@@ -13,6 +13,7 @@ export default function Parts() {
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPart, setEditingPart] = useState(null);
+  const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: parts = [], isLoading } = useQuery({
@@ -20,11 +21,15 @@ export default function Parts() {
     queryFn: () => base44.entities.Part.list("-created_date", 200),
   });
 
-  const filtered = parts.filter(p =>
-    p.name?.toLowerCase().includes(search.toLowerCase()) ||
-    p.part_number?.toLowerCase().includes(search.toLowerCase()) ||
-    p.supplier?.toLowerCase().includes(search.toLowerCase())
-  );
+  const lowStockParts = parts.filter(p => p.min_stock > 0 && p.quantity <= p.min_stock);
+
+  const filtered = parts
+    .filter(p => !showLowStockOnly || (p.min_stock > 0 && p.quantity <= p.min_stock))
+    .filter(p =>
+      p.name?.toLowerCase().includes(search.toLowerCase()) ||
+      p.part_number?.toLowerCase().includes(search.toLowerCase()) ||
+      p.supplier?.toLowerCase().includes(search.toLowerCase())
+    );
 
   const handleDelete = async (id) => {
     if (window.confirm("Delete this part?")) {
@@ -37,6 +42,40 @@ export default function Parts() {
     <div className="space-y-6">
       <PageHeader title="Parts Inventory" subtitle={`${parts.length} parts in stock`}
         onAdd={() => { setEditingPart(null); setDialogOpen(true); }} addLabel="Add Part" />
+
+      {lowStockParts.length > 0 && (
+        <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="text-rose-400 font-semibold text-sm">Low Stock Alert</h3>
+              <p className="text-gray-400 text-xs mt-1">
+                {lowStockParts.length} part{lowStockParts.length !== 1 ? 's' : ''} {lowStockParts.length !== 1 ? 'are' : 'is'} running low on inventory
+              </p>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {lowStockParts.slice(0, 5).map(p => (
+                  <Badge key={p.id} className="bg-rose-500/20 text-rose-300 border-rose-500/30">
+                    {p.name}: {p.quantity}/{p.min_stock}
+                  </Badge>
+                ))}
+                {lowStockParts.length > 5 && (
+                  <Badge className="bg-gray-800 text-gray-400">
+                    +{lowStockParts.length - 5} more
+                  </Badge>
+                )}
+              </div>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-rose-400 hover:text-rose-300"
+              onClick={() => setShowLowStockOnly(!showLowStockOnly)}
+            >
+              {showLowStockOnly ? "Show All" : "View All"}
+            </Button>
+          </div>
+        </div>
+      )}
 
       <SearchBar value={search} onChange={setSearch} placeholder="Search by name, number, or supplier..." />
 
