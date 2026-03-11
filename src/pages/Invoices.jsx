@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileText, Pencil, Trash2, Printer, CheckCircle2, XCircle } from "lucide-react";
+import { FileText, Pencil, Trash2, Printer, CheckCircle2, XCircle, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { jsPDF } from "jspdf";
 import PageHeader from "../components/shared/PageHeader";
 import SearchBar from "../components/shared/SearchBar";
 import EmptyState from "../components/shared/EmptyState";
@@ -56,6 +57,100 @@ export default function Invoices() {
     queryClient.invalidateQueries({ queryKey: ["invoices"] });
   };
 
+  const downloadPDF = (inv) => {
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(24);
+    doc.setTextColor(14, 165, 233);
+    doc.text("LBC AUTO", 20, 20);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text("Professional Auto Repair Services", 20, 27);
+    
+    // Invoice Title
+    doc.setFontSize(18);
+    doc.setTextColor(0);
+    doc.text("INVOICE", 150, 20);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`#${inv.invoice_number}`, 150, 27);
+    doc.text(`Date: ${new Date(inv.created_date).toLocaleDateString()}`, 150, 33);
+    
+    // Customer Info
+    doc.setFontSize(11);
+    doc.setTextColor(0);
+    doc.text("BILL TO:", 20, 50);
+    doc.setFontSize(10);
+    doc.text(inv.customer_name, 20, 57);
+    doc.text(inv.vehicle_info, 20, 63);
+    
+    // Line Items Table
+    let y = 85;
+    doc.setFillColor(14, 165, 233);
+    doc.rect(20, y, 170, 8, 'F');
+    doc.setTextColor(255);
+    doc.setFontSize(10);
+    doc.text("Description", 25, y + 5.5);
+    doc.text("Qty", 120, y + 5.5);
+    doc.text("Price", 145, y + 5.5);
+    doc.text("Total", 170, y + 5.5);
+    
+    y += 12;
+    doc.setTextColor(0);
+    
+    if (inv.line_items && inv.line_items.length > 0) {
+      inv.line_items.forEach(item => {
+        doc.text(item.description || '', 25, y);
+        doc.text(String(item.quantity || 1), 120, y);
+        doc.text(`$${(item.unit_price || 0).toFixed(2)}`, 145, y);
+        doc.text(`$${(item.total || 0).toFixed(2)}`, 170, y);
+        y += 8;
+      });
+    }
+    
+    // Totals
+    y += 10;
+    doc.text("Subtotal (Parts):", 120, y);
+    doc.text(`$${(inv.parts_total || 0).toFixed(2)}`, 170, y);
+    
+    y += 7;
+    doc.text("Subtotal (Labor):", 120, y);
+    doc.text(`$${(inv.labor_total || 0).toFixed(2)}`, 170, y);
+    
+    y += 7;
+    doc.text(`Tax (${inv.tax_rate || 0}%):`, 120, y);
+    doc.text(`$${(inv.tax_amount || 0).toFixed(2)}`, 170, y);
+    
+    y += 10;
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text("TOTAL:", 120, y);
+    doc.text(`$${(inv.total || 0).toFixed(2)}`, 170, y);
+    
+    // Payment Status
+    y += 15;
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    const statusColor = inv.status === 'paid' ? [34, 197, 94] : [251, 191, 36];
+    doc.setTextColor(...statusColor);
+    doc.text(`Status: ${inv.status.toUpperCase()}`, 20, y);
+    
+    if (inv.paid_date) {
+      doc.setTextColor(100);
+      doc.text(`Paid on: ${new Date(inv.paid_date).toLocaleDateString()}`, 20, y + 7);
+    }
+    
+    // Footer
+    doc.setTextColor(150);
+    doc.setFontSize(9);
+    doc.text("Thank you for your business!", 105, 280, { align: 'center' });
+    
+    doc.save(`Invoice-${inv.invoice_number}.pdf`);
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader title="Invoices" subtitle={`${invoices.length} total invoices`}
@@ -106,6 +201,10 @@ export default function Invoices() {
                         <CheckCircle2 className="w-4 h-4" />
                       </Button>
                     )}
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-white"
+                      onClick={() => downloadPDF(inv)} title="Download PDF">
+                      <Download className="w-4 h-4" />
+                    </Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-white"
                       onClick={() => setPrintInvoice(inv)} title="Print">
                       <Printer className="w-4 h-4" />
