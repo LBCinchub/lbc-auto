@@ -95,52 +95,59 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, c
 
   const handleSave = async () => {
     setSaving(true);
-    const laborHours = Number(form.labor_hours) || 0;
-    const mechanic = mechanics.find(m => m.id === form.mechanic_id);
-    const laborCost = laborHours * (mechanic?.hourly_rate || 0);
-    const partsCost = form.parts_used.reduce((sum, p) => sum + (p.total || 0), 0);
-    const totalCost = laborCost + partsCost;
+    try {
+      const laborHours = Number(form.labor_hours) || 0;
+      const mechanic = mechanics.find(m => m.id === form.mechanic_id);
+      const laborCost = laborHours * (mechanic?.hourly_rate || 0);
+      const partsCost = form.parts_used.reduce((sum, p) => sum + (p.total || 0), 0);
+      const totalCost = laborCost + partsCost;
 
-    const user = await base44.auth.me();
-    const timestamp = new Date().toISOString();
+      const user = await base44.auth.me();
+      const timestamp = new Date().toISOString();
 
-    const data = {
-      ...form,
-      labor_hours: laborHours,
-      labor_cost: laborCost,
-      parts_cost: partsCost,
-      total_cost: totalCost,
-      order_number: order?.order_number || `RO-${Date.now().toString(36).toUpperCase()}`,
-    };
-
-    if (order) {
-      const changes = {};
-      if (order.status !== data.status) changes.status = { from: order.status, to: data.status };
-      if (order.mechanic_name !== data.mechanic_name) changes.mechanic = { from: order.mechanic_name, to: data.mechanic_name };
-      if (order.labor_hours !== data.labor_hours) changes.labor_hours = { from: order.labor_hours, to: data.labor_hours };
-      if (order.parts_cost !== data.parts_cost) changes.parts_cost = { from: order.parts_cost, to: data.parts_cost };
-
-      const historyEntry = {
-        timestamp,
-        user: user?.email || 'system',
-        action: 'updated',
-        changes
+      const data = {
+        ...form,
+        labor_hours: laborHours,
+        labor_cost: laborCost,
+        parts_cost: partsCost,
+        total_cost: totalCost,
+        order_number: order?.order_number || `RO-${Date.now().toString(36).toUpperCase()}`,
       };
 
-      data.history = [...(order.history || []), historyEntry];
-      await base44.entities.RepairOrder.update(order.id, data);
-    } else {
-      data.history = [{
-        timestamp,
-        user: user?.email || 'system',
-        action: 'created',
-        changes: {}
-      }];
-      await base44.entities.RepairOrder.create(data);
+      if (order) {
+        const changes = {};
+        if (order.status !== data.status) changes.status = { from: order.status, to: data.status };
+        if (order.mechanic_name !== data.mechanic_name) changes.mechanic = { from: order.mechanic_name, to: data.mechanic_name };
+        if (order.labor_hours !== data.labor_hours) changes.labor_hours = { from: order.labor_hours, to: data.labor_hours };
+        if (order.parts_cost !== data.parts_cost) changes.parts_cost = { from: order.parts_cost, to: data.parts_cost };
+
+        const historyEntry = {
+          timestamp,
+          user: user?.email || 'system',
+          action: 'updated',
+          changes
+        };
+
+        data.history = [...(order.history || []), historyEntry];
+        await base44.entities.RepairOrder.update(order.id, data);
+      } else {
+        data.history = [{
+          timestamp,
+          user: user?.email || 'system',
+          action: 'created',
+          changes: {}
+        }];
+        await base44.entities.RepairOrder.create(data);
+      }
+      
+      onSaved();
+      onClose();
+    } catch (error) {
+      console.error('Error saving repair order:', error);
+      alert('Failed to save repair order: ' + error.message);
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
-    onSaved();
-    onClose();
   };
 
   return (
