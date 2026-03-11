@@ -94,6 +94,11 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, c
   };
 
   const handleSave = async () => {
+    if (!form.customer_id || !form.vehicle_id || !form.description) {
+      alert('Please fill in Customer, Vehicle, and Description fields');
+      return;
+    }
+
     setSaving(true);
     try {
       const laborHours = Number(form.labor_hours) || 0;
