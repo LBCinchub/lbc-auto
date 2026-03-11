@@ -101,6 +101,9 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, c
     const partsCost = form.parts_used.reduce((sum, p) => sum + (p.total || 0), 0);
     const totalCost = laborCost + partsCost;
 
+    const user = await base44.auth.me();
+    const timestamp = new Date().toISOString();
+
     const data = {
       ...form,
       labor_hours: laborHours,
@@ -111,8 +114,28 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, c
     };
 
     if (order) {
+      const changes = {};
+      if (order.status !== data.status) changes.status = { from: order.status, to: data.status };
+      if (order.mechanic_name !== data.mechanic_name) changes.mechanic = { from: order.mechanic_name, to: data.mechanic_name };
+      if (order.labor_hours !== data.labor_hours) changes.labor_hours = { from: order.labor_hours, to: data.labor_hours };
+      if (order.parts_cost !== data.parts_cost) changes.parts_cost = { from: order.parts_cost, to: data.parts_cost };
+
+      const historyEntry = {
+        timestamp,
+        user: user?.email || 'system',
+        action: 'updated',
+        changes
+      };
+
+      data.history = [...(order.history || []), historyEntry];
       await base44.entities.RepairOrder.update(order.id, data);
     } else {
+      data.history = [{
+        timestamp,
+        user: user?.email || 'system',
+        action: 'created',
+        changes: {}
+      }];
       await base44.entities.RepairOrder.create(data);
     }
     setSaving(false);

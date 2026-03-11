@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Wrench, Pencil, Trash2, DollarSign, Clock } from "lucide-react";
+import { Wrench, Pencil, Trash2, DollarSign, Clock, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import PageHeader from "../components/shared/PageHeader";
 import SearchBar from "../components/shared/SearchBar";
 import EmptyState from "../components/shared/EmptyState";
@@ -24,6 +25,7 @@ export default function RepairOrders() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
+  const [historyOrder, setHistoryOrder] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: orders = [], isLoading } = useQuery({
@@ -134,6 +136,12 @@ export default function RepairOrders() {
                     )}
                   </div>
                   <div className="flex gap-1">
+                    {order.history && order.history.length > 0 && (
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-sky-400"
+                        onClick={() => setHistoryOrder(order)} title="View History">
+                        <History className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-white"
                       onClick={() => { setEditingOrder(order); setDialogOpen(true); }}>
                       <Pencil className="w-3.5 h-3.5" />
@@ -160,6 +168,40 @@ export default function RepairOrders() {
         mechanics={mechanics}
         parts={parts}
       />
+
+      {historyOrder && (
+        <Dialog open={!!historyOrder} onOpenChange={() => setHistoryOrder(null)}>
+          <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Repair Order History - {historyOrder.order_number}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {historyOrder.history?.map((entry, idx) => (
+                <div key={idx} className="border-l-2 border-sky-500/50 pl-4 py-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-semibold text-sky-400">{entry.action}</span>
+                    <span className="text-xs text-gray-500">
+                      {new Date(entry.timestamp).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="text-xs text-gray-400 mb-1">By: {entry.user}</div>
+                  {entry.changes && Object.keys(entry.changes).length > 0 && (
+                    <div className="text-sm text-gray-300 space-y-1">
+                      {Object.entries(entry.changes).map(([key, val]) => (
+                        <div key={key}>
+                          <span className="text-gray-500">{key}:</span>{' '}
+                          <span className="text-rose-400">{val.from || 'none'}</span> →{' '}
+                          <span className="text-emerald-400">{val.to}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
