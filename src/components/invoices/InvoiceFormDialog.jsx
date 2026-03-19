@@ -11,7 +11,7 @@ import { base44 } from "@/api/base44Client";
 export default function InvoiceFormDialog({ open, onClose, invoice, orders, customers, onSaved }) {
   const [form, setForm] = useState({
     repair_order_id: "", customer_id: "", customer_name: "", vehicle_info: "",
-    parts_total: 0, labor_total: 0, tax_rate: 8.5, status: "unpaid",
+    parts_total: 0, labor_total: 0, tax_rate: 13, status: "unpaid",
     due_date: "", payment_method: "", amount_paid: 0, payment_history: []
   });
   const [saving, setSaving] = useState(false);
@@ -25,7 +25,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         vehicle_info: invoice.vehicle_info || "",
         parts_total: invoice.parts_total || 0,
         labor_total: invoice.labor_total || 0,
-        tax_rate: invoice.tax_rate ?? 8.5,
+        tax_rate: invoice.tax_rate ?? 13,
         status: invoice.status || "unpaid",
         due_date: invoice.due_date || "",
         payment_method: invoice.payment_method || "",
@@ -35,7 +35,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
     } else {
       setForm({
         repair_order_id: "", customer_id: "", customer_name: "", vehicle_info: "",
-        parts_total: 0, labor_total: 0, tax_rate: 8.5, status: "unpaid",
+        parts_total: 0, labor_total: 0, tax_rate: 13, status: "unpaid",
         due_date: "", payment_method: "", amount_paid: 0, payment_history: []
       });
     }
