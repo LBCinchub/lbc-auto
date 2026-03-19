@@ -107,8 +107,15 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, c
       const partsCost = form.parts_used.reduce((sum, p) => sum + (p.total || 0), 0);
       const totalCost = laborCost + partsCost;
 
-      const user = await base44.auth.me();
       const timestamp = new Date().toISOString();
+      let userEmail = 'system';
+      
+      try {
+        const user = await base44.auth.me();
+        userEmail = user?.email || 'system';
+      } catch (e) {
+        console.warn('Could not fetch user info, using system');
+      }
 
       const data = {
         ...form,
@@ -128,7 +135,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, c
 
         const historyEntry = {
           timestamp,
-          user: user?.email || 'system',
+          user: userEmail,
           action: 'updated',
           changes
         };
@@ -138,7 +145,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, c
       } else {
         data.history = [{
           timestamp,
-          user: user?.email || 'system',
+          user: userEmail,
           action: 'created',
           changes: {}
         }];
