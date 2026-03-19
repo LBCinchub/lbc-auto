@@ -12,7 +12,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
   const [form, setForm] = useState({
     repair_order_id: "", customer_id: "", customer_name: "", vehicle_info: "",
     parts_total: 0, labor_total: 0, tax_rate: 8.5, status: "unpaid",
-    due_date: "", payment_method: ""
+    due_date: "", payment_method: "", amount_paid: 0, payment_history: []
   });
   const [saving, setSaving] = useState(false);
 
@@ -29,12 +29,14 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         status: invoice.status || "unpaid",
         due_date: invoice.due_date || "",
         payment_method: invoice.payment_method || "",
+        amount_paid: invoice.amount_paid || 0,
+        payment_history: invoice.payment_history || [],
       });
     } else {
       setForm({
         repair_order_id: "", customer_id: "", customer_name: "", vehicle_info: "",
         parts_total: 0, labor_total: 0, tax_rate: 8.5, status: "unpaid",
-        due_date: "", payment_method: ""
+        due_date: "", payment_method: "", amount_paid: 0, payment_history: []
       });
     }
   }, [invoice, open]);
@@ -57,6 +59,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
   const subtotal = (form.parts_total || 0) + (form.labor_total || 0);
   const taxAmount = subtotal * ((form.tax_rate || 0) / 100);
   const total = subtotal + taxAmount;
+  const balanceDue = total - (form.amount_paid || 0);
 
   const handleSave = async () => {
     setSaving(true);
@@ -64,11 +67,20 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
     if (form.labor_total > 0) lineItems.push({ description: "Labor", type: "labor", quantity: 1, unit_price: form.labor_total, total: form.labor_total });
     if (form.parts_total > 0) lineItems.push({ description: "Parts", type: "parts", quantity: 1, unit_price: form.parts_total, total: form.parts_total });
 
+    let finalStatus = form.status;
+    if (balanceDue <= 0) {
+      finalStatus = "paid";
+    } else if (form.amount_paid > 0) {
+      finalStatus = "partial";
+    }
+
     const data = {
       ...form,
       invoice_number: invoice?.invoice_number || `INV-${Date.now().toString(36).toUpperCase()}`,
       tax_amount: taxAmount,
       total,
+      balance_due: balanceDue,
+      status: finalStatus,
       line_items: lineItems,
     };
 
@@ -142,6 +154,14 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
             </div>
           </div>
 
+          <div>
+            <Label className="text-gray-400">Upfront Payment (Cash)</Label>
+            <Input type="number" step="0.01" value={form.amount_paid}
+              onChange={e => setForm({...form, amount_paid: Number(e.target.value)})}
+              className="bg-gray-800 border-gray-700 text-white mt-1"
+              placeholder="0.00" />
+          </div>
+
           <div className="rounded-lg bg-gray-800/50 p-4 space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-gray-400">Subtotal</span>
@@ -155,6 +175,20 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
               <span className="text-white">Total</span>
               <span className="text-sky-400">${total.toFixed(2)}</span>
             </div>
+            {form.amount_paid > 0 && (
+              <>
+                <div className="flex justify-between text-sm text-green-400">
+                  <span>Paid Upfront</span>
+                  <span>-${form.amount_paid.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-lg font-bold border-t border-gray-700 pt-2">
+                  <span className="text-white">Balance Due</span>
+                  <span className={balanceDue <= 0 ? "text-green-400" : "text-yellow-400"}>
+                    ${balanceDue.toFixed(2)}
+                  </span>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="flex gap-3 pt-2">
