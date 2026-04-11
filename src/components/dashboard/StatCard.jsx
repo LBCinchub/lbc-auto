@@ -1,7 +1,7 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 
-export default function StatCard({ title, value, icon: Icon, trend, trendLabel, color = "sky" }) {
+export default function StatCard({ title, value, icon: Icon, trend, trendLabel, color = "sky", onClick }) {
   const colors = {
     sky: "from-sky-500/20 to-sky-600/5 text-sky-400 border-sky-500/20",
     green: "from-emerald-500/20 to-emerald-600/5 text-emerald-400 border-emerald-500/20",
@@ -19,8 +19,9 @@ export default function StatCard({ title, value, icon: Icon, trend, trendLabel, 
   };
 
   return (
-    <div className={cn(
+    <div onClick={onClick} className={cn(
       "relative overflow-hidden rounded-xl border bg-gradient-to-br p-5",
+      onClick ? "cursor-pointer hover:brightness-110 transition-all" : "",
       colors[color]
     )}>
       <div className="flex items-start justify-between">
