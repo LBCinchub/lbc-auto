@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
 import { Plus, Trash2 } from "lucide-react";
+import { useState as usePartSearch } from "react";
 import CustomerSearchInput from "@/components/shared/CustomerSearchInput";
 
 const statuses = [
@@ -67,6 +68,8 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, c
     const m = mechanics.find(m => m.id === id);
     setForm({ ...form, mechanic_id: id, mechanic_name: m?.name || "" });
   };
+
+  const [partSearches, setPartSearches] = useState({});
 
   const addPart = () => {
     setForm({ ...form, parts_used: [...form.parts_used, { part_id: "", name: "", quantity: 1, unit_price: "", total: 0 }] });
@@ -246,12 +249,22 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, c
             {form.parts_used.map((pu, idx) => (
               <div key={idx} className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-2 mb-2 items-center">
                 <div className="flex gap-2">
-                  <Select value={pu.part_id} onValueChange={v => updatePart(idx, "part_id", v)}>
+                  <Select value={pu.part_id} onValueChange={v => { updatePart(idx, "part_id", v); setPartSearches(s => ({...s, [idx]: ""})); }}>
                     <SelectTrigger className="bg-gray-800 border-gray-700 text-white w-40">
                       <SelectValue placeholder="Select part" />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-800 border-gray-700">
-                      {parts.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                      <div className="px-2 pb-1">
+                        <Input
+                          value={partSearches[idx] || ""}
+                          onChange={e => setPartSearches(s => ({...s, [idx]: e.target.value}))}
+                          className="bg-gray-700 border-gray-600 text-white h-7 text-xs"
+                          placeholder="Search parts..."
+                          onClick={e => e.stopPropagation()}
+                          onKeyDown={e => e.stopPropagation()}
+                        />
+                      </div>
+                      {parts.filter(p => !partSearches[idx] || p.name.toLowerCase().includes((partSearches[idx] || "").toLowerCase())).map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                   <Input value={pu.name} onChange={e => updatePart(idx, "name", e.target.value)}
