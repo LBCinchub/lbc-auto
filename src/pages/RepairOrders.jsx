@@ -68,6 +68,10 @@ export default function RepairOrders() {
     queryClient.invalidateQueries({ queryKey: ["repairOrders"] });
   };
 
+  const refreshParts = () => {
+    queryClient.invalidateQueries({ queryKey: ["parts"] });
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader title="Repair Orders" subtitle={`${orders.length} total orders`}
@@ -163,6 +167,7 @@ export default function RepairOrders() {
         onClose={() => setDialogOpen(false)}
         order={editingOrder}
         onSaved={refresh}
+        onPartAdded={refreshParts}
         customers={customers}
         vehicles={vehicles}
         mechanics={mechanics}

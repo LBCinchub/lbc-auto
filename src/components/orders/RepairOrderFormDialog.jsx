@@ -20,7 +20,7 @@ const statuses = [
   { value: "delivered", label: "Delivered" },
 ];
 
-export default function RepairOrderFormDialog({ open, onClose, order, onSaved, customers, vehicles, mechanics, parts }) {
+export default function RepairOrderFormDialog({ open, onClose, order, onSaved, onPartAdded, customers, vehicles, mechanics, parts }) {
   const [form, setForm] = useState({
     customer_id: "", customer_name: "", vehicle_id: "", vehicle_info: "",
     mechanic_id: "", mechanic_name: "", description: "", status: "waiting",
@@ -85,6 +85,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, c
       sale_price: Number(newPartForm.sale_price) || 0,
       quantity: Number(newPartForm.quantity) || 0,
     });
+    if (onPartAdded) onPartAdded();
     setNewPartForm(null);
     // Also add to parts_used
     setForm(f => ({ ...f, parts_used: [...f.parts_used, { part_id: created.id, name: created.name, quantity: 1, unit_price: "", total: 0 }] }));
