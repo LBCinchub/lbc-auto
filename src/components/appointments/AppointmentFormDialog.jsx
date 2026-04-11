@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
+import { Search, User } from "lucide-react";
 
 const timeSlots = [
   "8:00 AM", "8:30 AM", "9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM",
@@ -22,6 +23,7 @@ const serviceTypes = [
 ];
 
 export default function AppointmentFormDialog({ open, onClose, appointment, onSaved, customers, vehicles, mechanics }) {
+  const [customerSearch, setCustomerSearch] = useState("");
   const [form, setForm] = useState({
     customer_id: "", customer_name: "", vehicle_id: "", vehicle_info: "",
     mechanic_id: "", mechanic_name: "", service_type: "", date: "",
@@ -58,7 +60,14 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
   const handleCustomerChange = (id) => {
     const c = customers.find(c => c.id === id);
     setForm({ ...form, customer_id: id, customer_name: c?.full_name || "", vehicle_id: "", vehicle_info: "" });
+    setCustomerSearch("");
   };
+
+  const filteredCustomers = customers.filter(c =>
+    !customerSearch ||
+    c.full_name?.toLowerCase().includes(customerSearch.toLowerCase()) ||
+    c.phone?.includes(customerSearch)
+  );
 
   const handleVehicleChange = (id) => {
     const v = vehicles.find(v => v.id === id);
@@ -91,14 +100,39 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
         <div className="space-y-4 mt-2">
           <div>
             <Label className="text-gray-400">Customer *</Label>
-            <Select value={form.customer_id} onValueChange={handleCustomerChange}>
-              <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
-                <SelectValue placeholder="Select customer" />
-              </SelectTrigger>
-              <SelectContent className="bg-gray-800 border-gray-700">
-                {customers.map(c => <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            {form.customer_id ? (
+              <div className="mt-1 flex items-center justify-between bg-sky-500/10 border border-sky-500/40 rounded-lg px-3 py-2">
+                <div>
+                  <p className="text-white font-medium text-sm">{form.customer_name}</p>
+                  <p className="text-gray-400 text-xs">{customers.find(c => c.id === form.customer_id)?.phone || ""}</p>
+                </div>
+                <button onClick={() => setForm({ ...form, customer_id: "", customer_name: "", vehicle_id: "", vehicle_info: "" })}
+                  className="text-xs text-gray-500 hover:text-rose-400">Change</button>
+              </div>
+            ) : (
+              <div className="mt-1">
+                <div className="relative mb-2">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+                  <Input value={customerSearch} onChange={e => setCustomerSearch(e.target.value)}
+                    className="bg-gray-800 border-gray-700 text-white pl-8" placeholder="Search by name or phone..." />
+                </div>
+                <div className="max-h-40 overflow-y-auto space-y-1">
+                  {filteredCustomers.map(c => (
+                    <button key={c.id} onClick={() => handleCustomerChange(c.id)}
+                      className="w-full text-left px-3 py-2 rounded-lg bg-gray-800 hover:bg-sky-500/20 hover:border-sky-500/40 border border-transparent transition-colors flex items-center gap-3">
+                      <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0">
+                        <User className="w-3.5 h-3.5 text-gray-400" />
+                      </div>
+                      <div>
+                        <p className="text-white text-sm font-medium">{c.full_name}</p>
+                        <p className="text-gray-400 text-xs">{c.phone}</p>
+                      </div>
+                    </button>
+                  ))}
+                  {filteredCustomers.length === 0 && <p className="text-gray-500 text-xs text-center py-2">No customers found</p>}
+                </div>
+              </div>
+            )}
           </div>
 
           <div>
