@@ -69,7 +69,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, c
   };
 
   const addPart = () => {
-    setForm({ ...form, parts_used: [...form.parts_used, { part_id: "", name: "", quantity: 1, unit_price: 0, total: 0 }] });
+    setForm({ ...form, parts_used: [...form.parts_used, { part_id: "", name: "", quantity: 1, unit_price: "", total: 0 }] });
   };
 
   const updatePart = (idx, field, value) => {
@@ -83,8 +83,10 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, c
         updated[idx].total = p.sale_price * updated[idx].quantity;
       }
     }
-    if (field === "quantity") {
-      updated[idx].total = updated[idx].unit_price * value;
+    if (field === "quantity" || field === "unit_price") {
+      const qty = field === "quantity" ? Number(value) : Number(updated[idx].quantity);
+      const price = field === "unit_price" ? Number(value) : Number(updated[idx].unit_price);
+      updated[idx].total = qty * price;
     }
     setForm({ ...form, parts_used: updated });
   };
@@ -242,17 +244,23 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, c
               </Button>
             </div>
             {form.parts_used.map((pu, idx) => (
-              <div key={idx} className="flex items-center gap-2 mb-2">
-                <Select value={pu.part_id} onValueChange={v => updatePart(idx, "part_id", v)}>
-                  <SelectTrigger className="bg-gray-800 border-gray-700 text-white flex-1">
-                    <SelectValue placeholder="Select part" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-gray-800 border-gray-700">
-                    {parts.map(p => <SelectItem key={p.id} value={p.id}>{p.name} (${p.sale_price})</SelectItem>)}
-                  </SelectContent>
-                </Select>
+              <div key={idx} className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-2 mb-2 items-center">
+                <div className="flex gap-2">
+                  <Select value={pu.part_id} onValueChange={v => updatePart(idx, "part_id", v)}>
+                    <SelectTrigger className="bg-gray-800 border-gray-700 text-white w-40">
+                      <SelectValue placeholder="Select part" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-800 border-gray-700">
+                      {parts.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Input value={pu.name} onChange={e => updatePart(idx, "name", e.target.value)}
+                    className="bg-gray-800 border-gray-700 text-white flex-1" placeholder="Part name" />
+                </div>
                 <Input type="number" value={pu.quantity} onChange={e => updatePart(idx, "quantity", Number(e.target.value))}
-                  className="bg-gray-800 border-gray-700 text-white w-20" min="1" placeholder="Qty" />
+                  className="bg-gray-800 border-gray-700 text-white w-16" min="1" placeholder="Qty" />
+                <Input type="number" value={pu.unit_price} onChange={e => updatePart(idx, "unit_price", e.target.value)}
+                  className="bg-gray-800 border-gray-700 text-white w-24" step="0.01" placeholder="Price" />
                 <span className="text-sm text-gray-400 w-20 text-right">${(pu.total || 0).toFixed(2)}</span>
                 <Button variant="ghost" size="icon" onClick={() => removePart(idx)} className="text-gray-500 hover:text-rose-400 h-8 w-8">
                   <Trash2 className="w-3.5 h-3.5" />
