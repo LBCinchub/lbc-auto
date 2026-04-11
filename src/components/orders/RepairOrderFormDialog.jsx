@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
 import { Plus, Trash2, DollarSign } from "lucide-react";
-import { useState as usePartSearch } from "react";
+
 import CustomerSearchInput from "@/components/shared/CustomerSearchInput";
 
 const statuses = [
@@ -71,9 +71,23 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, c
 
   const [partSearches, setPartSearches] = useState({});
   const [showPrice, setShowPrice] = useState({});
+  const [newPartForm, setNewPartForm] = useState(null); // null = hidden, {} = open
 
   const addPart = () => {
     setForm({ ...form, parts_used: [...form.parts_used, { part_id: "", name: "", quantity: 1, unit_price: "", total: 0 }] });
+  };
+
+  const saveNewPartToInventory = async () => {
+    if (!newPartForm?.name) return;
+    const created = await base44.entities.Part.create({
+      name: newPartForm.name,
+      cost_price: Number(newPartForm.cost_price) || 0,
+      sale_price: Number(newPartForm.sale_price) || 0,
+      quantity: Number(newPartForm.quantity) || 0,
+    });
+    setNewPartForm(null);
+    // Also add to parts_used
+    setForm(f => ({ ...f, parts_used: [...f.parts_used, { part_id: created.id, name: created.name, quantity: 1, unit_price: "", total: 0 }] }));
   };
 
   const updatePart = (idx, field, value) => {
@@ -239,10 +253,34 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, c
           <div>
             <div className="flex items-center justify-between mb-2">
               <Label className="text-gray-400">Parts Used</Label>
-              <Button variant="ghost" size="sm" onClick={addPart} className="text-sky-400 hover:text-sky-300 gap-1">
-                <Plus className="w-3 h-3" /> Add Part
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="ghost" size="sm" onClick={() => setNewPartForm({ name: "", cost_price: "", sale_price: "", quantity: 0 })} className="text-amber-400 hover:text-amber-300 gap-1 text-xs">
+                  <Plus className="w-3 h-3" /> Add to Inventory
+                </Button>
+                <Button variant="ghost" size="sm" onClick={addPart} className="text-sky-400 hover:text-sky-300 gap-1">
+                  <Plus className="w-3 h-3" /> Add Part
+                </Button>
+              </div>
             </div>
+            {newPartForm !== null && (
+              <div className="bg-gray-800 border border-amber-500/30 rounded-lg p-3 mb-3 space-y-2">
+                <p className="text-xs text-amber-400 font-medium">New Part — Add to Inventory</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <Input value={newPartForm.name} onChange={e => setNewPartForm(f => ({...f, name: e.target.value}))}
+                    className="bg-gray-700 border-gray-600 text-white col-span-2" placeholder="Part name *" />
+                  <Input type="number" value={newPartForm.cost_price} onChange={e => setNewPartForm(f => ({...f, cost_price: e.target.value}))}
+                    className="bg-gray-700 border-gray-600 text-white" placeholder="Cost price" />
+                  <Input type="number" value={newPartForm.sale_price} onChange={e => setNewPartForm(f => ({...f, sale_price: e.target.value}))}
+                    className="bg-gray-700 border-gray-600 text-white" placeholder="Sale price" />
+                  <Input type="number" value={newPartForm.quantity} onChange={e => setNewPartForm(f => ({...f, quantity: e.target.value}))}
+                    className="bg-gray-700 border-gray-600 text-white" placeholder="Stock qty" />
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={saveNewPartToInventory} disabled={!newPartForm.name} className="bg-amber-500 hover:bg-amber-600 text-black">Save & Add</Button>
+                  <Button size="sm" variant="ghost" onClick={() => setNewPartForm(null)} className="text-gray-400">Cancel</Button>
+                </div>
+              </div>
+            )}
             {form.parts_used.map((pu, idx) => (
               <div key={idx} className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-2 mb-2 items-center">
                 <div className="flex gap-2">
