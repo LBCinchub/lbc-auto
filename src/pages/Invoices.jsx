@@ -38,7 +38,7 @@ export default function Invoices() {
   });
 
   const filtered = invoices
-    .filter(i => statusFilter === "all" || i.status === statusFilter)
+    .filter(i => statusFilter === "all" || i.status === statusFilter || (statusFilter === "unpaid" && i.status === "partial"))
     .filter(i =>
       i.invoice_number?.toLowerCase().includes(search.toLowerCase()) ||
       i.customer_name?.toLowerCase().includes(search.toLowerCase())
