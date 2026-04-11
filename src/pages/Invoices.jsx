@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileText, Pencil, Trash2, Printer, CheckCircle2, XCircle, Download } from "lucide-react";
+import { FileText, Pencil, Trash2, Printer, CheckCircle2, XCircle, Download, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { jsPDF } from "jspdf";
@@ -11,6 +11,7 @@ import EmptyState from "../components/shared/EmptyState";
 import StatusBadge from "../components/shared/StatusBadge";
 import InvoiceFormDialog from "../components/invoices/InvoiceFormDialog";
 import InvoicePrintView from "../components/invoices/InvoicePrintView";
+import PaymentReceiptDialog from "../components/invoices/PaymentReceiptDialog";
 
 export default function Invoices() {
   const [search, setSearch] = useState("");
@@ -18,6 +19,7 @@ export default function Invoices() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState(null);
   const [printInvoice, setPrintInvoice] = useState(null);
+  const [paymentInvoice, setPaymentInvoice] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: invoices = [], isLoading } = useQuery({
@@ -195,10 +197,10 @@ export default function Invoices() {
                 <div className="flex items-center gap-3 flex-shrink-0">
                   <span className="text-lg font-bold text-white">${inv.total?.toFixed(2)}</span>
                   <div className="flex gap-1">
-                    {inv.status === "unpaid" && (
+                    {(inv.status === "unpaid" || inv.status === "partial") && (
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-emerald-500 hover:text-emerald-400"
-                        onClick={() => markPaid(inv)} title="Mark as Paid">
-                        <CheckCircle2 className="w-4 h-4" />
+                        onClick={() => setPaymentInvoice(inv)} title="Record Payment">
+                        <DollarSign className="w-4 h-4" />
                       </Button>
                     )}
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-white"
@@ -237,6 +239,13 @@ export default function Invoices() {
       {printInvoice && (
         <InvoicePrintView invoice={printInvoice} onClose={() => setPrintInvoice(null)} />
       )}
+
+      <PaymentReceiptDialog
+        open={!!paymentInvoice}
+        onClose={() => setPaymentInvoice(null)}
+        invoice={paymentInvoice}
+        onSaved={() => queryClient.invalidateQueries({ queryKey: ["invoices"] })}
+      />
     </div>
   );
 }
