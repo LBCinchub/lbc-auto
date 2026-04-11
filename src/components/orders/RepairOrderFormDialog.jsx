@@ -283,42 +283,56 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
               </div>
             )}
             {form.parts_used.map((pu, idx) => (
-              <div key={idx} className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-2 mb-2 items-center">
-                <div className="flex gap-2">
-                  <Select value={pu.part_id} onValueChange={v => { updatePart(idx, "part_id", v); setPartSearches(s => ({...s, [idx]: ""})); }}>
-                    <SelectTrigger className="bg-gray-800 border-gray-700 text-white w-40">
-                      <SelectValue placeholder="Select part" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-800 border-gray-700">
-                      <div className="px-2 pb-1">
-                        <Input
-                          value={partSearches[idx] || ""}
-                          onChange={e => setPartSearches(s => ({...s, [idx]: e.target.value}))}
-                          className="bg-gray-700 border-gray-600 text-white h-7 text-xs"
-                          placeholder="Search parts..."
-                          onClick={e => e.stopPropagation()}
-                          onKeyDown={e => e.stopPropagation()}
-                        />
-                      </div>
-                      {parts.filter(p => !partSearches[idx] || p.name.toLowerCase().includes((partSearches[idx] || "").toLowerCase())).map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  <Input value={pu.name} onChange={e => updatePart(idx, "name", e.target.value)}
-                    className="bg-gray-800 border-gray-700 text-white flex-1" placeholder="Part name" />
+              <div key={idx} className="bg-gray-800/50 rounded-lg p-3 mb-2 space-y-2">
+                <div className="flex gap-2 items-center">
+                  <div className="flex-1 space-y-1">
+                    <Label className="text-gray-500 text-xs">Part Name</Label>
+                    <Input value={pu.name} onChange={e => updatePart(idx, "name", e.target.value)}
+                      className="bg-gray-800 border-gray-600 text-white" placeholder="Type part name..." />
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={() => removePart(idx)} className="text-gray-500 hover:text-rose-400 h-8 w-8 mt-5">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
                 </div>
-                <Input type="number" value={pu.quantity} onChange={e => updatePart(idx, "quantity", Number(e.target.value))}
-                  className="bg-gray-800 border-gray-700 text-white w-16" min="1" placeholder="Qty" />
-                <Button variant="ghost" size="icon" onClick={() => setShowPrice(s => ({...s, [idx]: !s[idx]}))}
-                  className={`h-8 w-8 ${showPrice[idx] ? 'text-sky-400' : 'text-gray-500 hover:text-sky-400'}`} title="Add price">
-                  <DollarSign className="w-3.5 h-3.5" />
-                </Button>
-                {showPrice[idx] && (
-                  <Input type="number" value={pu.unit_price || ""} onChange={e => updatePart(idx, "unit_price", e.target.value)}
-                    className="bg-gray-800 border-gray-700 text-white w-24" step="0.01" placeholder="Price" />
-                )}
-                <Button variant="ghost" size="icon" onClick={() => removePart(idx)} className="text-gray-500 hover:text-rose-400 h-8 w-8">
-                  <Trash2 className="w-3.5 h-3.5" />
-                </Button>
+                <div className="flex gap-2 items-center">
+                  <div className="flex-1">
+                    <Label className="text-gray-500 text-xs">From Inventory</Label>
+                    <Select value={pu.part_id} onValueChange={v => { updatePart(idx, "part_id", v); setPartSearches(s => ({...s, [idx]: ""})); }}>
+                      <SelectTrigger className="bg-gray-800 border-gray-600 text-white mt-1">
+                        <SelectValue placeholder="Select from inventory (optional)" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-gray-800 border-gray-700">
+                        <div className="px-2 pb-1">
+                          <Input
+                            value={partSearches[idx] || ""}
+                            onChange={e => setPartSearches(s => ({...s, [idx]: e.target.value}))}
+                            className="bg-gray-700 border-gray-600 text-white h-7 text-xs"
+                            placeholder="Search parts..."
+                            onClick={e => e.stopPropagation()}
+                            onKeyDown={e => e.stopPropagation()}
+                          />
+                        </div>
+                        {parts.filter(p => !partSearches[idx] || p.name.toLowerCase().includes((partSearches[idx] || "").toLowerCase())).map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="w-20">
+                    <Label className="text-gray-500 text-xs">Qty</Label>
+                    <Input type="number" value={pu.quantity} onChange={e => updatePart(idx, "quantity", Number(e.target.value))}
+                      className="bg-gray-800 border-gray-600 text-white mt-1" min="1" />
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={() => setShowPrice(s => ({...s, [idx]: !s[idx]}))}
+                    className={`h-8 w-8 mt-5 ${showPrice[idx] ? 'text-sky-400' : 'text-gray-500 hover:text-sky-400'}`} title="Add price">
+                    <DollarSign className="w-3.5 h-3.5" />
+                  </Button>
+                  {showPrice[idx] && (
+                    <div className="w-24">
+                      <Label className="text-gray-500 text-xs">Price</Label>
+                      <Input type="number" value={pu.unit_price || ""} onChange={e => updatePart(idx, "unit_price", e.target.value)}
+                        className="bg-gray-800 border-gray-600 text-white mt-1" step="0.01" placeholder="0.00" />
+                    </div>
+                  )}
+                </div>
               </div>
             ))}
           </div>
