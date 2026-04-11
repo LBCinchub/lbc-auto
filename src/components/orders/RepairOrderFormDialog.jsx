@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
 import { Plus, Trash2 } from "lucide-react";
+import CustomerSearchInput from "@/components/shared/CustomerSearchInput";
 
 const statuses = [
   { value: "waiting", label: "Waiting" },
@@ -53,9 +54,8 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, c
 
   const customerVehicles = vehicles.filter(v => v.customer_id === form.customer_id);
 
-  const handleCustomerChange = (id) => {
-    const c = customers.find(c => c.id === id);
-    setForm({ ...form, customer_id: id, customer_name: c?.full_name || "", vehicle_id: "", vehicle_info: "" });
+  const handleCustomerChange = (id, name) => {
+    setForm({ ...form, customer_id: id, customer_name: name || "", vehicle_id: "", vehicle_info: "" });
   };
 
   const handleVehicleChange = (id) => {
@@ -172,14 +172,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, c
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label className="text-gray-400">Customer *</Label>
-              <Select value={form.customer_id} onValueChange={handleCustomerChange}>
-                <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
-                  <SelectValue placeholder="Select customer" />
-                </SelectTrigger>
-                <SelectContent className="bg-gray-800 border-gray-700">
-                  {customers.map(c => <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <CustomerSearchInput customers={customers} value={form.customer_id} onChange={handleCustomerChange} />
             </div>
             <div>
               <Label className="text-gray-400">Vehicle *</Label>

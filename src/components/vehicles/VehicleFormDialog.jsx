@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
 import { Loader2 } from "lucide-react";
+import CustomerSearchInput from "@/components/shared/CustomerSearchInput";
 
 const emptyForm = {
   customer_id: "", customer_name: "", vin: "", license_plate: "",
@@ -78,9 +79,8 @@ export default function VehicleFormDialog({ open, onClose, vehicle, onSaved, cus
     onClose();
   };
 
-  const handleCustomerChange = (customerId) => {
-    const c = customers.find(c => c.id === customerId);
-    setForm({ ...form, customer_id: customerId, customer_name: c?.full_name || "" });
+  const handleCustomerChange = (customerId, customerName) => {
+    setForm({ ...form, customer_id: customerId, customer_name: customerName || "" });
   };
 
   return (
@@ -92,16 +92,7 @@ export default function VehicleFormDialog({ open, onClose, vehicle, onSaved, cus
         <div className="space-y-4 mt-2">
           <div>
             <Label className="text-gray-400">Customer *</Label>
-            <Select value={form.customer_id} onValueChange={handleCustomerChange}>
-              <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
-                <SelectValue placeholder="Select customer" />
-              </SelectTrigger>
-              <SelectContent className="bg-gray-800 border-gray-700">
-                {customers.map(c => (
-                  <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <CustomerSearchInput customers={customers} value={form.customer_id} onChange={handleCustomerChange} />
           </div>
 
           <div className="flex gap-2">
