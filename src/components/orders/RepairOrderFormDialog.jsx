@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, DollarSign } from "lucide-react";
 import { useState as usePartSearch } from "react";
 import CustomerSearchInput from "@/components/shared/CustomerSearchInput";
 
@@ -70,6 +70,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, c
   };
 
   const [partSearches, setPartSearches] = useState({});
+  const [showPrice, setShowPrice] = useState({});
 
   const addPart = () => {
     setForm({ ...form, parts_used: [...form.parts_used, { part_id: "", name: "", quantity: 1, unit_price: "", total: 0 }] });
@@ -268,6 +269,14 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, c
                 </div>
                 <Input type="number" value={pu.quantity} onChange={e => updatePart(idx, "quantity", Number(e.target.value))}
                   className="bg-gray-800 border-gray-700 text-white w-16" min="1" placeholder="Qty" />
+                <Button variant="ghost" size="icon" onClick={() => setShowPrice(s => ({...s, [idx]: !s[idx]}))}
+                  className={`h-8 w-8 ${showPrice[idx] ? 'text-sky-400' : 'text-gray-500 hover:text-sky-400'}`} title="Add price">
+                  <DollarSign className="w-3.5 h-3.5" />
+                </Button>
+                {showPrice[idx] && (
+                  <Input type="number" value={pu.unit_price || ""} onChange={e => updatePart(idx, "unit_price", e.target.value)}
+                    className="bg-gray-800 border-gray-700 text-white w-24" step="0.01" placeholder="Price" />
+                )}
                 <Button variant="ghost" size="icon" onClick={() => removePart(idx)} className="text-gray-500 hover:text-rose-400 h-8 w-8">
                   <Trash2 className="w-3.5 h-3.5" />
                 </Button>
