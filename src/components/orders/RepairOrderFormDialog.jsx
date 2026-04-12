@@ -25,11 +25,11 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
     customer_id: "", customer_name: "", vehicle_id: "", vehicle_info: "",
     mechanic_id: "", mechanic_name: "", description: "", status: "waiting",
     labor_hours: "", notes: "", parts_used: [], estimated_completion: "",
-    discount_type: "none", discount_value: 0
+    discount_type: "none", discount_value: 0, total_cost: 0, custom_total: false
   });
   const [saving, setSaving] = useState(false);
 
-  // Live cost calculation
+  // Live cost calculation (only if not custom/saved)
   const mechanic = mechanics.find(m => m.id === form.mechanic_id);
   const laborCost = (Number(form.labor_hours) || 0) * 120; // $120 per hour
   const partsCost = form.parts_used.reduce((sum, p) => sum + (Number(p.unit_price) || 0) * (Number(p.quantity) || 0), 0);
@@ -37,7 +37,8 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
   const discountAmount = form.discount_type === "percentage" 
     ? subtotal * ((form.discount_value || 0) / 100)
     : form.discount_type === "fixed" ? (form.discount_value || 0) : 0;
-  const totalCost = subtotal - discountAmount;
+  const calculatedTotal = subtotal - discountAmount;
+  const totalCost = form.custom_total ? Number(form.total_cost) || 0 : calculatedTotal;
 
   useEffect(() => {
     if (order) {
@@ -56,13 +57,15 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         estimated_completion: order.estimated_completion || "",
         discount_type: order.discount_type || "none",
         discount_value: order.discount_value || 0,
+        total_cost: order.total_cost || 0,
+        custom_total: order.total_cost ? true : false,
       });
     } else {
       setForm({
         customer_id: "", customer_name: "", vehicle_id: "", vehicle_info: "",
         mechanic_id: "", mechanic_name: "", description: "", status: "waiting",
         labor_hours: "", notes: "", parts_used: [], estimated_completion: "",
-        discount_type: "none", discount_value: 0
+        discount_type: "none", discount_value: 0, total_cost: 0, custom_total: false
       });
     }
   }, [order, open]);
@@ -139,7 +142,8 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
       const discountAmount = form.discount_type === "percentage" 
         ? subtotal * ((form.discount_value || 0) / 100)
         : form.discount_type === "fixed" ? (form.discount_value || 0) : 0;
-      const totalCost = subtotal - discountAmount;
+      const calculatedTotal = subtotal - discountAmount;
+      const finalTotal = form.custom_total ? Number(form.total_cost) || 0 : calculatedTotal;
 
       const timestamp = new Date().toISOString();
       let userEmail = 'system';
@@ -156,7 +160,8 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         labor_hours: laborHours,
         labor_cost: laborCost,
         parts_cost: partsCost,
-        total_cost: totalCost,
+        total_cost: finalTotal,
+        custom_total: form.custom_total,
         order_number: order?.order_number || `RO-${Date.now().toString(36).toUpperCase()}`,
       };
 
@@ -384,27 +389,42 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
             )}
           </div>
 
-          {/* Live Cost Summary */}
+          {/* Cost Summary */}
           <div className="rounded-xl border border-gray-700 bg-gray-800/40 p-4 space-y-2 text-sm">
-            <p className="text-gray-400 font-medium text-xs uppercase tracking-wider mb-3">Estimated Cost</p>
-            <div className="flex justify-between text-gray-400">
-              <span>Labor ({form.labor_hours || 0}h × $120/hr)</span>
-              <span className="text-white">${laborCost.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-gray-400">
-              <span>Parts</span>
-              <span className="text-white">${partsCost.toFixed(2)}</span>
-            </div>
-            {discountAmount > 0 && (
-              <div className="flex justify-between text-emerald-400">
-                <span>Discount {form.discount_type === "percentage" ? `(${form.discount_value}%)` : ""}</span>
-                <span>-${discountAmount.toFixed(2)}</span>
-              </div>
+            <p className="text-gray-400 font-medium text-xs uppercase tracking-wider mb-3">{form.custom_total ? "Fixed Cost" : "Estimated Cost"}</p>
+            {!form.custom_total ? (
+              <>
+                <div className="flex justify-between text-gray-400">
+                  <span>Labor ({form.labor_hours || 0}h × $120/hr)</span>
+                  <span className="text-white">${laborCost.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-gray-400">
+                  <span>Parts</span>
+                  <span className="text-white">${partsCost.toFixed(2)}</span>
+                </div>
+                {discountAmount > 0 && (
+                  <div className="flex justify-between text-emerald-400">
+                    <span>Discount {form.discount_type === "percentage" ? `(${form.discount_value}%)` : ""}</span>
+                    <span>-${discountAmount.toFixed(2)}</span>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="text-xs text-gray-500 italic">Cost locked (will not recalculate)</p>
             )}
             <div className="flex justify-between font-bold text-base border-t border-gray-700 pt-2 mt-2">
               <span className="text-white">Total</span>
               <span className="text-emerald-400">${totalCost.toFixed(2)}</span>
             </div>
+            {order && (
+              <div className="pt-2 mt-2 border-t border-gray-700">
+                <label className="flex items-center gap-2 text-gray-400 cursor-pointer">
+                  <input type="checkbox" checked={form.custom_total} onChange={e => setForm({...form, custom_total: e.target.checked})}
+                    className="w-4 h-4 rounded" />
+                  <span className="text-xs">Lock this total (don't recalculate)</span>
+                </label>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-3 pt-2">
