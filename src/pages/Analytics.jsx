@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -6,12 +6,16 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from "recharts";
 import { DollarSign, TrendingUp, Wrench, Users, Banknote, CreditCard, Clock } from "lucide-react";
-import { format } from "date-fns";
+import { format, startOfDay, startOfWeek, startOfMonth, startOfYear, parseISO, isAfter } from "date-fns";
 import StatCard from "../components/dashboard/StatCard";
 
 const COLORS = ["#0ea5e9", "#8b5cf6", "#10b981", "#f59e0b", "#ef4444", "#ec4899"];
 
+const REVENUE_PERIODS = ["Day", "Week", "Month", "Year"];
+
 export default function Analytics() {
+  const [revPeriod, setRevPeriod] = useState("Month");
+
   const { data: invoices = [] } = useQuery({
     queryKey: ["invoices"],
     queryFn: () => base44.entities.Invoice.list("-created_date", 500),
@@ -37,6 +41,21 @@ export default function Analytics() {
   const totalLaborRevenue = paidInvoices.reduce((sum, i) => sum + (i.labor_total || 0), 0);
   const totalPartsRevenue = paidInvoices.reduce((sum, i) => sum + (i.parts_total || 0), 0);
   const avgPerJob = paidInvoices.length > 0 ? totalRevenue / paidInvoices.length : 0;
+
+  const filteredRevenue = useMemo(() => {
+    const now = new Date();
+    const cutoff = revPeriod === "Day" ? startOfDay(now)
+      : revPeriod === "Week" ? startOfWeek(now, { weekStartsOn: 1 })
+      : revPeriod === "Month" ? startOfMonth(now)
+      : startOfYear(now);
+    return paidInvoices
+      .filter(i => {
+        const d = i.paid_date || i.created_date?.substring(0, 10);
+        if (!d) return false;
+        try { return isAfter(parseISO(d), cutoff) || parseISO(d).getTime() === cutoff.getTime(); } catch { return false; }
+      })
+      .reduce((sum, i) => sum + (i.total || 0), 0);
+  }, [paidInvoices, revPeriod]);
 
   // Monthly revenue
   const monthlyData = {};
@@ -124,7 +143,25 @@ export default function Analytics() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total Revenue" value={`$${totalRevenue.toFixed(2)}`} icon={DollarSign} color="green" />
+        {/* Clickable Total Revenue card with period toggle */}
+        <div className="rounded-xl border border-green-700/30 bg-gradient-to-br from-green-900/30 to-green-950/10 p-4 cursor-pointer select-none"
+          onClick={() => setRevPeriod(p => { const i = REVENUE_PERIODS.indexOf(p); return REVENUE_PERIODS[(i + 1) % REVENUE_PERIODS.length]; })}>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs text-gray-400 font-medium">Revenue ({revPeriod})</p>
+            <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center">
+              <DollarSign className="w-4 h-4 text-green-400" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold text-green-400">${filteredRevenue.toFixed(2)}</p>
+          <div className="flex gap-1 mt-2">
+            {REVENUE_PERIODS.map(p => (
+              <span key={p} onClick={e => { e.stopPropagation(); setRevPeriod(p); }}
+                className={`text-[10px] px-1.5 py-0.5 rounded font-medium transition-colors ${
+                  revPeriod === p ? "bg-green-500/30 text-green-300" : "text-gray-600 hover:text-gray-400"
+                }`}>{p}</span>
+            ))}
+          </div>
+        </div>
         <StatCard title="Avg Per Job" value={`$${avgPerJob.toFixed(2)}`} icon={TrendingUp} color="sky" />
         <StatCard title="Total Orders" value={orders.length} icon={Wrench} color="purple" />
         <StatCard title="Mechanics" value={mechanics.length} icon={Users} color="amber" />
