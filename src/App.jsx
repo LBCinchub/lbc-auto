@@ -18,6 +18,7 @@ import InvoiceDetail from './pages/InvoiceDetail';
 import Settings from './pages/Settings';
 import PaymentWall from './pages/PaymentWall';
 import Landing from './pages/Landing';
+import Billing from './pages/Billing';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -95,6 +96,7 @@ const AuthenticatedApp = () => {
       <Route path="/RepairOrderDetail/:orderId" element={<LayoutWrapper currentPageName="Repair Orders"><RepairOrderDetail /></LayoutWrapper>} />
       <Route path="/InvoiceDetail/:invoiceId" element={<LayoutWrapper currentPageName="Invoices"><InvoiceDetail /></LayoutWrapper>} />
       <Route path="/Settings" element={<LayoutWrapper currentPageName="Settings"><Settings /></LayoutWrapper>} />
+      <Route path="/Billing" element={<LayoutWrapper currentPageName="Billing"><Billing /></LayoutWrapper>} />
       <Route path="/PaymentWall" element={<PaymentWall />} />
       <Route path="/landing" element={<Landing />} />
       <Route path="*" element={<PageNotFound />} />

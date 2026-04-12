@@ -22,7 +22,8 @@ import {
   Banknote,
   Settings as SettingsIcon,
   LogOut,
-  HelpCircle
+  HelpCircle,
+  CreditCard
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -39,6 +40,7 @@ const navItems = [
   { name: "Time Tracking", icon: Clock, page: "TimeTracking" },
   { name: "Payroll", icon: Banknote, page: "Payroll" },
   { name: "Analytics", icon: BarChart3, page: "Analytics" },
+  { name: "Billing", icon: CreditCard, page: "Billing" },
 ];
 
 export default function Sidebar({ currentPage }) {
@@ -129,6 +131,19 @@ export default function Sidebar({ currentPage }) {
 
         {/* Settings & Footer */}
         <div className="p-3 border-t border-gray-800/50 space-y-2">
+          <Link
+            to="/Billing"
+            onClick={() => setMobileOpen(false)}
+            className={cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
+              currentPage === "Billing"
+                ? "bg-sky-500/10 text-sky-400 shadow-sm"
+                : "text-gray-400 hover:text-white hover:bg-gray-800/50"
+            )}
+          >
+            <CreditCard className="w-5 h-5 flex-shrink-0" />
+            {!collapsed && <span>Billing</span>}
+          </Link>
           <Link
             to="/Settings"
             onClick={() => setMobileOpen(false)}
