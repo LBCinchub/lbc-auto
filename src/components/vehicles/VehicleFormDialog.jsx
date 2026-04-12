@@ -7,8 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
-import { Loader2 } from "lucide-react";
+import { Loader2, Camera } from "lucide-react";
 import CustomerSearchInput from "@/components/shared/CustomerSearchInput";
+import VinScanner from "./VinScanner";
 
 const emptyForm = {
   customer_id: "", customer_name: "", vin: "", license_plate: "",
@@ -19,6 +20,20 @@ export default function VehicleFormDialog({ open, onClose, vehicle, onSaved, cus
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [decoding, setDecoding] = useState(false);
+  const [scanning, setScanning] = useState(false);
+
+  const handleVinScanned = ({ vin, make, model, year, color, engine_type }) => {
+    setForm(prev => ({
+      ...prev,
+      vin: vin || prev.vin,
+      make: make || prev.make,
+      model: model || prev.model,
+      year: year || prev.year,
+      color: color || prev.color,
+      engine_type: engine_type || prev.engine_type,
+    }));
+    setScanning(false);
+  };
 
   useEffect(() => {
     if (vehicle) {
@@ -84,6 +99,7 @@ export default function VehicleFormDialog({ open, onClose, vehicle, onSaved, cus
   };
 
   return (
+  <>
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -101,6 +117,10 @@ export default function VehicleFormDialog({ open, onClose, vehicle, onSaved, cus
               <Input value={form.vin} onChange={e => setForm({...form, vin: e.target.value})}
                 className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="17-character VIN" />
             </div>
+            <Button onClick={() => setScanning(true)} title="Scan VIN with camera"
+              className="mt-7 bg-purple-600 hover:bg-purple-700" size="sm">
+              <Camera className="w-4 h-4" />
+            </Button>
             <Button onClick={decodeVin} disabled={decoding || !form.vin}
               className="mt-7 bg-sky-500 hover:bg-sky-600" size="sm">
               {decoding ? <Loader2 className="w-4 h-4 animate-spin" /> : "Decode"}
@@ -160,5 +180,7 @@ export default function VehicleFormDialog({ open, onClose, vehicle, onSaved, cus
         </div>
       </DialogContent>
     </Dialog>
+    {scanning && <VinScanner onVinDetected={handleVinScanned} onClose={() => setScanning(false)} />}
+  </>
   );
 }
