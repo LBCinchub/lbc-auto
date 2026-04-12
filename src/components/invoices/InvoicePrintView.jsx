@@ -73,6 +73,7 @@ export default function InvoicePrintView({ invoice, onClose }) {
           <div className="mb-6">
             <p className="font-semibold">{invoice.customer_name}</p>
             <p className="text-sm text-gray-600">Customer #: {invoice.customer_id}</p>
+            {invoice.customer_phone && <p className="text-sm text-gray-600">Phone: {invoice.customer_phone}</p>}
             <p className="text-sm text-gray-600">{invoice.vehicle_info}</p>
           </div>
 

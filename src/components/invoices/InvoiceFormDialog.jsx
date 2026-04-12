@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 export default function InvoiceFormDialog({ open, onClose, invoice, orders, customers, onSaved, initialOrderId }) {
   const [form, setForm] = useState({
-    repair_order_id: "", customer_id: "", customer_name: "", vehicle_info: "",
+    repair_order_id: "", customer_id: "", customer_name: "", customer_phone: "", vehicle_info: "",
     parts_total: 0, labor_total: 0, tax_rate: 15, status: "unpaid",
     due_date: "", payment_method: "", amount_paid: 0, payment_history: [],
     receipt_number: "", card_last4: "", cashier_name: "", parts_used: [], customer_note: ""
@@ -24,6 +24,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         repair_order_id: invoice.repair_order_id || "",
         customer_id: invoice.customer_id || "",
         customer_name: invoice.customer_name || "",
+        customer_phone: invoice.customer_phone || "",
         vehicle_info: invoice.vehicle_info || "",
         parts_total: invoice.parts_total || 0,
         labor_total: invoice.labor_total || 0,
@@ -41,7 +42,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
       });
     } else {
       setForm({
-        repair_order_id: "", customer_id: "", customer_name: "", vehicle_info: "",
+        repair_order_id: "", customer_id: "", customer_name: "", customer_phone: "", vehicle_info: "",
         parts_total: 0, labor_total: 0, tax_rate: 15, status: "unpaid",
         due_date: "", payment_method: "", amount_paid: 0, payment_history: [],
         receipt_number: "", card_last4: "", cashier_name: "", parts_used: [], customer_note: ""
@@ -64,14 +65,22 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
     }
   }, [invoice, open, initialOrderId]);
 
-  const handleOrderSelect = (orderId) => {
+  const handleOrderSelect = async (orderId) => {
     const order = orders.find(o => o.id === orderId);
     if (order) {
+      let customerPhone = "";
+      try {
+        const customer = await base44.entities.Customer.get(order.customer_id);
+        customerPhone = customer.phone || "";
+      } catch (error) {
+        console.error("Error fetching customer:", error);
+      }
       setForm({
         ...form,
         repair_order_id: orderId,
         customer_id: order.customer_id,
         customer_name: order.customer_name,
+        customer_phone: customerPhone,
         vehicle_info: order.vehicle_info,
         parts_total: order.parts_cost || 0,
         labor_total: order.labor_cost || 0,
@@ -108,6 +117,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
     const data = {
       ...form,
       invoice_number: invoice?.invoice_number || `INV-${Date.now().toString(36).toUpperCase()}`,
+      customer_phone: form.customer_phone || "",
       parts_used: form.parts_used || [],
       tax_amount: taxAmount,
       total,

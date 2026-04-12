@@ -25,6 +25,12 @@ export default function EstimateDetail() {
     enabled: !!estimateId,
   });
 
+  const { data: customer } = useQuery({
+    queryKey: ["customer", estimate?.customer_id],
+    queryFn: () => base44.entities.Customer.get(estimate.customer_id),
+    enabled: !!estimate?.customer_id,
+  });
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -120,6 +126,7 @@ export default function EstimateDetail() {
             <div>
               <h3 className="text-xs uppercase text-gray-500 print:text-gray-600 font-semibold mb-2">Customer</h3>
               <p className="text-white print:text-black font-semibold">{estimate.customer_name}</p>
+              {customer?.phone && <p className="text-gray-400 print:text-gray-600 text-sm mt-1">{customer.phone}</p>}
             </div>
             <div>
               <h3 className="text-xs uppercase text-gray-500 print:text-gray-600 font-semibold mb-2">Vehicle</h3>
