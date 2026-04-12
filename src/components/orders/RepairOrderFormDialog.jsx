@@ -31,7 +31,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
 
   // Live cost calculation
   const mechanic = mechanics.find(m => m.id === form.mechanic_id);
-  const laborCost = (Number(form.labor_hours) || 0) * 120; // $120 per hour
+  const laborCost = Math.max(120, (Number(form.labor_hours) || 1) * 120); // Min $120 (1 hr)
   const partsCost = form.parts_used.reduce((sum, p) => sum + (Number(p.unit_price) || 0) * (Number(p.quantity) || 0), 0);
   const subtotal = laborCost + partsCost;
   const discountAmount = form.discount_type === "percentage" 
