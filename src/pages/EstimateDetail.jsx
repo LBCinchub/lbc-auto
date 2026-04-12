@@ -80,7 +80,7 @@ export default function EstimateDetail() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between no-print">
         <Button variant="ghost" onClick={() => navigate(-1)} className="text-gray-400 hover:text-white gap-2">
           <ArrowLeft className="w-4 h-4" /> Back
         </Button>
@@ -96,9 +96,9 @@ export default function EstimateDetail() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-8 print:border-0 print:bg-white print:text-black">
+      <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-8 print:border-0 print:bg-white print:text-black print:p-0">
         {/* Header */}
-        <div className="mb-8 pb-8 border-b border-gray-800 print:border-gray-300">
+        <div className="mb-8 pb-8 border-b border-gray-800 print:border-gray-300 no-print">
           <div className="flex items-start justify-between mb-6">
             <div>
               {user?.business_name && <h2 className="text-sm font-semibold text-sky-400 print:text-sky-600 mb-2">{user.business_name}</h2>}
@@ -203,18 +203,18 @@ export default function EstimateDetail() {
 
       <style>{`
         @media print {
-          body { background: white; }
-          .print\\:border-0 { border: none; }
-          .print\\:bg-white { background: white; }
-          .print\\:text-black { color: black; }
-          .print\\:text-gray-300 { color: #d1d5db; }
-          .print\\:text-gray-600 { color: #4b5563; }
-          .print\\:text-gray-700 { color: #374151; }
-          .print\\:border-gray-300 { border-color: #d1d5db; }
-          .print\\:bg-gray-100 { background: #f3f4f6; }
-          .print\\:mb-6 { margin-bottom: 1.5rem; }
-          .print\\:p-3 { padding: 0.75rem; }
-          .no-print { display: none; }
+          body { background: white; margin: 0; padding: 0; }
+          .print\:border-0 { border: none; }
+          .print\:bg-white { background: white; }
+          .print\:text-black { color: black; }
+          .print\:text-gray-300 { color: #d1d5db; }
+          .print\:text-gray-600 { color: #4b5563; }
+          .print\:text-gray-700 { color: #374151; }
+          .print\:border-gray-300 { border-color: #d1d5db; }
+          .print\:bg-gray-100 { background: #f3f4f6; }
+          .print\:mb-6 { margin-bottom: 1.5rem; }
+          .print\:p-3 { padding: 0.75rem; }
+          .no-print { display: none !important; }
         }
       `}</style>
     </div>
