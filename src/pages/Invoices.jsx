@@ -213,8 +213,29 @@ export default function Invoices() {
                     {inv.customer_name} · {inv.vehicle_info}
                   </p>
                 </div>
-                <div className="flex items-center gap-3 flex-shrink-0">
-                  <span className="text-lg font-bold text-white">${inv.total?.toFixed(2)}</span>
+                <div className="flex items-center gap-4 flex-shrink-0">
+                  <div className="text-right">
+                    <p className="text-xs text-gray-500">Total</p>
+                    <p className="text-base font-bold text-white">${(inv.total || 0).toFixed(2)}</p>
+                  </div>
+                  {(inv.amount_paid > 0) && (
+                    <div className="text-right">
+                      <p className="text-xs text-gray-500">Paid</p>
+                      <p className="text-base font-semibold text-emerald-400">${(inv.amount_paid || 0).toFixed(2)}</p>
+                    </div>
+                  )}
+                  {(inv.status === 'partial' || inv.status === 'unpaid') && inv.balance_due > 0 && (
+                    <div className="text-right">
+                      <p className="text-xs text-gray-500">Balance</p>
+                      <p className="text-base font-bold text-yellow-400">${(inv.balance_due || 0).toFixed(2)}</p>
+                    </div>
+                  )}
+                  {inv.status === 'paid' && (
+                    <div className="text-right">
+                      <p className="text-xs text-gray-500">Balance</p>
+                      <p className="text-base font-bold text-emerald-400">$0.00</p>
+                    </div>
+                  )}
                   <div className="flex gap-1">
                     {(inv.status === "unpaid" || inv.status === "partial") && (
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-emerald-500 hover:text-emerald-400"

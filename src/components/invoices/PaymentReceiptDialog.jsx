@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,13 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved }
     note: "",
   });
   const [saving, setSaving] = useState(false);
+
+  // Reset form whenever a new invoice is opened
+  React.useEffect(() => {
+    if (open) {
+      setForm({ amount: "", payment_method: "card", card_last4: "", receipt_number: "", cashier_code: "", note: "" });
+    }
+  }, [open, invoice?.id]);
 
   if (!invoice) return null;
 
