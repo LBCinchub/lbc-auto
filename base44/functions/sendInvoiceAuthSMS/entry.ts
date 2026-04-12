@@ -12,6 +12,11 @@ Deno.serve(async (req) => {
     const { invoice_id, phone, app_url } = await req.json();
     if (!invoice_id || !phone) return Response.json({ error: 'invoice_id and phone are required' }, { status: 400 });
 
+    // Normalize phone to E.164 format
+    const digits = phone.replace(/\D/g, '');
+    const normalized = digits.startsWith('1') && digits.length === 11 ? `+${digits}` : `+1${digits}`;
+
+
     // Generate a random token
     const token = crypto.randomUUID().replace(/-/g, '');
 
@@ -25,7 +30,7 @@ Deno.serve(async (req) => {
 
     const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
     const formData = new URLSearchParams();
-    formData.append('To', phone);
+    formData.append('To', normalized);
     formData.append('From', TWILIO_PHONE_NUMBER);
     formData.append('Body', `LBC AUTO - Please review and approve your invoice by signing here:\n${signUrl}`);
 
