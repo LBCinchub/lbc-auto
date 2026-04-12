@@ -62,9 +62,11 @@ export default function Dashboard() {
         <p className="text-gray-400 text-sm mt-1">Welcome back. Here's your shop overview.</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Clickable Total Revenue card with period toggle */}
-        <div className="rounded-xl border border-green-700/30 bg-gradient-to-br from-green-900/30 to-green-950/10 p-4 cursor-pointer select-none"
+      {/* Owner Cash Flow */}
+      <div className="rounded-xl border border-green-700/30 bg-gray-900/50 p-5">
+        <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-3">Owner — Cash Flow</p>
+        <div
+          className="inline-flex flex-col cursor-pointer select-none rounded-xl border border-green-700/30 bg-gradient-to-br from-green-900/30 to-green-950/10 p-4 min-w-[200px]"
           onClick={() => setRevPeriod(p => { const i = REVENUE_PERIODS.indexOf(p); return REVENUE_PERIODS[(i + 1) % REVENUE_PERIODS.length]; })}>
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs text-gray-400 font-medium">Revenue ({revPeriod})</p>
@@ -82,12 +84,18 @@ export default function Dashboard() {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Work Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard title="Vehicles Waiting" value={waiting.length} icon={Clock} color="amber"
           onClick={() => openModal("Vehicles Waiting", waiting, "order")} />
         <StatCard title="In Progress" value={inProgress.length} icon={Wrench} color="sky"
           onClick={() => openModal("In Progress", inProgress, "order")} />
         <StatCard title="Completed" value={completed.length} icon={CheckCircle2} color="green"
           onClick={() => openModal("Completed", completed, "order")} />
+        <StatCard title="Today's Appts" value={todayAppts.length} icon={Calendar} color="purple"
+          onClick={() => openModal("Today's Appointments", todayAppts, "appt")} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
