@@ -65,7 +65,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
   const removePart = (idx) => setForm(f => ({ ...f, parts_items: f.parts_items.filter((_, i) => i !== idx) }));
 
   // ---- Totals ----
-  const laborTotal = form.labor_items.reduce((s, r) => s + (r.total || 0), 0);
+  const laborTotal = 120; // Fixed labor cost
   const partsTotal = form.parts_items.reduce((s, r) => s + (r.total || 0), 0);
   const subtotal   = laborTotal + partsTotal;
   const taxRate    = parseFloat(form.tax_rate) || 0;
@@ -175,9 +175,6 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
           <div>
             <div className="flex items-center justify-between mb-2">
               <Label className="text-gray-300 font-semibold">Labor</Label>
-              <Button size="sm" variant="ghost" onClick={addLabor} className="text-sky-400 hover:text-sky-300 h-7 px-2">
-                <Plus className="w-4 h-4 mr-1" /> Add Row
-              </Button>
             </div>
             <div className="rounded-lg border border-gray-800 overflow-hidden">
               <table className="w-full text-sm">
@@ -187,32 +184,17 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
                     <th className="px-3 py-2 text-right w-20">Hours</th>
                     <th className="px-3 py-2 text-right w-24">Rate/hr</th>
                     <th className="px-3 py-2 text-right w-24">Total</th>
-                    <th className="w-8" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-800">
-                  {form.labor_items.map((row, idx) => (
-                    <tr key={idx} className="bg-gray-900">
-                      <td className="px-2 py-1.5">
-                        <Input value={row.description} onChange={e => updateLabor(idx, "description", e.target.value)}
-                          className="bg-gray-800 border-0 text-white h-8 text-sm" placeholder="e.g. Oil Change" />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <Input type="number" value={row.hours} onChange={e => updateLabor(idx, "hours", e.target.value)}
-                          className="bg-gray-800 border-0 text-white h-8 text-sm text-right" placeholder="0" />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <Input type="number" value={row.rate} onChange={e => updateLabor(idx, "rate", e.target.value)}
-                          className="bg-gray-800 border-0 text-white h-8 text-sm text-right" placeholder="0.00" />
-                      </td>
-                      <td className="px-3 py-1.5 text-right text-gray-300 font-medium">${row.total.toFixed(2)}</td>
-                      <td className="pr-2 py-1.5">
-                        <button onClick={() => removeLabor(idx)} className="text-gray-600 hover:text-rose-400 transition-colors">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  <tr className="bg-gray-900">
+                    <td className="px-2 py-1.5">
+                      <span className="text-gray-300">Fixed Labor Cost</span>
+                    </td>
+                    <td className="px-2 py-1.5 text-right text-gray-400">—</td>
+                    <td className="px-2 py-1.5 text-right text-gray-400">—</td>
+                    <td className="px-3 py-1.5 text-right text-gray-300 font-medium">$120.00</td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -280,7 +262,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
 
           {/* Summary */}
           <div className="rounded-xl border border-gray-700 bg-gray-800/40 p-4 space-y-2 text-sm">
-            <div className="flex justify-between text-gray-400"><span>Labor Subtotal</span><span>${laborTotal.toFixed(2)}</span></div>
+            <div className="flex justify-between text-gray-400"><span>Labor Subtotal</span><span>$120.00</span></div>
             <div className="flex justify-between text-gray-400"><span>Parts Subtotal</span><span>${partsTotal.toFixed(2)}</span></div>
             {taxRate > 0 && <div className="flex justify-between text-gray-400"><span>Tax ({taxRate}%)</span><span>${taxAmount.toFixed(2)}</span></div>}
             <div className="flex justify-between text-white font-bold text-base border-t border-gray-700 pt-2 mt-2">
