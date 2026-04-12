@@ -202,7 +202,8 @@ export default function Invoices() {
         <div className="space-y-3">
           {filtered.map(inv => (
             <div key={inv.id}
-              className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5 hover:border-sky-500/30 transition-colors">
+              className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5 hover:border-sky-500/30 transition-colors cursor-pointer"
+              onClick={() => setPrintInvoice(inv)}>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
