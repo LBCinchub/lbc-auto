@@ -2,7 +2,7 @@ import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function RepairOrderDetail() {
@@ -36,9 +36,14 @@ export default function RepairOrderDetail() {
 
   return (
     <div className="space-y-6">
-      <Button variant="ghost" onClick={() => navigate(-1)} className="text-gray-400 hover:text-white gap-2">
-        <ArrowLeft className="w-4 h-4" /> Back
-      </Button>
+      <div className="flex items-center justify-between">
+        <Button variant="ghost" onClick={() => navigate(-1)} className="text-gray-400 hover:text-white gap-2">
+          <ArrowLeft className="w-4 h-4" /> Back
+        </Button>
+        <Button onClick={() => navigate("/Estimates")} className="bg-sky-500 hover:bg-sky-600 gap-2">
+          <FileText className="w-4 h-4" /> View Estimates
+        </Button>
+      </div>
 
       <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-6">
         <div className="flex items-start justify-between mb-6">
