@@ -1,15 +1,21 @@
 import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, FileText, Plus } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, FileText, Plus, Trash2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import EstimateFormDialog from "@/components/estimates/EstimateFormDialog";
 
 export default function RepairOrderDetail() {
   const { orderId } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [showEstimateDialog, setShowEstimateDialog] = useState(false);
+  const [showPartDialog, setShowPartDialog] = useState(false);
+  const [newPart, setNewPart] = useState({ name: "", quantity: "", unit_price: "" });
 
   const { data: order, isLoading } = useQuery({
     queryKey: ["repairOrder", orderId],
@@ -123,7 +129,12 @@ export default function RepairOrderDetail() {
 
         {order.parts_used && order.parts_used.length > 0 && (
           <div className="mt-8 pt-6 border-t border-gray-800">
-            <h3 className="text-lg font-bold text-white mb-4">Parts Used</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-white">Parts Used</h3>
+              <button onClick={() => setShowPartDialog(true)} className="text-sky-400 hover:text-sky-300 text-sm flex items-center gap-1">
+                <Plus className="w-4 h-4" /> Add Part
+              </button>
+            </div>
             <div className="space-y-3">
               {order.parts_used.map((part, idx) => (
                 <div key={idx} className="flex justify-between items-center bg-gray-800/30 rounded-lg p-3">
@@ -131,10 +142,21 @@ export default function RepairOrderDetail() {
                     <p className="text-white font-medium">{part.name}</p>
                     <p className="text-gray-400 text-sm">Qty: {part.quantity}</p>
                   </div>
-                  <p className="text-white font-semibold">${part.total?.toFixed(2)}</p>
+                  <div className="flex items-center gap-4">
+                    <p className="text-white font-semibold">${part.total?.toFixed(2)}</p>
+                    <button onClick={() => removePart(idx)} className="text-gray-600 hover:text-rose-400 transition-colors">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
+          </div>
+        ) || (
+          <div className="mt-8 pt-6 border-t border-gray-800">
+            <button onClick={() => setShowPartDialog(true)} className="text-sky-400 hover:text-sky-300 flex items-center gap-2 font-medium">
+              <Plus className="w-5 h-5" /> Add First Part
+            </button>
           </div>
         )}
 
@@ -157,6 +179,55 @@ export default function RepairOrderDetail() {
           navigate("/Estimates");
         }}
       />
+
+      <Dialog open={showPartDialog} onOpenChange={setShowPartDialog}>
+        <DialogContent className="bg-gray-900 border-gray-800 text-white">
+          <DialogHeader>
+            <DialogTitle>Add Part</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-gray-400">Part Name</Label>
+              <Input value={newPart.name} onChange={e => setNewPart({...newPart, name: e.target.value})} 
+                className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="e.g. Oil Filter" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-gray-400">Quantity</Label>
+                <Input type="number" value={newPart.quantity} onChange={e => setNewPart({...newPart, quantity: e.target.value})} 
+                  className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="0" />
+              </div>
+              <div>
+                <Label className="text-gray-400">Unit Price</Label>
+                <Input type="number" value={newPart.unit_price} onChange={e => setNewPart({...newPart, unit_price: e.target.value})} 
+                  className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="0.00" />
+              </div>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button onClick={() => setShowPartDialog(false)} className="flex-1 px-4 py-2 rounded border border-gray-700 text-gray-300 hover:bg-gray-800">Cancel</button>
+              <button onClick={addPart} className="flex-1 px-4 py-2 rounded bg-sky-500 hover:bg-sky-600 text-white font-medium">Add Part</button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
+
+  function addPart() {
+    if (!newPart.name || !newPart.quantity || !newPart.unit_price) return;
+    const qty = parseFloat(newPart.quantity) || 0;
+    const price = parseFloat(newPart.unit_price) || 0;
+    const part = { name: newPart.name, quantity: qty, unit_price: price, total: qty * price };
+    const updatedParts = [...(order.parts_used || []), part];
+    base44.entities.RepairOrder.update(orderId, { parts_used: updatedParts });
+    setNewPart({ name: "", quantity: "", unit_price: "" });
+    setShowPartDialog(false);
+    queryClient.invalidateQueries({ queryKey: ["repairOrder", orderId] });
+  }
+
+  function removePart(idx) {
+    const updatedParts = order.parts_used.filter((_, i) => i !== idx);
+    base44.entities.RepairOrder.update(orderId, { parts_used: updatedParts });
+    queryClient.invalidateQueries({ queryKey: ["repairOrder", orderId] });
+  }
 }
