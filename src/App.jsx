@@ -14,6 +14,7 @@ import VehicleTimeline from './pages/VehicleTimeline';
 import RepairOrderDetail from './pages/RepairOrderDetail';
 import InvoiceDetail from './pages/InvoiceDetail';
 import Settings from './pages/Settings';
+import PaymentWall from './pages/PaymentWall';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -24,7 +25,7 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   : <>{children}</>;
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+  const { user, isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
 
   // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
@@ -43,6 +44,18 @@ const AuthenticatedApp = () => {
       // Redirect to login automatically
       navigateToLogin();
       return null;
+    }
+  }
+
+  // Check trial and subscription status
+  if (user) {
+    const trialStarted = user.trial_started_date ? new Date(user.trial_started_date) : new Date(user.created_date);
+    const trialEndDate = new Date(trialStarted);
+    trialEndDate.setDate(trialEndDate.getDate() + 7);
+    const now = new Date();
+
+    if (now > trialEndDate && user.subscription_status !== 'active') {
+      return <Routes><Route path="*" element={<PaymentWall />} /></Routes>;
     }
   }
 
@@ -73,6 +86,7 @@ const AuthenticatedApp = () => {
       <Route path="/RepairOrderDetail/:orderId" element={<LayoutWrapper currentPageName="Repair Orders"><RepairOrderDetail /></LayoutWrapper>} />
       <Route path="/InvoiceDetail/:invoiceId" element={<LayoutWrapper currentPageName="Invoices"><InvoiceDetail /></LayoutWrapper>} />
       <Route path="/Settings" element={<LayoutWrapper currentPageName="Settings"><Settings /></LayoutWrapper>} />
+      <Route path="/PaymentWall" element={<PaymentWall />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

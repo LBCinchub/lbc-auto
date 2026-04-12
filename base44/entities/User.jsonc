@@ -13,6 +13,28 @@
     "business_name": {
       "type": "string",
       "description": "Auto shop business name"
+    },
+    "trial_started_date": {
+      "type": "string",
+      "description": "Date user started 7-day free trial"
+    },
+    "subscription_status": {
+      "type": "string",
+      "enum": [
+        "trial",
+        "active",
+        "expired"
+      ],
+      "default": "trial",
+      "description": "User subscription status"
+    },
+    "payment_transaction_id": {
+      "type": "string",
+      "description": "Solana transaction ID for payment verification"
+    },
+    "payment_date": {
+      "type": "string",
+      "description": "Date payment was received"
     }
   }
 }
