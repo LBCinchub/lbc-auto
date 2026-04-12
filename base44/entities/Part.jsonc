@@ -1,0 +1,56 @@
+{
+  "name": "Part",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Part name"
+    },
+    "part_number": {
+      "type": "string",
+      "description": "Part number / SKU"
+    },
+    "supplier": {
+      "type": "string",
+      "description": "Supplier name"
+    },
+    "cost_price": {
+      "type": "number",
+      "description": "Cost price"
+    },
+    "sale_price": {
+      "type": "number",
+      "description": "Sale price"
+    },
+    "quantity": {
+      "type": "number",
+      "description": "Quantity in stock"
+    },
+    "min_stock": {
+      "type": "number",
+      "description": "Minimum stock level alert"
+    },
+    "category": {
+      "type": "string",
+      "description": "Part category"
+    }
+  },
+  "required": [
+    "name",
+    "cost_price",
+    "sale_price",
+    "quantity"
+  ],
+  "rls": {
+    "create": true,
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

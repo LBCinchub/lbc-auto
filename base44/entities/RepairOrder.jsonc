@@ -1,0 +1,144 @@
+{
+  "name": "RepairOrder",
+  "type": "object",
+  "properties": {
+    "order_number": {
+      "type": "string",
+      "description": "Auto-generated order number"
+    },
+    "customer_id": {
+      "type": "string",
+      "description": "Customer ID"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Customer name for display"
+    },
+    "vehicle_id": {
+      "type": "string",
+      "description": "Vehicle ID"
+    },
+    "vehicle_info": {
+      "type": "string",
+      "description": "Vehicle year make model for display"
+    },
+    "mechanic_id": {
+      "type": "string",
+      "description": "Assigned mechanic ID"
+    },
+    "mechanic_name": {
+      "type": "string",
+      "description": "Mechanic name for display"
+    },
+    "description": {
+      "type": "string",
+      "description": "Job description"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "waiting",
+        "in_progress",
+        "waiting_for_parts",
+        "completed",
+        "delivered"
+      ],
+      "default": "waiting",
+      "description": "Repair status"
+    },
+    "labor_hours": {
+      "type": "number",
+      "description": "Total labor hours"
+    },
+    "labor_cost": {
+      "type": "number",
+      "description": "Total labor cost"
+    },
+    "parts_used": {
+      "type": "array",
+      "description": "Parts used in repair",
+      "items": {
+        "type": "object",
+        "properties": {
+          "part_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "unit_price": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "parts_cost": {
+      "type": "number",
+      "description": "Total parts cost"
+    },
+    "total_cost": {
+      "type": "number",
+      "description": "Total repair cost"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Additional notes"
+    },
+    "photos": {
+      "type": "array",
+      "description": "Uploaded photos",
+      "items": {
+        "type": "string"
+      }
+    },
+    "estimated_completion": {
+      "type": "string",
+      "format": "date",
+      "description": "Estimated completion date"
+    },
+    "history": {
+      "type": "array",
+      "description": "Repair order history log",
+      "items": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string"
+          },
+          "user": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "changes": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "customer_id",
+    "vehicle_id",
+    "description"
+  ],
+  "rls": {
+    "create": true,
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

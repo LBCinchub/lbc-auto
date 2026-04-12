@@ -1,0 +1,42 @@
+{
+  "name": "Customer",
+  "type": "object",
+  "properties": {
+    "full_name": {
+      "type": "string",
+      "description": "Customer full name"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Phone number"
+    },
+    "email": {
+      "type": "string",
+      "description": "Email address"
+    },
+    "address": {
+      "type": "string",
+      "description": "Street address"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Additional notes"
+    }
+  },
+  "required": [
+    "full_name",
+    "phone"
+  ],
+  "rls": {
+    "create": true,
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

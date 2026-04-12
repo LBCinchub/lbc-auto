@@ -1,0 +1,52 @@
+{
+  "name": "TimeEntry",
+  "type": "object",
+  "properties": {
+    "mechanic_id": {
+      "type": "string",
+      "description": "Linked mechanic ID"
+    },
+    "mechanic_name": {
+      "type": "string",
+      "description": "Mechanic name for display"
+    },
+    "clock_in": {
+      "type": "string",
+      "description": "Clock-in timestamp (ISO)"
+    },
+    "clock_out": {
+      "type": "string",
+      "description": "Clock-out timestamp (ISO)"
+    },
+    "duration_minutes": {
+      "type": "number",
+      "description": "Total minutes worked"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Optional notes"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Work date"
+    }
+  },
+  "required": [
+    "mechanic_id",
+    "clock_in",
+    "date"
+  ],
+  "rls": {
+    "create": true,
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

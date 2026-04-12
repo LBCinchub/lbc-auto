@@ -1,0 +1,52 @@
+{
+  "name": "Mechanic",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Mechanic full name"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Phone number"
+    },
+    "email": {
+      "type": "string",
+      "description": "Email address"
+    },
+    "specialty": {
+      "type": "string",
+      "description": "Specialization area"
+    },
+    "hourly_rate": {
+      "type": "number",
+      "description": "Hourly labor rate in dollars"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "available",
+        "busy",
+        "off_duty"
+      ],
+      "default": "available",
+      "description": "Current availability status"
+    }
+  },
+  "required": [
+    "name",
+    "hourly_rate"
+  ],
+  "rls": {
+    "create": true,
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}
