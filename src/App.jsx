@@ -1,6 +1,7 @@
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
+import { base44 } from '@/api/base44Client'
 import { pagesConfig } from './pages.config'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
@@ -15,6 +16,7 @@ import RepairOrderDetail from './pages/RepairOrderDetail';
 import InvoiceDetail from './pages/InvoiceDetail';
 import Settings from './pages/Settings';
 import PaymentWall from './pages/PaymentWall';
+import Landing from './pages/Landing';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -45,6 +47,11 @@ const AuthenticatedApp = () => {
       navigateToLogin();
       return null;
     }
+  }
+
+  // Initialize trial on first login
+  if (user && !user.trial_started_date) {
+    base44.functions.invoke('initializeUserTrial', {});
   }
 
   // Check trial and subscription status
@@ -87,6 +94,7 @@ const AuthenticatedApp = () => {
       <Route path="/InvoiceDetail/:invoiceId" element={<LayoutWrapper currentPageName="Invoices"><InvoiceDetail /></LayoutWrapper>} />
       <Route path="/Settings" element={<LayoutWrapper currentPageName="Settings"><Settings /></LayoutWrapper>} />
       <Route path="/PaymentWall" element={<PaymentWall />} />
+      <Route path="/landing" element={<Landing />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
