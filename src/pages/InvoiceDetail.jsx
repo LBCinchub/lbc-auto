@@ -88,12 +88,12 @@ export default function InvoiceDetail() {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div>
-            <p className="text-gray-500 text-xs uppercase mb-1">Vehicle</p>
-            <p className="text-white font-semibold">{invoice.vehicle_info}</p>
+            <p className="text-gray-500 text-xs uppercase mb-1">Customer #</p>
+            <p className="text-white font-semibold">{invoice.customer_id}</p>
           </div>
           <div>
-            <p className="text-gray-500 text-xs uppercase mb-1">Repair Order</p>
-            <p className="text-white">{invoice.repair_order_id}</p>
+            <p className="text-gray-500 text-xs uppercase mb-1">Vehicle</p>
+            <p className="text-white font-semibold">{invoice.vehicle_info}</p>
           </div>
           <div>
             <p className="text-gray-500 text-xs uppercase mb-1">Due Date</p>
