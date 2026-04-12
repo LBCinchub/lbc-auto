@@ -8,6 +8,11 @@ import { Printer, X } from "lucide-react";
 export default function InvoicePrintView({ invoice, onClose }) {
   const printRef = useRef(null);
 
+  // Resolve parts to display: prefer parts_used array, fallback to line_items of type 'part'
+  const partsRows = (invoice.parts_used && invoice.parts_used.length > 0)
+    ? invoice.parts_used
+    : (invoice.line_items || []).filter(li => li.type === "part" || li.type === "parts");
+
   const handlePrint = () => {
     const content = printRef.current;
     const win = window.open("", "_blank");
@@ -84,10 +89,13 @@ export default function InvoicePrintView({ invoice, onClose }) {
                   <td className="p-3 text-right">${invoice.labor_total?.toFixed(2)}</td>
                 </tr>
               )}
-              {invoice.parts_used && invoice.parts_used.length > 0 ? (
-                invoice.parts_used.map((p, i) => (
+              {partsRows.length > 0 ? (
+                partsRows.map((p, i) => (
                   <tr key={i} className="border-b">
-                    <td className="p-3">{p.name} <span className="text-gray-400 text-sm">x{p.quantity}</span></td>
+                    <td className="p-3">
+                      {p.name || p.description}
+                      {p.quantity && <span className="text-gray-400 text-sm ml-1">x{p.quantity}</span>}
+                    </td>
                     <td className="p-3 text-right">${(p.total || 0).toFixed(2)}</td>
                   </tr>
                 ))
