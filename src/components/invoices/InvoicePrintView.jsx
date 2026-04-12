@@ -49,8 +49,8 @@ export default function InvoicePrintView({ invoice, onClose }) {
         .footer { margin-top: 60px; text-align: center; color: #94a3b8; font-size: 12px; }
       </style></head><body>
       ${content.innerHTML}
-      <div class="footer">LBC Auto · Powered by Lumina Blockchain</div>
-      </body></html>
+       <div class="footer">Powered by LBC.NETWORK</div>
+       </body></html>
     `);
     win.document.close();
     win.print();
@@ -160,6 +160,7 @@ export default function InvoicePrintView({ invoice, onClose }) {
 
           <div className="mt-8 text-center text-xs text-gray-400">
             {invoice.status === "paid" ? "✓ PAID" : invoice.due_date ? `Due: ${invoice.due_date}` : "UNPAID"}
+            <p className="mt-4 text-gray-400">Powered by LBC.NETWORK</p>
           </div>
         </div>
       </DialogContent>
