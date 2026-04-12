@@ -49,7 +49,6 @@ export default function InvoicePrintView({ invoice, onClose }) {
         .footer { margin-top: 60px; text-align: center; color: #94a3b8; font-size: 12px; }
       </style></head><body>
       ${content.innerHTML}
-       <div class="footer">Powered by LBC.NETWORK</div>
        </body></html>
     `);
     win.document.close();
