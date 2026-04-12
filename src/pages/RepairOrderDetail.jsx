@@ -1,18 +1,30 @@
-import React from "react";
+import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, FileText } from "lucide-react";
+import { ArrowLeft, FileText, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import EstimateFormDialog from "@/components/estimates/EstimateFormDialog";
 
 export default function RepairOrderDetail() {
   const { orderId } = useParams();
   const navigate = useNavigate();
+  const [showEstimateDialog, setShowEstimateDialog] = useState(false);
 
   const { data: order, isLoading } = useQuery({
     queryKey: ["repairOrder", orderId],
     queryFn: () => base44.entities.RepairOrder.get(orderId),
     enabled: !!orderId,
+  });
+
+  const { data: customers = [] } = useQuery({
+    queryKey: ["customers"],
+    queryFn: () => base44.entities.Customer.list(),
+  });
+
+  const { data: vehicles = [] } = useQuery({
+    queryKey: ["vehicles"],
+    queryFn: () => base44.entities.Vehicle.list(),
   });
 
   if (isLoading) {
@@ -40,9 +52,14 @@ export default function RepairOrderDetail() {
         <Button variant="ghost" onClick={() => navigate(-1)} className="text-gray-400 hover:text-white gap-2">
           <ArrowLeft className="w-4 h-4" /> Back
         </Button>
-        <Button onClick={() => navigate("/Estimates")} className="bg-sky-500 hover:bg-sky-600 gap-2">
-          <FileText className="w-4 h-4" /> View Estimates
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => setShowEstimateDialog(true)} className="bg-green-600 hover:bg-green-700 gap-2">
+            <Plus className="w-4 h-4" /> Create Estimate
+          </Button>
+          <Button onClick={() => navigate("/Estimates")} className="bg-sky-500 hover:bg-sky-600 gap-2">
+            <FileText className="w-4 h-4" /> View Estimates
+          </Button>
+        </div>
       </div>
 
       <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-6">
@@ -128,6 +145,18 @@ export default function RepairOrderDetail() {
           </div>
         )}
       </div>
+
+      <EstimateFormDialog
+        open={showEstimateDialog}
+        onClose={() => setShowEstimateDialog(false)}
+        estimate={null}
+        customers={customers}
+        vehicles={vehicles}
+        onSaved={() => {
+          setShowEstimateDialog(false);
+          navigate("/Estimates");
+        }}
+      />
     </div>
   );
 }
