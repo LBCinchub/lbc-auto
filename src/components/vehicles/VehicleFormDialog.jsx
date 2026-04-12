@@ -22,15 +22,10 @@ export default function VehicleFormDialog({ open, onClose, vehicle, onSaved, cus
   const [decoding, setDecoding] = useState(false);
   const [scanning, setScanning] = useState(false);
 
-  const handleVinScanned = ({ vin, make, model, year, color, engine_type }) => {
+  const handleVinScanned = ({ vin }) => {
     setForm(prev => ({
       ...prev,
       vin: vin || prev.vin,
-      make: make || prev.make,
-      model: model || prev.model,
-      year: year || prev.year,
-      color: color || prev.color,
-      engine_type: engine_type || prev.engine_type,
     }));
     setScanning(false);
   };
