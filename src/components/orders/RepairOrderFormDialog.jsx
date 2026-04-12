@@ -105,10 +105,10 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
       if (p) {
         updated[idx].name = p.name;
         updated[idx].unit_price = p.sale_price;
-        updated[idx].total = p.sale_price * updated[idx].quantity;
       }
     }
-
+    // Always recalculate total
+    updated[idx].total = (Number(updated[idx].unit_price) || 0) * (Number(updated[idx].quantity) || 0);
     setForm({ ...form, parts_used: updated });
   };
 
