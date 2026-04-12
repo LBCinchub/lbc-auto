@@ -30,7 +30,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
 
   // Live cost calculation
   const mechanic = mechanics.find(m => m.id === form.mechanic_id);
-  const laborCost = (Number(form.labor_hours) || 0) * (mechanic?.hourly_rate || 0);
+  const laborCost = 120; // Fixed labor cost
   const partsCost = form.parts_used.reduce((sum, p) => sum + (Number(p.unit_price) || 0) * (Number(p.quantity) || 0), 0);
   const totalCost = laborCost + partsCost;
 
@@ -125,8 +125,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
     setSaving(true);
     try {
       const laborHours = Number(form.labor_hours) || 0;
-      const mechanic = mechanics.find(m => m.id === form.mechanic_id);
-      const laborCost = laborHours * (mechanic?.hourly_rate || 0);
+      const laborCost = 120; // Fixed labor cost
       const partsCost = form.parts_used.reduce((sum, p) => sum + (p.total || 0), 0);
       const totalCost = laborCost + partsCost;
 
@@ -247,7 +246,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
             <div>
               <Label className="text-gray-400">Labor Hours</Label>
               <Input type="number" value={form.labor_hours} onChange={e => setForm({ ...form, labor_hours: e.target.value })}
-                className="bg-gray-800 border-gray-700 text-white mt-1" step="0.5" />
+                className="bg-gray-800 border-gray-700 text-white mt-1" step="0.5" disabled />
             </div>
             <div>
               <Label className="text-gray-400">Est. Completion</Label>
@@ -353,8 +352,8 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
           <div className="rounded-xl border border-gray-700 bg-gray-800/40 p-4 space-y-2 text-sm">
             <p className="text-gray-400 font-medium text-xs uppercase tracking-wider mb-3">Estimated Cost</p>
             <div className="flex justify-between text-gray-400">
-              <span>Labor ({form.labor_hours || 0}h × ${mechanic?.hourly_rate || 0}/hr)</span>
-              <span className="text-white">${laborCost.toFixed(2)}</span>
+              <span>Labor (Fixed Cost)</span>
+              <span className="text-white">$120.00</span>
             </div>
             <div className="flex justify-between text-gray-400">
               <span>Parts</span>
