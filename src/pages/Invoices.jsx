@@ -227,6 +227,11 @@ export default function Invoices() {
                   <p className="text-sm text-gray-400 mt-0.5">
                     {inv.customer_name} · {inv.vehicle_info}
                   </p>
+                  {inv.parts_used && inv.parts_used.length > 0 && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Parts: {inv.parts_used.map(p => p.name).join(', ')}
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-4 flex-shrink-0">
                   <div className="text-right">
