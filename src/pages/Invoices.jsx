@@ -26,13 +26,19 @@ export default function Invoices() {
   const sendAuthSMS = async (inv) => {
     const customer = customers.find(c => c.id === inv.customer_id);
     const phone = customer?.phone;
-    if (!phone) { alert("No phone number found for this customer."); return; }
+    if (!phone) { alert("No phone number found for this customer. Please add a phone number to the customer profile first."); return; }
     setSendingAuth(inv.id);
-    const appUrl = window.location.origin;
-    await base44.functions.invoke('sendInvoiceAuthSMS', { invoice_id: inv.id, phone, app_url: appUrl });
-    queryClient.invalidateQueries({ queryKey: ["invoices"] });
-    setSendingAuth(null);
-    alert(`Authorization SMS sent to ${phone}`);
+    try {
+      const appUrl = window.location.origin;
+      await base44.functions.invoke('sendInvoiceAuthSMS', { invoice_id: inv.id, phone, app_url: appUrl });
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      alert(`Authorization SMS sent to ${phone}`);
+    } catch (err) {
+      const detail = err?.response?.data?.details?.message || err?.response?.data?.error || err.message;
+      alert(`Failed to send SMS: ${detail}`);
+    } finally {
+      setSendingAuth(null);
+    }
   };
 
   const { data: invoices = [], isLoading } = useQuery({

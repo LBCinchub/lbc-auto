@@ -5,46 +5,61 @@ const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN");
 const TWILIO_PHONE_NUMBER = Deno.env.get("TWILIO_PHONE_NUMBER");
 
 Deno.serve(async (req) => {
-    const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    try {
+        const base44 = createClientFromRequest(req);
+        const user = await base44.auth.me();
+        if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { invoice_id, phone, app_url } = await req.json();
-    if (!invoice_id || !phone) return Response.json({ error: 'invoice_id and phone are required' }, { status: 400 });
+        const body = await req.json();
+        const { invoice_id, phone, app_url } = body;
 
-    // Normalize phone to E.164 format
-    const digits = phone.replace(/\D/g, '');
-    const normalized = digits.startsWith('1') && digits.length === 11 ? `+${digits}` : `+1${digits}`;
+        console.log('sendInvoiceAuthSMS called:', { invoice_id, phone: phone ? 'provided' : 'missing', app_url });
 
+        if (!invoice_id || !phone) {
+            return Response.json({ error: 'invoice_id and phone are required', received: { invoice_id, phone } }, { status: 400 });
+        }
 
-    // Generate a random token
-    const token = crypto.randomUUID().replace(/-/g, '');
+        // Normalize phone to E.164 format
+        const digits = String(phone).replace(/\D/g, '');
+        const normalized = digits.startsWith('1') && digits.length === 11 ? `+${digits}` : `+1${digits}`;
+        console.log('Normalized phone:', normalized);
 
-    // Save token + set auth_status to pending
-    await base44.asServiceRole.entities.Invoice.update(invoice_id, {
-        auth_token: token,
-        auth_status: "pending"
-    });
+        // Generate a random token
+        const token = crypto.randomUUID().replace(/-/g, '');
 
-    const signUrl = `${app_url}/InvoiceSign?token=${token}`;
+        // Save token + set auth_status to pending
+        await base44.asServiceRole.entities.Invoice.update(invoice_id, {
+            auth_token: token,
+            auth_status: "pending"
+        });
 
-    const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
-    const formData = new URLSearchParams();
-    formData.append('To', normalized);
-    formData.append('From', TWILIO_PHONE_NUMBER);
-    formData.append('Body', `LBC AUTO - Please review and approve your invoice by signing here:\n${signUrl}`);
+        const signUrl = `${app_url}/InvoiceSign?token=${token}`;
 
-    const response = await fetch(twilioUrl, {
-        method: 'POST',
-        headers: {
-            'Authorization': 'Basic ' + btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`),
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: formData.toString()
-    });
+        const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
+        const formData = new URLSearchParams();
+        formData.append('To', normalized);
+        formData.append('From', TWILIO_PHONE_NUMBER);
+        formData.append('Body', `LBC AUTO - Please review and approve your invoice by signing here:\n${signUrl}`);
 
-    const data = await response.json();
-    if (!response.ok) return Response.json({ error: 'Failed to send SMS', details: data }, { status: response.status });
+        const response = await fetch(twilioUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Basic ' + btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`),
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: formData.toString()
+        });
 
-    return Response.json({ success: true, messageSid: data.sid });
+        const data = await response.json();
+        console.log('Twilio response:', response.status, JSON.stringify(data));
+
+        if (!response.ok) {
+            return Response.json({ error: 'Failed to send SMS', details: data }, { status: 400 });
+        }
+
+        return Response.json({ success: true, messageSid: data.sid });
+    } catch (error) {
+        console.error('sendInvoiceAuthSMS error:', error.message);
+        return Response.json({ error: error.message }, { status: 500 });
+    }
 });
