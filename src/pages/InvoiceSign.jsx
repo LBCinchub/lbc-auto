@@ -64,7 +64,7 @@ export default function InvoiceSign() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4 py-8">
+    <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center px-4 py-8">
       <div className="w-full max-w-md space-y-6">
         {/* Header */}
         <div className="text-center">
@@ -126,6 +126,9 @@ export default function InvoiceSign() {
             Approve & Sign Invoice
           </Button>
         </div>
+      </div>
+      <div className="mt-12 text-center">
+        <p className="text-gray-600 text-xs">Powered by <span className="text-sky-400 font-semibold">LBC.Network</span></p>
       </div>
     </div>
   );
