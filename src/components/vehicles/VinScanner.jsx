@@ -21,13 +21,26 @@ export default function VinScanner({ onVinDetected, onClose }) {
         setError("Camera is not supported on this device. Please use the Upload option instead.");
         return;
       }
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } }
-      });
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Camera timeout")), 10000)
+      );
+      const stream = await Promise.race([
+        navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 1280 }, height: { ideal: 720 } }
+        }),
+        timeoutPromise
+      ]);
       streamRef.current = stream;
-      if (videoRef.current) videoRef.current.srcObject = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current.play().catch(() => {});
+        };
+      }
     } catch (err) {
-      const errMsg = err?.name === "NotAllowedError" 
+      const errMsg = err?.message === "Camera timeout"
+        ? "Camera is taking too long to start. Try using the Upload option instead."
+        : err?.name === "NotAllowedError" 
         ? "Camera permission denied. Please allow camera access in your browser settings and try again."
         : err?.name === "NotFoundError"
         ? "No camera device found. Please use the Upload option instead."
@@ -77,11 +90,19 @@ export default function VinScanner({ onVinDetected, onClose }) {
   const capture = async () => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    if (!video || !canvas) return;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext("2d").drawImage(video, 0, 0);
-    canvas.toBlob((blob) => processBlob(blob), "image/jpeg", 0.92);
+    if (!video || !canvas || video.videoWidth === 0) return;
+    try {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      ctx.drawImage(video, 0, 0);
+      canvas.toBlob((blob) => {
+        if (blob) processBlob(blob);
+      }, "image/jpeg", 0.92);
+    } catch (err) {
+      setError("Failed to capture photo. Please try again.");
+    }
   };
 
   const handleFileUpload = (e) => {
