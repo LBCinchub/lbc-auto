@@ -50,32 +50,43 @@ export default function VehicleFormDialog({ open, onClose, vehicle, onSaved, cus
   }, [vehicle, open]);
 
   const decodeVin = async () => {
-    if (!form.vin || form.vin.length < 11) return;
-    setDecoding(true);
-    const result = await base44.integrations.Core.InvokeLLM({
-      prompt: `Decode this VIN number: ${form.vin}. Return the vehicle make, model, year, engine type, and color if determinable.`,
-      response_json_schema: {
-        type: "object",
-        properties: {
-          make: { type: "string" },
-          model: { type: "string" },
-          year: { type: "number" },
-          engine_type: { type: "string" },
-          color: { type: "string" }
-        }
-      }
-    });
-    if (result) {
-      setForm(prev => ({
-        ...prev,
-        make: result.make || prev.make,
-        model: result.model || prev.model,
-        year: result.year || prev.year,
-        engine_type: result.engine_type || prev.engine_type,
-        color: result.color || prev.color,
-      }));
+    if (!form.vin || form.vin.length < 11) {
+      alert("Please enter a VIN with at least 11 characters.");
+      return;
     }
-    setDecoding(false);
+    setDecoding(true);
+    try {
+      const result = await base44.integrations.Core.InvokeLLM({
+        prompt: `Decode this VIN number: ${form.vin}. Return the vehicle make, model, year, engine type, and color if determinable.`,
+        add_context_from_internet: true,
+        response_json_schema: {
+          type: "object",
+          properties: {
+            make: { type: "string" },
+            model: { type: "string" },
+            year: { type: "number" },
+            engine_type: { type: "string" },
+            color: { type: "string" }
+          }
+        }
+      });
+      if (result && result.make) {
+        setForm(prev => ({
+          ...prev,
+          make: result.make || prev.make,
+          model: result.model || prev.model,
+          year: result.year || prev.year,
+          engine_type: result.engine_type || prev.engine_type,
+          color: result.color || prev.color,
+        }));
+      } else {
+        alert("Could not decode VIN. Please enter manually.");
+      }
+    } catch (err) {
+      alert("Error decoding VIN: " + (err?.message || "Please try again."));
+    } finally {
+      setDecoding(false);
+    }
   };
 
   const handleSave = async () => {
