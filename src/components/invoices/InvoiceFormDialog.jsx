@@ -220,50 +220,51 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
             </div>
           </div>
 
-          {/* Payment Method */}
-          <div>
-            <Label className="text-gray-400">Payment Method</Label>
-            <div className="flex gap-4 mt-2">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="paymentMethod" value="cash" checked={form.payment_method === "cash"}
-                  onChange={e => setForm({...form, payment_method: e.target.value, card_last4: ""})}
-                  className="w-4 h-4" />
-                <span className="text-sm text-gray-300">Cash</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="paymentMethod" value="card" checked={form.payment_method === "card"}
-                  onChange={e => setForm({...form, payment_method: e.target.value})}
-                  className="w-4 h-4" />
-                <span className="text-sm text-gray-300">Card</span>
-              </label>
+          {/* Payment Method & Receipt Info Side by Side */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Payment Method */}
+            <div>
+              <Label className="text-gray-400 text-sm">Payment Method</Label>
+              <div className="flex gap-4 mt-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="paymentMethod" value="cash" checked={form.payment_method === "cash"}
+                    onChange={e => setForm({...form, payment_method: e.target.value, card_last4: ""})}
+                    className="w-4 h-4" />
+                  <span className="text-sm text-gray-300">Cash</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="paymentMethod" value="card" checked={form.payment_method === "card"}
+                    onChange={e => setForm({...form, payment_method: e.target.value})}
+                    className="w-4 h-4" />
+                  <span className="text-sm text-gray-300">Card</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Receipt Info */}
+            <div className="rounded-lg border border-gray-700/50 p-3 space-y-3">
+              <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Receipt Info</p>
+              <div className="space-y-2">
+                {form.payment_method === "card" && (
+                  <div>
+                    <Label className="text-gray-400 text-xs">Card Last 4</Label>
+                    <Input value={form.card_last4} onChange={e => setForm({...form, card_last4: e.target.value.slice(0,4)})}
+                      className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="e.g. 4242" maxLength={4} />
+                  </div>
+                )}
+                <div>
+                  <Label className="text-gray-400 text-xs">Receipt #</Label>
+                  <Input value={form.receipt_number} onChange={e => setForm({...form, receipt_number: e.target.value})}
+                    className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="e.g. 001234" />
+                </div>
+                <div>
+                  <Label className="text-gray-400 text-xs">Cashier</Label>
+                  <Input value={form.cashier_name} onChange={e => setForm({...form, cashier_name: e.target.value})}
+                    className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="Name or #" />
+                </div>
+              </div>
             </div>
           </div>
-
-          {/* Receipt Info */}
-          <div className="rounded-lg border border-gray-700/50 p-3 space-y-3">
-            <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Receipt Info</p>
-            <div className="grid gap-3">
-              {form.payment_method === "card" && (
-                <div>
-                  <Label className="text-gray-400 text-xs">Card Last 4</Label>
-                  <Input value={form.card_last4} onChange={e => setForm({...form, card_last4: e.target.value.slice(0,4)})}
-                    className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="e.g. 4242" maxLength={4} />
-                </div>
-              )}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-gray-400 text-xs">Receipt #</Label>
-                <Input value={form.receipt_number} onChange={e => setForm({...form, receipt_number: e.target.value})}
-                  className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="e.g. 001234" />
-              </div>
-              <div>
-                <Label className="text-gray-400 text-xs">Cashier</Label>
-                <Input value={form.cashier_name} onChange={e => setForm({...form, cashier_name: e.target.value})}
-                  className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="Name or #" />
-              </div>
-              </div>
-              </div>
-              </div>
 
           <div>
             <Label className="text-gray-400">Upfront Payment (Cash)</Label>
