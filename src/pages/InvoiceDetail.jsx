@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
@@ -8,6 +8,15 @@ import { Button } from "@/components/ui/button";
 export default function InvoiceDetail() {
   const { invoiceId } = useParams();
   const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const currentUser = await base44.auth.me();
+      setUser(currentUser);
+    };
+    loadUser();
+  }, []);
 
   const { data: invoice, isLoading } = useQuery({
     queryKey: ["invoice", invoiceId],
@@ -59,6 +68,7 @@ export default function InvoiceDetail() {
       <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-6">
         <div className="flex items-start justify-between mb-6">
           <div>
+            {user?.business_name && <h2 className="text-sm font-semibold text-sky-400 mb-2">{user.business_name}</h2>}
             <h1 className="text-3xl font-bold text-white">Invoice #{invoice.invoice_number}</h1>
             <p className="text-gray-400 mt-1">{invoice.customer_name}</p>
             {customer?.phone && <p className="text-gray-500 text-sm mt-1">{customer.phone}</p>}

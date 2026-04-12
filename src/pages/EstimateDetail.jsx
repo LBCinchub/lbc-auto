@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -9,6 +9,15 @@ export default function EstimateDetail() {
   const { estimateId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const currentUser = await base44.auth.me();
+      setUser(currentUser);
+    };
+    loadUser();
+  }, []);
 
   const { data: estimate, isLoading } = useQuery({
     queryKey: ["estimate", estimateId],
@@ -92,6 +101,7 @@ export default function EstimateDetail() {
         <div className="mb-8 pb-8 border-b border-gray-800 print:border-gray-300">
           <div className="flex items-start justify-between mb-6">
             <div>
+              {user?.business_name && <h2 className="text-sm font-semibold text-sky-400 print:text-sky-600 mb-2">{user.business_name}</h2>}
               <h1 className="text-4xl font-bold text-white print:text-black">Estimate</h1>
               <p className="text-gray-400 print:text-gray-600 mt-1">#{estimate.estimate_number}</p>
             </div>
