@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { ClipboardList, Plus, Pencil, Trash2 } from "lucide-react";
+import { ClipboardList, Plus, Pencil, Trash2, CheckCircle2 } from "lucide-react";
 import PageHeader from "../components/shared/PageHeader";
 import SearchBar from "../components/shared/SearchBar";
 import EmptyState from "../components/shared/EmptyState";
@@ -47,6 +47,35 @@ export default function Estimates() {
     if (window.confirm("Delete this estimate?")) {
       await base44.entities.Estimate.delete(id);
       queryClient.invalidateQueries({ queryKey: ["estimates"] });
+    }
+  };
+
+  const handleConvertToRepairOrder = async (estimate) => {
+    if (!window.confirm("Convert this estimate to a repair order?")) return;
+    try {
+      await base44.entities.RepairOrder.create({
+        customer_id: estimate.customer_id,
+        customer_name: estimate.customer_name,
+        vehicle_id: estimate.vehicle_id,
+        vehicle_info: estimate.vehicle_info,
+        description: estimate.notes || "Created from estimate #" + estimate.estimate_number,
+        status: "waiting",
+        labor_hours: estimate.labor_items?.reduce((sum, item) => sum + (parseFloat(item.hours) || 0), 0) || 0,
+        labor_cost: estimate.labor_total || 0,
+        parts_used: estimate.parts_items?.map(item => ({
+          name: item.name,
+          part_number: item.part_number,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total: item.total
+        })) || [],
+        parts_cost: estimate.parts_total || 0,
+        total_cost: estimate.grand_total || 0,
+      });
+      await base44.entities.Estimate.update(estimate.id, { status: "approved" });
+      queryClient.invalidateQueries({ queryKey: ["estimates", "repairOrders"] });
+    } catch (error) {
+      console.error("Error converting estimate:", error);
     }
   };
 
@@ -107,13 +136,18 @@ export default function Estimates() {
                   <p className="text-lg font-bold text-sky-400">${(est.grand_total || 0).toFixed(2)}</p>
                 </div>
                 <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-white" onClick={() => openEdit(est)}>
-                    <Pencil className="w-3.5 h-3.5" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-rose-400" onClick={() => handleDelete(est.id)}>
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
+                   {est.status === "approved" && (
+                     <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-green-400" title="Convert to Repair Order" onClick={() => handleConvertToRepairOrder(est)}>
+                       <CheckCircle2 className="w-3.5 h-3.5" />
+                     </Button>
+                   )}
+                   <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-white" onClick={() => openEdit(est)}>
+                     <Pencil className="w-3.5 h-3.5" />
+                   </Button>
+                   <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-rose-400" onClick={() => handleDelete(est.id)}>
+                     <Trash2 className="w-3.5 h-3.5" />
+                   </Button>
+                 </div>
               </div>
             </div>
           ))}
