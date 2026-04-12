@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,13 @@ import { format, differenceInMinutes, parseISO } from "date-fns";
 export default function TimeTracking() {
   const queryClient = useQueryClient();
   const [loadingId, setLoadingId] = useState(null);
+  const [, setTick] = useState(0);
+
+  // Re-render every 30 seconds so live durations update
+  useEffect(() => {
+    const interval = setInterval(() => setTick((t) => t + 1), 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const { data: mechanics = [] } = useQuery({
     queryKey: ["mechanics"],
