@@ -1,0 +1,78 @@
+{
+  "name": "Vehicle",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string",
+      "description": "Linked customer ID"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Customer name for display"
+    },
+    "vin": {
+      "type": "string",
+      "description": "Vehicle Identification Number"
+    },
+    "license_plate": {
+      "type": "string",
+      "description": "License plate number"
+    },
+    "make": {
+      "type": "string",
+      "description": "Vehicle make"
+    },
+    "model": {
+      "type": "string",
+      "description": "Vehicle model"
+    },
+    "year": {
+      "type": "number",
+      "description": "Model year"
+    },
+    "engine_type": {
+      "type": "string",
+      "description": "Engine type"
+    },
+    "color": {
+      "type": "string",
+      "description": "Vehicle color"
+    },
+    "mileage": {
+      "type": "number",
+      "description": "Current mileage"
+    },
+    "last_service_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Last service date"
+    },
+    "last_service_mileage": {
+      "type": "number",
+      "description": "Mileage at last service"
+    },
+    "service_interval_miles": {
+      "type": "number",
+      "description": "Miles between services (e.g. 5000 for oil change every 5000 miles)"
+    },
+    "service_interval_days": {
+      "type": "number",
+      "description": "Days between services (e.g. 180 for service every 6 months)"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Customer phone number for reminders"
+    },
+    "reminder_sent_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Last reminder sent date (to avoid duplicate reminders)"
+    }
+  },
+  "required": [
+    "customer_id",
+    "make",
+    "model",
+    "year"
+  ]
+}
