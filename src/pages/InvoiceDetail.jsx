@@ -39,9 +39,14 @@ export default function InvoiceDetail() {
 
   return (
     <div className="space-y-6">
-      <Button variant="ghost" onClick={() => navigate(-1)} className="text-gray-400 hover:text-white gap-2">
-        <ArrowLeft className="w-4 h-4" /> Back
-      </Button>
+      <div className="flex items-center justify-between">
+        <Button variant="ghost" onClick={() => navigate(-1)} className="text-gray-400 hover:text-white gap-2">
+          <ArrowLeft className="w-4 h-4" /> Back
+        </Button>
+        <Button onClick={() => navigate("/Invoices")} className="bg-sky-500 hover:bg-sky-600">
+          View in Invoices
+        </Button>
+      </div>
 
       <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-6">
         <div className="flex items-start justify-between mb-6">
