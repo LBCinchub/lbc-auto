@@ -1,7 +1,8 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Car, Pencil, Trash2 } from "lucide-react";
+import { Car, Pencil, Trash2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PageHeader from "../components/shared/PageHeader";
 import SearchBar from "../components/shared/SearchBar";
@@ -12,6 +13,7 @@ export default function Vehicles() {
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState(null);
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const { data: vehicles = [], isLoading } = useQuery({
@@ -70,15 +72,19 @@ export default function Vehicles() {
                   </div>
                 </div>
                 <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-white"
-                    onClick={() => { setEditingVehicle(v); setDialogOpen(true); }}>
-                    <Pencil className="w-3.5 h-3.5" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-rose-400"
-                    onClick={() => handleDelete(v.id)}>
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
+                   <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-sky-400"
+                     onClick={() => navigate(`/VehicleTimeline/${v.id}`)}>
+                     <Clock className="w-3.5 h-3.5" />
+                   </Button>
+                   <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-white"
+                     onClick={() => { setEditingVehicle(v); setDialogOpen(true); }}>
+                     <Pencil className="w-3.5 h-3.5" />
+                   </Button>
+                   <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-rose-400"
+                     onClick={() => handleDelete(v.id)}>
+                     <Trash2 className="w-3.5 h-3.5" />
+                   </Button>
+                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2 text-sm">
                 {v.license_plate && (
