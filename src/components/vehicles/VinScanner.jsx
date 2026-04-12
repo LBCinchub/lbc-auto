@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Camera, X, ScanLine, Loader2 } from "lucide-react";
+import { Camera, X, ScanLine, Loader2, Upload } from "lucide-react";
 
 export default function VinScanner({ onVinDetected, onClose }) {
   const videoRef = useRef(null);
@@ -31,47 +31,49 @@ export default function VinScanner({ onVinDetected, onClose }) {
     streamRef.current?.getTracks().forEach(t => t.stop());
   };
 
+  const processBlob = async (blob) => {
+    stopCamera();
+    setStep("processing");
+    const file = new File([blob], "vin_scan.jpg", { type: "image/jpeg" });
+    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    const result = await base44.integrations.Core.InvokeLLM({
+      prompt: `Look at this image carefully. Find the VIN (Vehicle Identification Number) — it's typically a 17-character alphanumeric code found on the dashboard near the windshield, door jamb sticker, or engine bay. Extract the exact VIN characters. Then decode the VIN to get the vehicle's make, model, year, color, and engine type. Return all data.`,
+      file_urls: [file_url],
+      response_json_schema: {
+        type: "object",
+        properties: {
+          vin: { type: "string" },
+          make: { type: "string" },
+          model: { type: "string" },
+          year: { type: "number" },
+          color: { type: "string" },
+          engine_type: { type: "string" }
+        }
+      }
+    });
+    if (result?.vin) {
+      setStep("done");
+      onVinDetected(result);
+    } else {
+      setError("Could not detect a VIN in the image. Please try again with better lighting or a clearer angle.");
+      setStep("error");
+    }
+  };
+
   const capture = async () => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
     if (!video || !canvas) return;
-
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     canvas.getContext("2d").drawImage(video, 0, 0);
-    stopCamera();
-    setStep("processing");
+    canvas.toBlob((blob) => processBlob(blob), "image/jpeg", 0.92);
+  };
 
-    // Convert canvas to blob and upload
-    canvas.toBlob(async (blob) => {
-      const file = new File([blob], "vin_scan.jpg", { type: "image/jpeg" });
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-
-      // Use LLM vision to extract VIN from image
-      const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `Look at this image carefully. Find the VIN (Vehicle Identification Number) — it's typically a 17-character alphanumeric code found on the dashboard near the windshield, door jamb sticker, or engine bay. Extract the exact VIN characters. Then decode the VIN to get the vehicle's make, model, year, color, and engine type. Return all data.`,
-        file_urls: [file_url],
-        response_json_schema: {
-          type: "object",
-          properties: {
-            vin: { type: "string" },
-            make: { type: "string" },
-            model: { type: "string" },
-            year: { type: "number" },
-            color: { type: "string" },
-            engine_type: { type: "string" }
-          }
-        }
-      });
-
-      if (result?.vin) {
-        setStep("done");
-        onVinDetected(result);
-      } else {
-        setError("Could not detect a VIN in the image. Please try again with better lighting or a clearer angle.");
-        setStep("error");
-      }
-    }, "image/jpeg", 0.92);
+  const handleFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    processBlob(file);
   };
 
   return (
@@ -101,8 +103,15 @@ export default function VinScanner({ onVinDetected, onClose }) {
               Point camera at VIN sticker on door jamb or dashboard
             </p>
           </div>
-          {/* Capture button */}
-          <div className="absolute bottom-8 left-0 right-0 flex justify-center">
+          {/* Capture / Upload buttons */}
+          <div className="absolute bottom-8 left-0 right-0 flex justify-center items-center gap-8">
+            <label className="flex flex-col items-center gap-1 cursor-pointer">
+              <div className="w-12 h-12 rounded-full bg-gray-800/80 border-2 border-gray-500 flex items-center justify-center hover:border-sky-400 transition-colors">
+                <Upload className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-white text-xs">Upload</span>
+              <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+            </label>
             <button onClick={capture}
               className="w-16 h-16 rounded-full bg-white border-4 border-sky-400 flex items-center justify-center shadow-lg hover:scale-105 transition-transform active:scale-95">
               <Camera className="w-7 h-7 text-gray-800" />
