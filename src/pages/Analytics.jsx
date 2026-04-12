@@ -89,28 +89,25 @@ export default function Analytics() {
   // Daily cash vs card report
   const dailyPayments = {};
   invoices.forEach(inv => {
-    // Get payment date
+    // Only count paid invoices
+    if (inv.status !== "paid") return;
+    
+    // Get payment date (when it was actually paid)
     const day = inv.paid_date || inv.created_date?.substring(0, 10);
     if (!day) return;
     if (!dailyPayments[day]) dailyPayments[day] = { date: day, cash: 0, card: 0 };
     
-    // Check if invoice has amount_paid or balance_due <= 0 (meaning it's paid)
-    const isPaid = inv.status === "paid" || (inv.balance_due !== undefined && inv.balance_due <= 0) || (inv.amount_paid && inv.amount_paid > 0);
-    if (!isPaid) return;
+    // Use the full total for paid invoices
+    const amount = inv.total || 0;
+    const method = inv.payment_method?.toLowerCase() || "";
     
-    // Determine payment method and amount
-    let amount = inv.amount_paid || inv.total || 0;
-    let method = inv.payment_method?.toLowerCase() || "";
-    
-    // Check if card_last4 is set (indicates card payment)
-    if (inv.card_last4) {
+    // Track by payment method
+    if (method === "card" || inv.card_last4) {
       dailyPayments[day].card += amount;
     } else if (method === "cash") {
       dailyPayments[day].cash += amount;
-    } else if (method === "card") {
-      dailyPayments[day].card += amount;
-    } else if (amount > 0) {
-      // Default: if no method specified but amount paid, count as cash
+    } else {
+      // Default to cash if not specified
       dailyPayments[day].cash += amount;
     }
   });

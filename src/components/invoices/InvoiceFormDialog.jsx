@@ -99,45 +99,51 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
   const balanceDue = total - (form.amount_paid || 0);
 
   const handleSave = async () => {
-    setSaving(true);
-    const lineItems = [];
-    if (form.labor_total > 0) lineItems.push({ description: "Labor", type: "labor", quantity: 1, unit_price: form.labor_total, total: form.labor_total });
-    // Add individual parts as line items
-    if (form.parts_used && form.parts_used.length > 0) {
-      form.parts_used.forEach(p => {
-        lineItems.push({ description: p.name, type: "part", quantity: p.quantity || 1, unit_price: p.unit_price || 0, total: p.total || 0 });
-      });
-    } else if (form.parts_total > 0) {
-      lineItems.push({ description: "Parts", type: "parts", quantity: 1, unit_price: form.parts_total, total: form.parts_total });
-    }
+   setSaving(true);
+   const lineItems = [];
+   if (form.labor_total > 0) lineItems.push({ description: "Labor", type: "labor", quantity: 1, unit_price: form.labor_total, total: form.labor_total });
+   // Add individual parts as line items
+   if (form.parts_used && form.parts_used.length > 0) {
+     form.parts_used.forEach(p => {
+       lineItems.push({ description: p.name, type: "part", quantity: p.quantity || 1, unit_price: p.unit_price || 0, total: p.total || 0 });
+     });
+   } else if (form.parts_total > 0) {
+     lineItems.push({ description: "Parts", type: "parts", quantity: 1, unit_price: form.parts_total, total: form.parts_total });
+   }
 
-    let finalStatus = form.status;
-    if (balanceDue <= 0) {
-      finalStatus = "paid";
-    } else if (form.amount_paid > 0) {
-      finalStatus = "partial";
-    }
+   let finalStatus = form.status;
+   let paidDate = invoice?.paid_date;
+   if (balanceDue <= 0) {
+     finalStatus = "paid";
+     // Set paid_date to today if transitioning to paid status
+     if (invoice?.status !== "paid") {
+       paidDate = new Date().toISOString().substring(0, 10);
+     }
+   } else if (form.amount_paid > 0) {
+     finalStatus = "partial";
+   }
 
-    const data = {
-      ...form,
-      invoice_number: invoice?.invoice_number || `INV-${Date.now().toString(36).toUpperCase()}`,
-      customer_phone: form.customer_phone || "",
-      parts_used: form.parts_used || [],
-      tax_amount: taxAmount,
-      total,
-      balance_due: balanceDue,
-      status: finalStatus,
-      line_items: lineItems,
-    };
+   const data = {
+     ...form,
+     invoice_number: invoice?.invoice_number || `INV-${Date.now().toString(36).toUpperCase()}`,
+     customer_phone: form.customer_phone || "",
+     parts_used: form.parts_used || [],
+     tax_amount: taxAmount,
+     total,
+     balance_due: balanceDue,
+     status: finalStatus,
+     paid_date: paidDate,
+     line_items: lineItems,
+   };
 
-    if (invoice) {
-      await base44.entities.Invoice.update(invoice.id, data);
-    } else {
-      await base44.entities.Invoice.create(data);
-    }
-    setSaving(false);
-    onSaved();
-    onClose();
+   if (invoice) {
+     await base44.entities.Invoice.update(invoice.id, data);
+   } else {
+     await base44.entities.Invoice.create(data);
+   }
+   setSaving(false);
+   onSaved();
+   onClose();
   };
 
   return (
