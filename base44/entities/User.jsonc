@@ -1,0 +1,18 @@
+{
+  "name": "User",
+  "type": "object",
+  "properties": {
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "user"
+      ],
+      "default": "user"
+    },
+    "business_name": {
+      "type": "string",
+      "description": "Auto shop business name"
+    }
+  }
+}

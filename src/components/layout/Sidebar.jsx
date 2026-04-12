@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { base44 } from "@/api/base44Client";
 import {
   LayoutDashboard,
   Users,
@@ -18,7 +19,9 @@ import {
   X,
   Zap,
   Clock,
-  Banknote
+  Banknote,
+  Settings as SettingsIcon,
+  LogOut
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -40,6 +43,15 @@ const navItems = [
 export default function Sidebar({ currentPage }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const currentUser = await base44.auth.me();
+      setUser(currentUser);
+    };
+    loadUser();
+  }, []);
 
   return (
     <>
@@ -114,23 +126,58 @@ export default function Sidebar({ currentPage }) {
           })}
         </nav>
 
-        {/* Collapse button - desktop only */}
-        <div className="hidden lg:block p-3 border-t border-gray-800/50">
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-gray-500 hover:text-gray-300 hover:bg-gray-800/50 transition-colors text-xs"
+        {/* Settings & Footer */}
+        <div className="p-3 border-t border-gray-800/50 space-y-2">
+          <Link
+            to="/Settings"
+            onClick={() => setMobileOpen(false)}
+            className={cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
+              currentPage === "Settings"
+                ? "bg-sky-500/10 text-sky-400 shadow-sm"
+                : "text-gray-400 hover:text-white hover:bg-gray-800/50"
+            )}
           >
-            {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-            {!collapsed && <span>Collapse</span>}
+            <SettingsIcon className="w-5 h-5 flex-shrink-0" />
+            {!collapsed && <span>Settings</span>}
+          </Link>
+          <button
+            onClick={() => {
+              base44.auth.logout();
+              setMobileOpen(false);
+            }}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 transition-all"
+          >
+            <LogOut className="w-5 h-5 flex-shrink-0" />
+            {!collapsed && <span>Logout</span>}
           </button>
+          {!collapsed && (
+            <div className="hidden lg:block pt-2">
+              <button
+                onClick={() => setCollapsed(!collapsed)}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-gray-500 hover:text-gray-300 hover:bg-gray-800/50 transition-colors text-xs"
+              >
+                {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+                <span>Collapse</span>
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Footer */}
-        {!collapsed && (
+        {/* Business Name */}
+        {!collapsed && user?.business_name && (
           <div className="px-4 pb-4">
             <div className="px-3 py-2 rounded-lg bg-gray-900/50 border border-gray-800/50">
-              <p className="text-[10px] text-gray-500 tracking-wider">POWERED BY</p>
-              <p className="text-xs text-gray-400 font-medium">Lumina Blockchain</p>
+              <p className="text-[10px] text-gray-500 tracking-wider">YOUR SHOP</p>
+              <p className="text-xs text-gray-300 font-medium truncate">{user.business_name}</p>
+            </div>
+          </div>
+        )}
+        {!collapsed && !user?.business_name && (
+          <div className="px-4 pb-4">
+            <div className="px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30">
+              <p className="text-[10px] text-amber-600 tracking-wider">SETUP REQUIRED</p>
+              <p className="text-xs text-amber-500 font-medium">Add your business name</p>
             </div>
           </div>
         )}
