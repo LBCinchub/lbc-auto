@@ -5,8 +5,9 @@ import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from "recharts";
-import { DollarSign, TrendingUp, Wrench, Users, Banknote, CreditCard, Clock } from "lucide-react";
+import { DollarSign, TrendingUp, Wrench, Users, Banknote, CreditCard, Clock, Printer } from "lucide-react";
 import { format, startOfDay, startOfWeek, startOfMonth, startOfYear, parseISO, isAfter } from "date-fns";
+import { Button } from "@/components/ui/button";
 import StatCard from "../components/dashboard/StatCard";
 
 const COLORS = ["#0ea5e9", "#8b5cf6", "#10b981", "#f59e0b", "#ef4444", "#ec4899"];
@@ -135,6 +136,83 @@ export default function Analytics() {
     .slice(-14)
     .map(([date, hours]) => ({ date, hours: parseFloat(hours.toFixed(1)) }));
 
+  const handlePrintDailyReport = () => {
+    const printWindow = window.open('', '_blank');
+    const reportData = [...dailyChart].reverse();
+    const totalCash = reportData.reduce((sum, d) => sum + d.cash, 0);
+    const totalCard = reportData.reduce((sum, d) => sum + d.card, 0);
+    const reportTotal = totalCash + totalCard;
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Daily Revenue Report</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; background: white; }
+            h1 { text-align: center; color: #333; margin-bottom: 10px; }
+            .date { text-align: center; color: #666; font-size: 14px; margin-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th { background: #f5f5f5; padding: 12px; text-align: right; border-bottom: 2px solid #333; font-weight: bold; }
+            th:first-child { text-align: left; }
+            td { padding: 10px 12px; border-bottom: 1px solid #ddd; text-align: right; }
+            td:first-child { text-align: left; }
+            tr.today { background: #fffacd; }
+            .total-row { font-weight: bold; background: #f5f5f5; border-top: 2px solid #333; }
+            .summary { margin-top: 20px; padding: 15px; background: #f9f9f9; border-left: 4px solid #0ea5e9; }
+            .summary-item { margin: 5px 0; }
+            .label { font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <h1>Daily Revenue Report</h1>
+          <div class="date">Generated: ${new Date().toLocaleDateString('en-CA')}</div>
+          
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Cash</th>
+                <th>Card</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${reportData.map(d => `
+                <tr class="${d.date === today ? 'today' : ''}">
+                  <td>${d.date}${d.date === today ? ' (Today)' : ''}</td>
+                  <td>$${d.cash.toFixed(2)}</td>
+                  <td>$${d.card.toFixed(2)}</td>
+                  <td>$${d.total.toFixed(2)}</td>
+                </tr>
+              `).join('')}
+              <tr class="total-row">
+                <td>TOTAL</td>
+                <td>$${totalCash.toFixed(2)}</td>
+                <td>$${totalCard.toFixed(2)}</td>
+                <td>$${reportTotal.toFixed(2)}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="summary">
+            <div class="summary-item"><span class="label">Total Cash:</span> $${totalCash.toFixed(2)}</div>
+            <div class="summary-item"><span class="label">Total Card:</span> $${totalCard.toFixed(2)}</div>
+            <div class="summary-item"><span class="label">Grand Total:</span> $${reportTotal.toFixed(2)}</div>
+            <div class="summary-item"><span class="label">Period:</span> Last 14 days</div>
+          </div>
+
+          <script>
+            window.print();
+            window.onafterprint = () => window.close();
+          </script>
+        </body>
+      </html>
+    `;
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -169,8 +247,21 @@ export default function Analytics() {
 
       {/* Daily Cash vs Card Report */}
       <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5">
-        <h3 className="text-white font-semibold mb-1">Daily Payment Report</h3>
-        <p className="text-gray-400 text-xs mb-4">Cash vs Card breakdown per day</p>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-white font-semibold mb-1">Daily Payment Report</h3>
+            <p className="text-gray-400 text-xs">Cash vs Card breakdown per day</p>
+          </div>
+          <Button
+            onClick={handlePrintDailyReport}
+            variant="outline"
+            size="sm"
+            className="gap-2"
+          >
+            <Printer className="w-4 h-4" />
+            Print Report
+          </Button>
+        </div>
 
         {/* Today's totals */}
         <div className="grid grid-cols-3 gap-4 mb-6">
