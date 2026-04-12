@@ -58,14 +58,15 @@ export default function VehicleFormDialog({ open, onClose, vehicle, onSaved, cus
     if (!form.vin || form.vin.length < 11) return;
     setDecoding(true);
     const result = await base44.integrations.Core.InvokeLLM({
-      prompt: `Decode this VIN number: ${form.vin}. Return the vehicle make, model, year, and engine type.`,
+      prompt: `Decode this VIN number: ${form.vin}. Return the vehicle make, model, year, engine type, and color if determinable.`,
       response_json_schema: {
         type: "object",
         properties: {
           make: { type: "string" },
           model: { type: "string" },
           year: { type: "number" },
-          engine_type: { type: "string" }
+          engine_type: { type: "string" },
+          color: { type: "string" }
         }
       }
     });
@@ -76,6 +77,7 @@ export default function VehicleFormDialog({ open, onClose, vehicle, onSaved, cus
         model: result.model || prev.model,
         year: result.year || prev.year,
         engine_type: result.engine_type || prev.engine_type,
+        color: result.color || prev.color,
       }));
     }
     setDecoding(false);
