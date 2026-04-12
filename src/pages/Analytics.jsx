@@ -5,7 +5,7 @@ import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from "recharts";
-import { DollarSign, TrendingUp, Wrench, Users } from "lucide-react";
+import { DollarSign, TrendingUp, Wrench, Users, Banknote, CreditCard } from "lucide-react";
 import StatCard from "../components/dashboard/StatCard";
 
 const COLORS = ["#0ea5e9", "#8b5cf6", "#10b981", "#f59e0b", "#ef4444", "#ec4899"];
@@ -60,6 +60,28 @@ export default function Analytics() {
     return { name: m.name, completed, hours, revenue };
   });
 
+  // Daily cash vs card report
+  const dailyPayments = {};
+  invoices.forEach(inv => {
+    const entries = inv.payment_history?.length > 0
+      ? inv.payment_history
+      : [{ date: inv.paid_date || inv.created_date?.substring(0, 10), amount: inv.total || 0, method: inv.payment_method || "unknown" }];
+    entries.forEach(p => {
+      const day = (p.date || "").substring(0, 10);
+      if (!day) return;
+      if (!dailyPayments[day]) dailyPayments[day] = { date: day, cash: 0, card: 0 };
+      const method = (p.method || "").toLowerCase();
+      if (method === "cash") dailyPayments[day].cash += p.amount || 0;
+      else if (method && method !== "unknown") dailyPayments[day].card += p.amount || 0;
+    });
+  });
+  const today = new Date().toISOString().substring(0, 10);
+  const todayData = dailyPayments[today] || { cash: 0, card: 0 };
+  const dailyChart = Object.values(dailyPayments)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(-14)
+    .map(d => ({ ...d, total: d.cash + d.card }));
+
   // Order status
   const statusCounts = [
     { name: "Waiting", value: orders.filter(o => o.status === "waiting").length },
@@ -81,6 +103,89 @@ export default function Analytics() {
         <StatCard title="Avg Per Job" value={`$${avgPerJob.toFixed(2)}`} icon={TrendingUp} color="sky" />
         <StatCard title="Total Orders" value={orders.length} icon={Wrench} color="purple" />
         <StatCard title="Mechanics" value={mechanics.length} icon={Users} color="amber" />
+      </div>
+
+      {/* Daily Cash vs Card Report */}
+      <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5">
+        <h3 className="text-white font-semibold mb-1">Daily Payment Report</h3>
+        <p className="text-gray-400 text-xs mb-4">Cash vs Card breakdown per day</p>
+
+        {/* Today's totals */}
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
+              <Banknote className="w-5 h-5 text-emerald-400" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-400">Today — Cash</p>
+              <p className="text-xl font-bold text-emerald-400">${todayData.cash.toFixed(2)}</p>
+            </div>
+          </div>
+          <div className="rounded-lg bg-sky-500/10 border border-sky-500/20 p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-sky-500/20 flex items-center justify-center">
+              <CreditCard className="w-5 h-5 text-sky-400" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-400">Today — Card</p>
+              <p className="text-xl font-bold text-sky-400">${todayData.card.toFixed(2)}</p>
+            </div>
+          </div>
+          <div className="rounded-lg bg-purple-500/10 border border-purple-500/20 p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
+              <DollarSign className="w-5 h-5 text-purple-400" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-400">Today — Total</p>
+              <p className="text-xl font-bold text-purple-400">${(todayData.cash + todayData.card).toFixed(2)}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* 14-day bar chart */}
+        {dailyChart.length > 0 && (
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={dailyChart}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <XAxis dataKey="date" stroke="#64748b" fontSize={11} tickFormatter={d => d.slice(5)} />
+                <YAxis stroke="#64748b" fontSize={12} tickFormatter={v => `$${v}`} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: "#0f172a", border: "1px solid #1e293b", borderRadius: "8px", color: "#e2e8f0" }}
+                  formatter={(v) => [`$${v.toFixed(2)}`]}
+                />
+                <Legend />
+                <Bar dataKey="cash" name="Cash" fill="#10b981" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="card" name="Card" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+
+        {/* Daily table */}
+        {dailyChart.length > 0 && (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-800/50">
+                  <th className="text-left text-xs text-gray-500 font-medium px-3 py-2">Date</th>
+                  <th className="text-right text-xs text-gray-500 font-medium px-3 py-2">Cash</th>
+                  <th className="text-right text-xs text-gray-500 font-medium px-3 py-2">Card</th>
+                  <th className="text-right text-xs text-gray-500 font-medium px-3 py-2">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...dailyChart].reverse().map(d => (
+                  <tr key={d.date} className={`border-b border-gray-800/30 ${d.date === today ? "bg-yellow-500/5" : ""}`}>
+                    <td className="px-3 py-2 text-gray-300 font-medium">{d.date}{d.date === today ? " 📅" : ""}</td>
+                    <td className="px-3 py-2 text-right text-emerald-400">${d.cash.toFixed(2)}</td>
+                    <td className="px-3 py-2 text-right text-sky-400">${d.card.toFixed(2)}</td>
+                    <td className="px-3 py-2 text-right text-white font-semibold">${d.total.toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Monthly Revenue Chart */}
