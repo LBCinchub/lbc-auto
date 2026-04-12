@@ -213,6 +213,63 @@ export default function Analytics() {
     printWindow.document.close();
   };
 
+  const handlePrintTodayRevenue = () => {
+    const printWindow = window.open('', '_blank');
+    const totalCash = todayData.cash;
+    const totalCard = todayData.card;
+    const reportTotal = totalCash + totalCard;
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>End of Day Revenue Report</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; background: white; }
+            h1 { text-align: center; color: #333; margin-bottom: 10px; }
+            .date { text-align: center; color: #666; font-size: 14px; margin-bottom: 20px; }
+            .summary { margin-top: 20px; padding: 20px; background: #f9f9f9; border: 2px solid #333; border-radius: 8px; }
+            .summary-item { margin: 15px 0; padding: 10px 0; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; }
+            .summary-item:last-child { border-bottom: none; }
+            .label { font-weight: bold; font-size: 14px; }
+            .value { font-size: 18px; font-weight: bold; color: #0ea5e9; }
+            .total-value { color: #10b981; font-size: 24px; }
+            .timestamp { text-align: center; color: #666; font-size: 12px; margin-top: 20px; }
+          </style>
+        </head>
+        <body>
+          <h1>End of Day Revenue Report</h1>
+          <div class="date">Date: ${today}</div>
+          <div class="date">Generated: ${new Date().toLocaleString('en-CA')}</div>
+          
+          <div class="summary">
+            <div class="summary-item">
+              <span class="label">Cash Payments:</span>
+              <span class="value">$${totalCash.toFixed(2)}</span>
+            </div>
+            <div class="summary-item">
+              <span class="label">Card Payments:</span>
+              <span class="value">$${totalCard.toFixed(2)}</span>
+            </div>
+            <div class="summary-item" style="border: none; padding: 15px 0; border-top: 2px solid #333; margin-top: 10px;">
+              <span class="label" style="font-size: 16px;">Daily Total Revenue:</span>
+              <span class="total-value">$${reportTotal.toFixed(2)}</span>
+            </div>
+          </div>
+
+          <div class="timestamp">Report generated at end of business day</div>
+
+          <script>
+            window.print();
+            window.onafterprint = () => window.close();
+          </script>
+        </body>
+      </html>
+    `;
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -252,15 +309,26 @@ export default function Analytics() {
             <h3 className="text-white font-semibold mb-1">Daily Payment Report</h3>
             <p className="text-gray-400 text-xs">Cash vs Card breakdown per day</p>
           </div>
-          <Button
-            onClick={handlePrintDailyReport}
-            variant="outline"
-            size="sm"
-            className="gap-2"
-          >
-            <Printer className="w-4 h-4" />
-            Print Report
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={handlePrintTodayRevenue}
+              variant="outline"
+              size="sm"
+              className="gap-2 bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/20"
+            >
+              <Printer className="w-4 h-4" />
+              Print Today's Revenue
+            </Button>
+            <Button
+              onClick={handlePrintDailyReport}
+              variant="outline"
+              size="sm"
+              className="gap-2"
+            >
+              <Printer className="w-4 h-4" />
+              Print 14-Day Report
+            </Button>
+          </div>
         </div>
 
         {/* Today's totals */}
