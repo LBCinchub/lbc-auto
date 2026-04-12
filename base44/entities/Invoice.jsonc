@@ -1,0 +1,152 @@
+{
+  "name": "Invoice",
+  "type": "object",
+  "properties": {
+    "invoice_number": {
+      "type": "string",
+      "description": "Invoice number"
+    },
+    "repair_order_id": {
+      "type": "string",
+      "description": "Linked repair order ID"
+    },
+    "customer_id": {
+      "type": "string",
+      "description": "Customer ID"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Customer name"
+    },
+    "vehicle_info": {
+      "type": "string",
+      "description": "Vehicle info for display"
+    },
+    "parts_total": {
+      "type": "number",
+      "description": "Parts subtotal"
+    },
+    "labor_total": {
+      "type": "number",
+      "description": "Labor subtotal"
+    },
+    "tax_rate": {
+      "type": "number",
+      "description": "Tax rate percentage"
+    },
+    "tax_amount": {
+      "type": "number",
+      "description": "Tax amount"
+    },
+    "total": {
+      "type": "number",
+      "description": "Total invoice amount"
+    },
+    "amount_paid": {
+      "type": "number",
+      "description": "Total amount already paid",
+      "default": 0
+    },
+    "balance_due": {
+      "type": "number",
+      "description": "Remaining balance to be paid"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "unpaid",
+        "partial",
+        "paid",
+        "overdue"
+      ],
+      "default": "unpaid",
+      "description": "Payment status"
+    },
+    "payment_method": {
+      "type": "string",
+      "description": "Payment method used"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Payment due date"
+    },
+    "paid_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date payment was received"
+    },
+    "payment_history": {
+      "type": "array",
+      "description": "Record of all payments made",
+      "items": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "number"
+          },
+          "method": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "line_items": {
+      "type": "array",
+      "description": "Invoice line items",
+      "items": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "unit_price": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "auth_status": {
+      "type": "string",
+      "enum": [
+        "none",
+        "pending",
+        "approved"
+      ],
+      "default": "none",
+      "description": "Customer authorization status"
+    },
+    "auth_token": {
+      "type": "string",
+      "description": "Secure token for signing link"
+    },
+    "auth_signed_at": {
+      "type": "string",
+      "description": "Timestamp when customer approved"
+    },
+    "auth_signer_name": {
+      "type": "string",
+      "description": "Name entered by customer when signing"
+    }
+  },
+  "required": [
+    "customer_id",
+    "repair_order_id",
+    "total"
+  ]
+}

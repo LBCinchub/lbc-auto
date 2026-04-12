@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileText, Pencil, Trash2, Printer, CheckCircle2, XCircle, Download, DollarSign } from "lucide-react";
+import { FileText, Pencil, Trash2, Printer, CheckCircle2, XCircle, Download, DollarSign, MessageSquare, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { jsPDF } from "jspdf";
@@ -20,7 +20,20 @@ export default function Invoices() {
   const [editingInvoice, setEditingInvoice] = useState(null);
   const [printInvoice, setPrintInvoice] = useState(null);
   const [paymentInvoice, setPaymentInvoice] = useState(null);
+  const [sendingAuth, setSendingAuth] = useState(null);
   const queryClient = useQueryClient();
+
+  const sendAuthSMS = async (inv) => {
+    const customer = customers.find(c => c.id === inv.customer_id);
+    const phone = customer?.phone;
+    if (!phone) { alert("No phone number found for this customer."); return; }
+    setSendingAuth(inv.id);
+    const appUrl = window.location.origin;
+    await base44.functions.invoke('sendInvoiceAuthSMS', { invoice_id: inv.id, phone, app_url: appUrl });
+    queryClient.invalidateQueries({ queryKey: ["invoices"] });
+    setSendingAuth(null);
+    alert(`Authorization SMS sent to ${phone}`);
+  };
 
   const { data: invoices = [], isLoading } = useQuery({
     queryKey: ["invoices"],
@@ -201,6 +214,16 @@ export default function Invoices() {
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-emerald-500 hover:text-emerald-400"
                         onClick={() => setPaymentInvoice(inv)} title="Record Payment">
                         <DollarSign className="w-4 h-4" />
+                      </Button>
+                    )}
+                    {inv.auth_status === "approved" ? (
+                      <span title="Approved by customer" className="flex items-center justify-center h-8 w-8">
+                        <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                      </span>
+                    ) : (
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-sky-500 hover:text-sky-400"
+                        onClick={() => sendAuthSMS(inv)} disabled={sendingAuth === inv.id} title="Send Auth SMS">
+                        <MessageSquare className="w-4 h-4" />
                       </Button>
                     )}
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-white"
