@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ export default function Estimates() {
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const { data: estimates = [], isLoading } = useQuery({
@@ -108,7 +110,7 @@ export default function Estimates() {
       ) : (
         <div className="space-y-3">
           {filtered.map(est => (
-            <div key={est.id} className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5 flex flex-col sm:flex-row sm:items-center gap-4 hover:border-sky-500/30 transition-colors">
+            <div key={est.id} onClick={() => navigate(`/EstimateDetail/${est.id}`)} className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5 flex flex-col sm:flex-row sm:items-center gap-4 hover:border-sky-500/30 transition-colors cursor-pointer">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-3 flex-wrap">
                   <h3 className="text-white font-semibold">{est.customer_name}</h3>
@@ -135,7 +137,7 @@ export default function Estimates() {
                   <p className="text-xs text-gray-500">Total</p>
                   <p className="text-lg font-bold text-sky-400">${(est.grand_total || 0).toFixed(2)}</p>
                 </div>
-                <div className="flex gap-1">
+                <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                    {est.status === "approved" && (
                      <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-green-400" title="Convert to Repair Order" onClick={() => handleConvertToRepairOrder(est)}>
                        <CheckCircle2 className="w-3.5 h-3.5" />

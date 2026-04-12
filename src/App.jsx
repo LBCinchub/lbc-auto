@@ -10,6 +10,7 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import InvoiceSign from './pages/InvoiceSign';
 import Estimates from './pages/Estimates';
+import EstimateDetail from './pages/EstimateDetail';
 import TimeTracking from './pages/TimeTracking';
 import Payroll from './pages/Payroll';
 import VehicleTimeline from './pages/VehicleTimeline';
@@ -90,6 +91,7 @@ const AuthenticatedApp = () => {
       ))}
       <Route path="/InvoiceSign" element={<InvoiceSign />} />
       <Route path="/Estimates" element={<LayoutWrapper currentPageName="Estimates"><Estimates /></LayoutWrapper>} />
+      <Route path="/EstimateDetail/:estimateId" element={<LayoutWrapper currentPageName="Estimates"><EstimateDetail /></LayoutWrapper>} />
       <Route path="/TimeTracking" element={<LayoutWrapper currentPageName="TimeTracking"><TimeTracking /></LayoutWrapper>} />
       <Route path="/Payroll" element={<LayoutWrapper currentPageName="Payroll"><Payroll /></LayoutWrapper>} />
       <Route path="/VehicleTimeline/:vehicleId" element={<LayoutWrapper currentPageName="Vehicles"><VehicleTimeline /></LayoutWrapper>} />
