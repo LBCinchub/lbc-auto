@@ -1,0 +1,302 @@
+import React, { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { base44 } from "@/api/base44Client";
+import { Plus, Trash2, Loader2 } from "lucide-react";
+
+const emptyLaborRow = () => ({ description: "", hours: "", rate: "", total: 0 });
+const emptyPartRow  = () => ({ name: "", part_number: "", quantity: "", unit_price: "", total: 0 });
+
+const emptyForm = {
+  customer_id: "", customer_name: "", vehicle_id: "", vehicle_info: "",
+  status: "draft", notes: "", tax_rate: "0", valid_until: "",
+  labor_items: [emptyLaborRow()],
+  parts_items: [emptyPartRow()],
+};
+
+export default function EstimateFormDialog({ open, onClose, estimate, customers, vehicles, onSaved }) {
+  const [form, setForm] = useState(emptyForm);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (estimate) {
+      setForm({
+        ...emptyForm,
+        ...estimate,
+        tax_rate: String(estimate.tax_rate ?? 0),
+        labor_items: estimate.labor_items?.length ? estimate.labor_items.map(i => ({ ...i, hours: String(i.hours), rate: String(i.rate) })) : [emptyLaborRow()],
+        parts_items: estimate.parts_items?.length ? estimate.parts_items.map(i => ({ ...i, quantity: String(i.quantity), unit_price: String(i.unit_price) })) : [emptyPartRow()],
+      });
+    } else {
+      setForm(emptyForm);
+    }
+  }, [estimate, open]);
+
+  const customerVehicles = vehicles.filter(v => v.customer_id === form.customer_id);
+
+  // ---- Labor helpers ----
+  const updateLabor = (idx, field, value) => {
+    const items = form.labor_items.map((row, i) => {
+      if (i !== idx) return row;
+      const updated = { ...row, [field]: value };
+      updated.total = (parseFloat(updated.hours) || 0) * (parseFloat(updated.rate) || 0);
+      return updated;
+    });
+    setForm(f => ({ ...f, labor_items: items }));
+  };
+  const addLabor = () => setForm(f => ({ ...f, labor_items: [...f.labor_items, emptyLaborRow()] }));
+  const removeLabor = (idx) => setForm(f => ({ ...f, labor_items: f.labor_items.filter((_, i) => i !== idx) }));
+
+  // ---- Parts helpers ----
+  const updatePart = (idx, field, value) => {
+    const items = form.parts_items.map((row, i) => {
+      if (i !== idx) return row;
+      const updated = { ...row, [field]: value };
+      updated.total = (parseFloat(updated.quantity) || 0) * (parseFloat(updated.unit_price) || 0);
+      return updated;
+    });
+    setForm(f => ({ ...f, parts_items: items }));
+  };
+  const addPart = () => setForm(f => ({ ...f, parts_items: [...f.parts_items, emptyPartRow()] }));
+  const removePart = (idx) => setForm(f => ({ ...f, parts_items: f.parts_items.filter((_, i) => i !== idx) }));
+
+  // ---- Totals ----
+  const laborTotal = form.labor_items.reduce((s, r) => s + (r.total || 0), 0);
+  const partsTotal = form.parts_items.reduce((s, r) => s + (r.total || 0), 0);
+  const subtotal   = laborTotal + partsTotal;
+  const taxRate    = parseFloat(form.tax_rate) || 0;
+  const taxAmount  = subtotal * (taxRate / 100);
+  const grandTotal = subtotal + taxAmount;
+
+  const handleCustomerChange = (cid) => {
+    const customer = customers.find(c => c.id === cid);
+    setForm(f => ({ ...f, customer_id: cid, customer_name: customer?.full_name || "", vehicle_id: "", vehicle_info: "" }));
+  };
+
+  const handleVehicleChange = (vid) => {
+    const v = vehicles.find(v => v.id === vid);
+    setForm(f => ({ ...f, vehicle_id: vid, vehicle_info: v ? `${v.year} ${v.make} ${v.model}` : "" }));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    const estNum = estimate?.estimate_number || `EST-${Date.now().toString().slice(-6)}`;
+    const payload = {
+      ...form,
+      estimate_number: estNum,
+      tax_rate: taxRate,
+      labor_items: form.labor_items.map(r => ({ ...r, hours: parseFloat(r.hours) || 0, rate: parseFloat(r.rate) || 0 })),
+      parts_items: form.parts_items.map(r => ({ ...r, quantity: parseFloat(r.quantity) || 0, unit_price: parseFloat(r.unit_price) || 0 })),
+      labor_total: laborTotal,
+      parts_total: partsTotal,
+      tax_amount: taxAmount,
+      grand_total: grandTotal,
+    };
+    if (estimate) {
+      await base44.entities.Estimate.update(estimate.id, payload);
+    } else {
+      await base44.entities.Estimate.create(payload);
+    }
+    setSaving(false);
+    onSaved();
+    onClose();
+  };
+
+  const canSave = form.customer_id && form.vehicle_id;
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-3xl max-h-[92vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{estimate ? "Edit Estimate" : "New Service Estimate"}</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-6 mt-2">
+          {/* Customer & Vehicle */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label className="text-gray-400">Customer *</Label>
+              <Select value={form.customer_id} onValueChange={handleCustomerChange}>
+                <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
+                  <SelectValue placeholder="Select customer..." />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                  {customers.map(c => <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-gray-400">Vehicle *</Label>
+              <Select value={form.vehicle_id} onValueChange={handleVehicleChange} disabled={!form.customer_id}>
+                <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
+                  <SelectValue placeholder="Select vehicle..." />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                  {customerVehicles.map(v => (
+                    <SelectItem key={v.id} value={v.id}>{v.year} {v.make} {v.model} {v.license_plate ? `(${v.license_plate})` : ""}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Status / Tax / Valid Until */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <Label className="text-gray-400">Status</Label>
+              <Select value={form.status} onValueChange={v => setForm(f => ({ ...f, status: v }))}>
+                <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                  {["draft","sent","approved","declined","expired"].map(s => (
+                    <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-gray-400">Tax Rate (%)</Label>
+              <Input type="number" value={form.tax_rate} onChange={e => setForm(f => ({ ...f, tax_rate: e.target.value }))}
+                className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="0" />
+            </div>
+            <div>
+              <Label className="text-gray-400">Valid Until</Label>
+              <Input type="date" value={form.valid_until} onChange={e => setForm(f => ({ ...f, valid_until: e.target.value }))}
+                className="bg-gray-800 border-gray-700 text-white mt-1" />
+            </div>
+          </div>
+
+          {/* Labor Items */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label className="text-gray-300 font-semibold">Labor</Label>
+              <Button size="sm" variant="ghost" onClick={addLabor} className="text-sky-400 hover:text-sky-300 h-7 px-2">
+                <Plus className="w-4 h-4 mr-1" /> Add Row
+              </Button>
+            </div>
+            <div className="rounded-lg border border-gray-800 overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-800/60 text-gray-500 text-xs">
+                  <tr>
+                    <th className="px-3 py-2 text-left">Description</th>
+                    <th className="px-3 py-2 text-right w-20">Hours</th>
+                    <th className="px-3 py-2 text-right w-24">Rate/hr</th>
+                    <th className="px-3 py-2 text-right w-24">Total</th>
+                    <th className="w-8" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-800">
+                  {form.labor_items.map((row, idx) => (
+                    <tr key={idx} className="bg-gray-900">
+                      <td className="px-2 py-1.5">
+                        <Input value={row.description} onChange={e => updateLabor(idx, "description", e.target.value)}
+                          className="bg-gray-800 border-0 text-white h-8 text-sm" placeholder="e.g. Oil Change" />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <Input type="number" value={row.hours} onChange={e => updateLabor(idx, "hours", e.target.value)}
+                          className="bg-gray-800 border-0 text-white h-8 text-sm text-right" placeholder="0" />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <Input type="number" value={row.rate} onChange={e => updateLabor(idx, "rate", e.target.value)}
+                          className="bg-gray-800 border-0 text-white h-8 text-sm text-right" placeholder="0.00" />
+                      </td>
+                      <td className="px-3 py-1.5 text-right text-gray-300 font-medium">${row.total.toFixed(2)}</td>
+                      <td className="pr-2 py-1.5">
+                        <button onClick={() => removeLabor(idx)} className="text-gray-600 hover:text-rose-400 transition-colors">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Parts Items */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label className="text-gray-300 font-semibold">Parts</Label>
+              <Button size="sm" variant="ghost" onClick={addPart} className="text-sky-400 hover:text-sky-300 h-7 px-2">
+                <Plus className="w-4 h-4 mr-1" /> Add Row
+              </Button>
+            </div>
+            <div className="rounded-lg border border-gray-800 overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-800/60 text-gray-500 text-xs">
+                  <tr>
+                    <th className="px-3 py-2 text-left">Part Name</th>
+                    <th className="px-3 py-2 text-left w-28">Part #</th>
+                    <th className="px-3 py-2 text-right w-20">Qty</th>
+                    <th className="px-3 py-2 text-right w-24">Unit Price</th>
+                    <th className="px-3 py-2 text-right w-24">Total</th>
+                    <th className="w-8" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-800">
+                  {form.parts_items.map((row, idx) => (
+                    <tr key={idx} className="bg-gray-900">
+                      <td className="px-2 py-1.5">
+                        <Input value={row.name} onChange={e => updatePart(idx, "name", e.target.value)}
+                          className="bg-gray-800 border-0 text-white h-8 text-sm" placeholder="e.g. Oil Filter" />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <Input value={row.part_number} onChange={e => updatePart(idx, "part_number", e.target.value)}
+                          className="bg-gray-800 border-0 text-white h-8 text-sm" placeholder="SKU" />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <Input type="number" value={row.quantity} onChange={e => updatePart(idx, "quantity", e.target.value)}
+                          className="bg-gray-800 border-0 text-white h-8 text-sm text-right" placeholder="0" />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <Input type="number" value={row.unit_price} onChange={e => updatePart(idx, "unit_price", e.target.value)}
+                          className="bg-gray-800 border-0 text-white h-8 text-sm text-right" placeholder="0.00" />
+                      </td>
+                      <td className="px-3 py-1.5 text-right text-gray-300 font-medium">${row.total.toFixed(2)}</td>
+                      <td className="pr-2 py-1.5">
+                        <button onClick={() => removePart(idx)} className="text-gray-600 hover:text-rose-400 transition-colors">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <Label className="text-gray-400">Notes</Label>
+            <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+              rows={2} placeholder="Additional notes..."
+              className="w-full mt-1 rounded-md bg-gray-800 border border-gray-700 text-white text-sm px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-sky-500" />
+          </div>
+
+          {/* Summary */}
+          <div className="rounded-xl border border-gray-700 bg-gray-800/40 p-4 space-y-2 text-sm">
+            <div className="flex justify-between text-gray-400"><span>Labor Subtotal</span><span>${laborTotal.toFixed(2)}</span></div>
+            <div className="flex justify-between text-gray-400"><span>Parts Subtotal</span><span>${partsTotal.toFixed(2)}</span></div>
+            {taxRate > 0 && <div className="flex justify-between text-gray-400"><span>Tax ({taxRate}%)</span><span>${taxAmount.toFixed(2)}</span></div>}
+            <div className="flex justify-between text-white font-bold text-base border-t border-gray-700 pt-2 mt-2">
+              <span>Grand Total</span>
+              <span className="text-sky-400">${grandTotal.toFixed(2)}</span>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3 pt-1">
+            <Button variant="outline" onClick={onClose} className="flex-1 border-gray-700 text-gray-300">Cancel</Button>
+            <Button onClick={handleSave} disabled={saving || !canSave} className="flex-1 bg-sky-500 hover:bg-sky-600">
+              {saving ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Saving...</> : "Save Estimate"}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

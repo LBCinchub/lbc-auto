@@ -1,0 +1,117 @@
+{
+  "name": "Estimate",
+  "type": "object",
+  "properties": {
+    "estimate_number": {
+      "type": "string",
+      "description": "Auto-generated estimate number"
+    },
+    "customer_id": {
+      "type": "string",
+      "description": "Customer ID"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Customer name for display"
+    },
+    "vehicle_id": {
+      "type": "string",
+      "description": "Linked vehicle ID"
+    },
+    "vehicle_info": {
+      "type": "string",
+      "description": "Vehicle year make model for display"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "sent",
+        "approved",
+        "declined",
+        "expired"
+      ],
+      "default": "draft",
+      "description": "Estimate status"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Additional notes"
+    },
+    "labor_items": {
+      "type": "array",
+      "description": "Labor line items",
+      "items": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "hours": {
+            "type": "number"
+          },
+          "rate": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "parts_items": {
+      "type": "array",
+      "description": "Parts line items",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "part_number": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "unit_price": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "labor_total": {
+      "type": "number",
+      "description": "Total labor cost"
+    },
+    "parts_total": {
+      "type": "number",
+      "description": "Total parts cost"
+    },
+    "tax_rate": {
+      "type": "number",
+      "description": "Tax rate percentage",
+      "default": 0
+    },
+    "tax_amount": {
+      "type": "number",
+      "description": "Tax amount"
+    },
+    "grand_total": {
+      "type": "number",
+      "description": "Grand total"
+    },
+    "valid_until": {
+      "type": "string",
+      "format": "date",
+      "description": "Estimate expiry date"
+    }
+  },
+  "required": [
+    "customer_id",
+    "vehicle_id"
+  ]
+}
