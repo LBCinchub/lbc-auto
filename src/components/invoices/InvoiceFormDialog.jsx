@@ -223,23 +223,29 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
           {/* Payment Method & Receipt Info Side by Side */}
           <div className="grid grid-cols-2 gap-4">
             {/* Payment Method */}
-            <div>
-              <Label className="text-gray-400 text-sm">Payment Method</Label>
-              <div className="flex gap-4 mt-2">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="paymentMethod" value="cash" checked={form.payment_method === "cash"}
-                    onChange={e => setForm({...form, payment_method: e.target.value, card_last4: ""})}
-                    className="w-4 h-4" />
-                  <span className="text-sm text-gray-300">Cash</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="paymentMethod" value="card" checked={form.payment_method === "card"}
-                    onChange={e => setForm({...form, payment_method: e.target.value})}
-                    className="w-4 h-4" />
-                  <span className="text-sm text-gray-300">Card</span>
-                </label>
+              <div>
+                <Label className="text-gray-400 text-sm">Payment Method</Label>
+                <div className="flex flex-col gap-2 mt-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="paymentMethod" value="cash" checked={form.payment_method === "cash"}
+                      onChange={e => setForm({...form, payment_method: e.target.value, card_last4: ""})}
+                      className="w-4 h-4" />
+                    <span className="text-sm text-gray-300">Cash</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="paymentMethod" value="card" checked={form.payment_method === "card"}
+                      onChange={e => setForm({...form, payment_method: e.target.value})}
+                      className="w-4 h-4" />
+                    <span className="text-sm text-gray-300">Card</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="paymentMethod" value="e-transfer" checked={form.payment_method === "e-transfer"}
+                      onChange={e => setForm({...form, payment_method: e.target.value, card_last4: ""})}
+                      className="w-4 h-4" />
+                    <span className="text-sm text-gray-300">E-Transfer</span>
+                  </label>
+                </div>
               </div>
-            </div>
 
             {/* Receipt Info */}
             <div className="rounded-lg border border-gray-700/50 p-3 space-y-3">

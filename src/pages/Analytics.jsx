@@ -86,7 +86,7 @@ export default function Analytics() {
     return { name: m.name, completed, hours, revenue };
   });
 
-  // Daily cash vs card report
+  // Daily cash vs card vs e-transfer report
   const dailyPayments = {};
   invoices.forEach(inv => {
     // Only count paid invoices
@@ -95,14 +95,16 @@ export default function Analytics() {
     // Get payment date (when it was actually paid)
     const day = inv.paid_date || inv.created_date?.substring(0, 10);
     if (!day) return;
-    if (!dailyPayments[day]) dailyPayments[day] = { date: day, cash: 0, card: 0 };
+    if (!dailyPayments[day]) dailyPayments[day] = { date: day, cash: 0, card: 0, etransfer: 0 };
     
     // Use the full total for paid invoices
     const amount = inv.total || 0;
     const method = inv.payment_method?.toLowerCase() || "";
     
     // Track by payment method
-    if (method === "card" || inv.card_last4) {
+    if (method === "e-transfer" || method === "etransfer") {
+      dailyPayments[day].etransfer += amount;
+    } else if (method === "card" || inv.card_last4) {
       dailyPayments[day].card += amount;
     } else if (method === "cash") {
       dailyPayments[day].cash += amount;
@@ -112,11 +114,11 @@ export default function Analytics() {
     }
   });
   const today = new Date().toISOString().substring(0, 10);
-  const todayData = dailyPayments[today] || { cash: 0, card: 0 };
+  const todayData = dailyPayments[today] || { cash: 0, card: 0, etransfer: 0 };
   const dailyChart = Object.values(dailyPayments)
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(-14)
-    .map(d => ({ ...d, total: d.cash + d.card }));
+    .map(d => ({ ...d, total: d.cash + d.card + d.etransfer }));
 
   // Order status
   const statusCounts = [
@@ -151,7 +153,8 @@ export default function Analytics() {
     const reportData = [...dailyChart].reverse();
     const totalCash = reportData.reduce((sum, d) => sum + d.cash, 0);
     const totalCard = reportData.reduce((sum, d) => sum + d.card, 0);
-    const reportTotal = totalCash + totalCard;
+    const totalEtransfer = reportData.reduce((sum, d) => sum + d.etransfer, 0);
+    const reportTotal = totalCash + totalCard + totalEtransfer;
 
     const html = `
       <!DOCTYPE html>
@@ -184,6 +187,7 @@ export default function Analytics() {
                 <th>Date</th>
                 <th>Cash</th>
                 <th>Card</th>
+                <th>E-Transfer</th>
                 <th>Total</th>
               </tr>
             </thead>
@@ -193,6 +197,7 @@ export default function Analytics() {
                   <td>${d.date}${d.date === today ? ' (Today)' : ''}</td>
                   <td>$${d.cash.toFixed(2)}</td>
                   <td>$${d.card.toFixed(2)}</td>
+                  <td>$${d.etransfer.toFixed(2)}</td>
                   <td>$${d.total.toFixed(2)}</td>
                 </tr>
               `).join('')}
@@ -200,6 +205,7 @@ export default function Analytics() {
                 <td>TOTAL</td>
                 <td>$${totalCash.toFixed(2)}</td>
                 <td>$${totalCard.toFixed(2)}</td>
+                <td>$${totalEtransfer.toFixed(2)}</td>
                 <td>$${reportTotal.toFixed(2)}</td>
               </tr>
             </tbody>
@@ -208,6 +214,7 @@ export default function Analytics() {
           <div class="summary">
             <div class="summary-item"><span class="label">Total Cash:</span> $${totalCash.toFixed(2)}</div>
             <div class="summary-item"><span class="label">Total Card:</span> $${totalCard.toFixed(2)}</div>
+            <div class="summary-item"><span class="label">Total E-Transfer:</span> $${totalEtransfer.toFixed(2)}</div>
             <div class="summary-item"><span class="label">Grand Total:</span> $${reportTotal.toFixed(2)}</div>
             <div class="summary-item"><span class="label">Period:</span> Last 14 days</div>
           </div>
@@ -227,7 +234,8 @@ export default function Analytics() {
     const printWindow = window.open('', '_blank');
     const totalCash = todayData.cash;
     const totalCard = todayData.card;
-    const reportTotal = totalCash + totalCard;
+    const totalEtransfer = todayData.etransfer;
+    const reportTotal = totalCash + totalCard + totalEtransfer;
 
     const html = `
       <!DOCTYPE html>
@@ -260,6 +268,10 @@ export default function Analytics() {
             <div class="summary-item">
               <span class="label">Card Payments:</span>
               <span class="value">$${totalCard.toFixed(2)}</span>
+            </div>
+            <div class="summary-item">
+              <span class="label">E-Transfer Payments:</span>
+              <span class="value">$${totalEtransfer.toFixed(2)}</span>
             </div>
             <div class="summary-item" style="border: none; padding: 15px 0; border-top: 2px solid #333; margin-top: 10px;">
               <span class="label" style="font-size: 16px;">Daily Total Revenue:</span>
@@ -342,14 +354,14 @@ export default function Analytics() {
         </div>
 
         {/* Today's totals */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-4 flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
               <Banknote className="w-5 h-5 text-emerald-400" />
             </div>
             <div>
               <p className="text-xs text-gray-400">Today — Cash</p>
-              <p className="text-xl font-bold text-emerald-400">${todayData.cash.toFixed(2)}</p>
+              <p className="text-lg font-bold text-emerald-400">${todayData.cash.toFixed(2)}</p>
             </div>
           </div>
           <div className="rounded-lg bg-sky-500/10 border border-sky-500/20 p-4 flex items-center gap-3">
@@ -358,7 +370,16 @@ export default function Analytics() {
             </div>
             <div>
               <p className="text-xs text-gray-400">Today — Card</p>
-              <p className="text-xl font-bold text-sky-400">${todayData.card.toFixed(2)}</p>
+              <p className="text-lg font-bold text-sky-400">${todayData.card.toFixed(2)}</p>
+            </div>
+          </div>
+          <div className="rounded-lg bg-orange-500/10 border border-orange-500/20 p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center">
+              <DollarSign className="w-5 h-5 text-orange-400" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-400">Today — E-Transfer</p>
+              <p className="text-lg font-bold text-orange-400">${todayData.etransfer.toFixed(2)}</p>
             </div>
           </div>
           <div className="rounded-lg bg-purple-500/10 border border-purple-500/20 p-4 flex items-center gap-3">
@@ -367,7 +388,7 @@ export default function Analytics() {
             </div>
             <div>
               <p className="text-xs text-gray-400">Today — Total</p>
-              <p className="text-xl font-bold text-purple-400">${(todayData.cash + todayData.card).toFixed(2)}</p>
+              <p className="text-lg font-bold text-purple-400">${(todayData.cash + todayData.card + todayData.etransfer).toFixed(2)}</p>
             </div>
           </div>
         </div>
@@ -387,6 +408,7 @@ export default function Analytics() {
                 <Legend />
                 <Bar dataKey="cash" name="Cash" fill="#10b981" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="card" name="Card" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="etransfer" name="E-Transfer" fill="#f97316" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -399,18 +421,20 @@ export default function Analytics() {
               <thead>
                 <tr className="border-b border-gray-800/50">
                   <th className="text-left text-xs text-gray-500 font-medium px-3 py-2">Date</th>
-                  <th className="text-right text-xs text-gray-500 font-medium px-3 py-2">Cash</th>
-                  <th className="text-right text-xs text-gray-500 font-medium px-3 py-2">Card</th>
-                  <th className="text-right text-xs text-gray-500 font-medium px-3 py-2">Total</th>
+                   <th className="text-right text-xs text-gray-500 font-medium px-3 py-2">Cash</th>
+                   <th className="text-right text-xs text-gray-500 font-medium px-3 py-2">Card</th>
+                   <th className="text-right text-xs text-gray-500 font-medium px-3 py-2">E-Transfer</th>
+                   <th className="text-right text-xs text-gray-500 font-medium px-3 py-2">Total</th>
                 </tr>
               </thead>
               <tbody>
                 {[...dailyChart].reverse().map(d => (
                   <tr key={d.date} className={`border-b border-gray-800/30 ${d.date === today ? "bg-yellow-500/5" : ""}`}>
                     <td className="px-3 py-2 text-gray-300 font-medium">{d.date}{d.date === today ? " 📅" : ""}</td>
-                    <td className="px-3 py-2 text-right text-emerald-400">${d.cash.toFixed(2)}</td>
-                    <td className="px-3 py-2 text-right text-sky-400">${d.card.toFixed(2)}</td>
-                    <td className="px-3 py-2 text-right text-white font-semibold">${d.total.toFixed(2)}</td>
+                     <td className="px-3 py-2 text-right text-emerald-400">${d.cash.toFixed(2)}</td>
+                     <td className="px-3 py-2 text-right text-sky-400">${d.card.toFixed(2)}</td>
+                     <td className="px-3 py-2 text-right text-orange-400">${d.etransfer.toFixed(2)}</td>
+                     <td className="px-3 py-2 text-right text-white font-semibold">${d.total.toFixed(2)}</td>
                   </tr>
                 ))}
               </tbody>
