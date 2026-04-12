@@ -88,6 +88,10 @@
       "type": "string",
       "description": "Name or ID of cashier who processed payment"
     },
+    "customer_note": {
+      "type": "string",
+      "description": "Note for the customer shown on the invoice"
+    },
     "payment_history": {
       "type": "array",
       "description": "Record of all payments made",

@@ -115,6 +115,13 @@ export default function InvoicePrintView({ invoice, onClose }) {
             </div>
           </div>
 
+          {invoice.customer_note && (
+            <div className="mt-6 rounded-lg border border-gray-200 p-4">
+              <p className="text-xs font-semibold uppercase text-gray-500 mb-1">Note for Customer</p>
+              <p className="text-sm text-gray-700">{invoice.customer_note}</p>
+            </div>
+          )}
+
           <div className="mt-8 text-center text-xs text-gray-400">
             {invoice.status === "paid" ? "✓ PAID" : invoice.due_date ? `Due: ${invoice.due_date}` : "UNPAID"}
           </div>

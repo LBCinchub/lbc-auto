@@ -7,13 +7,14 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function InvoiceFormDialog({ open, onClose, invoice, orders, customers, onSaved, initialOrderId }) {
   const [form, setForm] = useState({
     repair_order_id: "", customer_id: "", customer_name: "", vehicle_info: "",
     parts_total: 0, labor_total: 0, tax_rate: 15, status: "unpaid",
     due_date: "", payment_method: "", amount_paid: 0, payment_history: [],
-    receipt_number: "", card_last4: "", cashier_name: "", parts_used: []
+    receipt_number: "", card_last4: "", cashier_name: "", parts_used: [], customer_note: ""
   });
   const [saving, setSaving] = useState(false);
 
@@ -36,13 +37,14 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         card_last4: invoice.card_last4 || "",
         cashier_name: invoice.cashier_name || "",
         parts_used: invoice.parts_used || [],
+        customer_note: invoice.customer_note || "",
       });
     } else {
       setForm({
         repair_order_id: "", customer_id: "", customer_name: "", vehicle_info: "",
         parts_total: 0, labor_total: 0, tax_rate: 15, status: "unpaid",
         due_date: "", payment_method: "", amount_paid: 0, payment_history: [],
-        receipt_number: "", card_last4: "", cashier_name: "", parts_used: []
+        receipt_number: "", card_last4: "", cashier_name: "", parts_used: [], customer_note: ""
       });
     }
     // Auto-select order if opened from RepairOrders
@@ -255,6 +257,15 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
                 </div>
               </>
             )}
+          </div>
+
+          <div>
+            <Label className="text-gray-400">Note for Customer</Label>
+            <Textarea value={form.customer_note || ""}
+              onChange={e => setForm({...form, customer_note: e.target.value})}
+              className="bg-gray-800 border-gray-700 text-white mt-1"
+              placeholder="e.g. Please come back for a follow-up check in 1 month..."
+              rows={2} />
           </div>
 
           <div className="flex gap-3 pt-2">
