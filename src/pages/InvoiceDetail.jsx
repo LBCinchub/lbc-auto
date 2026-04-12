@@ -71,7 +71,11 @@ export default function InvoiceDetail() {
             {user?.business_name && <h2 className="text-sm font-semibold text-sky-400 mb-2">{user.business_name}</h2>}
             <h1 className="text-3xl font-bold text-white">Invoice #{invoice.invoice_number}</h1>
             <p className="text-gray-400 mt-1">{invoice.customer_name}</p>
-            {customer?.phone && <p className="text-gray-500 text-sm mt-1">{customer.phone}</p>}
+            {(invoice.customer_phone || customer?.phone) && (
+              <a href={`tel:${invoice.customer_phone || customer?.phone}`} className="text-sky-400 hover:text-sky-300 text-sm font-medium mt-1 inline-block">
+                📞 {invoice.customer_phone || customer?.phone}
+              </a>
+            )}
           </div>
           <span className={`px-3 py-1 rounded-full text-sm font-medium ${
             invoice.status === "paid"
