@@ -43,9 +43,11 @@ export default function InvoiceDetail() {
         <Button variant="ghost" onClick={() => navigate(-1)} className="text-gray-400 hover:text-white gap-2">
           <ArrowLeft className="w-4 h-4" /> Back
         </Button>
-        <Button onClick={() => navigate("/Invoices")} className="bg-sky-500 hover:bg-sky-600">
-          View in Invoices
-        </Button>
+        {invoice?.repair_order_id ? (
+          <Button onClick={() => navigate(`/RepairOrderDetail/${invoice.repair_order_id}`)} className="bg-sky-500 hover:bg-sky-600">
+            View Repair Order
+          </Button>
+        ) : null}
       </div>
 
       <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-6">
