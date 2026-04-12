@@ -84,12 +84,19 @@ export default function InvoicePrintView({ invoice, onClose }) {
                   <td className="p-3 text-right">${invoice.labor_total?.toFixed(2)}</td>
                 </tr>
               )}
-              {invoice.parts_total > 0 && (
+              {invoice.parts_used && invoice.parts_used.length > 0 ? (
+                invoice.parts_used.map((p, i) => (
+                  <tr key={i} className="border-b">
+                    <td className="p-3">{p.name} <span className="text-gray-400 text-sm">x{p.quantity}</span></td>
+                    <td className="p-3 text-right">${(p.total || 0).toFixed(2)}</td>
+                  </tr>
+                ))
+              ) : invoice.parts_total > 0 ? (
                 <tr className="border-b">
                   <td className="p-3">Parts</td>
                   <td className="p-3 text-right">${invoice.parts_total?.toFixed(2)}</td>
                 </tr>
-              )}
+              ) : null}
             </tbody>
           </table>
 
