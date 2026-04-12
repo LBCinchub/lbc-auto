@@ -90,7 +90,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         customer_phone: customerPhone,
         vehicle_info: order.vehicle_info,
         parts_total: order.parts_cost || 0,
-        labor_total: 120,
+        labor_total: order.labor_cost || (order.labor_hours ? order.labor_hours * 120 : 0),
         parts_used: order.parts_used || [],
         customer_note: description,
       });
@@ -207,7 +207,8 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
             </div>
             <div>
               <Label className="text-gray-400">Labor Total</Label>
-              <Input type="number" step="0.01" value={120} disabled
+              <Input type="number" step="0.01" value={form.labor_total}
+                onChange={e => setForm({...form, labor_total: Number(e.target.value)})}
                 className="bg-gray-800 border-gray-700 text-white mt-1" />
             </div>
           </div>

@@ -43,7 +43,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
     const items = form.labor_items.map((row, i) => {
       if (i !== idx) return row;
       const updated = { ...row, [field]: value };
-      updated.total = (parseFloat(updated.hours) || 0) * (parseFloat(updated.rate) || 0);
+      updated.total = (parseFloat(updated.hours) || 0) * 120;
       return updated;
     });
     setForm(f => ({ ...f, labor_items: items }));
@@ -65,7 +65,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
   const removePart = (idx) => setForm(f => ({ ...f, parts_items: f.parts_items.filter((_, i) => i !== idx) }));
 
   // ---- Totals ----
-  const laborTotal = form.labor_items.reduce((s, r) => s + ((parseFloat(r.hours) || 0) * (parseFloat(r.rate) || 0)), 0);
+  const laborTotal = form.labor_items.reduce((s, r) => s + ((parseFloat(r.hours) || 0) * 120), 0);
   const partsTotal = form.parts_items.reduce((s, r) => s + (r.total || 0), 0);
   const subtotal   = laborTotal + partsTotal;
   const taxRate    = parseFloat(form.tax_rate) || 0;
@@ -89,7 +89,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
       ...form,
       estimate_number: estNum,
       tax_rate: taxRate,
-      labor_items: form.labor_items.map(r => ({ ...r, hours: parseFloat(r.hours) || 0, rate: parseFloat(r.rate) || 0 })),
+      labor_items: form.labor_items.map(r => ({ ...r, hours: parseFloat(r.hours) || 0, rate: 120 })),
       parts_items: form.parts_items.map(r => ({ ...r, quantity: parseFloat(r.quantity) || 0, unit_price: parseFloat(r.unit_price) || 0 })),
       labor_total: laborTotal,
       parts_total: partsTotal,
@@ -175,6 +175,9 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
           <div>
             <div className="flex items-center justify-between mb-2">
               <Label className="text-gray-300 font-semibold">Labor</Label>
+              <Button size="sm" variant="ghost" onClick={addLabor} className="text-sky-400 hover:text-sky-300 h-7 px-2">
+                <Plus className="w-4 h-4 mr-1" /> Add Labor
+              </Button>
             </div>
             <div className="rounded-lg border border-gray-800 overflow-hidden">
               <table className="w-full text-sm">
@@ -187,14 +190,25 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-800">
-                  <tr className="bg-gray-900">
-                    <td className="px-2 py-1.5">
-                      <span className="text-gray-300">Fixed Labor Cost</span>
-                    </td>
-                    <td className="px-2 py-1.5 text-right text-gray-400">—</td>
-                    <td className="px-2 py-1.5 text-right text-gray-400">—</td>
-                    <td className="px-3 py-1.5 text-right text-gray-300 font-medium">$120.00</td>
-                  </tr>
+                  {form.labor_items.map((row, idx) => (
+                    <tr key={idx} className="bg-gray-900">
+                      <td className="px-2 py-1.5">
+                        <Input value={row.description} onChange={e => updateLabor(idx, "description", e.target.value)}
+                          className="bg-gray-800 border-0 text-white h-8 text-sm" placeholder="e.g. Engine Diagnosis" />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <Input type="number" value={row.hours} onChange={e => updateLabor(idx, "hours", e.target.value)}
+                          className="bg-gray-800 border-0 text-white h-8 text-sm text-right" placeholder="0" step="0.5" />
+                      </td>
+                      <td className="px-2 py-1.5 text-right text-gray-300">$120</td>
+                      <td className="px-3 py-1.5 text-right text-gray-300 font-medium">${row.total.toFixed(2)}</td>
+                      <td className="pr-2 py-1.5">
+                        <button onClick={() => removeLabor(idx)} className="text-gray-600 hover:text-rose-400 transition-colors">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
