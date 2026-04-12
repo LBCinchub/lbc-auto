@@ -17,13 +17,22 @@ export default function VinScanner({ onVinDetected, onClose }) {
 
   const startCamera = async () => {
     try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setError("Camera is not supported on this device. Please use the Upload option instead.");
+        return;
+      }
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } }
       });
       streamRef.current = stream;
       if (videoRef.current) videoRef.current.srcObject = stream;
-    } catch {
-      setError("Camera access denied. Please allow camera permissions and try again.");
+    } catch (err) {
+      const errMsg = err?.name === "NotAllowedError" 
+        ? "Camera permission denied. Please allow camera access in your browser settings and try again."
+        : err?.name === "NotFoundError"
+        ? "No camera device found. Please use the Upload option instead."
+        : "Camera access failed. Please try using the Upload option instead.";
+      setError(errMsg);
     }
   };
 
