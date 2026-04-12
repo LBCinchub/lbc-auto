@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
@@ -29,6 +30,12 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
 const AuthenticatedApp = () => {
   const { user, isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
 
+  useEffect(() => {
+    if (user && !user.trial_started_date) {
+      base44.functions.invoke('initializeUserTrial', {});
+    }
+  }, [user]);
+
   // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
@@ -47,11 +54,6 @@ const AuthenticatedApp = () => {
       navigateToLogin();
       return null;
     }
-  }
-
-  // Initialize trial on first login
-  if (user && !user.trial_started_date) {
-    base44.functions.invoke('initializeUserTrial', {});
   }
 
   // Check trial and subscription status
