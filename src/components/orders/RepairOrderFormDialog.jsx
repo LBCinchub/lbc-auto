@@ -133,7 +133,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
     setSaving(true);
     try {
       const laborHours = Number(form.labor_hours) || 0;
-      const laborCost = 120; // Fixed labor cost
+      const laborCost = laborHours * 120; // Only charge if labor hours added
       const partsCost = form.parts_used.reduce((sum, p) => sum + (p.total || 0), 0);
       const subtotal = laborCost + partsCost;
       const discountAmount = form.discount_type === "percentage" 
