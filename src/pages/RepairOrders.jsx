@@ -148,7 +148,7 @@ export default function RepairOrders() {
                     )}
                     {order.total_cost > 0 && (
                       <span className="text-emerald-400 font-semibold flex items-center gap-1">
-                        <DollarSign className="w-3 h-3" />{(order.total_cost * 1.15).toFixed(2)}
+                        <DollarSign className="w-3 h-3" />{order.total_cost.toFixed(2)}
                       </span>
                     )}
                   </div>
