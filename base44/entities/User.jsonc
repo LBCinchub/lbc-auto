@@ -14,6 +14,10 @@
       "type": "string",
       "description": "Auto shop business name"
     },
+    "phone": {
+      "type": "string",
+      "description": "Shop phone number"
+    },
     "trial_started_date": {
       "type": "string",
       "description": "Date user started 7-day free trial"
@@ -36,5 +40,11 @@
       "type": "string",
       "description": "Date payment was received"
     }
-  }
+  },
+  "required": [
+    "business_name",
+    "trial_started_date",
+    "payment_transaction_id",
+    "payment_date"
+  ]
 }

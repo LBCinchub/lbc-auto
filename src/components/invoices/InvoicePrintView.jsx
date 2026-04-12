@@ -1,12 +1,27 @@
-import React, { useRef } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Printer, X } from "lucide-react";
+import { base44 } from "@/api/base44Client";
 
 export default function InvoicePrintView({ invoice, onClose }) {
   const printRef = useRef(null);
+  const [customer, setCustomer] = useState(null);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const loadData = async () => {
+      const currentUser = await base44.auth.me();
+      setUser(currentUser);
+      if (invoice?.customer_id) {
+        const cust = await base44.entities.Customer.get(invoice.customer_id);
+        setCustomer(cust);
+      }
+    };
+    loadData();
+  }, [invoice]);
 
   // Resolve parts to display: prefer parts_used array, fallback to line_items of type 'part'
   const partsRows = (invoice.parts_used && invoice.parts_used.length > 0)
@@ -70,11 +85,22 @@ export default function InvoicePrintView({ invoice, onClose }) {
             </div>
           </div>
 
-          <div className="mb-6">
-            <p className="font-semibold">{invoice.customer_name}</p>
-            <p className="text-sm text-gray-600">Customer #: {invoice.customer_id}</p>
-            {invoice.customer_phone && <p className="text-sm text-gray-600">Phone: {invoice.customer_phone}</p>}
-            <p className="text-sm text-gray-600">{invoice.vehicle_info}</p>
+          <div className="flex justify-between mb-8">
+            <div>
+              <p className="font-semibold">{invoice.customer_name}</p>
+              <p className="text-sm text-gray-600">Customer #: {invoice.customer_id}</p>
+              {(invoice.customer_phone || customer?.phone) && (
+                <p className="text-sm text-gray-600">Phone: {invoice.customer_phone || customer?.phone}</p>
+              )}
+              <p className="text-sm text-gray-600">{invoice.vehicle_info}</p>
+            </div>
+            {user?.business_name && (
+              <div className="text-right">
+                <p className="font-semibold text-sm">{user.business_name}</p>
+                {user?.phone && <p className="text-sm text-gray-600">{user.phone}</p>}
+                {user?.email && <p className="text-sm text-gray-600">{user.email}</p>}
+              </div>
+            )}
           </div>
 
           <table className="w-full mb-6">

@@ -8,6 +8,7 @@ import PageHeader from "@/components/shared/PageHeader";
 export default function Settings() {
   const [user, setUser] = useState(null);
   const [businessName, setBusinessName] = useState("");
+  const [shopPhone, setShopPhone] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -16,6 +17,7 @@ export default function Settings() {
       const currentUser = await base44.auth.me();
       setUser(currentUser);
       setBusinessName(currentUser?.business_name || "");
+      setShopPhone(currentUser?.phone || "");
     };
     loadUser();
   }, []);
@@ -27,11 +29,11 @@ export default function Settings() {
     }
     setSaving(true);
     try {
-      await base44.auth.updateMe({ business_name: businessName });
+      await base44.auth.updateMe({ business_name: businessName, phone: shopPhone });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
-      alert("Error saving business name: " + err.message);
+      alert("Error saving details: " + err.message);
     } finally {
       setSaving(false);
     }
@@ -56,6 +58,17 @@ export default function Settings() {
                 <p className="text-gray-500 text-sm mt-2">This will appear as your shop's name throughout the app</p>
               </div>
 
+              <div>
+                <Label className="text-gray-400 mb-2 block">Shop Phone Number</Label>
+                <Input
+                  value={shopPhone}
+                  onChange={(e) => setShopPhone(e.target.value)}
+                  placeholder="Enter your shop phone number"
+                  className="bg-gray-800 border-gray-700 text-white"
+                />
+                <p className="text-gray-500 text-sm mt-2">This will appear on invoices</p>
+              </div>
+
               <div className="bg-gray-800 border border-gray-700 rounded p-4">
                 <p className="text-gray-400 text-sm">
                   <strong>Email:</strong> {user?.email}
@@ -67,7 +80,7 @@ export default function Settings() {
                 disabled={saving || !businessName.trim()}
                 className="bg-sky-500 hover:bg-sky-600 w-full"
               >
-                {saving ? "Saving..." : saved ? "Saved ✓" : "Save Business Name"}
+                {saving ? "Saving..." : saved ? "Saved ✓" : "Save Details"}
               </Button>
             </div>
           </div>
