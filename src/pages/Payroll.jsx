@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subWeeks, subMonths, isWithinInterval, parseISO } from "date-fns";
-import { DollarSign, Clock, Users, ChevronDown } from "lucide-react";
+import { DollarSign, Clock, Users, Banknote } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const PAY_PERIODS = [
@@ -98,9 +98,14 @@ export default function Payroll() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+            <Banknote className="w-5 h-5 text-emerald-400" />
+          </div>
+          <div>
           <h1 className="text-2xl font-bold text-gray-100">Payroll</h1>
           <p className="text-gray-400 text-sm mt-1">{periodLabel}</p>
+          </div>
         </div>
         <Select value={period} onValueChange={setPeriod}>
           <SelectTrigger className="w-44 bg-gray-900 border-gray-700 text-gray-200">
