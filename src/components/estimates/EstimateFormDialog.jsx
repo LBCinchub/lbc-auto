@@ -65,7 +65,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
   const removePart = (idx) => setForm(f => ({ ...f, parts_items: f.parts_items.filter((_, i) => i !== idx) }));
 
   // ---- Totals ----
-  const laborTotal = form.labor_items.reduce((s, r) => s + (Math.max(120, (parseFloat(r.hours) || 1) * 120)), 0);
+  const laborTotal = form.labor_items.reduce((s, r) => s + ((parseFloat(r.hours) || 0) * 120), 0);
   const partsTotal = form.parts_items.reduce((s, r) => s + (r.total || 0), 0);
   const subtotal   = laborTotal + partsTotal;
   const taxRate    = parseFloat(form.tax_rate) || 0;
