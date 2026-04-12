@@ -15,9 +15,10 @@ const emptyForm = {
   status: "draft", notes: "", tax_rate: "0", valid_until: "",
   labor_items: [emptyLaborRow()],
   parts_items: [emptyPartRow()],
+  repair_order_id: "",
 };
 
-export default function EstimateFormDialog({ open, onClose, estimate, customers, vehicles, onSaved }) {
+export default function EstimateFormDialog({ open, onClose, estimate, customers, vehicles, repairOrderId, onSaved }) {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
 
@@ -31,9 +32,9 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
         parts_items: estimate.parts_items?.length ? estimate.parts_items.map(i => ({ ...i, quantity: String(i.quantity), unit_price: String(i.unit_price) })) : [emptyPartRow()],
       });
     } else {
-      setForm(emptyForm);
+      setForm({ ...emptyForm, repair_order_id: repairOrderId || "" });
     }
-  }, [estimate, open]);
+  }, [estimate, open, repairOrderId]);
 
   const customerVehicles = vehicles.filter(v => v.customer_id === form.customer_id);
 

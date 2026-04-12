@@ -187,6 +187,7 @@ export default function RepairOrderDetail() {
         estimate={null}
         customers={customers}
         vehicles={vehicles}
+        repairOrderId={orderId}
         onSaved={() => {
           setShowEstimateDialog(false);
           navigate("/Estimates");
