@@ -135,7 +135,11 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
       const laborHours = Number(form.labor_hours) || 0;
       const laborCost = 120; // Fixed labor cost
       const partsCost = form.parts_used.reduce((sum, p) => sum + (p.total || 0), 0);
-      const totalCost = laborCost + partsCost;
+      const subtotal = laborCost + partsCost;
+      const discountAmount = form.discount_type === "percentage" 
+        ? subtotal * ((form.discount_value || 0) / 100)
+        : form.discount_type === "fixed" ? (form.discount_value || 0) : 0;
+      const totalCost = subtotal - discountAmount;
 
       const timestamp = new Date().toISOString();
       let userEmail = 'system';
