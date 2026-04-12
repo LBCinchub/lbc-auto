@@ -138,7 +138,7 @@ export default function VehicleTimeline() {
 
                 {/* Event content */}
                 <div className="flex-1 pb-4">
-                  <div className="bg-gray-800/30 rounded-lg p-4 border border-gray-800">
+                  <div className="bg-gray-800/30 rounded-lg p-4 border border-gray-800 cursor-pointer hover:bg-gray-800/50 transition-colors" onClick={() => event.type === "repair" && event.order ? navigate(`/RepairOrderDetail/${event.order.id}`) : event.type === "invoice" && event.invoice ? navigate(`/InvoiceDetail/${event.invoice.id}`) : null}>
                     {event.type === "repair" && event.order ? (
                       <>
                         <div className="flex items-start justify-between mb-2">
