@@ -128,11 +128,11 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-md">
+      <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-md max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{invoice ? "Edit Invoice" : "Create Invoice"}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 mt-2">
+        <div className="space-y-4 mt-2 overflow-y-auto flex-1">
           <div>
             <Label className="text-gray-400">Repair Order</Label>
             <Select value={form.repair_order_id} onValueChange={handleOrderSelect}>
