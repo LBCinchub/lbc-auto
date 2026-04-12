@@ -56,12 +56,26 @@ export default function Invoices() {
     queryFn: () => base44.entities.Customer.list("-created_date", 200),
   });
 
+  const { data: vehicles = [] } = useQuery({
+    queryKey: ["vehicles"],
+    queryFn: () => base44.entities.Vehicle.list("-created_date", 500),
+  });
+
   const filtered = invoices
     .filter(i => statusFilter === "all" || i.status === statusFilter || (statusFilter === "unpaid" && i.status === "partial"))
-    .filter(i =>
-      i.invoice_number?.toLowerCase().includes(search.toLowerCase()) ||
-      i.customer_name?.toLowerCase().includes(search.toLowerCase())
-    );
+    .filter(i => {
+      if (!search) return true;
+      const q = search.toLowerCase();
+      if (i.invoice_number?.toLowerCase().includes(q)) return true;
+      if (i.customer_name?.toLowerCase().includes(q)) return true;
+      if (i.vehicle_info?.toLowerCase().includes(q)) return true;
+      const customer = customers.find(c => c.id === i.customer_id);
+      if (customer?.phone?.toLowerCase().includes(q)) return true;
+      const vehicle = vehicles.find(v => i.vehicle_info?.includes(v.make) && v.customer_id === i.customer_id);
+      if (vehicle?.license_plate?.toLowerCase().includes(q)) return true;
+      if (vehicle?.vin?.toLowerCase().includes(q)) return true;
+      return false;
+    });
 
   const handleDelete = async (id) => {
     if (window.confirm("Delete this invoice?")) {
