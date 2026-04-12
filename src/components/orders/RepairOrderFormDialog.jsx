@@ -28,6 +28,12 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
   });
   const [saving, setSaving] = useState(false);
 
+  // Live cost calculation
+  const mechanic = mechanics.find(m => m.id === form.mechanic_id);
+  const laborCost = (Number(form.labor_hours) || 0) * (mechanic?.hourly_rate || 0);
+  const partsCost = form.parts_used.reduce((sum, p) => sum + (Number(p.unit_price) || 0) * (Number(p.quantity) || 0), 0);
+  const totalCost = laborCost + partsCost;
+
   useEffect(() => {
     if (order) {
       setForm({
@@ -341,6 +347,23 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
             <Label className="text-gray-400">Notes</Label>
             <Textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })}
               className="bg-gray-800 border-gray-700 text-white mt-1" rows={2} />
+          </div>
+
+          {/* Live Cost Summary */}
+          <div className="rounded-xl border border-gray-700 bg-gray-800/40 p-4 space-y-2 text-sm">
+            <p className="text-gray-400 font-medium text-xs uppercase tracking-wider mb-3">Estimated Cost</p>
+            <div className="flex justify-between text-gray-400">
+              <span>Labor ({form.labor_hours || 0}h × ${mechanic?.hourly_rate || 0}/hr)</span>
+              <span className="text-white">${laborCost.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-gray-400">
+              <span>Parts</span>
+              <span className="text-white">${partsCost.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between font-bold text-base border-t border-gray-700 pt-2 mt-2">
+              <span className="text-white">Total</span>
+              <span className="text-emerald-400">${totalCost.toFixed(2)}</span>
+            </div>
           </div>
 
           <div className="flex gap-3 pt-2">

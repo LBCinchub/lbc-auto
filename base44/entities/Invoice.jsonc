@@ -76,6 +76,18 @@
       "format": "date",
       "description": "Date payment was received"
     },
+    "receipt_number": {
+      "type": "string",
+      "description": "Receipt number for the transaction"
+    },
+    "card_last4": {
+      "type": "string",
+      "description": "Last 4 digits of card used"
+    },
+    "cashier_name": {
+      "type": "string",
+      "description": "Name or ID of cashier who processed payment"
+    },
     "payment_history": {
       "type": "array",
       "description": "Record of all payments made",

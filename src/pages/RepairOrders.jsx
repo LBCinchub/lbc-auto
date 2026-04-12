@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Wrench, Pencil, Trash2, DollarSign, Clock, History } from "lucide-react";
+import { Wrench, Pencil, Trash2, DollarSign, Clock, History, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -10,6 +10,7 @@ import SearchBar from "../components/shared/SearchBar";
 import EmptyState from "../components/shared/EmptyState";
 import StatusBadge from "../components/shared/StatusBadge";
 import RepairOrderFormDialog from "../components/orders/RepairOrderFormDialog";
+import InvoiceFormDialog from "../components/invoices/InvoiceFormDialog";
 
 const statusFilters = [
   { value: "all", label: "All" },
@@ -26,6 +27,8 @@ export default function RepairOrders() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
   const [historyOrder, setHistoryOrder] = useState(null);
+  const [invoiceOrder, setInvoiceOrder] = useState(null);
+  const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: orders = [], isLoading } = useQuery({
@@ -146,6 +149,11 @@ export default function RepairOrders() {
                         <History className="w-3.5 h-3.5" />
                       </Button>
                     )}
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-emerald-400"
+                      onClick={() => { setInvoiceOrder(order); setInvoiceDialogOpen(true); }}
+                      title="Create Invoice">
+                      <FileText className="w-3.5 h-3.5" />
+                    </Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-white"
                       onClick={() => { setEditingOrder(order); setDialogOpen(true); }}>
                       <Pencil className="w-3.5 h-3.5" />
@@ -172,6 +180,16 @@ export default function RepairOrders() {
         vehicles={vehicles}
         mechanics={mechanics}
         parts={parts}
+      />
+
+      <InvoiceFormDialog
+        open={invoiceDialogOpen}
+        onClose={() => { setInvoiceDialogOpen(false); setInvoiceOrder(null); }}
+        invoice={null}
+        initialOrderId={invoiceOrder?.id}
+        orders={orders}
+        customers={customers}
+        onSaved={() => queryClient.invalidateQueries({ queryKey: ["invoices"] })}
       />
 
       {historyOrder && (

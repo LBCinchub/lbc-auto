@@ -8,11 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
 
-export default function InvoiceFormDialog({ open, onClose, invoice, orders, customers, onSaved }) {
+export default function InvoiceFormDialog({ open, onClose, invoice, orders, customers, onSaved, initialOrderId }) {
   const [form, setForm] = useState({
     repair_order_id: "", customer_id: "", customer_name: "", vehicle_info: "",
     parts_total: 0, labor_total: 0, tax_rate: 15, status: "unpaid",
-    due_date: "", payment_method: "", amount_paid: 0, payment_history: []
+    due_date: "", payment_method: "", amount_paid: 0, payment_history: [],
+    receipt_number: "", card_last4: "", cashier_name: ""
   });
   const [saving, setSaving] = useState(false);
 
@@ -31,15 +32,34 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         payment_method: invoice.payment_method || "",
         amount_paid: invoice.amount_paid || 0,
         payment_history: invoice.payment_history || [],
+        receipt_number: invoice.receipt_number || "",
+        card_last4: invoice.card_last4 || "",
+        cashier_name: invoice.cashier_name || "",
       });
     } else {
       setForm({
         repair_order_id: "", customer_id: "", customer_name: "", vehicle_info: "",
         parts_total: 0, labor_total: 0, tax_rate: 15, status: "unpaid",
-        due_date: "", payment_method: "", amount_paid: 0, payment_history: []
+        due_date: "", payment_method: "", amount_paid: 0, payment_history: [],
+        receipt_number: "", card_last4: "", cashier_name: ""
       });
     }
-  }, [invoice, open]);
+    // Auto-select order if opened from RepairOrders
+    if (!invoice && initialOrderId) {
+      const order = orders.find(o => o.id === initialOrderId);
+      if (order) {
+        setForm(f => ({
+          ...f,
+          repair_order_id: order.id,
+          customer_id: order.customer_id,
+          customer_name: order.customer_name,
+          vehicle_info: order.vehicle_info,
+          parts_total: order.parts_cost || 0,
+          labor_total: order.labor_cost || 0,
+        }));
+      }
+    }
+  }, [invoice, open, initialOrderId]);
 
   const handleOrderSelect = (orderId) => {
     const order = orders.find(o => o.id === orderId);
@@ -151,6 +171,28 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
               <Input type="date" value={form.due_date}
                 onChange={e => setForm({...form, due_date: e.target.value})}
                 className="bg-gray-800 border-gray-700 text-white mt-1" />
+            </div>
+          </div>
+
+          {/* Receipt Info */}
+          <div className="rounded-lg border border-gray-700/50 p-3 space-y-3">
+            <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Receipt Info</p>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <Label className="text-gray-400 text-xs">Receipt #</Label>
+                <Input value={form.receipt_number} onChange={e => setForm({...form, receipt_number: e.target.value})}
+                  className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="e.g. 001234" />
+              </div>
+              <div>
+                <Label className="text-gray-400 text-xs">Card Last 4</Label>
+                <Input value={form.card_last4} onChange={e => setForm({...form, card_last4: e.target.value.slice(0,4)})}
+                  className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="e.g. 4242" maxLength={4} />
+              </div>
+              <div>
+                <Label className="text-gray-400 text-xs">Cashier</Label>
+                <Input value={form.cashier_name} onChange={e => setForm({...form, cashier_name: e.target.value})}
+                  className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="Name or #" />
+              </div>
             </div>
           </div>
 
