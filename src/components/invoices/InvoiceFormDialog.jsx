@@ -14,7 +14,8 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
     repair_order_id: "", customer_id: "", customer_name: "", customer_phone: "", vehicle_info: "",
     parts_total: 0, labor_total: 0, tax_rate: 15, status: "unpaid",
     due_date: "", payment_method: "", amount_paid: 0, payment_history: [],
-    receipt_number: "", card_last4: "", cashier_name: "", parts_used: [], customer_note: ""
+    receipt_number: "", card_last4: "", cashier_name: "", parts_used: [], customer_note: "",
+    discount_type: "none", discount_value: 0
   });
   const [saving, setSaving] = useState(false);
 
@@ -39,13 +40,16 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         cashier_name: invoice.cashier_name || "",
         parts_used: invoice.parts_used || [],
         customer_note: invoice.customer_note || "",
+        discount_type: invoice.discount_type || "none",
+        discount_value: invoice.discount_value || 0,
       });
     } else {
       setForm({
         repair_order_id: "", customer_id: "", customer_name: "", customer_phone: "", vehicle_info: "",
         parts_total: 0, labor_total: 0, tax_rate: 15, status: "unpaid",
         due_date: "", payment_method: "", amount_paid: 0, payment_history: [],
-        receipt_number: "", card_last4: "", cashier_name: "", parts_used: [], customer_note: ""
+        receipt_number: "", card_last4: "", cashier_name: "", parts_used: [], customer_note: "",
+        discount_type: "none", discount_value: 0
       });
     }
     // Auto-select order if opened from RepairOrders
@@ -94,8 +98,12 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
   };
 
   const subtotal = (form.parts_total || 0) + (form.labor_total || 0);
-  const taxAmount = subtotal * ((form.tax_rate || 0) / 100);
-  const total = subtotal + taxAmount;
+  const discountAmount = form.discount_type === "percentage" 
+    ? subtotal * ((form.discount_value || 0) / 100)
+    : form.discount_type === "fixed" ? (form.discount_value || 0) : 0;
+  const subtotalAfterDiscount = subtotal - discountAmount;
+  const taxAmount = subtotalAfterDiscount * ((form.tax_rate || 0) / 100);
+  const total = subtotalAfterDiscount + taxAmount;
   const balanceDue = total - (form.amount_paid || 0);
 
   const handleSave = async () => {
@@ -219,6 +227,30 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
             </div>
           </div>
 
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <Label className="text-gray-400 text-sm">Discount Type</Label>
+              <Select value={form.discount_type} onValueChange={v => setForm({...form, discount_type: v, discount_value: 0})}>
+                <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-700">
+                  <SelectItem value="none">None</SelectItem>
+                  <SelectItem value="percentage">%</SelectItem>
+                  <SelectItem value="fixed">$</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {form.discount_type !== "none" && (
+              <div className="col-span-2">
+                <Label className="text-gray-400 text-sm">Discount {form.discount_type === "percentage" ? "(%)" : "($)"}</Label>
+                <Input type="number" step="0.01" value={form.discount_value}
+                  onChange={e => setForm({...form, discount_value: Number(e.target.value)})}
+                  className="bg-gray-800 border-gray-700 text-white mt-1" />
+              </div>
+            )}
+          </div>
+
           {/* Payment Method & Receipt Info Side by Side */}
           <div className="grid grid-cols-2 gap-4">
             {/* Payment Method */}
@@ -284,6 +316,12 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
               <span className="text-gray-400">Subtotal</span>
               <span className="text-white">${subtotal.toFixed(2)}</span>
             </div>
+            {discountAmount > 0 && (
+              <div className="flex justify-between text-sm text-emerald-400">
+                <span>Discount {form.discount_type === "percentage" ? `(${form.discount_value}%)` : ""}</span>
+                <span>-${discountAmount.toFixed(2)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-sm">
               <span className="text-gray-400">Tax ({form.tax_rate}%)</span>
               <span className="text-white">${taxAmount.toFixed(2)}</span>

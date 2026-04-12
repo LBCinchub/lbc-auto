@@ -24,7 +24,8 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
   const [form, setForm] = useState({
     customer_id: "", customer_name: "", vehicle_id: "", vehicle_info: "",
     mechanic_id: "", mechanic_name: "", description: "", status: "waiting",
-    labor_hours: "", notes: "", parts_used: [], estimated_completion: ""
+    labor_hours: "", notes: "", parts_used: [], estimated_completion: "",
+    discount_type: "none", discount_value: 0
   });
   const [saving, setSaving] = useState(false);
 
@@ -32,7 +33,11 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
   const mechanic = mechanics.find(m => m.id === form.mechanic_id);
   const laborCost = 120; // Fixed labor cost
   const partsCost = form.parts_used.reduce((sum, p) => sum + (Number(p.unit_price) || 0) * (Number(p.quantity) || 0), 0);
-  const totalCost = laborCost + partsCost;
+  const subtotal = laborCost + partsCost;
+  const discountAmount = form.discount_type === "percentage" 
+    ? subtotal * ((form.discount_value || 0) / 100)
+    : form.discount_type === "fixed" ? (form.discount_value || 0) : 0;
+  const totalCost = subtotal - discountAmount;
 
   useEffect(() => {
     if (order) {
@@ -49,12 +54,15 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         notes: order.notes || "",
         parts_used: order.parts_used || [],
         estimated_completion: order.estimated_completion || "",
+        discount_type: order.discount_type || "none",
+        discount_value: order.discount_value || 0,
       });
     } else {
       setForm({
         customer_id: "", customer_name: "", vehicle_id: "", vehicle_info: "",
         mechanic_id: "", mechanic_name: "", description: "", status: "waiting",
-        labor_hours: "", notes: "", parts_used: [], estimated_completion: ""
+        labor_hours: "", notes: "", parts_used: [], estimated_completion: "",
+        discount_type: "none", discount_value: 0
       });
     }
   }, [order, open]);
@@ -348,6 +356,30 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
               className="bg-gray-800 border-gray-700 text-white mt-1" rows={2} />
           </div>
 
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <Label className="text-gray-400 text-sm">Discount Type</Label>
+              <Select value={form.discount_type} onValueChange={v => setForm({...form, discount_type: v, discount_value: 0})}>
+                <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-700">
+                  <SelectItem value="none">None</SelectItem>
+                  <SelectItem value="percentage">%</SelectItem>
+                  <SelectItem value="fixed">$</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {form.discount_type !== "none" && (
+              <div className="col-span-2">
+                <Label className="text-gray-400 text-sm">Discount {form.discount_type === "percentage" ? "(%)" : "($)"}</Label>
+                <Input type="number" step="0.01" value={form.discount_value}
+                  onChange={e => setForm({...form, discount_value: Number(e.target.value)})}
+                  className="bg-gray-800 border-gray-700 text-white mt-1" />
+              </div>
+            )}
+          </div>
+
           {/* Live Cost Summary */}
           <div className="rounded-xl border border-gray-700 bg-gray-800/40 p-4 space-y-2 text-sm">
             <p className="text-gray-400 font-medium text-xs uppercase tracking-wider mb-3">Estimated Cost</p>
@@ -359,6 +391,12 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
               <span>Parts</span>
               <span className="text-white">${partsCost.toFixed(2)}</span>
             </div>
+            {discountAmount > 0 && (
+              <div className="flex justify-between text-emerald-400">
+                <span>Discount {form.discount_type === "percentage" ? `(${form.discount_value}%)` : ""}</span>
+                <span>-${discountAmount.toFixed(2)}</span>
+              </div>
+            )}
             <div className="flex justify-between font-bold text-base border-t border-gray-700 pt-2 mt-2">
               <span className="text-white">Total</span>
               <span className="text-emerald-400">${totalCost.toFixed(2)}</span>
