@@ -97,7 +97,7 @@ export default function VehicleFormDialog({ open, onClose, vehicle, onSaved, cus
 
   return (
   <>
-    <Dialog open={open} onOpenChange={scanning ? undefined : onClose}>
+    <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{vehicle ? "Edit Vehicle" : "New Vehicle"}</DialogTitle>

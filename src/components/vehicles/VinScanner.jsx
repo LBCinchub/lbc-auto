@@ -76,7 +76,8 @@ export default function VinScanner({ onVinDetected, onClose }) {
       });
       if (result?.vin) {
         onVinDetected(result);
-        onClose();
+        setStep("done");
+        setTimeout(onClose, 500);
       } else {
         setError("Could not detect a VIN in the image. Please try again with better lighting or a clearer angle.");
         setStep("error");
