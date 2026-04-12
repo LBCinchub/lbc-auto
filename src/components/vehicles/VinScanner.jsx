@@ -34,28 +34,33 @@ export default function VinScanner({ onVinDetected, onClose }) {
   const processBlob = async (blob) => {
     stopCamera();
     setStep("processing");
-    const file = new File([blob], "vin_scan.jpg", { type: "image/jpeg" });
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    const result = await base44.integrations.Core.InvokeLLM({
-      prompt: `Look at this image carefully. Find the VIN (Vehicle Identification Number) — it's typically a 17-character alphanumeric code found on the dashboard near the windshield, door jamb sticker, or engine bay. Extract the exact VIN characters. Then decode the VIN to get the vehicle's make, model, year, color, and engine type. Return all data.`,
-      file_urls: [file_url],
-      response_json_schema: {
-        type: "object",
-        properties: {
-          vin: { type: "string" },
-          make: { type: "string" },
-          model: { type: "string" },
-          year: { type: "number" },
-          color: { type: "string" },
-          engine_type: { type: "string" }
+    try {
+      const file = blob instanceof File ? blob : new File([blob], "vin_scan.jpg", { type: "image/jpeg" });
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const result = await base44.integrations.Core.InvokeLLM({
+        prompt: `Look at this image carefully. Find the VIN (Vehicle Identification Number) — it's typically a 17-character alphanumeric code found on the dashboard near the windshield, door jamb sticker, or engine bay. Extract the exact VIN characters. Then decode the VIN to get the vehicle's make, model, year, color, and engine type. Return all data.`,
+        file_urls: [file_url],
+        response_json_schema: {
+          type: "object",
+          properties: {
+            vin: { type: "string" },
+            make: { type: "string" },
+            model: { type: "string" },
+            year: { type: "number" },
+            color: { type: "string" },
+            engine_type: { type: "string" }
+          }
         }
+      });
+      if (result?.vin) {
+        setStep("done");
+        onVinDetected(result);
+      } else {
+        setError("Could not detect a VIN in the image. Please try again with better lighting or a clearer angle.");
+        setStep("error");
       }
-    });
-    if (result?.vin) {
-      setStep("done");
-      onVinDetected(result);
-    } else {
-      setError("Could not detect a VIN in the image. Please try again with better lighting or a clearer angle.");
+    } catch (err) {
+      setError("Something went wrong: " + (err?.message || "Please try again."));
       setStep("error");
     }
   };
