@@ -13,7 +13,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
     repair_order_id: "", customer_id: "", customer_name: "", vehicle_info: "",
     parts_total: 0, labor_total: 0, tax_rate: 15, status: "unpaid",
     due_date: "", payment_method: "", amount_paid: 0, payment_history: [],
-    receipt_number: "", card_last4: "", cashier_name: ""
+    receipt_number: "", card_last4: "", cashier_name: "", parts_used: []
   });
   const [saving, setSaving] = useState(false);
 
@@ -35,13 +35,14 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         receipt_number: invoice.receipt_number || "",
         card_last4: invoice.card_last4 || "",
         cashier_name: invoice.cashier_name || "",
+        parts_used: invoice.parts_used || [],
       });
     } else {
       setForm({
         repair_order_id: "", customer_id: "", customer_name: "", vehicle_info: "",
         parts_total: 0, labor_total: 0, tax_rate: 15, status: "unpaid",
         due_date: "", payment_method: "", amount_paid: 0, payment_history: [],
-        receipt_number: "", card_last4: "", cashier_name: ""
+        receipt_number: "", card_last4: "", cashier_name: "", parts_used: []
       });
     }
     // Auto-select order if opened from RepairOrders
@@ -72,6 +73,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         vehicle_info: order.vehicle_info,
         parts_total: order.parts_cost || 0,
         labor_total: order.labor_cost || 0,
+        parts_used: order.parts_used || [],
       });
     }
   };
@@ -85,7 +87,14 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
     setSaving(true);
     const lineItems = [];
     if (form.labor_total > 0) lineItems.push({ description: "Labor", type: "labor", quantity: 1, unit_price: form.labor_total, total: form.labor_total });
-    if (form.parts_total > 0) lineItems.push({ description: "Parts", type: "parts", quantity: 1, unit_price: form.parts_total, total: form.parts_total });
+    // Add individual parts as line items
+    if (form.parts_used && form.parts_used.length > 0) {
+      form.parts_used.forEach(p => {
+        lineItems.push({ description: p.name, type: "part", quantity: p.quantity || 1, unit_price: p.unit_price || 0, total: p.total || 0 });
+      });
+    } else if (form.parts_total > 0) {
+      lineItems.push({ description: "Parts", type: "parts", quantity: 1, unit_price: form.parts_total, total: form.parts_total });
+    }
 
     let finalStatus = form.status;
     if (balanceDue <= 0) {
@@ -97,6 +106,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
     const data = {
       ...form,
       invoice_number: invoice?.invoice_number || `INV-${Date.now().toString(36).toUpperCase()}`,
+      parts_used: form.parts_used || [],
       tax_amount: taxAmount,
       total,
       balance_due: balanceDue,
@@ -141,6 +151,20 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
             <div className="rounded-lg bg-gray-800/50 p-3 text-sm">
               <p className="text-white">{form.customer_name}</p>
               <p className="text-gray-500 text-xs">{form.vehicle_info}</p>
+            </div>
+          )}
+
+          {form.parts_used && form.parts_used.length > 0 && (
+            <div className="rounded-lg border border-gray-700/50 p-3 space-y-2">
+              <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Parts Used</p>
+              <div className="space-y-1">
+                {form.parts_used.map((p, i) => (
+                  <div key={i} className="flex justify-between text-sm">
+                    <span className="text-gray-300">{p.name} <span className="text-gray-500">x{p.quantity}</span></span>
+                    <span className="text-white">${(p.total || 0).toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
