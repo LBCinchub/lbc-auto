@@ -2,10 +2,11 @@ import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, FileText, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, FileText, Plus, Trash2, MoreVertical } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import EstimateFormDialog from "@/components/estimates/EstimateFormDialog";
 
@@ -142,11 +143,23 @@ export default function RepairOrderDetail() {
                     <p className="text-white font-medium">{part.name}</p>
                     <p className="text-gray-400 text-sm">Qty: {part.quantity}</p>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3">
                     <p className="text-white font-semibold">${part.total?.toFixed(2)}</p>
-                    <button onClick={() => removePart(idx)} className="text-gray-600 hover:text-rose-400 transition-colors">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="text-gray-600 hover:text-gray-400 transition-colors p-1">
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="bg-gray-800 border-gray-700 text-white">
+                        <DropdownMenuItem onClick={() => setShowPartDialog(true)} className="cursor-pointer hover:bg-gray-700">
+                          <Plus className="w-4 h-4 mr-2" /> Add Part
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => removePart(idx)} className="cursor-pointer hover:bg-gray-700 text-rose-400">
+                          <Trash2 className="w-4 h-4 mr-2" /> Remove
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               ))}
