@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { CreditCard, Calendar, CheckCircle2, Clock } from "lucide-react";
+import { CreditCard, Calendar, CheckCircle2, Clock, ArrowLeft } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 
 export default function Billing() {
+  const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [trialDaysLeft, setTrialDaysLeft] = useState(0);
 
@@ -27,6 +29,13 @@ export default function Billing() {
 
   return (
     <div className="space-y-8">
+      <button
+        onClick={() => navigate(-1)}
+        className="flex items-center gap-2 text-sky-400 hover:text-sky-300 transition-colors mb-4"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        <span className="text-sm font-medium">Back</span>
+      </button>
       <PageHeader title="Billing & Subscription" subtitle="Manage your account and payment" />
 
       {/* Trial Status */}
