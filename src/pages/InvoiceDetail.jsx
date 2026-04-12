@@ -15,6 +15,12 @@ export default function InvoiceDetail() {
     enabled: !!invoiceId,
   });
 
+  const { data: customer } = useQuery({
+    queryKey: ["customer", invoice?.customer_id],
+    queryFn: () => base44.entities.Customer.get(invoice.customer_id),
+    enabled: !!invoice?.customer_id,
+  });
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -55,6 +61,7 @@ export default function InvoiceDetail() {
           <div>
             <h1 className="text-3xl font-bold text-white">Invoice #{invoice.invoice_number}</h1>
             <p className="text-gray-400 mt-1">{invoice.customer_name}</p>
+            {customer?.phone && <p className="text-gray-500 text-sm mt-1">{customer.phone}</p>}
           </div>
           <span className={`px-3 py-1 rounded-full text-sm font-medium ${
             invoice.status === "paid"
