@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Wrench, Pencil, Trash2, DollarSign, Clock, History, FileText } from "lucide-react";
@@ -29,27 +29,37 @@ export default function RepairOrders() {
   const [historyOrder, setHistoryOrder] = useState(null);
   const [invoiceOrder, setInvoiceOrder] = useState(null);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
+  const [user, setUser] = useState(null);
   const queryClient = useQueryClient();
 
+  useEffect(() => {
+    base44.auth.me().then(setUser);
+  }, []);
+
   const { data: orders = [], isLoading } = useQuery({
-    queryKey: ["repairOrders"],
-    queryFn: () => base44.entities.RepairOrder.list("-created_date", 200),
+    queryKey: ["repairOrders", user?.email],
+    queryFn: () => user ? base44.entities.RepairOrder.filter({created_by: user.email}, "-created_date", 200) : Promise.resolve([]),
+    enabled: !!user,
   });
   const { data: customers = [] } = useQuery({
-    queryKey: ["customers"],
-    queryFn: () => base44.entities.Customer.list("-created_date", 200),
+    queryKey: ["customers", user?.email],
+    queryFn: () => user ? base44.entities.Customer.filter({created_by: user.email}, "-created_date", 200) : Promise.resolve([]),
+    enabled: !!user,
   });
   const { data: vehicles = [] } = useQuery({
-    queryKey: ["vehicles"],
-    queryFn: () => base44.entities.Vehicle.list("-created_date", 200),
+    queryKey: ["vehicles", user?.email],
+    queryFn: () => user ? base44.entities.Vehicle.filter({created_by: user.email}, "-created_date", 200) : Promise.resolve([]),
+    enabled: !!user,
   });
   const { data: mechanics = [] } = useQuery({
-    queryKey: ["mechanics"],
-    queryFn: () => base44.entities.Mechanic.list("-created_date", 50),
+    queryKey: ["mechanics", user?.email],
+    queryFn: () => user ? base44.entities.Mechanic.filter({created_by: user.email}, "-created_date", 50) : Promise.resolve([]),
+    enabled: !!user,
   });
   const { data: parts = [] } = useQuery({
-    queryKey: ["parts"],
-    queryFn: () => base44.entities.Part.list("-created_date", 200),
+    queryKey: ["parts", user?.email],
+    queryFn: () => user ? base44.entities.Part.filter({created_by: user.email}, "-created_date", 200) : Promise.resolve([]),
+    enabled: !!user,
   });
 
   const filtered = orders

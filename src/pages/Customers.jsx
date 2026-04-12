@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Users, Phone, Mail, MapPin, Pencil, Trash2, Eye } from "lucide-react";
@@ -16,9 +16,16 @@ export default function Customers() {
   const [profileCustomer, setProfileCustomer] = useState(null);
   const queryClient = useQueryClient();
 
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    base44.auth.me().then(setUser);
+  }, []);
+
   const { data: customers = [], isLoading } = useQuery({
-    queryKey: ["customers"],
-    queryFn: () => base44.entities.Customer.list("-created_date", 200),
+    queryKey: ["customers", user?.email],
+    queryFn: () => user ? base44.entities.Customer.filter({created_by: user.email}, "-created_date", 200) : Promise.resolve([]),
+    enabled: !!user,
   });
 
   const filtered = customers.filter(c =>

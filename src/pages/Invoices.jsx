@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileText, Pencil, Trash2, Printer, CheckCircle2, XCircle, Download, DollarSign, MessageSquare, ShieldCheck } from "lucide-react";
@@ -21,7 +21,12 @@ export default function Invoices() {
   const [printInvoice, setPrintInvoice] = useState(null);
   const [paymentInvoice, setPaymentInvoice] = useState(null);
   const [sendingAuth, setSendingAuth] = useState(null);
+  const [user, setUser] = useState(null);
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    base44.auth.me().then(setUser);
+  }, []);
 
   const sendAuthSMS = async (inv) => {
     const customer = customers.find(c => c.id === inv.customer_id);
@@ -42,23 +47,27 @@ export default function Invoices() {
   };
 
   const { data: invoices = [], isLoading } = useQuery({
-    queryKey: ["invoices"],
-    queryFn: () => base44.entities.Invoice.list("-created_date", 200),
+    queryKey: ["invoices", user?.email],
+    queryFn: () => user ? base44.entities.Invoice.filter({created_by: user.email}, "-created_date", 200) : Promise.resolve([]),
+    enabled: !!user,
   });
 
   const { data: orders = [] } = useQuery({
-    queryKey: ["repairOrders"],
-    queryFn: () => base44.entities.RepairOrder.list("-created_date", 200),
+    queryKey: ["repairOrders", user?.email],
+    queryFn: () => user ? base44.entities.RepairOrder.filter({created_by: user.email}, "-created_date", 200) : Promise.resolve([]),
+    enabled: !!user,
   });
 
   const { data: customers = [] } = useQuery({
-    queryKey: ["customers"],
-    queryFn: () => base44.entities.Customer.list("-created_date", 200),
+    queryKey: ["customers", user?.email],
+    queryFn: () => user ? base44.entities.Customer.filter({created_by: user.email}, "-created_date", 200) : Promise.resolve([]),
+    enabled: !!user,
   });
 
   const { data: vehicles = [] } = useQuery({
-    queryKey: ["vehicles"],
-    queryFn: () => base44.entities.Vehicle.list("-created_date", 500),
+    queryKey: ["vehicles", user?.email],
+    queryFn: () => user ? base44.entities.Vehicle.filter({created_by: user.email}, "-created_date", 500) : Promise.resolve([]),
+    enabled: !!user,
   });
 
   const filtered = invoices

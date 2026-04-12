@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Wrench, CheckCircle2, Clock, Calendar, X, Car } from "lucide-react";
@@ -10,15 +10,22 @@ import StatusBadge from "../components/shared/StatusBadge";
 
 export default function Dashboard() {
   const [modal, setModal] = useState(null); // { title, items }
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    base44.auth.me().then(setUser);
+  }, []);
 
   const { data: orders = [] } = useQuery({
-    queryKey: ["repairOrders"],
-    queryFn: () => base44.entities.RepairOrder.list("-created_date", 100),
+    queryKey: ["repairOrders", user?.email],
+    queryFn: () => user ? base44.entities.RepairOrder.filter({created_by: user.email}, "-created_date", 100) : Promise.resolve([]),
+    enabled: !!user,
   });
 
   const { data: appointments = [] } = useQuery({
-    queryKey: ["appointments"],
-    queryFn: () => base44.entities.Appointment.list("-date", 50),
+    queryKey: ["appointments", user?.email],
+    queryFn: () => user ? base44.entities.Appointment.filter({created_by: user.email}, "-date", 50) : Promise.resolve([]),
+    enabled: !!user,
   });
 
   const today = new Date().toISOString().split("T")[0];
