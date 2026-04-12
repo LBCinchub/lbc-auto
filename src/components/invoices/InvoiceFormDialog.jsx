@@ -69,11 +69,14 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
     const order = orders.find(o => o.id === orderId);
     if (order) {
       let customerPhone = "";
+      let description = "";
       try {
         const customer = await base44.entities.Customer.get(order.customer_id);
         customerPhone = customer.phone || "";
+        const fullOrder = await base44.entities.RepairOrder.get(orderId);
+        description = fullOrder.description || "";
       } catch (error) {
-        console.error("Error fetching customer:", error);
+        console.error("Error fetching data:", error);
       }
       setForm({
         ...form,
@@ -85,6 +88,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         parts_total: order.parts_cost || 0,
         labor_total: order.labor_cost || 0,
         parts_used: order.parts_used || [],
+        customer_note: description,
       });
     }
   };
