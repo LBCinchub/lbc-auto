@@ -16,7 +16,8 @@ import {
   Menu,
   X,
   Zap,
-  Clock
+  Clock,
+  Banknote
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +31,7 @@ const navItems = [
   { name: "Appointments", icon: Calendar, page: "Appointments" },
   { name: "Mechanics", icon: HardHat, page: "Mechanics" },
   { name: "Time Tracking", icon: Clock, page: "TimeTracking" },
+  { name: "Payroll", icon: Banknote, page: "Payroll" },
   { name: "Analytics", icon: BarChart3, page: "Analytics" },
 ];
 
