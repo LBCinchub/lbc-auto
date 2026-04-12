@@ -65,7 +65,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
   const removePart = (idx) => setForm(f => ({ ...f, parts_items: f.parts_items.filter((_, i) => i !== idx) }));
 
   // ---- Totals ----
-  const laborTotal = 120; // Fixed labor cost
+  const laborTotal = form.labor_items.reduce((s, r) => s + ((parseFloat(r.hours) || 0) * (parseFloat(r.rate) || 0)), 0);
   const partsTotal = form.parts_items.reduce((s, r) => s + (r.total || 0), 0);
   const subtotal   = laborTotal + partsTotal;
   const taxRate    = parseFloat(form.tax_rate) || 0;
@@ -262,7 +262,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
 
           {/* Summary */}
           <div className="rounded-xl border border-gray-700 bg-gray-800/40 p-4 space-y-2 text-sm">
-            <div className="flex justify-between text-gray-400"><span>Labor Subtotal</span><span>$120.00</span></div>
+            <div className="flex justify-between text-gray-400"><span>Labor Subtotal</span><span>${laborTotal.toFixed(2)}</span></div>
             <div className="flex justify-between text-gray-400"><span>Parts Subtotal</span><span>${partsTotal.toFixed(2)}</span></div>
             {taxRate > 0 && <div className="flex justify-between text-gray-400"><span>Tax ({taxRate}%)</span><span>${taxAmount.toFixed(2)}</span></div>}
             <div className="flex justify-between text-white font-bold text-base border-t border-gray-700 pt-2 mt-2">
