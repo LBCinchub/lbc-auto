@@ -146,9 +146,9 @@ export default function RepairOrders() {
                         <Clock className="w-3 h-3" />{order.labor_hours}h
                       </span>
                     )}
-                    {order.total_cost > 0 && (
+                    {((order.labor_hours || 0) * 120 + (order.parts_cost || 0)) > 0 && (
                       <span className="text-emerald-400 font-semibold flex items-center gap-1">
-                        <DollarSign className="w-3 h-3" />{order.total_cost.toFixed(2)}
+                        <DollarSign className="w-3 h-3" />{(((order.labor_hours || 0) * 120 + (order.parts_cost || 0))).toFixed(2)}
                       </span>
                     )}
                   </div>
