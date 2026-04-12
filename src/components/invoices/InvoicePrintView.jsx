@@ -77,6 +77,13 @@ export default function InvoicePrintView({ invoice, onClose }) {
               <p className="text-sm text-gray-500 mt-1">Smart Management</p>
             </div>
             <div className="text-right">
+              {user?.business_name && (
+                <div className="mb-4">
+                  <p className="font-semibold text-sm">{user.business_name}</p>
+                  {user?.phone && <p className="text-sm text-gray-600">{user.phone}</p>}
+                  {user?.email && <p className="text-sm text-gray-600">{user.email}</p>}
+                </div>
+              )}
               <h2 className="text-2xl font-bold text-sky-500">INVOICE</h2>
               <p className="text-sm text-gray-600 mt-1">{invoice.invoice_number}</p>
               <p className="text-sm text-gray-600">
@@ -85,7 +92,7 @@ export default function InvoicePrintView({ invoice, onClose }) {
             </div>
           </div>
 
-          <div className="flex justify-between mb-8">
+          <div className="mb-8">
             <div>
               <p className="font-semibold">{invoice.customer_name}</p>
               <p className="text-sm text-gray-600">Customer #: {invoice.customer_id}</p>
@@ -94,13 +101,6 @@ export default function InvoicePrintView({ invoice, onClose }) {
               )}
               <p className="text-sm text-gray-600">{invoice.vehicle_info}</p>
             </div>
-            {user?.business_name && (
-              <div className="text-right">
-                <p className="font-semibold text-sm">{user.business_name}</p>
-                {user?.phone && <p className="text-sm text-gray-600">{user.phone}</p>}
-                {user?.email && <p className="text-sm text-gray-600">{user.email}</p>}
-              </div>
-            )}
           </div>
 
           <table className="w-full mb-6">
