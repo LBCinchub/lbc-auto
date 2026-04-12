@@ -5,7 +5,8 @@ import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from "recharts";
-import { DollarSign, TrendingUp, Wrench, Users, Banknote, CreditCard } from "lucide-react";
+import { DollarSign, TrendingUp, Wrench, Users, Banknote, CreditCard, Clock } from "lucide-react";
+import { format } from "date-fns";
 import StatCard from "../components/dashboard/StatCard";
 
 const COLORS = ["#0ea5e9", "#8b5cf6", "#10b981", "#f59e0b", "#ef4444", "#ec4899"];
@@ -24,6 +25,11 @@ export default function Analytics() {
   const { data: mechanics = [] } = useQuery({
     queryKey: ["mechanics"],
     queryFn: () => base44.entities.Mechanic.list("-created_date", 50),
+  });
+
+  const { data: timeEntries = [] } = useQuery({
+    queryKey: ["timeEntries", "all"],
+    queryFn: () => base44.entities.TimeEntry.list("-clock_in", 500),
   });
 
   const paidInvoices = invoices.filter(i => i.status === "paid");
@@ -90,6 +96,25 @@ export default function Analytics() {
     { name: "Completed", value: orders.filter(o => o.status === "completed").length },
     { name: "Delivered", value: orders.filter(o => o.status === "delivered").length },
   ].filter(s => s.value > 0);
+
+  // Time tracking per mechanic
+  const mechanicHours = mechanics.map(m => {
+    const entries = timeEntries.filter(e => e.mechanic_id === m.id && e.duration_minutes);
+    const totalMinutes = entries.reduce((sum, e) => sum + (e.duration_minutes || 0), 0);
+    const days = [...new Set(entries.map(e => e.date))].length;
+    return { name: m.name, hours: parseFloat((totalMinutes / 60).toFixed(1)), days, sessions: entries.length };
+  }).filter(m => m.sessions > 0).sort((a, b) => b.hours - a.hours);
+
+  // Daily hours chart (last 14 days)
+  const dailyHoursMap = {};
+  timeEntries.filter(e => e.duration_minutes).forEach(e => {
+    if (!dailyHoursMap[e.date]) dailyHoursMap[e.date] = 0;
+    dailyHoursMap[e.date] += e.duration_minutes / 60;
+  });
+  const dailyHoursChart = Object.entries(dailyHoursMap)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(-14)
+    .map(([date, hours]) => ({ date, hours: parseFloat(hours.toFixed(1)) }));
 
   return (
     <div className="space-y-6">
@@ -276,6 +301,54 @@ export default function Analytics() {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* Time Tracking Analytics */}
+      {(mechanicHours.length > 0 || dailyHoursChart.length > 0) && (
+        <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5">
+          <h3 className="text-white font-semibold mb-1 flex items-center gap-2"><Clock className="w-4 h-4 text-sky-400" /> Employee Time Tracking</h3>
+          <p className="text-gray-400 text-xs mb-5">Clock-in hours logged per employee</p>
+
+          {dailyHoursChart.length > 0 && (
+            <div className="h-52 mb-6">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={dailyHoursChart}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                  <XAxis dataKey="date" stroke="#64748b" fontSize={11} tickFormatter={d => d.slice(5)} />
+                  <YAxis stroke="#64748b" fontSize={11} tickFormatter={v => `${v}h`} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: "#0f172a", border: "1px solid #1e293b", borderRadius: "8px", color: "#e2e8f0" }}
+                    formatter={v => [`${v}h`, "Hours Worked"]}
+                  />
+                  <Bar dataKey="hours" name="Hours" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {mechanicHours.length > 0 && (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-800/50">
+                  <th className="text-left text-xs text-gray-500 font-medium px-4 py-2">Employee</th>
+                  <th className="text-right text-xs text-gray-500 font-medium px-4 py-2">Sessions</th>
+                  <th className="text-right text-xs text-gray-500 font-medium px-4 py-2">Days Worked</th>
+                  <th className="text-right text-xs text-gray-500 font-medium px-4 py-2">Total Hours</th>
+                </tr>
+              </thead>
+              <tbody>
+                {mechanicHours.map(m => (
+                  <tr key={m.name} className="border-b border-gray-800/30">
+                    <td className="px-4 py-3 text-white font-medium">{m.name}</td>
+                    <td className="px-4 py-3 text-right text-gray-400">{m.sessions}</td>
+                    <td className="px-4 py-3 text-right text-gray-400">{m.days}</td>
+                    <td className="px-4 py-3 text-right text-purple-400 font-semibold">{m.hours}h</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
     </div>

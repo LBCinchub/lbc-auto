@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { HardHat, Phone, Mail, Pencil, Trash2, Wrench, DollarSign } from "lucide-react";
+import { HardHat, Phone, Mail, Pencil, Trash2, Wrench, DollarSign, LogIn, LogOut } from "lucide-react";
+import { format, differenceInMinutes } from "date-fns";
 import { Button } from "@/components/ui/button";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -59,6 +60,49 @@ export default function Mechanics() {
     }
   };
 
+  const today = format(new Date(), "yyyy-MM-dd");
+
+  const { data: todayEntries = [] } = useQuery({
+    queryKey: ["timeEntries", today],
+    queryFn: () => base44.entities.TimeEntry.filter({ date: today }),
+    refetchInterval: 30000,
+  });
+
+  const [clockLoading, setClockLoading] = useState(null);
+
+  const handleStatusClick = async (mech, newStatus) => {
+    setClockLoading(mech.id);
+    // Clock in
+    if (newStatus === "available") {
+      const alreadyClockedIn = todayEntries.find(e => e.mechanic_id === mech.id && !e.clock_out);
+      if (!alreadyClockedIn) {
+        await base44.entities.TimeEntry.create({
+          mechanic_id: mech.id,
+          mechanic_name: mech.name,
+          clock_in: new Date().toISOString(),
+          date: today,
+        });
+        queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
+      }
+    }
+    // Clock out
+    if (newStatus === "off_duty") {
+      const activeEntry = todayEntries.find(e => e.mechanic_id === mech.id && !e.clock_out);
+      if (activeEntry) {
+        const now = new Date();
+        const duration = differenceInMinutes(now, new Date(activeEntry.clock_in));
+        await base44.entities.TimeEntry.update(activeEntry.id, {
+          clock_out: now.toISOString(),
+          duration_minutes: duration,
+        });
+        queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
+      }
+    }
+    await base44.entities.Mechanic.update(mech.id, { status: newStatus });
+    queryClient.invalidateQueries({ queryKey: ["mechanics"] });
+    setClockLoading(null);
+  };
+
   const getMechanicStats = (mechId) => {
     const mechOrders = orders.filter(o => o.mechanic_id === mechId);
     const active = mechOrders.filter(o => o.status === "in_progress").length;
@@ -83,20 +127,20 @@ export default function Mechanics() {
             return (
               <div key={m.id} className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5 hover:border-sky-500/30 transition-colors">
                 <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-sky-500/20 flex items-center justify-center">
+                   <div className="flex items-center gap-3">
+                     <div className="w-12 h-12 rounded-full bg-sky-500/20 flex items-center justify-center">
                       <span className="text-sky-400 font-bold">{m.name?.charAt(0)?.toUpperCase()}</span>
-                    </div>
-                    <div>
-                      <h3 className="text-white font-semibold">{m.name}</h3>
-                      <div className="flex items-center gap-2 mt-1">
-                        <StatusBadge status={m.status} />
-                        <span className="text-xs text-gray-500">${m.hourly_rate}/hr</span>
-                      </div>
-                    </div>
-                  </div>
+                     </div>
+                     <div>
+                       <h3 className="text-white font-semibold">{m.name}</h3>
+                       <div className="flex items-center gap-2 mt-1">
+                         <StatusBadge status={m.status} />
+                         <span className="text-xs text-gray-500">${m.hourly_rate}/hr</span>
+                       </div>
+                     </div>
+                   </div>
                   <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-white"
+                     <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-white"
                       onClick={() => openDialog(m)}>
                       <Pencil className="w-3.5 h-3.5" />
                     </Button>
@@ -128,7 +172,29 @@ export default function Mechanics() {
                   </div>
                 </div>
 
-                <div className="mt-3 space-y-1">
+                {/* Quick clock in/out buttons */}
+                <div className="flex gap-2 mt-3">
+                  {m.status !== "available" && (
+                    <button
+                      disabled={clockLoading === m.id}
+                      onClick={() => handleStatusClick(m, "available")}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-green-600/20 hover:bg-green-600/30 text-green-400 text-xs font-medium transition-colors disabled:opacity-50"
+                    >
+                      <LogIn className="w-3.5 h-3.5" /> Clock In
+                    </button>
+                  )}
+                  {m.status === "available" && (
+                    <button
+                      disabled={clockLoading === m.id}
+                      onClick={() => handleStatusClick(m, "off_duty")}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-red-600/20 hover:bg-red-600/30 text-red-400 text-xs font-medium transition-colors disabled:opacity-50"
+                    >
+                      <LogOut className="w-3.5 h-3.5" /> Clock Out
+                    </button>
+                  )}
+                </div>
+
+                <div className="mt-2 space-y-1">
                   {m.phone && (
                     <div className="flex items-center gap-2 text-xs text-gray-500">
                       <Phone className="w-3 h-3" /> {m.phone}

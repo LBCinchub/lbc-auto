@@ -15,7 +15,8 @@ import {
   ChevronRight,
   Menu,
   X,
-  Zap
+  Zap,
+  Clock
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +29,7 @@ const navItems = [
   { name: "Invoices", icon: FileText, page: "Invoices" },
   { name: "Appointments", icon: Calendar, page: "Appointments" },
   { name: "Mechanics", icon: HardHat, page: "Mechanics" },
+  { name: "Time Tracking", icon: Clock, page: "TimeTracking" },
   { name: "Analytics", icon: BarChart3, page: "Analytics" },
 ];
 
