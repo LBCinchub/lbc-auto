@@ -102,7 +102,8 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
     ? subtotal * ((form.discount_value || 0) / 100)
     : form.discount_type === "fixed" ? (form.discount_value || 0) : 0;
   const subtotalAfterDiscount = subtotal - discountAmount;
-  const taxAmount = subtotalAfterDiscount * ((form.tax_rate || 0) / 100);
+  const isCash = form.payment_method === "cash";
+  const taxAmount = isCash ? 0 : subtotalAfterDiscount * ((form.tax_rate || 0) / 100);
   const total = subtotalAfterDiscount + taxAmount;
   const balanceDue = total - (form.amount_paid || 0);
 
@@ -324,7 +325,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
               </div>
             )}
             <div className="flex justify-between text-sm">
-              <span className="text-gray-400">Tax ({form.tax_rate}%)</span>
+              <span className="text-gray-400">Tax ({isCash ? "Cash - No Tax" : `${form.tax_rate}%`})</span>
               <span className="text-white">${taxAmount.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-lg font-bold border-t border-gray-700 pt-2">
