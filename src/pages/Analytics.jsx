@@ -5,10 +5,11 @@ import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from "recharts";
-import { DollarSign, TrendingUp, Wrench, Users, Banknote, CreditCard, Clock, Printer, FileText } from "lucide-react";
+import { DollarSign, TrendingUp, Wrench, Users, Banknote, CreditCard, Clock, Printer, FileText, X } from "lucide-react";
 import { format, startOfDay, startOfWeek, startOfMonth, startOfYear, parseISO, isAfter } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { jsPDF } from "jspdf";
 import StatCard from "../components/dashboard/StatCard";
 
@@ -19,6 +20,9 @@ const REVENUE_PERIODS = ["Day", "Week", "Month", "Year"];
 export default function Analytics() {
   const [revPeriod, setRevPeriod] = useState("Month");
   const [activeTab, setActiveTab] = useState("overview");
+  const [filterMechanic, setFilterMechanic] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [filterPaymentMethod, setFilterPaymentMethod] = useState("");
 
   const { data: invoices = [] } = useQuery({
     queryKey: ["invoices"],
@@ -45,7 +49,23 @@ export default function Analytics() {
     queryFn: () => base44.entities.Part.list("-created_date", 500),
   });
 
-  const paidInvoices = invoices.filter(i => i.status === "paid");
+  // Apply data filters
+  let paidInvoices = invoices.filter(i => i.status === "paid");
+  
+  if (filterPaymentMethod) {
+    paidInvoices = paidInvoices.filter(i => {
+      const method = i.payment_method?.toLowerCase() || "cash";
+      return method === filterPaymentMethod.toLowerCase();
+    });
+  }
+
+  const filteredOrders = filterStatus 
+    ? orders.filter(o => o.status === filterStatus)
+    : orders;
+  
+  const filteredMechanic = filterMechanic
+    ? mechanics.find(m => m.id === filterMechanic)
+    : null;
   const totalRevenue = paidInvoices.reduce((sum, i) => sum + (i.total || 0), 0);
   const totalLaborRevenue = paidInvoices.reduce((sum, i) => sum + (i.labor_total || 0), 0);
   const totalPartsRevenue = paidInvoices.reduce((sum, i) => sum + (i.parts_total || 0), 0);
@@ -87,12 +107,12 @@ export default function Analytics() {
 
   // Mechanic productivity
   const mechProductivity = mechanics.map(m => {
-    const mechOrders = orders.filter(o => o.mechanic_id === m.id);
+    const mechOrders = (filterMechanic ? (m.id === filterMechanic ? orders.filter(o => o.mechanic_id === m.id) : []) : orders.filter(o => o.mechanic_id === m.id));
     const completed = mechOrders.filter(o => o.status === "completed" || o.status === "delivered").length;
     const hours = mechOrders.reduce((sum, o) => sum + (o.labor_hours || 0), 0);
     const revenue = mechOrders.reduce((sum, o) => sum + (o.labor_cost || 0), 0);
-    return { name: m.name, completed, hours, revenue };
-  });
+    return { name: m.name, completed, hours, revenue, id: m.id };
+  }).filter(m => !filterMechanic || m.id === filterMechanic);
 
   // Daily cash vs card vs e-transfer report
   const dailyPayments = {};
@@ -539,6 +559,70 @@ export default function Analytics() {
 
       {activeTab === "overview" && (
         <>
+        {/* Data Filters */}
+        <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-4">
+          <div className="flex flex-wrap gap-3 items-end">
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-xs text-gray-400 font-medium mb-2">Filter by Mechanic</label>
+              <Select value={filterMechanic} onValueChange={setFilterMechanic}>
+                <SelectTrigger className="bg-gray-800 border-gray-700">
+                  <SelectValue placeholder="All Mechanics" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={null}>All Mechanics</SelectItem>
+                  {mechanics.map(m => (
+                    <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-xs text-gray-400 font-medium mb-2">Filter by Order Status</label>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="bg-gray-800 border-gray-700">
+                  <SelectValue placeholder="All Statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={null}>All Statuses</SelectItem>
+                  <SelectItem value="waiting">Waiting</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="waiting_for_parts">Waiting for Parts</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="delivered">Delivered</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-xs text-gray-400 font-medium mb-2">Filter by Payment Method</label>
+              <Select value={filterPaymentMethod} onValueChange={setFilterPaymentMethod}>
+                <SelectTrigger className="bg-gray-800 border-gray-700">
+                  <SelectValue placeholder="All Methods" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={null}>All Methods</SelectItem>
+                  <SelectItem value="cash">Cash</SelectItem>
+                  <SelectItem value="card">Card</SelectItem>
+                  <SelectItem value="e-transfer">E-Transfer</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {(filterMechanic || filterStatus || filterPaymentMethod) && (
+              <Button 
+                onClick={() => { setFilterMechanic(""); setFilterStatus(""); setFilterPaymentMethod(""); }}
+                variant="outline"
+                size="sm"
+                className="gap-2 h-9 bg-gray-800 border-gray-700 hover:bg-gray-700"
+              >
+                <X className="w-4 h-4" />
+                Clear Filters
+              </Button>
+            )}
+          </div>
+        </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Clickable Total Revenue card with period toggle */}
         <div className="rounded-xl border border-green-700/30 bg-gradient-to-br from-green-900/30 to-green-950/10 p-4 cursor-pointer select-none"
