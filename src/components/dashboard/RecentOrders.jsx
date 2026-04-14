@@ -13,7 +13,12 @@ const statusConfig = {
 };
 
 export default function RecentOrders({ orders }) {
-  const recent = orders.slice(0, 8);
+  const sorted = [...orders].sort((a, b) => {
+    const isDeliveredA = a.status === "delivered" ? 1 : 0;
+    const isDeliveredB = b.status === "delivered" ? 1 : 0;
+    return isDeliveredA - isDeliveredB;
+  });
+  const recent = sorted.slice(0, 8);
 
   return (
     <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5">
