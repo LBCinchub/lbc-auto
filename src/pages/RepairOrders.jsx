@@ -108,39 +108,38 @@ export default function RepairOrders() {
       <PageHeader title="Repair Orders" subtitle={`${orders.length} total orders`}
         onAdd={() => { setEditingOrder(null); setDialogOpen(true); }} addLabel="New Order" />
 
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex flex-1 gap-2 items-center">
-          <Select value={searchField} onValueChange={setSearchField}>
-            <SelectTrigger className="w-36 bg-gray-900 border-gray-700 text-gray-300">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Fields</SelectItem>
-              <SelectItem value="order_number">Order #</SelectItem>
-              <SelectItem value="customer">Customer</SelectItem>
-              <SelectItem value="vehicle">Vehicle</SelectItem>
-            </SelectContent>
-          </Select>
-          <div className="flex-1">
-            <SearchBar value={search} onChange={setSearch} placeholder={
-              searchField === "order_number" ? "Search by order #..." :
-              searchField === "customer" ? "Search by customer..." :
-              searchField === "vehicle" ? "Search by vehicle..." :
-              "Search by order #, customer, or vehicle..."
-            } />
-          </div>
-        </div>
-        <Tabs value={statusFilter} onValueChange={setStatusFilter}>
-          <TabsList className="bg-gray-800/50 flex-wrap h-auto">
-            {statusFilters.map(s => (
-              <TabsTrigger key={s.value} value={s.value}
-                className="text-xs data-[state=active]:bg-sky-500/20 data-[state=active]:text-sky-400">
-                {s.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-      </div>
+      <div className="flex gap-2 items-center">
+         <Select value={searchField} onValueChange={setSearchField}>
+           <SelectTrigger className="w-36 bg-gray-900 border-gray-700 text-gray-300">
+             <SelectValue />
+           </SelectTrigger>
+           <SelectContent>
+             <SelectItem value="all">All Fields</SelectItem>
+             <SelectItem value="order_number">Order #</SelectItem>
+             <SelectItem value="customer">Customer</SelectItem>
+             <SelectItem value="vehicle">Vehicle</SelectItem>
+           </SelectContent>
+         </Select>
+         <div className="flex-1">
+           <SearchBar value={search} onChange={setSearch} placeholder={
+             searchField === "order_number" ? "Search by order #..." :
+             searchField === "customer" ? "Search by customer..." :
+             searchField === "vehicle" ? "Search by vehicle..." :
+             "Search by order #, customer, or vehicle..."
+           } />
+         </div>
+       </div>
+
+       <Tabs value={statusFilter} onValueChange={setStatusFilter}>
+         <TabsList className="bg-gray-800/50 flex-wrap h-auto">
+           {statusFilters.map(s => (
+             <TabsTrigger key={s.value} value={s.value}
+               className="text-xs data-[state=active]:bg-sky-500/20 data-[state=active]:text-sky-400">
+               {s.label}
+             </TabsTrigger>
+           ))}
+         </TabsList>
+       </Tabs>
 
       {isLoading ? (
         <div className="space-y-3">
@@ -154,75 +153,62 @@ export default function RepairOrders() {
       ) : (
         <div className="space-y-3">
           {filtered.map(order => (
-            <div key={order.id}
-              className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5 hover:border-sky-500/30 transition-colors">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-4 min-w-0">
-                  <div className="hidden sm:flex w-10 h-10 rounded-lg bg-sky-500/20 items-center justify-center flex-shrink-0">
-                    <Wrench className="w-5 h-5 text-sky-400" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="text-white font-semibold cursor-pointer hover:text-sky-400 transition-colors" onClick={() => navigate(`/RepairOrderDetail/${order.id}`)}>{order.order_number}</h3>
-                      <StatusBadge status={order.status} />
-                    </div>
-                    <p className="text-sm text-gray-400 truncate">
-                      {order.customer_name} · {order.vehicle_info}
-                    </p>
-                    {(() => {
-                      const customer = customers.find(c => c.id === order.customer_id);
-                      return customer?.phone ? (
-                        <a href={`tel:${customer.phone}`} className="inline-flex items-center gap-1.5 text-xs text-sky-400 hover:text-sky-300 font-medium mt-0.5">
-                          <Phone className="w-3 h-3" />{customer.phone}
-                        </a>
-                      ) : null;
-                    })()}
-                    <p className="text-xs text-gray-600 truncate mt-0.5">{order.description}</p>
-                    <p className="text-xs text-gray-600 mt-0.5">
-                      Created {new Date(order.created_date).toLocaleString()}
-                      {order.updated_date && order.updated_date !== order.created_date && (
-                        <> · Updated {new Date(order.updated_date).toLocaleString()}</>
-                      )}
-                    </p>
-                  </div>
+            <div key={order.id} onClick={() => navigate(`/RepairOrderDetail/${order.id}`)} className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5 flex flex-col sm:flex-row sm:items-center gap-4 hover:border-sky-500/30 transition-colors cursor-pointer">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h3 className="text-white font-semibold">{order.order_number}</h3>
+                  <span className="text-xs text-gray-500 font-mono">{order.customer_name}</span>
+                  <StatusBadge status={order.status} />
                 </div>
-                <div className="flex items-center gap-4 flex-shrink-0">
-                  {order.mechanic_name && (
-                    <span className="text-xs text-gray-500">{order.mechanic_name}</span>
+                <p className="text-sm text-gray-400 mt-0.5">{order.vehicle_info}</p>
+                {(() => {
+                  const customer = customers.find(c => c.id === order.customer_id);
+                  return customer?.phone ? (
+                    <a href={`tel:${customer.phone}`} onClick={e => e.stopPropagation()} className="inline-flex items-center gap-1.5 text-xs text-sky-400 hover:text-sky-300 font-medium mt-0.5">
+                      <Phone className="w-3 h-3" />{customer.phone}
+                    </a>
+                  ) : null;
+                })()}
+                {order.description && <p className="text-xs text-gray-600 mt-1 truncate">{order.description}</p>}
+                <p className="text-xs text-gray-600 mt-0.5">
+                  Created {new Date(order.created_date).toLocaleString()}
+                  {order.updated_date && order.updated_date !== order.created_date && (
+                    <> · Updated {new Date(order.updated_date).toLocaleString()}</>
                   )}
-                  <div className="flex items-center gap-2 text-sm">
-                    {order.labor_hours > 0 && (
-                      <span className="text-gray-400 flex items-center gap-1">
-                        <Clock className="w-3 h-3" />{order.labor_hours}h
-                      </span>
-                    )}
-                    {order.total_cost > 0 && (
-                      <span className="text-emerald-400 font-semibold flex items-center gap-1">
-                        <DollarSign className="w-3 h-3" />{order.total_cost.toFixed(2)}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex gap-1">
-                    {order.history && order.history.length > 0 && (
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-sky-400"
-                        onClick={() => setHistoryOrder(order)} title="View History">
-                        <History className="w-3.5 h-3.5" />
-                      </Button>
-                    )}
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-emerald-400"
-                      onClick={() => { setInvoiceOrder(order); setInvoiceDialogOpen(true); }}
-                      title="Create Invoice">
-                      <FileText className="w-3.5 h-3.5" />
+                </p>
+              </div>
+              <div className="flex items-center gap-6">
+                <div className="text-right">
+                  <p className="text-xs text-gray-500">Labor</p>
+                  <p className="text-sm text-gray-300">${(order.labor_cost || 0).toFixed(2)}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-gray-500">Parts</p>
+                  <p className="text-sm text-gray-300">${(order.parts_cost || 0).toFixed(2)}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-gray-500">Total</p>
+                  <p className="text-lg font-bold text-sky-400">${(order.total_cost || 0).toFixed(2)}</p>
+                </div>
+                <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                  {order.history && order.history.length > 0 && (
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-sky-400" title="View History"
+                      onClick={() => setHistoryOrder(order)}>
+                      <History className="w-3.5 h-3.5" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-white"
-                      onClick={() => { setEditingOrder(order); setDialogOpen(true); }}>
-                      <Pencil className="w-3.5 h-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-rose-400"
-                      onClick={() => handleDelete(order.id)}>
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
-                  </div>
+                  )}
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-emerald-400" title="Create Invoice"
+                    onClick={() => { setInvoiceOrder(order); setInvoiceDialogOpen(true); }}>
+                    <FileText className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-white"
+                    onClick={() => { setEditingOrder(order); setDialogOpen(true); }}>
+                    <Pencil className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-rose-400"
+                    onClick={() => handleDelete(order.id)}>
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
                 </div>
               </div>
             </div>
