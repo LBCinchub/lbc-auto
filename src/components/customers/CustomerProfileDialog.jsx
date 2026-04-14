@@ -6,7 +6,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle
 } from "@/components/ui/dialog";
 import {
-  Phone, Mail, MapPin, Car, Wrench, FileText, Lightbulb, Clock, Plus, Pencil
+  Phone, Mail, MapPin, Car, Wrench, FileText, Lightbulb, Clock, Plus, Pencil, ChevronRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StatusBadge from "../shared/StatusBadge";
@@ -172,7 +172,9 @@ export default function CustomerProfileDialog({ customer, open, onClose, custome
             ) : (
               <div className="space-y-2">
                 {customerOrders.map(o => (
-                  <div key={o.id} className="bg-gray-800/60 rounded-lg p-3 flex items-start justify-between gap-3">
+                  <button key={o.id}
+                    onClick={() => { onClose(); navigate(`/RepairOrderDetail/${o.id}`); }}
+                    className="w-full bg-gray-800/60 rounded-lg p-3 flex items-start justify-between gap-3 hover:bg-gray-700/60 transition-colors text-left">
                     <div className="flex items-start gap-3 min-w-0">
                       <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0 mt-0.5">
                         <Wrench className="w-3.5 h-3.5 text-gray-400" />
@@ -188,13 +190,16 @@ export default function CustomerProfileDialog({ customer, open, onClose, custome
                         )}
                       </div>
                     </div>
-                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                      <StatusBadge status={o.status} />
-                      {o.total_cost > 0 && (
-                        <span className="text-emerald-400 text-xs font-semibold">${o.total_cost.toFixed(2)}</span>
-                      )}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="flex flex-col items-end gap-1">
+                        <StatusBadge status={o.status} />
+                        {o.total_cost > 0 && (
+                          <span className="text-emerald-400 text-xs font-semibold">${o.total_cost.toFixed(2)}</span>
+                        )}
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-500" />
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
@@ -207,7 +212,9 @@ export default function CustomerProfileDialog({ customer, open, onClose, custome
             ) : (
               <div className="space-y-2">
                 {customerInvoices.map(inv => (
-                  <div key={inv.id} className="bg-gray-800/60 rounded-lg p-3 flex items-start justify-between gap-3">
+                  <button key={inv.id}
+                    onClick={() => { onClose(); navigate(`/InvoiceDetail/${inv.id}`); }}
+                    className="w-full bg-gray-800/60 rounded-lg p-3 flex items-start justify-between gap-3 hover:bg-gray-700/60 transition-colors text-left">
                     <div className="flex items-start gap-3 min-w-0">
                       <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0 mt-0.5">
                         <FileText className="w-3.5 h-3.5 text-gray-400" />
@@ -223,11 +230,14 @@ export default function CustomerProfileDialog({ customer, open, onClose, custome
                         )}
                       </div>
                     </div>
-                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                      <StatusBadge status={inv.status} />
-                      <span className="text-emerald-400 text-xs font-semibold">${(inv.total || 0).toFixed(2)}</span>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="flex flex-col items-end gap-1">
+                        <StatusBadge status={inv.status} />
+                        <span className="text-emerald-400 text-xs font-semibold">${(inv.total || 0).toFixed(2)}</span>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-500" />
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
