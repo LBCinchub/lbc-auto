@@ -11,8 +11,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { base44 } from "@/api/base44Client";
+import { useNavigate } from "react-router-dom";
+import { FileText, Wrench, Receipt, CheckCircle2 } from "lucide-react";
 
 export default function CustomerFormDialog({ open, onClose, customer, onSaved }) {
+  const navigate = useNavigate();
   const [form, setForm] = useState({
     full_name: "", phone: "", email: "", address: "", notes: ""
   });
@@ -20,6 +23,7 @@ export default function CustomerFormDialog({ open, onClose, customer, onSaved })
   const [vehicleForm, setVehicleForm] = useState({ vin: "", make: "", model: "", year: "", license_plate: "" });
   const [decodingVin, setDecodingVin] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [savedCustomer, setSavedCustomer] = useState(null);
 
   useEffect(() => {
     if (customer) {
@@ -35,29 +39,101 @@ export default function CustomerFormDialog({ open, onClose, customer, onSaved })
       setAddVehicle(false);
       setVehicleForm({ vin: "", make: "", model: "", year: "", license_plate: "" });
     }
+    setSavedCustomer(null);
   }, [customer, open]);
 
   const handleSave = async () => {
     setSaving(true);
-    let savedCustomer;
+    let newCustomer;
     if (customer) {
       await base44.entities.Customer.update(customer.id, form);
-      savedCustomer = { id: customer.id, ...form };
+      newCustomer = { id: customer.id, ...form };
     } else {
-      savedCustomer = await base44.entities.Customer.create(form);
+      newCustomer = await base44.entities.Customer.create(form);
     }
     if (!customer && addVehicle && vehicleForm.make && vehicleForm.model && vehicleForm.year) {
       await base44.entities.Vehicle.create({
         ...vehicleForm,
         year: Number(vehicleForm.year),
-        customer_id: savedCustomer.id,
+        customer_id: newCustomer.id,
         customer_name: form.full_name,
       });
     }
     setSaving(false);
     onSaved();
-    onClose();
+    // For new customers, show quick-action step instead of closing
+    if (!customer) {
+      setSavedCustomer(newCustomer);
+    } else {
+      onClose();
+    }
   };
+
+  const handleQuickAction = (page) => {
+    onClose();
+    navigate(`/${page}`);
+  };
+
+  if (savedCustomer) {
+    return (
+      <Dialog open={open} onOpenChange={onClose}>
+        <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-green-400" />
+              Customer Added!
+            </DialogTitle>
+          </DialogHeader>
+          <div className="mt-2 space-y-4">
+            <p className="text-gray-400 text-sm">
+              <span className="text-white font-medium">{savedCustomer.full_name}</span> has been saved. What would you like to do next?
+            </p>
+            <div className="grid grid-cols-1 gap-3">
+              <button
+                onClick={() => handleQuickAction("Estimates")}
+                className="flex items-center gap-3 p-4 rounded-lg bg-gray-800 hover:bg-sky-500/10 border border-gray-700 hover:border-sky-500/50 transition-all text-left"
+              >
+                <div className="w-9 h-9 rounded-full bg-sky-500/20 flex items-center justify-center flex-shrink-0">
+                  <FileText className="w-4 h-4 text-sky-400" />
+                </div>
+                <div>
+                  <p className="text-white font-medium text-sm">Create Estimate</p>
+                  <p className="text-gray-500 text-xs">Provide a service quote for this customer</p>
+                </div>
+              </button>
+              <button
+                onClick={() => handleQuickAction("RepairOrders")}
+                className="flex items-center gap-3 p-4 rounded-lg bg-gray-800 hover:bg-amber-500/10 border border-gray-700 hover:border-amber-500/50 transition-all text-left"
+              >
+                <div className="w-9 h-9 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                  <Wrench className="w-4 h-4 text-amber-400" />
+                </div>
+                <div>
+                  <p className="text-white font-medium text-sm">Create Repair Order</p>
+                  <p className="text-gray-500 text-xs">Start a new repair job for this customer</p>
+                </div>
+              </button>
+              <button
+                onClick={() => handleQuickAction("Invoices")}
+                className="flex items-center gap-3 p-4 rounded-lg bg-gray-800 hover:bg-emerald-500/10 border border-gray-700 hover:border-emerald-500/50 transition-all text-left"
+              >
+                <div className="w-9 h-9 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                  <Receipt className="w-4 h-4 text-emerald-400" />
+                </div>
+                <div>
+                  <p className="text-white font-medium text-sm">Create Invoice</p>
+                  <p className="text-gray-500 text-xs">Bill this customer for completed work</p>
+                </div>
+              </button>
+            </div>
+            <Button variant="outline" onClick={onClose} className="w-full border-gray-700 text-gray-300">
+              Done — Go Back to Customers
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
