@@ -267,11 +267,11 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
              <div>
                <Label className="text-gray-400">Customer *</Label>
-               <div className="relative mt-1">
+               <div className="mt-1">
                  <CustomerSearchInput customers={customers} value={form.customer_id} onChange={handleCustomerChange} />
                  <button onClick={() => setNewCustomerForm({ full_name: "", phone: "", email: "" })}
-                   className="absolute right-10 top-1/2 -translate-y-1/2 px-2 py-1 rounded text-xs bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/40 text-sky-400 flex items-center gap-1">
-                   <Plus className="w-3 h-3" /> New
+                   className="mt-2 w-full px-3 py-1 rounded text-xs bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/40 text-sky-400 flex items-center justify-center gap-2">
+                   <Plus className="w-3 h-3" /> New customer
                  </button>
                </div>
              </div>
