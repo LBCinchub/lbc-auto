@@ -26,7 +26,8 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
     mechanic_id: "", mechanic_name: "", description: "", status: "waiting",
     labor_hours: "", labor_items: [{ description: "", hours: "", total: 0 }],
     notes: "", parts_used: [], estimated_completion: "",
-    discount_type: "none", discount_value: 0, total_cost: 0, custom_total: false
+    discount_type: "none", discount_value: 0, total_cost: 0, custom_total: false,
+    apply_tax: true
   });
   const [saving, setSaving] = useState(false);
 
@@ -34,11 +35,14 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
   const mechanic = mechanics.find(m => m.id === form.mechanic_id);
   const laborCost = (Number(form.labor_hours) || 0) * 120; // $120 per hour
   const partsCost = form.parts_used.reduce((sum, p) => sum + (Number(p.unit_price) || 0) * (Number(p.quantity) || 0), 0);
+  const TAX_RATE = 15;
   const subtotal = laborCost + partsCost;
   const discountAmount = form.discount_type === "percentage" 
     ? subtotal * ((form.discount_value || 0) / 100)
     : form.discount_type === "fixed" ? (form.discount_value || 0) : 0;
-  const calculatedTotal = subtotal - discountAmount;
+  const afterDiscount = subtotal - discountAmount;
+  const taxAmount = form.apply_tax ? afterDiscount * 0.15 : 0;
+  const calculatedTotal = afterDiscount + taxAmount;
   const totalCost = form.custom_total ? Number(form.total_cost) || 0 : calculatedTotal;
 
   useEffect(() => {
@@ -61,6 +65,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         discount_value: order.discount_value || 0,
         total_cost: order.total_cost || 0,
         custom_total: order.total_cost ? true : false,
+        apply_tax: order.apply_tax !== false,
       });
     } else {
       setForm({
@@ -68,7 +73,8 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         mechanic_id: "", mechanic_name: "", description: "", status: "waiting",
         labor_hours: "", labor_items: [{ description: "", hours: "", total: 0 }],
         notes: "", parts_used: [], estimated_completion: "",
-        discount_type: "none", discount_value: 0, total_cost: 0, custom_total: false
+        discount_type: "none", discount_value: 0, total_cost: 0, custom_total: false,
+        apply_tax: true
       });
     }
   }, [order, open]);
@@ -138,13 +144,15 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
     setSaving(true);
     try {
       const laborHours = Number(form.labor_hours) || 0;
-      const laborCost = laborHours * 120; // Only charge if labor hours added
+      const laborCost = laborHours * 120;
       const partsCost = form.parts_used.reduce((sum, p) => sum + (p.total || 0), 0);
       const subtotal = laborCost + partsCost;
       const discountAmount = form.discount_type === "percentage" 
         ? subtotal * ((form.discount_value || 0) / 100)
         : form.discount_type === "fixed" ? (form.discount_value || 0) : 0;
-      const calculatedTotal = subtotal - discountAmount;
+      const afterDiscount = subtotal - discountAmount;
+      const taxAmt = form.apply_tax ? afterDiscount * 0.15 : 0;
+      const calculatedTotal = afterDiscount + taxAmt;
       const finalTotal = form.custom_total ? Number(form.total_cost) || 0 : calculatedTotal;
 
       const timestamp = new Date().toISOString();
@@ -449,7 +457,21 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
 
           {/* Cost Summary */}
           <div className="rounded-xl border border-gray-700 bg-gray-800/40 p-4 space-y-2 text-sm">
-            <p className="text-gray-400 font-medium text-xs uppercase tracking-wider mb-3">{form.custom_total ? "Fixed Cost" : "Estimated Cost"}</p>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-gray-400 font-medium text-xs uppercase tracking-wider">{form.custom_total ? "Fixed Cost" : "Estimated Cost"}</p>
+              <button
+                type="button"
+                onClick={() => setForm(f => ({ ...f, apply_tax: !f.apply_tax }))}
+                className={`text-xs px-3 py-1 rounded-full border font-medium transition-colors flex items-center gap-1.5 ${
+                  form.apply_tax
+                    ? "bg-sky-500/20 border-sky-500 text-sky-400"
+                    : "bg-gray-800 border-gray-700 text-gray-500"
+                }`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${form.apply_tax ? "bg-sky-400" : "bg-gray-600"}`} />
+                Tax 15%
+              </button>
+            </div>
             {!form.custom_total ? (
               <>
                 <div className="flex justify-between text-gray-400">
@@ -466,6 +488,10 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                     <span>-${discountAmount.toFixed(2)}</span>
                   </div>
                 )}
+                <div className="flex justify-between text-gray-400">
+                  <span>Tax (15%)</span>
+                  <span className={form.apply_tax ? "" : "line-through opacity-50"}>{form.apply_tax ? `$${taxAmount.toFixed(2)}` : "Not applied"}</span>
+                </div>
               </>
             ) : (
               <p className="text-xs text-gray-500 italic">Cost locked (will not recalculate)</p>

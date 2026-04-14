@@ -10,9 +10,11 @@ import { Plus, Trash2, Loader2 } from "lucide-react";
 const emptyLaborRow = () => ({ description: "", hours: "", rate: "", total: 0 });
 const emptyPartRow  = () => ({ name: "", part_number: "", quantity: "", unit_price: "", total: 0 });
 
+const TAX_RATE = 15;
+
 const emptyForm = {
   customer_id: "", customer_name: "", vehicle_id: "", vehicle_info: "",
-  status: "draft", notes: "", tax_rate: "0", valid_until: "",
+  status: "draft", notes: "", tax_rate: String(TAX_RATE), apply_tax: true, valid_until: "",
   labor_items: [emptyLaborRow()],
   parts_items: [emptyPartRow()],
   repair_order_id: "",
@@ -27,7 +29,8 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
       setForm({
         ...emptyForm,
         ...estimate,
-        tax_rate: String(estimate.tax_rate ?? 0),
+        apply_tax: estimate.apply_tax !== false,
+        tax_rate: String(estimate.tax_rate ?? TAX_RATE),
         labor_items: estimate.labor_items?.length ? estimate.labor_items.map(i => ({ ...i, hours: String(i.hours), rate: String(i.rate) })) : [emptyLaborRow()],
         parts_items: estimate.parts_items?.length ? estimate.parts_items.map(i => ({ ...i, quantity: String(i.quantity), unit_price: String(i.unit_price) })) : [emptyPartRow()],
       });
@@ -68,7 +71,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
   const laborTotal = form.labor_items.reduce((s, r) => s + ((parseFloat(r.hours) || 0) * 120), 0);
   const partsTotal = form.parts_items.reduce((s, r) => s + (r.total || 0), 0);
   const subtotal   = laborTotal + partsTotal;
-  const taxRate    = parseFloat(form.tax_rate) || 0;
+  const taxRate    = form.apply_tax ? TAX_RATE : 0;
   const taxAmount  = subtotal * (taxRate / 100);
   const grandTotal = subtotal + taxAmount;
 
@@ -88,6 +91,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
     const payload = {
       ...form,
       estimate_number: estNum,
+      apply_tax: form.apply_tax,
       tax_rate: taxRate,
       labor_items: form.labor_items.map(r => ({ ...r, hours: parseFloat(r.hours) || 0, rate: 120 })),
       parts_items: form.parts_items.map(r => ({ ...r, quantity: parseFloat(r.quantity) || 0, unit_price: parseFloat(r.unit_price) || 0 })),
@@ -160,9 +164,19 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
               </Select>
             </div>
             <div>
-              <Label className="text-gray-400">Tax Rate (%)</Label>
-              <Input type="number" value={form.tax_rate} onChange={e => setForm(f => ({ ...f, tax_rate: e.target.value }))}
-                className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="0" />
+              <Label className="text-gray-400">Tax (15%)</Label>
+              <button
+                type="button"
+                onClick={() => setForm(f => ({ ...f, apply_tax: !f.apply_tax }))}
+                className={`mt-1 w-full h-9 rounded-md border text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+                  form.apply_tax
+                    ? "bg-sky-500/20 border-sky-500 text-sky-400"
+                    : "bg-gray-800 border-gray-700 text-gray-500"
+                }`}
+              >
+                <span className={`w-2 h-2 rounded-full ${form.apply_tax ? "bg-sky-400" : "bg-gray-600"}`} />
+                {form.apply_tax ? "Applied" : "Not Applied"}
+              </button>
             </div>
             <div>
               <Label className="text-gray-400">Valid Until</Label>
@@ -278,7 +292,10 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
           <div className="rounded-xl border border-gray-700 bg-gray-800/40 p-4 space-y-2 text-sm">
             <div className="flex justify-between text-gray-400"><span>Labor Subtotal</span><span>${laborTotal.toFixed(2)}</span></div>
             <div className="flex justify-between text-gray-400"><span>Parts Subtotal</span><span>${partsTotal.toFixed(2)}</span></div>
-            {taxRate > 0 && <div className="flex justify-between text-gray-400"><span>Tax ({taxRate}%)</span><span>${taxAmount.toFixed(2)}</span></div>}
+            <div className="flex justify-between text-gray-400">
+              <span>Tax (15%)</span>
+              <span className={form.apply_tax ? "" : "line-through opacity-50"}>{form.apply_tax ? `$${taxAmount.toFixed(2)}` : "Not applied"}</span>
+            </div>
             <div className="flex justify-between text-white font-bold text-base border-t border-gray-700 pt-2 mt-2">
               <span>Grand Total</span>
               <span className="text-sky-400">${grandTotal.toFixed(2)}</span>
