@@ -5,8 +5,9 @@ import { useNavigate } from "react-router-dom";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle
 } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Phone, Mail, MapPin, Car, Wrench, FileText, Lightbulb, Clock, Plus, Pencil, ChevronRight
+  Phone, Mail, MapPin, Car, Wrench, FileText, Lightbulb, Clock, Plus, Pencil, ChevronRight, Calendar
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StatusBadge from "../shared/StatusBadge";
@@ -28,6 +29,7 @@ export default function CustomerProfileDialog({ customer, open, onClose, custome
   const queryClient = useQueryClient();
   const [editingVehicle, setEditingVehicle] = useState(null);
   const [showVehicleDialog, setShowVehicleDialog] = useState(false);
+  const [activeTab, setActiveTab] = useState("orders");
 
   const { data: orders = [] } = useQuery({
     queryKey: ["repairOrders"],
@@ -53,6 +55,12 @@ export default function CustomerProfileDialog({ customer, open, onClose, custome
     enabled: open,
   });
 
+  const { data: appointments = [] } = useQuery({
+    queryKey: ["appointments"],
+    queryFn: () => base44.entities.Appointment.list("-date", 200),
+    enabled: open,
+  });
+
   const customerOrders = useMemo(() =>
     orders.filter(o => o.customer_id === customer?.id),
     [orders, customer]
@@ -72,6 +80,15 @@ export default function CustomerProfileDialog({ customer, open, onClose, custome
     estimates.filter(e => e.customer_id === customer?.id),
     [estimates, customer]
   );
+
+  const customerAppointments = useMemo(() =>
+    appointments.filter(a => a.customer_id === customer?.id),
+    [appointments, customer]
+  );
+
+  const today = new Date().toISOString().split("T")[0];
+  const upcomingAppointments = customerAppointments.filter(a => a.date >= today).sort((a, b) => a.date.localeCompare(b.date));
+  const pastAppointments = customerAppointments.filter(a => a.date < today).sort((a, b) => b.date.localeCompare(a.date));
 
   // Simple recommendations based on order history
   const recommendations = useMemo(() => {
@@ -121,6 +138,24 @@ export default function CustomerProfileDialog({ customer, open, onClose, custome
 
         <div className="space-y-6 mt-2">
 
+          {/* Tabs Navigation */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-4 bg-gray-800/50 border border-gray-700">
+              <TabsTrigger value="orders" className="data-[state=active]:bg-sky-500/20 data-[state=active]:text-sky-400 text-xs sm:text-sm">
+                <Wrench className="w-3 h-3 sm:w-4 sm:h-4 mr-1" /> Repairs
+              </TabsTrigger>
+              <TabsTrigger value="invoices" className="data-[state=active]:bg-sky-500/20 data-[state=active]:text-sky-400 text-xs sm:text-sm">
+                <FileText className="w-3 h-3 sm:w-4 sm:h-4 mr-1" /> Invoices
+              </TabsTrigger>
+              <TabsTrigger value="appointments" className="data-[state=active]:bg-sky-500/20 data-[state=active]:text-sky-400 text-xs sm:text-sm">
+                <Calendar className="w-3 h-3 sm:w-4 sm:h-4 mr-1" /> Appointments
+              </TabsTrigger>
+              <TabsTrigger value="vehicles" className="data-[state=active]:bg-sky-500/20 data-[state=active]:text-sky-400 text-xs sm:text-sm">
+                <Car className="w-3 h-3 sm:w-4 sm:h-4 mr-1" /> Vehicles
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+
           {/* Contact Info */}
           <div className="bg-gray-800/50 rounded-lg p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
             {customer.phone && (
@@ -148,8 +183,9 @@ export default function CustomerProfileDialog({ customer, open, onClose, custome
             </div>
           </div>
 
-          {/* Vehicles */}
-          <Section icon={Car} title="Vehicles">
+          {/* Vehicles Tab */}
+          {activeTab === "vehicles" && (
+           <Section icon={Car} title="Vehicles">
             {customerVehicles.length === 0 ? (
               <p className="text-gray-500 text-sm">No vehicles on file.</p>
             ) : (
@@ -174,10 +210,12 @@ export default function CustomerProfileDialog({ customer, open, onClose, custome
                 ))}
               </div>
             )}
-          </Section>
+            </Section>
+            )}
 
-          {/* Repair History */}
-          <Section icon={Wrench} title="Repair History">
+            {/* Repair History Tab */}
+            {activeTab === "orders" && (
+            <Section icon={Wrench} title="Repair History">
             {customerOrders.length === 0 ? (
               <p className="text-gray-500 text-sm">No repair orders found.</p>
             ) : (
@@ -214,10 +252,12 @@ export default function CustomerProfileDialog({ customer, open, onClose, custome
                 ))}
               </div>
             )}
-          </Section>
+            </Section>
+            )}
 
-          {/* Estimates */}
-          <Section icon={FileText} title="Estimates">
+            {/* Estimates Tab */}
+            {activeTab === "orders" && (
+            <Section icon={FileText} title="Estimates">
             {customerEstimates.length === 0 ? (
               <p className="text-gray-500 text-sm">No estimates found.</p>
             ) : (
@@ -254,10 +294,12 @@ export default function CustomerProfileDialog({ customer, open, onClose, custome
                 ))}
               </div>
             )}
-          </Section>
+            </Section>
+            )}
 
-          {/* Invoices */}
-          <Section icon={FileText} title="Invoices">
+            {/* Invoices Tab */}
+            {activeTab === "invoices" && (
+            <Section icon={FileText} title="Invoices">
             {customerInvoices.length === 0 ? (
               <p className="text-gray-500 text-sm">No invoices found.</p>
             ) : (
@@ -292,10 +334,90 @@ export default function CustomerProfileDialog({ customer, open, onClose, custome
                 ))}
               </div>
             )}
-          </Section>
+            </Section>
+            )}
 
-          {/* Recommendations */}
-          <Section icon={Lightbulb} title="Recommendations">
+            {/* Appointments Tab */}
+            {activeTab === "appointments" && (
+            <div className="space-y-2">
+            {/* Upcoming */}
+            {upcomingAppointments.length > 0 && (
+              <div>
+                <h3 className="text-sky-400 font-semibold text-sm uppercase tracking-wide mb-2 flex items-center gap-2">
+                  <Calendar className="w-4 h-4" /> Upcoming
+                </h3>
+                <div className="space-y-2 mb-4">
+                  {upcomingAppointments.map(appt => (
+                    <button key={appt.id}
+                      onClick={() => { onClose(); navigate(`/Appointments?appointmentId=${appt.id}`); }}
+                      className="w-full bg-gray-800/60 rounded-lg p-3 flex items-start justify-between gap-3 hover:bg-gray-700/60 transition-colors text-left border border-green-500/20">
+                      <div className="flex items-start gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <Calendar className="w-3.5 h-3.5 text-green-400" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-white text-sm font-medium">{appt.service_type}</p>
+                          <p className="text-gray-500 text-xs">{appt.vehicle_info}</p>
+                          <p className="text-gray-600 text-xs mt-0.5 flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {new Date(appt.date + "T12:00:00").toLocaleDateString()} at {appt.time_slot}
+                          </p>
+                          {appt.mechanic_name && <p className="text-gray-600 text-xs">Mechanic: {appt.mechanic_name}</p>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <StatusBadge status={appt.status} />
+                        <ChevronRight className="w-4 h-4 text-gray-500" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Past */}
+            {pastAppointments.length > 0 && (
+              <div>
+                <h3 className="text-gray-400 font-semibold text-sm uppercase tracking-wide mb-2 flex items-center gap-2">
+                  <Clock className="w-4 h-4" /> Past
+                </h3>
+                <div className="space-y-2">
+                  {pastAppointments.slice(0, 5).map(appt => (
+                    <button key={appt.id}
+                      onClick={() => { onClose(); navigate(`/Appointments?appointmentId=${appt.id}`); }}
+                      className="w-full bg-gray-800/60 rounded-lg p-3 flex items-start justify-between gap-3 hover:bg-gray-700/60 transition-colors text-left opacity-75">
+                      <div className="flex items-start gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-white text-sm font-medium">{appt.service_type}</p>
+                          <p className="text-gray-500 text-xs">{appt.vehicle_info}</p>
+                          <p className="text-gray-600 text-xs mt-0.5 flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {new Date(appt.date + "T12:00:00").toLocaleDateString()} at {appt.time_slot}
+                          </p>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-500" />
+                    </button>
+                  ))}
+                  {pastAppointments.length > 5 && (
+                    <p className="text-gray-500 text-xs text-center py-2">+{pastAppointments.length - 5} more past appointments</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {customerAppointments.length === 0 && (
+              <p className="text-gray-500 text-sm">No appointments found.</p>
+            )}
+            </div>
+            )}
+
+            {/* Recommendations */}
+            {activeTab === "orders" && (
+            <Section icon={Lightbulb} title="Recommendations">
             <div className="space-y-2">
               {recommendations.map((rec, i) => (
                 <div key={i} className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 text-sm text-amber-300">
@@ -304,9 +426,10 @@ export default function CustomerProfileDialog({ customer, open, onClose, custome
                 </div>
               ))}
             </div>
-          </Section>
+            </Section>
+            )}
 
-          {/* Quick Actions */}
+            {/* Quick Actions */}
           <div className="border-t border-gray-800 pt-4">
             <p className="text-gray-500 text-xs uppercase tracking-wide mb-3">Quick Actions</p>
             <div className="grid grid-cols-3 gap-3">
