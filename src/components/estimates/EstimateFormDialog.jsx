@@ -14,7 +14,7 @@ const TAX_RATE = 15;
 
 const emptyForm = {
   customer_id: "", customer_name: "", vehicle_id: "", vehicle_info: "",
-  status: "draft", notes: "", tax_rate: String(TAX_RATE), apply_tax: true, valid_until: "",
+  status: "draft", notes: "", tax_rate: String(TAX_RATE), apply_tax: true, tax_applies_to: "labor", valid_until: "",
   labor_items: [emptyLaborRow()],
   parts_items: [emptyPartRow()],
   repair_order_id: "",
@@ -75,7 +75,14 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
   const partsTotal = form.parts_items.reduce((s, r) => s + (r.total || 0), 0);
   const subtotal   = laborTotal + partsTotal;
   const taxRate    = form.apply_tax ? TAX_RATE : 0;
-  const taxAmount  = subtotal * (taxRate / 100);
+
+  let taxableAmount = 0;
+  const taxAppliesTo = form.tax_applies_to || "labor";
+  if (taxAppliesTo === "labor") taxableAmount = laborTotal;
+  else if (taxAppliesTo === "parts") taxableAmount = partsTotal;
+  else if (taxAppliesTo === "both") taxableAmount = subtotal;
+
+  const taxAmount  = taxableAmount * (taxRate / 100);
   const grandTotal = subtotal + taxAmount;
 
   const handleCustomerChange = (cid) => {
@@ -295,18 +302,32 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
             </div>
             <div>
               <Label className="text-gray-400">Tax (15%)</Label>
-              <button
-                type="button"
-                onClick={() => setForm(f => ({ ...f, apply_tax: !f.apply_tax }))}
-                className={`mt-1 w-full h-9 rounded-md border text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-                  form.apply_tax
-                    ? "bg-sky-500/20 border-sky-500 text-sky-400"
-                    : "bg-gray-800 border-gray-700 text-gray-500"
-                }`}
-              >
-                <span className={`w-2 h-2 rounded-full ${form.apply_tax ? "bg-sky-400" : "bg-gray-600"}`} />
-                {form.apply_tax ? "Applied" : "Not Applied"}
-              </button>
+              <div className="flex gap-2 mt-1">
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, apply_tax: !f.apply_tax }))}
+                  className={`flex-1 h-9 rounded-md border text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+                    form.apply_tax
+                      ? "bg-sky-500/20 border-sky-500 text-sky-400"
+                      : "bg-gray-800 border-gray-700 text-gray-500"
+                  }`}
+                >
+                  <span className={`w-2 h-2 rounded-full ${form.apply_tax ? "bg-sky-400" : "bg-gray-600"}`} />
+                  {form.apply_tax ? "Applied" : "Not Applied"}
+                </button>
+                {form.apply_tax && (
+                  <Select value={form.tax_applies_to || "labor"} onValueChange={v => setForm(f => ({ ...f, tax_applies_to: v }))}>
+                    <SelectTrigger className="bg-gray-800 border-gray-700 text-white w-24 h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-800 border-gray-700">
+                      <SelectItem value="labor">Labor</SelectItem>
+                      <SelectItem value="parts">Parts</SelectItem>
+                      <SelectItem value="both">Both</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
             </div>
             <div>
               <Label className="text-gray-400">Valid Until</Label>

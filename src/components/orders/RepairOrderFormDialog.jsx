@@ -27,7 +27,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
     labor_hours: "", labor_items: [{ description: "", hours: "", total: 0 }],
     notes: "", parts_used: [], estimated_completion: "",
     discount_type: "none", discount_value: 0, total_cost: 0, custom_total: false,
-    apply_tax: true
+    apply_tax: true, tax_applies_to: "labor"
   });
   const [saving, setSaving] = useState(false);
   const [newCustomerForm, setNewCustomerForm] = useState(null);
@@ -44,7 +44,14 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
     ? subtotal * ((form.discount_value || 0) / 100)
     : form.discount_type === "fixed" ? (form.discount_value || 0) : 0;
   const afterDiscount = subtotal - discountAmount;
-  const taxAmount = form.apply_tax ? afterDiscount * 0.15 : 0;
+
+  let taxableAmount = 0;
+  const taxAppliesTo = form.tax_applies_to || "labor";
+  if (taxAppliesTo === "labor") taxableAmount = laborCost;
+  else if (taxAppliesTo === "parts") taxableAmount = partsCost;
+  else if (taxAppliesTo === "both") taxableAmount = afterDiscount;
+
+  const taxAmount = form.apply_tax ? taxableAmount * 0.15 : 0;
   const calculatedTotal = afterDiscount + taxAmount;
   const totalCost = form.custom_total ? Number(form.total_cost) || 0 : calculatedTotal;
 
@@ -77,7 +84,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         labor_hours: "", labor_items: [{ description: "", hours: "", total: 0 }],
         notes: "", parts_used: [], estimated_completion: "",
         discount_type: "none", discount_value: 0, total_cost: 0, custom_total: false,
-        apply_tax: true
+        apply_tax: true, tax_applies_to: "labor"
       });
     }
   }, [order, open]);
@@ -591,18 +598,32 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
           <div className="rounded-xl border border-gray-700 bg-gray-800/40 p-4 space-y-2 text-sm">
             <div className="flex items-center justify-between mb-3">
               <p className="text-gray-400 font-medium text-xs uppercase tracking-wider">{form.custom_total ? "Fixed Cost" : "Estimated Cost"}</p>
-              <button
-                type="button"
-                onClick={() => setForm(f => ({ ...f, apply_tax: !f.apply_tax }))}
-                className={`text-xs px-3 py-1 rounded-full border font-medium transition-colors flex items-center gap-1.5 ${
-                  form.apply_tax
-                    ? "bg-sky-500/20 border-sky-500 text-sky-400"
-                    : "bg-gray-800 border-gray-700 text-gray-500"
-                }`}
-              >
-                <span className={`w-1.5 h-1.5 rounded-full ${form.apply_tax ? "bg-sky-400" : "bg-gray-600"}`} />
-                Tax 15%
-              </button>
+              <div className="flex gap-2 items-center">
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, apply_tax: !f.apply_tax }))}
+                  className={`text-xs px-3 py-1 rounded-full border font-medium transition-colors flex items-center gap-1.5 ${
+                    form.apply_tax
+                      ? "bg-sky-500/20 border-sky-500 text-sky-400"
+                      : "bg-gray-800 border-gray-700 text-gray-500"
+                  }`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${form.apply_tax ? "bg-sky-400" : "bg-gray-600"}`} />
+                  Tax 15%
+                </button>
+                {form.apply_tax && (
+                  <Select value={form.tax_applies_to || "labor"} onValueChange={v => setForm(f => ({ ...f, tax_applies_to: v }))}>
+                    <SelectTrigger className="bg-gray-800 border-gray-700 text-white w-20 h-7">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-800 border-gray-700">
+                      <SelectItem value="labor">Labor</SelectItem>
+                      <SelectItem value="parts">Parts</SelectItem>
+                      <SelectItem value="both">Both</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
             </div>
             {!form.custom_total ? (
               <>

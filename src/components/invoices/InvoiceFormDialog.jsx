@@ -13,7 +13,7 @@ import { ChevronDown } from "lucide-react";
 export default function InvoiceFormDialog({ open, onClose, invoice, orders, customers, onSaved, initialOrderId, sourceEstimate }) {
   const [form, setForm] = useState({
     repair_order_id: "", customer_id: "", customer_name: "", customer_phone: "", vehicle_info: "",
-    parts_total: 0, labor_total: 0, tax_rate: 15, status: "unpaid",
+    parts_total: 0, labor_total: 0, tax_rate: 15, tax_applies_to: "labor", status: "unpaid",
     due_date: "", payment_method: "", amount_paid: 0, payment_history: [],
     receipt_number: "", card_last4: "", cashier_name: "", parts_used: [], customer_note: "",
     discount_type: "none", discount_value: 0
@@ -124,11 +124,18 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
       : form.discount_type === "fixed" ? (form.discount_value || 0) : 0;
     const subtotalAfterDiscount = subtotal - discountAmount;
     const isCash = form.payment_method === "cash";
-    const taxAmount = isCash ? 0 : (form.labor_total || 0) * ((form.tax_rate || 0) / 100);
+    
+    let taxableAmount = 0;
+    const taxAppliesTo = form.tax_applies_to || "labor";
+    if (taxAppliesTo === "labor") taxableAmount = form.labor_total || 0;
+    else if (taxAppliesTo === "parts") taxableAmount = form.parts_total || 0;
+    else if (taxAppliesTo === "both") taxableAmount = subtotalAfterDiscount;
+    
+    const taxAmount = isCash ? 0 : taxableAmount * ((form.tax_rate || 0) / 100);
     const total = subtotalAfterDiscount + taxAmount;
     const balanceDue = total - (form.amount_paid || 0);
     return { subtotal, discountAmount, subtotalAfterDiscount, isCash, taxAmount, total, balanceDue };
-  }, [form.parts_total, form.labor_total, form.discount_type, form.discount_value, form.payment_method, form.tax_rate, form.amount_paid]);
+  }, [form.parts_total, form.labor_total, form.discount_type, form.discount_value, form.payment_method, form.tax_rate, form.amount_paid, form.tax_applies_to]);
 
   const { subtotal, discountAmount, isCash, taxAmount, total, balanceDue } = calculations;
 
@@ -258,9 +265,21 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-gray-300 text-sm">Tax Rate (%)</Label>
-                <Input type="number" step="0.1" value={form.tax_rate}
-                  onChange={e => setForm({...form, tax_rate: Number(e.target.value)})}
-                  className="bg-gray-800 border-gray-700 text-white mt-1.5" />
+                <div className="flex gap-2 mt-1.5">
+                  <Input type="number" step="0.1" value={form.tax_rate}
+                    onChange={e => setForm({...form, tax_rate: Number(e.target.value)})}
+                    className="bg-gray-800 border-gray-700 text-white flex-1" />
+                  <Select value={form.tax_applies_to || "labor"} onValueChange={v => setForm({...form, tax_applies_to: v})}>
+                    <SelectTrigger className="bg-gray-800 border-gray-700 text-white w-24">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-800 border-gray-700">
+                      <SelectItem value="labor">Labor</SelectItem>
+                      <SelectItem value="parts">Parts</SelectItem>
+                      <SelectItem value="both">Both</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div>
                 <Label className="text-gray-300 text-sm">Due Date</Label>
