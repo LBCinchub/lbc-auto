@@ -1,5 +1,6 @@
 import React from "react";
 import Sidebar from "./components/layout/Sidebar";
+import FloatingNote from "./components/shared/FloatingNote";
 
 export default function Layout({ children, currentPageName }) {
   return (
@@ -15,6 +16,7 @@ export default function Layout({ children, currentPageName }) {
           {children}
         </div>
       </main>
+      <FloatingNote />
     </div>
   );
 }
