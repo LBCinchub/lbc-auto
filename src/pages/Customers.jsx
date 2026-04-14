@@ -112,14 +112,16 @@ export default function Customers() {
               </div>
               <div className="space-y-1.5">
                 {customer.phone && (
-                  <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <a href={`tel:${customer.phone}`} onClick={e => e.stopPropagation()}
+                    className="flex items-center gap-2 text-sm text-gray-400 hover:text-sky-400 transition-colors">
                     <Phone className="w-3.5 h-3.5" /> {customer.phone}
-                  </div>
+                  </a>
                 )}
                 {customer.email && (
-                  <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <a href={`mailto:${customer.email}`} onClick={e => e.stopPropagation()}
+                    className="flex items-center gap-2 text-sm text-gray-400 hover:text-sky-400 transition-colors">
                     <Mail className="w-3.5 h-3.5" /> {customer.email}
-                  </div>
+                  </a>
                 )}
                 {customer.address && (
                   <div className="flex items-center gap-2 text-sm text-gray-400">
