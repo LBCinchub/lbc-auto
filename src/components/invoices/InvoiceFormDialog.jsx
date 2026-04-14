@@ -13,7 +13,7 @@ import { ChevronDown } from "lucide-react";
 export default function InvoiceFormDialog({ open, onClose, invoice, orders, customers, onSaved, initialOrderId, sourceEstimate }) {
   const [form, setForm] = useState({
     repair_order_id: "", customer_id: "", customer_name: "", customer_phone: "", vehicle_info: "",
-    parts_total: 0, labor_total: 0, tax_rate: 15, tax_applies_to: "labor", status: "unpaid",
+    parts_total: 0, labor_total: 0, tax_rate: 15, apply_tax_parts: true, apply_tax_labor: true, status: "unpaid",
     due_date: "", payment_method: "", amount_paid: 0, payment_history: [],
     receipt_number: "", card_last4: "", cashier_name: "", parts_used: [], customer_note: "",
     discount_type: "none", discount_value: 0
@@ -43,12 +43,13 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         customer_note: invoice.customer_note || "",
         discount_type: invoice.discount_type || "none",
         discount_value: invoice.discount_value || 0,
-        tax_applies_to: invoice.tax_applies_to || "labor",
-      });
+        apply_tax_parts: invoice.apply_tax_parts !== false,
+        apply_tax_labor: invoice.apply_tax_labor !== false,
+        });
     } else {
       setForm({
         repair_order_id: "", customer_id: "", customer_name: "", customer_phone: "", vehicle_info: "",
-        parts_total: 0, labor_total: 0, tax_rate: 15, tax_applies_to: "labor", status: "unpaid",
+        parts_total: 0, labor_total: 0, tax_rate: 15, apply_tax_parts: true, apply_tax_labor: true, status: "unpaid",
         due_date: "", payment_method: "", amount_paid: 0, payment_history: [],
         receipt_number: "", card_last4: "", cashier_name: "", parts_used: [], customer_note: "",
         discount_type: "none", discount_value: 0
@@ -125,18 +126,16 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
       : form.discount_type === "fixed" ? (form.discount_value || 0) : 0;
     const subtotalAfterDiscount = subtotal - discountAmount;
     const isCash = form.payment_method === "cash";
-    
+
     let taxableAmount = 0;
-    const taxAppliesTo = form.tax_applies_to || "labor";
-    if (taxAppliesTo === "labor") taxableAmount = form.labor_total || 0;
-    else if (taxAppliesTo === "parts") taxableAmount = form.parts_total || 0;
-    else if (taxAppliesTo === "both") taxableAmount = subtotalAfterDiscount;
-    
+    if (form.apply_tax_labor) taxableAmount += form.labor_total || 0;
+    if (form.apply_tax_parts) taxableAmount += form.parts_total || 0;
+
     const taxAmount = isCash ? 0 : taxableAmount * ((form.tax_rate || 0) / 100);
     const total = subtotalAfterDiscount + taxAmount;
     const balanceDue = total - (form.amount_paid || 0);
     return { subtotal, discountAmount, subtotalAfterDiscount, isCash, taxAmount, total, balanceDue };
-  }, [form.parts_total, form.labor_total, form.discount_type, form.discount_value, form.payment_method, form.tax_rate, form.amount_paid, form.tax_applies_to]);
+  }, [form.parts_total, form.labor_total, form.discount_type, form.discount_value, form.payment_method, form.tax_rate, form.amount_paid, form.apply_tax_labor, form.apply_tax_parts]);
 
   const { subtotal, discountAmount, isCash, taxAmount, total, balanceDue } = calculations;
 
@@ -263,31 +262,31 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
                   className="bg-gray-800 border-gray-700 text-white mt-1.5" />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-gray-300 text-sm">Tax Rate (%)</Label>
-                <div className="flex gap-2 mt-1.5">
-                  <Input type="number" step="0.1" value={form.tax_rate}
-                    onChange={e => setForm({...form, tax_rate: Number(e.target.value)})}
-                    className="bg-gray-800 border-gray-700 text-white flex-1" />
-                  <Select value={form.tax_applies_to || "labor"} onValueChange={v => setForm({...form, tax_applies_to: v})}>
-                    <SelectTrigger className="bg-gray-800 border-gray-700 text-white w-24">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-800 border-gray-700">
-                      <SelectItem value="labor">Labor</SelectItem>
-                      <SelectItem value="parts">Parts</SelectItem>
-                      <SelectItem value="both">Both</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div>
-                <Label className="text-gray-300 text-sm">Due Date</Label>
-                <Input type="date" value={form.due_date}
-                  onChange={e => setForm({...form, due_date: e.target.value})}
-                  className="bg-gray-800 border-gray-700 text-white mt-1.5" />
-              </div>
+            <div>
+              <Label className="text-gray-300 text-sm">Tax Rate (%)</Label>
+              <Input type="number" step="0.1" value={form.tax_rate}
+                onChange={e => setForm({...form, tax_rate: Number(e.target.value)})}
+                className="bg-gray-800 border-gray-700 text-white mt-1.5" />
+            </div>
+            <div className="flex gap-4 pt-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={form.apply_tax_labor}
+                  onChange={e => setForm({...form, apply_tax_labor: e.target.checked})}
+                  className="w-4 h-4 rounded" />
+                <span className="text-sm text-gray-300">Tax on Labor</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={form.apply_tax_parts}
+                  onChange={e => setForm({...form, apply_tax_parts: e.target.checked})}
+                  className="w-4 h-4 rounded" />
+                <span className="text-sm text-gray-300">Tax on Parts</span>
+              </label>
+            </div>
+            <div>
+              <Label className="text-gray-300 text-sm">Due Date</Label>
+              <Input type="date" value={form.due_date}
+                onChange={e => setForm({...form, due_date: e.target.value})}
+                className="bg-gray-800 border-gray-700 text-white mt-1.5" />
             </div>
           </div>
 
@@ -379,9 +378,9 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
               </div>
             )}
             <div className="flex justify-between text-sm">
-              <span className="text-gray-400">Tax on Labor {isCash ? <span className="text-xs text-amber-400">(No Tax - Cash)</span> : <span>({form.tax_rate}%)</span>}</span>
-              <span className="text-gray-200 font-medium">${taxAmount.toFixed(2)}</span>
-            </div>
+               <span className="text-gray-400">Tax {isCash ? <span className="text-xs text-amber-400">(No Tax - Cash)</span> : <span>({form.tax_rate}%)</span>}</span>
+               <span className="text-gray-200 font-medium">${taxAmount.toFixed(2)}</span>
+             </div>
             <div className="flex justify-between text-lg font-bold border-t border-sky-500/30 pt-2.5">
               <span className="text-gray-200">Total</span>
               <span className="text-sky-400">${total.toFixed(2)}</span>
