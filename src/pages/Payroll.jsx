@@ -1,9 +1,13 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subWeeks, subMonths, isWithinInterval, parseISO } from "date-fns";
-import { DollarSign, Clock, Users, Banknote } from "lucide-react";
+import { DollarSign, Clock, Users, Banknote, Plus, Trash2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const PAY_PERIODS = [
   { label: "This Week", value: "this_week" },
@@ -34,6 +38,11 @@ function getPeriodRange(period) {
 
 export default function Payroll() {
   const [period, setPeriod] = useState("this_month");
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [selectedMechanic, setSelectedMechanic] = useState(null);
+  const [paymentForm, setPaymentForm] = useState({ amount: "", payment_date: format(new Date(), "yyyy-MM-dd"), notes: "" });
+  const [saving, setSaving] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: mechanics = [] } = useQuery({
     queryKey: ["mechanics"],
@@ -43,6 +52,11 @@ export default function Payroll() {
   const { data: timeEntries = [] } = useQuery({
     queryKey: ["timeEntries", "all"],
     queryFn: () => base44.entities.TimeEntry.list("-clock_in", 1000),
+  });
+
+  const { data: paymentRecords = [] } = useQuery({
+    queryKey: ["paymentRecords"],
+    queryFn: () => base44.entities.PaymentRecord.list("-payment_date", 500),
   });
 
   const { start, end } = getPeriodRange(period);
@@ -92,6 +106,35 @@ export default function Payroll() {
     if (h === 0) return `${m}m`;
     if (m === 0) return `${h}h`;
     return `${h}h ${m}m`;
+  };
+
+  const handleSavePayment = async () => {
+    if (!selectedMechanic || !paymentForm.amount) return;
+    setSaving(true);
+    await base44.entities.PaymentRecord.create({
+      mechanic_id: selectedMechanic.id,
+      mechanic_name: selectedMechanic.name,
+      amount: Number(paymentForm.amount),
+      payment_date: paymentForm.payment_date,
+      period: periodLabel,
+      notes: paymentForm.notes,
+    });
+    setSaving(false);
+    queryClient.invalidateQueries({ queryKey: ["paymentRecords"] });
+    setPaymentDialogOpen(false);
+    setPaymentForm({ amount: "", payment_date: format(new Date(), "yyyy-MM-dd"), notes: "" });
+    setSelectedMechanic(null);
+  };
+
+  const handleDeletePayment = async (id) => {
+    if (window.confirm("Delete this payment record?")) {
+      await base44.entities.PaymentRecord.delete(id);
+      queryClient.invalidateQueries({ queryKey: ["paymentRecords"] });
+    }
+  };
+
+  const getMechanicPayments = (mechId) => {
+    return paymentRecords.filter(p => p.mechanic_id === mechId);
   };
 
   return (
@@ -152,8 +195,11 @@ export default function Payroll() {
 
       {/* Payroll table */}
       <div className="rounded-xl border border-gray-800 overflow-hidden">
-        <div className="px-5 py-4 bg-gray-900 border-b border-gray-800">
+        <div className="px-5 py-4 bg-gray-900 border-b border-gray-800 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-gray-200">Employee Breakdown</h2>
+          <Button onClick={() => setPaymentDialogOpen(true)} className="gap-1.5 text-xs h-8">
+            <Plus className="w-3.5 h-3.5" /> Record Payment
+          </Button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -165,6 +211,7 @@ export default function Payroll() {
                 <th className="px-5 py-3 text-right">Days</th>
                 <th className="px-5 py-3 text-right">Time Worked</th>
                 <th className="px-5 py-3 text-right">Gross Pay</th>
+                <th className="px-5 py-3 text-right">Paid</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-800">
@@ -192,9 +239,30 @@ export default function Payroll() {
                       ${m.grossPay.toFixed(2)}
                     </span>
                   </td>
-                </tr>
-              ))}
-            </tbody>
+                  <td className="px-5 py-4 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <span className="text-gray-400 text-xs">
+                        ${getMechanicPayments(m.id).reduce((sum, p) => sum + p.amount, 0).toFixed(2)}
+                      </span>
+                      {m.totalHours > 0 && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6 text-sky-400 hover:text-sky-300"
+                          onClick={() => {
+                            setSelectedMechanic(m);
+                            setPaymentForm({ amount: "", payment_date: format(new Date(), "yyyy-MM-dd"), notes: "" });
+                            setPaymentDialogOpen(true);
+                          }}
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                  </td>
+                  </tr>
+                  ))}
+                  </tbody>
             <tfoot className="border-t-2 border-gray-700 bg-gray-900">
               <tr>
                 <td colSpan={4} className="px-5 py-3 text-xs text-gray-400 font-semibold uppercase tracking-wider">Total</td>
@@ -204,7 +272,112 @@ export default function Payroll() {
             </tfoot>
           </table>
         </div>
-      </div>
-    </div>
-  );
-}
+        </div>
+
+        {/* Payment Records */}
+        {paymentRecords.length > 0 && (
+        <div className="rounded-xl border border-gray-800 overflow-hidden">
+          <div className="px-5 py-4 bg-gray-900 border-b border-gray-800">
+            <h2 className="text-sm font-semibold text-gray-200">Payment History</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-900/60 text-gray-500 text-xs uppercase">
+                <tr>
+                  <th className="px-5 py-3 text-left">Employee</th>
+                  <th className="px-5 py-3 text-left">Period</th>
+                  <th className="px-5 py-3 text-left">Date</th>
+                  <th className="px-5 py-3 text-right">Amount</th>
+                  <th className="px-5 py-3 text-left">Notes</th>
+                  <th className="px-5 py-3 text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-800">
+                {paymentRecords.map((p) => (
+                  <tr key={p.id} className="bg-gray-950 hover:bg-gray-900 transition-colors">
+                    <td className="px-5 py-4 text-gray-200">{p.mechanic_name}</td>
+                    <td className="px-5 py-4 text-gray-400 text-xs">{p.period}</td>
+                    <td className="px-5 py-4 text-gray-400">{format(parseISO(p.payment_date), "MMM d, yyyy")}</td>
+                    <td className="px-5 py-4 text-right text-emerald-400 font-semibold">${p.amount.toFixed(2)}</td>
+                    <td className="px-5 py-4 text-gray-400 text-xs">{p.notes || "—"}</td>
+                    <td className="px-5 py-4 text-center">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6 text-rose-400 hover:text-rose-300"
+                        onClick={() => handleDeletePayment(p.id)}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        )}
+
+        {/* Payment Dialog */}
+        <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+        <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle>Record Payment</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-gray-400">Employee *</Label>
+              <div className="text-sm text-gray-200 mt-1 px-3 py-2 bg-gray-800 rounded border border-gray-700">
+                {selectedMechanic ? selectedMechanic.name : "Select an employee"}
+              </div>
+            </div>
+            <div>
+              <Label className="text-gray-400">Amount ($) *</Label>
+              <Input
+                type="number"
+                placeholder="0.00"
+                value={paymentForm.amount}
+                onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
+                className="bg-gray-800 border-gray-700 text-white mt-1"
+              />
+            </div>
+            <div>
+              <Label className="text-gray-400">Payment Date *</Label>
+              <Input
+                type="date"
+                value={paymentForm.payment_date}
+                onChange={(e) => setPaymentForm({ ...paymentForm, payment_date: e.target.value })}
+                className="bg-gray-800 border-gray-700 text-white mt-1"
+              />
+            </div>
+            <div>
+              <Label className="text-gray-400">Notes</Label>
+              <Input
+                placeholder="e.g., Weekly payment, including overtime"
+                value={paymentForm.notes}
+                onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value })}
+                className="bg-gray-800 border-gray-700 text-white mt-1"
+              />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => setPaymentDialogOpen(false)}
+                className="flex-1 border-gray-700 text-gray-300"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSavePayment}
+                disabled={saving || !selectedMechanic || !paymentForm.amount}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+              >
+                {saving ? "Saving..." : "Record Payment"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+        </Dialog>
+        </div>
+        );
+        }

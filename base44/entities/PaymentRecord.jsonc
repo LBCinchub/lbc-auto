@@ -1,0 +1,48 @@
+{
+  "name": "PaymentRecord",
+  "type": "object",
+  "properties": {
+    "mechanic_id": {
+      "type": "string",
+      "description": "Mechanic ID"
+    },
+    "mechanic_name": {
+      "type": "string",
+      "description": "Mechanic name for display"
+    },
+    "amount": {
+      "type": "number",
+      "description": "Payment amount in dollars"
+    },
+    "payment_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of payment"
+    },
+    "period": {
+      "type": "string",
+      "description": "Pay period (e.g., 'Week of Apr 7-13')"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Optional notes about the payment"
+    }
+  },
+  "required": [
+    "mechanic_id",
+    "amount",
+    "payment_date"
+  ],
+  "rls": {
+    "create": true,
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}
