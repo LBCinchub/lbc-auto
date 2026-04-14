@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileText, Pencil, Trash2, Printer, Download, DollarSign, MessageSquare, ShieldCheck, Calendar, AlertCircle } from "lucide-react";
+import { FileText, Pencil, Trash2, Printer, Download, DollarSign, MessageSquare, ShieldCheck, Calendar, AlertCircle, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { jsPDF } from "jspdf";
@@ -247,6 +247,19 @@ export default function Invoices() {
                   <p className="text-sm text-gray-400 mt-0.5">
                     {inv.customer_name} · {inv.vehicle_info}
                   </p>
+                  {(() => {
+                    const customer = customers.find(c => c.id === inv.customer_id);
+                    return customer?.phone ? (
+                      <a
+                        href={`tel:${customer.phone}`}
+                        onClick={e => e.stopPropagation()}
+                        className="inline-flex items-center gap-1.5 mt-1 text-xs text-sky-400 hover:text-sky-300 font-medium"
+                      >
+                        <Phone className="w-3 h-3" />
+                        {customer.phone}
+                      </a>
+                    ) : null;
+                  })()}
                   <div className="flex items-center gap-3 mt-1 flex-wrap">
                     {inv.due_date && (
                       <span className={`text-xs flex items-center gap-1 ${
