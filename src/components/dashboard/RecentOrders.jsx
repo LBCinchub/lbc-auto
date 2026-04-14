@@ -19,7 +19,6 @@ export default function RecentOrders({ orders }) {
     const isDeliveredB = b.status === "delivered" ? 1 : 0;
     return isDeliveredA - isDeliveredB;
   });
-  const recent = sorted.slice(0, 8);
 
   return (
     <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5">
@@ -29,11 +28,11 @@ export default function RecentOrders({ orders }) {
           View all →
         </button>
       </div>
-      <div className="space-y-3">
-        {recent.length === 0 && (
+      <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
+        {sorted.length === 0 && (
           <p className="text-gray-500 text-sm text-center py-8">No repair orders yet</p>
         )}
-        {recent.map((order) => {
+        {sorted.map((order) => {
           const config = statusConfig[order.status] || statusConfig.waiting;
           return (
             <button

@@ -14,7 +14,7 @@ export default function TodayAppointments({ appointments, onApptClick }) {
           View all →
         </Link>
       </div>
-      <div className="space-y-3">
+      <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
         {todayAppts.length === 0 && (
           <p className="text-gray-500 text-sm text-center py-8">No appointments today</p>
         )}
