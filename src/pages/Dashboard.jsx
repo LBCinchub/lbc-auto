@@ -60,7 +60,7 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <TodayAppointments appointments={appointments} />
+        <TodayAppointments appointments={appointments} onApptClick={(appt) => { setModal({ title: "Today's Appointments", items: todayAppts, type: "appt" }); setSelectedAppt(appt); }} />
         <RecentOrders orders={orders} />
       </div>
 
