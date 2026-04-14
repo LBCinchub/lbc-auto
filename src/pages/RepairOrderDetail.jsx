@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, FileText, Plus, Trash2, MoreVertical } from "lucide-react";
+import { ArrowLeft, FileText, Plus, Trash2, MoreVertical, Clock, History } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,6 +39,15 @@ export default function RepairOrderDetail() {
     queryFn: () => base44.entities.Customer.get(order.customer_id),
     enabled: !!order?.customer_id,
   });
+
+  // Fetch all repair orders for the same vehicle to show history
+  const { data: allOrders = [] } = useQuery({
+    queryKey: ["repairOrders", order?.vehicle_id],
+    queryFn: () => base44.entities.RepairOrder.filter({ vehicle_id: order.vehicle_id }, "-created_date", 50),
+    enabled: !!order?.vehicle_id,
+  });
+
+  const previousOrders = allOrders.filter(o => o.id !== orderId);
 
   if (isLoading) {
     return (
@@ -186,7 +195,56 @@ export default function RepairOrderDetail() {
             <p className="text-gray-300">{order.notes}</p>
           </div>
         )}
+
+        {/* Timestamps */}
+        <div className="mt-6 pt-4 border-t border-gray-800 flex flex-wrap gap-4 text-xs text-gray-600">
+          <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> Created: {new Date(order.created_date).toLocaleString()}</span>
+          {order.updated_date && order.updated_date !== order.created_date && (
+            <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> Updated: {new Date(order.updated_date).toLocaleString()}</span>
+          )}
+        </div>
       </div>
+
+      {/* Previous Work on This Vehicle */}
+      {previousOrders.length > 0 && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <History className="w-5 h-5 text-amber-400" />
+            <h2 className="text-lg font-bold text-amber-400">Previous Work on This Vehicle</h2>
+            <span className="text-xs bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full">{previousOrders.length} record{previousOrders.length > 1 ? "s" : ""}</span>
+          </div>
+          <div className="space-y-3">
+            {previousOrders.map(prev => (
+              <div key={prev.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-gray-900/60 rounded-lg p-4 border border-amber-500/10 hover:border-amber-500/30 transition-colors cursor-pointer" onClick={() => navigate(`/RepairOrderDetail/${prev.id}`)}>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-white font-semibold text-sm">#{prev.order_number}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${
+                      prev.status === "completed" || prev.status === "delivered" ? "bg-green-500/20 text-green-400" :
+                      prev.status === "in_progress" ? "bg-yellow-500/20 text-yellow-400" :
+                      "bg-gray-500/20 text-gray-400"
+                    }`}>{prev.status?.replace("_", " ")}</span>
+                  </div>
+                  <p className="text-gray-400 text-sm mt-0.5 truncate">{prev.description}</p>
+                  {prev.mechanic_name && <p className="text-gray-600 text-xs mt-0.5">Mechanic: {prev.mechanic_name}</p>}
+                </div>
+                <div className="flex items-center gap-4 flex-shrink-0 text-right">
+                  {prev.total_cost > 0 && (
+                    <div>
+                      <p className="text-xs text-gray-500">Total</p>
+                      <p className="text-emerald-400 font-semibold">${prev.total_cost.toFixed(2)}</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-xs text-gray-500">Date</p>
+                    <p className="text-gray-300 text-xs">{new Date(prev.created_date).toLocaleDateString()}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <EstimateFormDialog
         open={showEstimateDialog}
