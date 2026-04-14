@@ -147,6 +147,12 @@ export default function Estimates() {
                   ) : null;
                 })()}
                 {est.notes && <p className="text-xs text-gray-600 mt-1 truncate">{est.notes}</p>}
+                <p className="text-xs text-gray-600 mt-0.5">
+                  Created {new Date(est.created_date).toLocaleString()}
+                  {est.updated_date && est.updated_date !== est.created_date && (
+                    <> · Updated {new Date(est.updated_date).toLocaleString()}</>
+                  )}
+                </p>
               </div>
               <div className="flex items-center gap-6">
                 <div className="text-right">

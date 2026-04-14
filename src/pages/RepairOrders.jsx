@@ -153,6 +153,12 @@ export default function RepairOrders() {
                       ) : null;
                     })()}
                     <p className="text-xs text-gray-600 truncate mt-0.5">{order.description}</p>
+                    <p className="text-xs text-gray-600 mt-0.5">
+                      Created {new Date(order.created_date).toLocaleString()}
+                      {order.updated_date && order.updated_date !== order.created_date && (
+                        <> · Updated {new Date(order.updated_date).toLocaleString()}</>
+                      )}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-4 flex-shrink-0">

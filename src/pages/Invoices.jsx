@@ -282,6 +282,12 @@ export default function Invoices() {
                     {inv.estimate_id && (
                       <span className="text-xs text-sky-500/70">From Estimate</span>
                     )}
+                    <span className="text-xs text-gray-600">
+                      Created {new Date(inv.created_date).toLocaleString()}
+                      {inv.updated_date && inv.updated_date !== inv.created_date && (
+                        <> · Updated {new Date(inv.updated_date).toLocaleString()}</>
+                      )}
+                    </span>
                   </div>
                 </div>
                 <div className="flex items-center gap-4 flex-shrink-0">
