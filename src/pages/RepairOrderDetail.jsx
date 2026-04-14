@@ -2,12 +2,13 @@ import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, FileText, Plus, Trash2, MoreVertical, Clock, History, Wrench, PenLine, CheckCircle2, XCircle } from "lucide-react";
+import { ArrowLeft, FileText, Plus, Trash2, MoreVertical, Clock, History, Wrench, PenLine, CheckCircle2, XCircle, ChevronDown } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import EstimateFormDialog from "@/components/estimates/EstimateFormDialog";
 import SignaturePad from "@/components/orders/SignaturePad";
 
@@ -21,6 +22,7 @@ export default function RepairOrderDetail() {
   const [showLaborDialog, setShowLaborDialog] = useState(false);
   const [newLabor, setNewLabor] = useState({ description: "", hours: "", rate: "" });
   const [showSignatureDialog, setShowSignatureDialog] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   const { data: order, isLoading } = useQuery({
     queryKey: ["repairOrder", orderId],
@@ -90,23 +92,29 @@ export default function RepairOrderDetail() {
 
       <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-6">
         <div className="flex items-start justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-white">Repair Order #{order.order_number}</h1>
-            <p className="text-gray-400 mt-1">{order.customer_name}</p>
-            {customer?.phone && <p className="text-gray-500 text-sm mt-1">{customer.phone}</p>}
-          </div>
-          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-            order.status === "completed"
-              ? "bg-green-500/20 text-green-400"
-              : order.status === "in_progress"
-              ? "bg-yellow-500/20 text-yellow-400"
-              : order.status === "waiting_for_parts"
-              ? "bg-orange-500/20 text-orange-400"
-              : "bg-gray-500/20 text-gray-400"
-          }`}>
-            {order.status}
-          </span>
-        </div>
+           <div>
+             <h1 className="text-3xl font-bold text-white">Repair Order #{order.order_number}</h1>
+             <p className="text-gray-400 mt-1">{order.customer_name}</p>
+             {customer?.phone && <p className="text-gray-500 text-sm mt-1">{customer.phone}</p>}
+           </div>
+           <Select value={order.status} onValueChange={(newStatus) => {
+             setUpdatingStatus(true);
+             base44.entities.RepairOrder.update(orderId, { status: newStatus });
+             queryClient.invalidateQueries({ queryKey: ["repairOrder", orderId] });
+             setUpdatingStatus(false);
+           }} disabled={updatingStatus}>
+             <SelectTrigger className="w-48 bg-gray-800 border-gray-700 text-white">
+               <SelectValue />
+             </SelectTrigger>
+             <SelectContent className="bg-gray-800 border-gray-700">
+               <SelectItem value="waiting">Waiting</SelectItem>
+               <SelectItem value="in_progress">In Progress</SelectItem>
+               <SelectItem value="waiting_for_parts">Waiting for Parts</SelectItem>
+               <SelectItem value="completed">Completed</SelectItem>
+               <SelectItem value="delivered">Delivered</SelectItem>
+             </SelectContent>
+           </Select>
+         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mb-8">
           <div>
