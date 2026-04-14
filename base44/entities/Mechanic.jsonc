@@ -18,9 +18,22 @@
       "type": "string",
       "description": "Specialization area"
     },
+    "pay_type": {
+      "type": "string",
+      "enum": [
+        "hourly",
+        "daily"
+      ],
+      "default": "hourly",
+      "description": "Pay rate type"
+    },
     "hourly_rate": {
       "type": "number",
       "description": "Hourly labor rate in dollars"
+    },
+    "daily_rate": {
+      "type": "number",
+      "description": "Daily labor rate in dollars"
     },
     "status": {
       "type": "string",

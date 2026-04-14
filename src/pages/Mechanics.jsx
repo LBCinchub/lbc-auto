@@ -17,7 +17,7 @@ import StatusBadge from "../components/shared/StatusBadge";
 export default function Mechanics() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ name: "", phone: "", email: "", specialty: "", hourly_rate: "", status: "available" });
+  const [form, setForm] = useState({ name: "", phone: "", email: "", specialty: "", pay_type: "hourly", hourly_rate: "", daily_rate: "", status: "available" });
   const [saving, setSaving] = useState(false);
   const queryClient = useQueryClient();
 
@@ -35,14 +35,18 @@ export default function Mechanics() {
     setEditing(mech);
     setForm(mech ? {
       name: mech.name || "", phone: mech.phone || "", email: mech.email || "",
-      specialty: mech.specialty || "", hourly_rate: mech.hourly_rate || "", status: mech.status || "available"
-    } : { name: "", phone: "", email: "", specialty: "", hourly_rate: "", status: "available" });
+      specialty: mech.specialty || "", pay_type: mech.pay_type || "hourly", hourly_rate: mech.hourly_rate || "", daily_rate: mech.daily_rate || "", status: mech.status || "available"
+    } : { name: "", phone: "", email: "", specialty: "", pay_type: "hourly", hourly_rate: "", daily_rate: "", status: "available" });
     setDialogOpen(true);
   };
 
   const handleSave = async () => {
     setSaving(true);
-    const data = { ...form, hourly_rate: Number(form.hourly_rate) || 0 };
+    const data = { 
+      ...form, 
+      hourly_rate: Number(form.hourly_rate) || 0,
+      daily_rate: Number(form.daily_rate) || 0
+    };
     if (editing) {
       await base44.entities.Mechanic.update(editing.id, data);
     } else {
@@ -135,7 +139,7 @@ export default function Mechanics() {
                        <h3 className="text-white font-semibold">{m.name}</h3>
                        <div className="flex items-center gap-2 mt-1">
                          <StatusBadge status={m.status} />
-                         <span className="text-xs text-gray-500">${m.hourly_rate}/hr</span>
+                         <span className="text-xs text-gray-500">${m.pay_type === "daily" ? m.daily_rate : m.hourly_rate}/{m.pay_type === "daily" ? "day" : "hr"}</span>
                        </div>
                      </div>
                    </div>
@@ -240,31 +244,49 @@ export default function Mechanics() {
               <Input value={form.specialty} onChange={e => setForm({...form, specialty: e.target.value})}
                 className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="e.g., Engine, Transmission" />
             </div>
+            <div>
+              <Label className="text-gray-400">Pay Type *</Label>
+              <Select value={form.pay_type} onValueChange={v => setForm({...form, pay_type: v})}>
+                <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-700">
+                  <SelectItem value="hourly">Hourly</SelectItem>
+                  <SelectItem value="daily">Daily</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-gray-400">Hourly Rate ($) *</Label>
+                <Label className="text-gray-400">Hourly Rate ($)</Label>
                 <Input type="number" value={form.hourly_rate}
                   onChange={e => setForm({...form, hourly_rate: e.target.value})}
                   className="bg-gray-800 border-gray-700 text-white mt-1" />
               </div>
               <div>
-                <Label className="text-gray-400">Status</Label>
-                <Select value={form.status} onValueChange={v => setForm({...form, status: v})}>
-                  <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-gray-800 border-gray-700">
-                    <SelectItem value="available">Available</SelectItem>
-                    <SelectItem value="busy">Busy</SelectItem>
-                    <SelectItem value="off_duty">Off Duty</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label className="text-gray-400">Daily Rate ($)</Label>
+                <Input type="number" value={form.daily_rate}
+                  onChange={e => setForm({...form, daily_rate: e.target.value})}
+                  className="bg-gray-800 border-gray-700 text-white mt-1" />
               </div>
+            </div>
+            <div>
+              <Label className="text-gray-400">Status</Label>
+              <Select value={form.status} onValueChange={v => setForm({...form, status: v})}>
+                <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-700">
+                  <SelectItem value="available">Available</SelectItem>
+                  <SelectItem value="busy">Busy</SelectItem>
+                  <SelectItem value="off_duty">Off Duty</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex gap-3 pt-2">
               <Button variant="outline" onClick={() => setDialogOpen(false)}
                 className="flex-1 border-gray-700 text-gray-300">Cancel</Button>
-              <Button onClick={handleSave} disabled={saving || !form.name || !form.hourly_rate}
+              <Button onClick={handleSave} disabled={saving || !form.name || (form.pay_type === "hourly" ? !form.hourly_rate : !form.daily_rate)}
                 className="flex-1 bg-sky-500 hover:bg-sky-600">
                 {saving ? "Saving..." : "Save"}
               </Button>
