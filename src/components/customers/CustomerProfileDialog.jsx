@@ -180,14 +180,25 @@ export default function CustomerProfileDialog({ customer, open, onClose }) {
             ) : (
               <div className="space-y-2">
                 {customerInvoices.map(inv => (
-                  <div key={inv.id} className="bg-gray-800/60 rounded-lg px-4 py-2.5 flex items-center justify-between gap-3 text-sm">
-                    <div>
-                      <p className="text-white font-medium">#{inv.invoice_number || inv.id?.slice(0,6)}</p>
-                      <p className="text-gray-500 text-xs">{inv.vehicle_info}</p>
+                  <div key={inv.id} className="bg-gray-800/60 rounded-lg p-3 flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <FileText className="w-3.5 h-3.5 text-gray-400" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-white text-sm font-medium">#{inv.invoice_number || inv.id?.slice(0,6)}</p>
+                        <p className="text-gray-500 text-xs">{inv.vehicle_info}</p>
+                        {inv.created_date && (
+                          <p className="text-gray-600 text-xs mt-0.5 flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {new Date(inv.created_date).toLocaleDateString()}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-white font-semibold">${inv.total?.toFixed(2)}</span>
+                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
                       <StatusBadge status={inv.status} />
+                      <span className="text-emerald-400 text-xs font-semibold">${(inv.total || 0).toFixed(2)}</span>
                     </div>
                   </div>
                 ))}
@@ -211,7 +222,7 @@ export default function CustomerProfileDialog({ customer, open, onClose }) {
           <div className="border-t border-gray-800 pt-4">
             <p className="text-gray-500 text-xs uppercase tracking-wide mb-3">Quick Actions</p>
             <div className="grid grid-cols-3 gap-3">
-              <Button className="bg-emerald-600 hover:bg-emerald-700 text-white flex flex-col h-auto py-3 gap-1"
+              <Button className="bg-sky-600 hover:bg-sky-700 text-white flex flex-col h-auto py-3 gap-1"
                 onClick={() => { onClose(); navigate(`/Estimates?customerId=${customer.id}&customerName=${encodeURIComponent(customer.full_name)}`); }}>
                 <FileText className="w-4 h-4" />
                 <span className="text-xs">New Estimate</span>
@@ -221,7 +232,7 @@ export default function CustomerProfileDialog({ customer, open, onClose }) {
                 <Wrench className="w-4 h-4" />
                 <span className="text-xs">Repair Order</span>
               </Button>
-              <Button className="bg-purple-600 hover:bg-purple-700 text-white flex flex-col h-auto py-3 gap-1"
+              <Button className="bg-sky-600 hover:bg-sky-700 text-white flex flex-col h-auto py-3 gap-1"
                 onClick={() => { onClose(); navigate(`/Invoices?customerId=${customer.id}&customerName=${encodeURIComponent(customer.full_name)}`); }}>
                 <FileText className="w-4 h-4" />
                 <span className="text-xs">New Invoice</span>
