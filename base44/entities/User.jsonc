@@ -39,6 +39,46 @@
     "payment_date": {
       "type": "string",
       "description": "Date payment was received"
+    },
+    "notif_sms_repair_status": {
+      "type": "boolean",
+      "default": true,
+      "description": "SMS when repair order status changes"
+    },
+    "notif_sms_appointment_reminder": {
+      "type": "boolean",
+      "default": true,
+      "description": "SMS appointment reminders"
+    },
+    "notif_sms_invoice_ready": {
+      "type": "boolean",
+      "default": true,
+      "description": "SMS when invoice ready / paid"
+    },
+    "notif_sms_overdue_invoice": {
+      "type": "boolean",
+      "default": true,
+      "description": "SMS for overdue invoices"
+    },
+    "notif_email_repair_status": {
+      "type": "boolean",
+      "default": false,
+      "description": "Email when repair order status changes"
+    },
+    "notif_email_appointment_reminder": {
+      "type": "boolean",
+      "default": false,
+      "description": "Email appointment reminders"
+    },
+    "notif_email_invoice_ready": {
+      "type": "boolean",
+      "default": false,
+      "description": "Email when invoice ready / paid"
+    },
+    "notif_email_overdue_invoice": {
+      "type": "boolean",
+      "default": false,
+      "description": "Email for overdue invoices"
     }
   },
   "required": [
