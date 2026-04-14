@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
-import { Plus, Trash2, DollarSign } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 
 import CustomerSearchInput from "@/components/shared/CustomerSearchInput";
 
@@ -87,7 +87,6 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
   };
 
   const [partSearches, setPartSearches] = useState({});
-  const [showPrice, setShowPrice] = useState({});
   const [newPartForm, setNewPartForm] = useState(null); // null = hidden, {} = open
 
   const addPart = () => {
@@ -275,13 +274,13 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
           {/* Parts section */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <Label className="text-gray-400">Parts Used</Label>
+              <Label className="text-gray-300 font-semibold">Parts Used</Label>
               <div className="flex gap-2">
-                <Button variant="ghost" size="sm" onClick={() => setNewPartForm({ name: "", cost_price: "", sale_price: "", quantity: 0 })} className="text-amber-400 hover:text-amber-300 gap-1 text-xs">
+                <Button variant="ghost" size="sm" onClick={() => setNewPartForm({ name: "", cost_price: "", sale_price: "", quantity: 0 })} className="text-amber-400 hover:text-amber-300 gap-1 text-xs h-7 px-2">
                   <Plus className="w-3 h-3" /> Add to Inventory
                 </Button>
-                <Button variant="ghost" size="sm" onClick={addPart} className="text-sky-400 hover:text-sky-300 gap-1">
-                  <Plus className="w-3 h-3" /> Add Part
+                <Button size="sm" variant="ghost" onClick={addPart} className="text-sky-400 hover:text-sky-300 h-7 px-2">
+                  <Plus className="w-4 h-4 mr-1" /> Add Row
                 </Button>
               </div>
             </div>
@@ -304,59 +303,66 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                 </div>
               </div>
             )}
-            {form.parts_used.map((pu, idx) => (
-              <div key={idx} className="bg-gray-800/50 rounded-lg p-3 mb-2 space-y-2">
-                <div className="flex gap-2 items-center">
-                  <div className="flex-1 space-y-1">
-                    <Label className="text-gray-500 text-xs">Part Name</Label>
-                    <Input value={pu.name} onChange={e => updatePart(idx, "name", e.target.value)}
-                      className="bg-gray-800 border-gray-600 text-white" placeholder="Type part name..." />
-                  </div>
-                  <Button variant="ghost" size="icon" onClick={() => removePart(idx)} className="text-gray-500 hover:text-rose-400 h-8 w-8 mt-5">
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
-                <div className="flex gap-2 items-center">
-                  <div className="flex-1">
-                    <Label className="text-gray-500 text-xs">From Inventory</Label>
-                    <Select value={pu.part_id} onValueChange={v => { updatePart(idx, "part_id", v); setPartSearches(s => ({...s, [idx]: ""})); }}>
-                      <SelectTrigger className="bg-gray-800 border-gray-600 text-white mt-1">
-                        <SelectValue placeholder="Select from inventory (optional)" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-gray-800 border-gray-700">
-                        <div className="px-2 pb-1">
-                          <Input
-                            value={partSearches[idx] || ""}
-                            onChange={e => setPartSearches(s => ({...s, [idx]: e.target.value}))}
-                            className="bg-gray-700 border-gray-600 text-white h-7 text-xs"
-                            placeholder="Search parts..."
-                            onClick={e => e.stopPropagation()}
-                            onKeyDown={e => e.stopPropagation()}
-                          />
-                        </div>
-                        {parts.filter(p => !partSearches[idx] || p.name.toLowerCase().includes((partSearches[idx] || "").toLowerCase())).map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="w-20">
-                    <Label className="text-gray-500 text-xs">Qty</Label>
-                    <Input type="number" value={pu.quantity} onChange={e => updatePart(idx, "quantity", Number(e.target.value))}
-                      className="bg-gray-800 border-gray-600 text-white mt-1" min="1" />
-                  </div>
-                  <Button variant="ghost" size="icon" onClick={() => setShowPrice(s => ({...s, [idx]: !s[idx]}))}
-                    className={`h-8 w-8 mt-5 ${showPrice[idx] ? 'text-sky-400' : 'text-gray-500 hover:text-sky-400'}`} title="Add price">
-                    <DollarSign className="w-3.5 h-3.5" />
-                  </Button>
-                  {showPrice[idx] && (
-                    <div className="w-24">
-                      <Label className="text-gray-500 text-xs">Price</Label>
-                      <Input type="number" value={pu.unit_price || ""} onChange={e => updatePart(idx, "unit_price", e.target.value)}
-                        className="bg-gray-800 border-gray-600 text-white mt-1" step="0.01" placeholder="0.00" />
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
+            <div className="rounded-lg border border-gray-800 overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-800/60 text-gray-500 text-xs">
+                  <tr>
+                    <th className="px-3 py-2 text-left">Part Name</th>
+                    <th className="px-3 py-2 text-left w-36">From Inventory</th>
+                    <th className="px-3 py-2 text-right w-20">Qty</th>
+                    <th className="px-3 py-2 text-right w-24">Unit Price</th>
+                    <th className="px-3 py-2 text-right w-24">Total</th>
+                    <th className="w-8" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-800">
+                  {form.parts_used.map((pu, idx) => (
+                    <tr key={idx} className="bg-gray-900">
+                      <td className="px-2 py-1.5">
+                        <Input value={pu.name} onChange={e => updatePart(idx, "name", e.target.value)}
+                          className="bg-gray-800 border-0 text-white h-8 text-sm" placeholder="Part name..." />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <Select value={pu.part_id} onValueChange={v => { updatePart(idx, "part_id", v); setPartSearches(s => ({...s, [idx]: ""})); }}>
+                          <SelectTrigger className="bg-gray-800 border-0 text-white h-8 text-xs">
+                            <SelectValue placeholder="Inventory..." />
+                          </SelectTrigger>
+                          <SelectContent className="bg-gray-800 border-gray-700">
+                            <div className="px-2 pb-1">
+                              <Input
+                                value={partSearches[idx] || ""}
+                                onChange={e => setPartSearches(s => ({...s, [idx]: e.target.value}))}
+                                className="bg-gray-700 border-gray-600 text-white h-7 text-xs"
+                                placeholder="Search..."
+                                onClick={e => e.stopPropagation()}
+                                onKeyDown={e => e.stopPropagation()}
+                              />
+                            </div>
+                            {parts.filter(p => !partSearches[idx] || p.name.toLowerCase().includes((partSearches[idx] || "").toLowerCase())).map(p => (
+                              <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <Input type="number" value={pu.quantity} onChange={e => updatePart(idx, "quantity", Number(e.target.value))}
+                          className="bg-gray-800 border-0 text-white h-8 text-sm text-right" min="1" placeholder="1" />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <Input type="number" value={pu.unit_price || ""} onChange={e => updatePart(idx, "unit_price", e.target.value)}
+                          className="bg-gray-800 border-0 text-white h-8 text-sm text-right" step="0.01" placeholder="0.00" />
+                      </td>
+                      <td className="px-3 py-1.5 text-right text-gray-300 font-medium">${(pu.total || 0).toFixed(2)}</td>
+                      <td className="pr-2 py-1.5">
+                        <button onClick={() => removePart(idx)} className="text-gray-600 hover:text-rose-400 transition-colors">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <div>
