@@ -43,11 +43,12 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         customer_note: invoice.customer_note || "",
         discount_type: invoice.discount_type || "none",
         discount_value: invoice.discount_value || 0,
+        tax_applies_to: invoice.tax_applies_to || "labor",
       });
     } else {
       setForm({
         repair_order_id: "", customer_id: "", customer_name: "", customer_phone: "", vehicle_info: "",
-        parts_total: 0, labor_total: 0, tax_rate: 15, status: "unpaid",
+        parts_total: 0, labor_total: 0, tax_rate: 15, tax_applies_to: "labor", status: "unpaid",
         due_date: "", payment_method: "", amount_paid: 0, payment_history: [],
         receipt_number: "", card_last4: "", cashier_name: "", parts_used: [], customer_note: "",
         discount_type: "none", discount_value: 0

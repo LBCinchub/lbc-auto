@@ -76,6 +76,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         total_cost: order.total_cost || 0,
         custom_total: order.total_cost ? true : false,
         apply_tax: order.apply_tax !== false,
+        tax_applies_to: order.tax_applies_to || "labor",
       });
     } else {
       setForm({
