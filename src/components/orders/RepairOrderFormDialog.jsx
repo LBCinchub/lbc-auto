@@ -24,7 +24,8 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
   const [form, setForm] = useState({
     customer_id: "", customer_name: "", vehicle_id: "", vehicle_info: "",
     mechanic_id: "", mechanic_name: "", description: "", status: "waiting",
-    labor_hours: "", notes: "", parts_used: [], estimated_completion: "",
+    labor_hours: "", labor_items: [{ description: "", hours: "", total: 0 }],
+    notes: "", parts_used: [], estimated_completion: "",
     discount_type: "none", discount_value: 0, total_cost: 0, custom_total: false
   });
   const [saving, setSaving] = useState(false);
@@ -52,6 +53,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         description: order.description || "",
         status: order.status || "waiting",
         labor_hours: order.labor_hours || "",
+        labor_items: order.labor_items?.length ? order.labor_items : [{ description: order.description || "", hours: String(order.labor_hours || ""), total: (order.labor_hours || 0) * 120 }],
         notes: order.notes || "",
         parts_used: order.parts_used || [],
         estimated_completion: order.estimated_completion || "",
@@ -64,7 +66,8 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
       setForm({
         customer_id: "", customer_name: "", vehicle_id: "", vehicle_info: "",
         mechanic_id: "", mechanic_name: "", description: "", status: "waiting",
-        labor_hours: "", notes: "", parts_used: [], estimated_completion: "",
+        labor_hours: "", labor_items: [{ description: "", hours: "", total: 0 }],
+        notes: "", parts_used: [], estimated_completion: "",
         discount_type: "none", discount_value: 0, total_cost: 0, custom_total: false
       });
     }
@@ -258,17 +261,66 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
               className="bg-gray-800 border-gray-700 text-white mt-1" rows={3} />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label className="text-gray-400">Labor Hours</Label>
-              <Input type="number" value={form.labor_hours} onChange={e => setForm({ ...form, labor_hours: e.target.value })}
-                className="bg-gray-800 border-gray-700 text-white mt-1" step="0.5" />
+          {/* Labor */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label className="text-gray-300 font-semibold">Labor</Label>
+              <Button size="sm" variant="ghost" onClick={() => setForm(f => ({ ...f, labor_items: [...(f.labor_items || []), { description: "", hours: "", total: 0 }] }))}
+                className="text-sky-400 hover:text-sky-300 h-7 px-2">
+                <Plus className="w-4 h-4 mr-1" /> Add Labor
+              </Button>
             </div>
-            <div>
-              <Label className="text-gray-400">Est. Completion</Label>
-              <Input type="date" value={form.estimated_completion} onChange={e => setForm({ ...form, estimated_completion: e.target.value })}
-                className="bg-gray-800 border-gray-700 text-white mt-1" />
+            <div className="rounded-lg border border-gray-800 overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-800/60 text-gray-500 text-xs">
+                  <tr>
+                    <th className="px-3 py-2 text-left">Description</th>
+                    <th className="px-3 py-2 text-right w-20">Hours</th>
+                    <th className="px-3 py-2 text-right w-24">Rate/hr</th>
+                    <th className="px-3 py-2 text-right w-24">Total</th>
+                    <th className="w-8" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-800">
+                  {(form.labor_items || [{ description: "", hours: form.labor_hours || "", total: (Number(form.labor_hours) || 0) * 120 }]).map((row, idx) => (
+                    <tr key={idx} className="bg-gray-900">
+                      <td className="px-2 py-1.5">
+                        <Input value={row.description} onChange={e => {
+                          const items = [...(form.labor_items || [])];
+                          items[idx] = { ...items[idx], description: e.target.value };
+                          setForm(f => ({ ...f, labor_items: items }));
+                        }} className="bg-gray-800 border-0 text-white h-8 text-sm" placeholder="e.g. Engine Diagnosis" />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <Input type="number" value={row.hours} onChange={e => {
+                          const items = [...(form.labor_items || [])];
+                          items[idx] = { ...items[idx], hours: e.target.value, total: (parseFloat(e.target.value) || 0) * 120 };
+                          const totalHours = items.reduce((s, r) => s + (parseFloat(r.hours) || 0), 0);
+                          setForm(f => ({ ...f, labor_items: items, labor_hours: totalHours }));
+                        }} className="bg-gray-800 border-0 text-white h-8 text-sm text-right" placeholder="0" step="0.5" />
+                      </td>
+                      <td className="px-2 py-1.5 text-right text-gray-300">$120</td>
+                      <td className="px-3 py-1.5 text-right text-gray-300 font-medium">${((parseFloat(row.hours) || 0) * 120).toFixed(2)}</td>
+                      <td className="pr-2 py-1.5">
+                        <button onClick={() => {
+                          const items = (form.labor_items || []).filter((_, i) => i !== idx);
+                          const totalHours = items.reduce((s, r) => s + (parseFloat(r.hours) || 0), 0);
+                          setForm(f => ({ ...f, labor_items: items, labor_hours: totalHours }));
+                        }} className="text-gray-600 hover:text-rose-400 transition-colors">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
+          </div>
+
+          <div>
+            <Label className="text-gray-400">Est. Completion</Label>
+            <Input type="date" value={form.estimated_completion} onChange={e => setForm({ ...form, estimated_completion: e.target.value })}
+              className="bg-gray-800 border-gray-700 text-white mt-1" />
           </div>
 
           {/* Parts section */}
