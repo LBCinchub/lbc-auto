@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Wrench, Pencil, Trash2, DollarSign, Clock, History, FileText } from "lucide-react";
+import { Wrench, Pencil, Trash2, DollarSign, Clock, History, FileText, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -144,6 +144,14 @@ export default function RepairOrders() {
                     <p className="text-sm text-gray-400 truncate">
                       {order.customer_name} · {order.vehicle_info}
                     </p>
+                    {(() => {
+                      const customer = customers.find(c => c.id === order.customer_id);
+                      return customer?.phone ? (
+                        <a href={`tel:${customer.phone}`} className="inline-flex items-center gap-1.5 text-xs text-sky-400 hover:text-sky-300 font-medium mt-0.5">
+                          <Phone className="w-3 h-3" />{customer.phone}
+                        </a>
+                      ) : null;
+                    })()}
                     <p className="text-xs text-gray-600 truncate mt-0.5">{order.description}</p>
                   </div>
                 </div>

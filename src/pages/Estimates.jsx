@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { ClipboardList, Pencil, Trash2, CheckCircle2, FileText } from "lucide-react";
+import { ClipboardList, Pencil, Trash2, CheckCircle2, FileText, Phone } from "lucide-react";
 import PageHeader from "../components/shared/PageHeader";
 import SearchBar from "../components/shared/SearchBar";
 import EmptyState from "../components/shared/EmptyState";
@@ -138,6 +138,14 @@ export default function Estimates() {
                   </span>
                 </div>
                 <p className="text-sm text-gray-400 mt-0.5">{est.vehicle_info}</p>
+                {(() => {
+                  const customer = customers.find(c => c.id === est.customer_id);
+                  return customer?.phone ? (
+                    <a href={`tel:${customer.phone}`} onClick={e => e.stopPropagation()} className="inline-flex items-center gap-1.5 text-xs text-sky-400 hover:text-sky-300 font-medium mt-0.5">
+                      <Phone className="w-3 h-3" />{customer.phone}
+                    </a>
+                  ) : null;
+                })()}
                 {est.notes && <p className="text-xs text-gray-600 mt-1 truncate">{est.notes}</p>}
               </div>
               <div className="flex items-center gap-6">
