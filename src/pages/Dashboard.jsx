@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
-import { Wrench, CheckCircle2, Clock, Calendar, X, Car, ChevronRight } from "lucide-react";
+import { Wrench, CheckCircle2, Clock, Calendar, X, Car, ChevronRight, User, MapPin, Phone, Mail, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import StatCard from "../components/dashboard/StatCard";
 import RecentOrders from "../components/dashboard/RecentOrders";
@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import StatusBadge from "../components/shared/StatusBadge";
 
 export default function Dashboard() {
-  const [modal, setModal] = useState(null); // { title, items }
+  const [modal, setModal] = useState(null); // { title, items, type }
+  const [selectedAppt, setSelectedAppt] = useState(null);
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
 
@@ -64,7 +65,7 @@ export default function Dashboard() {
       </div>
 
       {/* Modal */}
-      <Dialog open={!!modal} onOpenChange={() => setModal(null)}>
+      <Dialog open={!!modal} onOpenChange={() => { setModal(null); setSelectedAppt(null); }}>
         <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -95,8 +96,8 @@ export default function Dashboard() {
                 </div>
               </button>
             ))}
-            {modal?.type === "appt" && modal?.items?.map(a => (
-              <button key={a.id} onClick={() => { setModal(null); navigate(`/Appointments`); }}
+            {modal?.type === "appt" && !selectedAppt && modal?.items?.map(a => (
+              <button key={a.id} onClick={() => setSelectedAppt(a)}
                 className="w-full bg-gray-800 rounded-lg p-3 flex items-center justify-between gap-3 hover:bg-gray-700 transition-colors text-left">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0">
@@ -113,6 +114,51 @@ export default function Dashboard() {
                 </div>
               </button>
             ))}
+            {modal?.type === "appt" && selectedAppt && (
+              <div className="space-y-4">
+                <button onClick={() => setSelectedAppt(null)} className="flex items-center gap-1 text-sky-400 hover:text-sky-300 text-sm">
+                  <ArrowLeft className="w-4 h-4" /> Back to list
+                </button>
+                <div className="bg-gray-800 rounded-xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-white font-semibold text-base">{selectedAppt.customer_name}</p>
+                    <StatusBadge status={selectedAppt.status} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-gray-500 text-xs uppercase mb-1">Date</p>
+                      <p className="text-white">{new Date(selectedAppt.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-xs uppercase mb-1">Time</p>
+                      <p className="text-white">{selectedAppt.time_slot || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-xs uppercase mb-1">Service</p>
+                      <p className="text-white">{selectedAppt.service_type || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-xs uppercase mb-1">Mechanic</p>
+                      <p className="text-white">{selectedAppt.mechanic_name || "Unassigned"}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 text-xs uppercase mb-1">Vehicle</p>
+                    <p className="text-white flex items-center gap-1"><Car className="w-3.5 h-3.5 text-sky-400" />{selectedAppt.vehicle_info || "—"}</p>
+                  </div>
+                  {selectedAppt.notes && (
+                    <div>
+                      <p className="text-gray-500 text-xs uppercase mb-1">Notes</p>
+                      <p className="text-gray-300 text-sm">{selectedAppt.notes}</p>
+                    </div>
+                  )}
+                  <button onClick={() => { setModal(null); setSelectedAppt(null); navigate("/Appointments"); }}
+                    className="w-full mt-2 py-2 rounded-lg bg-sky-500/20 text-sky-400 hover:bg-sky-500/30 text-sm font-medium transition-colors">
+                    Open in Appointments →
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
