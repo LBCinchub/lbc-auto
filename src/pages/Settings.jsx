@@ -45,6 +45,7 @@ export default function Settings() {
   const [user, setUser] = useState(null);
   const [businessName, setBusinessName] = useState("");
   const [shopPhone, setShopPhone] = useState("");
+  const [shopAddress, setShopAddress] = useState("");
   const [notifPrefs, setNotifPrefs] = useState({});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -55,6 +56,7 @@ export default function Settings() {
       setUser(currentUser);
       setBusinessName(currentUser?.business_name || "");
       setShopPhone(currentUser?.phone || "");
+      setShopAddress(currentUser?.address || "");
       // Load notification prefs (default SMS on, email off)
       const prefs = {};
       NOTIF_SETTINGS.forEach(({ key }) => {
@@ -78,7 +80,7 @@ export default function Settings() {
         notifData[`notif_sms_${key}`] = notifPrefs[`sms_${key}`] !== false;
         notifData[`notif_email_${key}`] = notifPrefs[`email_${key}`] === true;
       });
-      await base44.auth.updateMe({ business_name: businessName, phone: shopPhone, ...notifData });
+      await base44.auth.updateMe({ business_name: businessName, phone: shopPhone, address: shopAddress, ...notifData });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
@@ -119,6 +121,16 @@ export default function Settings() {
               className="bg-gray-800 border-gray-700 text-white"
             />
             <p className="text-gray-500 text-sm mt-2">This will appear on invoices</p>
+          </div>
+          <div>
+            <Label className="text-gray-400 mb-2 block">Shop Address</Label>
+            <Input
+              value={shopAddress}
+              onChange={(e) => setShopAddress(e.target.value)}
+              placeholder="Enter your shop address"
+              className="bg-gray-800 border-gray-700 text-white"
+            />
+            <p className="text-gray-500 text-sm mt-2">This will appear on invoices and estimates</p>
           </div>
           <div className="bg-gray-800 border border-gray-700 rounded p-4">
             <p className="text-gray-400 text-sm"><strong>Email:</strong> {user?.email}</p>
