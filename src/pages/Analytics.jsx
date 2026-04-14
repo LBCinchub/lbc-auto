@@ -1,15 +1,18 @@
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from "recharts";
-import { DollarSign, TrendingUp, Wrench, Users, Banknote, CreditCard, Clock, Printer, FileText, X } from "lucide-react";
+import { DollarSign, TrendingUp, Wrench, Users, Banknote, CreditCard, Clock, Printer, FileText, X, Plus, Trash2 } from "lucide-react";
 import { format, startOfDay, startOfWeek, startOfMonth, startOfYear, parseISO, isAfter } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { jsPDF } from "jspdf";
 import StatCard from "../components/dashboard/StatCard";
 
@@ -23,6 +26,10 @@ export default function Analytics() {
   const [filterMechanic, setFilterMechanic] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterPaymentMethod, setFilterPaymentMethod] = useState("");
+  const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
+  const [expenseForm, setExpenseForm] = useState({ category: "supplies", description: "", amount: "", expense_date: format(new Date(), "yyyy-MM-dd"), notes: "" });
+  const [savingExpense, setSavingExpense] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: invoices = [] } = useQuery({
     queryKey: ["invoices"],
@@ -47,6 +54,11 @@ export default function Analytics() {
   const { data: parts = [] } = useQuery({
     queryKey: ["parts"],
     queryFn: () => base44.entities.Part.list("-created_date", 500),
+  });
+
+  const { data: expenses = [] } = useQuery({
+    queryKey: ["expenses"],
+    queryFn: () => base44.entities.Expense.list("-expense_date", 500),
   });
 
   // Apply data filters
@@ -357,6 +369,49 @@ export default function Analytics() {
     .slice(-14)
     .map(([date, hours]) => ({ date, hours: parseFloat(hours.toFixed(1)) }));
 
+  // Expense handling
+  const handleSaveExpense = async () => {
+    if (!expenseForm.category || !expenseForm.amount) return;
+    setSavingExpense(true);
+    await base44.entities.Expense.create({
+      category: expenseForm.category,
+      description: expenseForm.description,
+      amount: Number(expenseForm.amount),
+      expense_date: expenseForm.expense_date,
+      notes: expenseForm.notes,
+    });
+    setSavingExpense(false);
+    queryClient.invalidateQueries({ queryKey: ["expenses"] });
+    setExpenseDialogOpen(false);
+    setExpenseForm({ category: "supplies", description: "", amount: "", expense_date: format(new Date(), "yyyy-MM-dd"), notes: "" });
+  };
+
+  const handleDeleteExpense = async (id) => {
+    if (window.confirm("Delete this expense?")) {
+      await base44.entities.Expense.delete(id);
+      queryClient.invalidateQueries({ queryKey: ["expenses"] });
+    }
+  };
+
+  // Monthly profit/loss
+  const monthlyProfitLoss = {};
+  paidInvoices.forEach(inv => {
+    const date = inv.paid_date || inv.created_date?.substring(0, 10);
+    if (!date) return;
+    const month = date.substring(0, 7);
+    if (!monthlyProfitLoss[month]) monthlyProfitLoss[month] = { month, revenue: 0, expenses: 0 };
+    monthlyProfitLoss[month].revenue += inv.total || 0;
+  });
+  expenses.forEach(exp => {
+    const month = exp.expense_date.substring(0, 7);
+    if (!monthlyProfitLoss[month]) monthlyProfitLoss[month] = { month, revenue: 0, expenses: 0 };
+    monthlyProfitLoss[month].expenses += exp.amount || 0;
+  });
+  const profitLossChart = Object.values(monthlyProfitLoss)
+    .map(item => ({ ...item, profit: item.revenue - item.expenses }))
+    .sort((a, b) => a.month.localeCompare(b.month))
+    .slice(-12);
+
   const handlePrintDailyReport = () => {
     const printWindow = window.open('', '_blank');
     const reportData = [...dailyChart].reverse();
@@ -512,12 +567,151 @@ export default function Analytics() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-gray-800/50 border border-gray-700">
           <TabsTrigger value="overview" className="text-sm data-[state=active]:bg-sky-500/20 data-[state=active]:text-sky-400">Overview</TabsTrigger>
+          <TabsTrigger value="profitloss" className="text-sm data-[state=active]:bg-sky-500/20 data-[state=active]:text-sky-400">Profit & Loss</TabsTrigger>
           <TabsTrigger value="reports" className="text-sm data-[state=active]:bg-sky-500/20 data-[state=active]:text-sky-400 flex items-center gap-2">
             <FileText className="w-4 h-4" />
             PDF Reports
           </TabsTrigger>
         </TabsList>
       </Tabs>
+
+      {activeTab === "profitloss" && (
+        <div className="space-y-6">
+          {/* Expenses Card */}
+          <div className="rounded-xl border border-red-700/30 bg-gradient-to-br from-red-900/30 to-red-950/10 p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-white font-semibold mb-1">Monthly Expenses</h3>
+                <p className="text-gray-400 text-xs">Record and track business costs</p>
+              </div>
+              <Button onClick={() => setExpenseDialogOpen(true)} className="gap-1.5 text-xs h-8">
+                <Plus className="w-3.5 h-3.5" /> Add Expense
+              </Button>
+            </div>
+            
+            {expenses.length > 0 && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-800/50">
+                      <th className="text-left text-xs text-gray-400 font-medium px-3 py-2">Date</th>
+                      <th className="text-left text-xs text-gray-400 font-medium px-3 py-2">Category</th>
+                      <th className="text-left text-xs text-gray-400 font-medium px-3 py-2">Description</th>
+                      <th className="text-right text-xs text-gray-400 font-medium px-3 py-2">Amount</th>
+                      <th className="text-center text-xs text-gray-400 font-medium px-3 py-2">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...expenses].reverse().map(exp => (
+                      <tr key={exp.id} className="border-b border-gray-800/30 hover:bg-gray-800/20">
+                        <td className="px-3 py-2 text-gray-300">{exp.expense_date}</td>
+                        <td className="px-3 py-2 text-gray-300 capitalize">{exp.category}</td>
+                        <td className="px-3 py-2 text-gray-400">{exp.description || "—"}</td>
+                        <td className="px-3 py-2 text-right text-red-400 font-semibold">${exp.amount.toFixed(2)}</td>
+                        <td className="px-3 py-2 text-center">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6 text-rose-400 hover:text-rose-300"
+                            onClick={() => handleDeleteExpense(exp.id)}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Monthly P&L Chart */}
+          {profitLossChart.length > 0 && (
+            <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5">
+              <h3 className="text-white font-semibold mb-4">Monthly Profit & Loss</h3>
+              <div className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={profitLossChart}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                    <XAxis dataKey="month" stroke="#64748b" fontSize={12} />
+                    <YAxis stroke="#64748b" fontSize={12} tickFormatter={v => `$${v}`} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: "#0f172a", border: "1px solid #1e293b", borderRadius: "8px", color: "#e2e8f0" }}
+                      formatter={(v) => [`$${v.toFixed(2)}`]}
+                    />
+                    <Legend />
+                    <Bar dataKey="revenue" name="Revenue" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="expenses" name="Expenses" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="profit" name="Profit" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
+
+          {/* P&L Summary Table */}
+          {profitLossChart.length > 0 && (
+            <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5">
+              <h3 className="text-white font-semibold mb-4">Profit & Loss Summary</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-800/50">
+                      <th className="text-left text-xs text-gray-500 font-medium px-4 py-3">Month</th>
+                      <th className="text-right text-xs text-gray-500 font-medium px-4 py-3">Revenue</th>
+                      <th className="text-right text-xs text-gray-500 font-medium px-4 py-3">Expenses</th>
+                      <th className="text-right text-xs text-gray-500 font-medium px-4 py-3">Profit</th>
+                      <th className="text-right text-xs text-gray-500 font-medium px-4 py-3">Margin %</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {profitLossChart.map(row => {
+                      const margin = row.revenue > 0 ? (row.profit / row.revenue * 100) : 0;
+                      return (
+                        <tr key={row.month} className="border-b border-gray-800/30">
+                          <td className="px-4 py-3 text-gray-200 font-medium">{row.month}</td>
+                          <td className="px-4 py-3 text-right text-emerald-400">${row.revenue.toFixed(2)}</td>
+                          <td className="px-4 py-3 text-right text-red-400">${row.expenses.toFixed(2)}</td>
+                          <td className="px-4 py-3 text-right font-semibold" style={{ color: row.profit >= 0 ? "#10b981" : "#ef4444" }}>
+                            ${row.profit.toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3 text-right" style={{ color: margin >= 0 ? "#10b981" : "#ef4444" }}>
+                            {margin.toFixed(1)}%
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot className="border-t-2 border-gray-700 bg-gray-900">
+                    {(() => {
+                      const totals = profitLossChart.reduce((acc, row) => ({
+                        revenue: acc.revenue + row.revenue,
+                        expenses: acc.expenses + row.expenses,
+                        profit: acc.profit + row.profit
+                      }), { revenue: 0, expenses: 0, profit: 0 });
+                      const totalMargin = totals.revenue > 0 ? (totals.profit / totals.revenue * 100) : 0;
+                      return (
+                        <tr>
+                          <td className="px-4 py-3 text-sm font-bold text-gray-300">TOTAL</td>
+                          <td className="px-4 py-3 text-right text-emerald-400 font-bold">${totals.revenue.toFixed(2)}</td>
+                          <td className="px-4 py-3 text-right text-red-400 font-bold">${totals.expenses.toFixed(2)}</td>
+                          <td className="px-4 py-3 text-right font-bold" style={{ color: totals.profit >= 0 ? "#10b981" : "#ef4444" }}>
+                            ${totals.profit.toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3 text-right font-bold" style={{ color: totalMargin >= 0 ? "#10b981" : "#ef4444" }}>
+                            {totalMargin.toFixed(1)}%
+                          </td>
+                        </tr>
+                      );
+                    })()}
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {activeTab === "reports" && (
         <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-6 space-y-4">
@@ -907,6 +1101,86 @@ export default function Analytics() {
       )}
         </>
       )}
+
+      {/* Expense Dialog */}
+      <Dialog open={expenseDialogOpen} onOpenChange={setExpenseDialogOpen}>
+        <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Expense</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-gray-400">Category *</Label>
+              <Select value={expenseForm.category} onValueChange={(v) => setExpenseForm({ ...expenseForm, category: v })}>
+                <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-700">
+                  <SelectItem value="rent">Rent</SelectItem>
+                  <SelectItem value="utilities">Utilities</SelectItem>
+                  <SelectItem value="supplies">Supplies</SelectItem>
+                  <SelectItem value="equipment">Equipment</SelectItem>
+                  <SelectItem value="maintenance">Maintenance</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-gray-400">Description</Label>
+              <Input
+                placeholder="e.g., Monthly shop rent"
+                value={expenseForm.description}
+                onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })}
+                className="bg-gray-800 border-gray-700 text-white mt-1"
+              />
+            </div>
+            <div>
+              <Label className="text-gray-400">Amount ($) *</Label>
+              <Input
+                type="number"
+                placeholder="0.00"
+                value={expenseForm.amount}
+                onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
+                className="bg-gray-800 border-gray-700 text-white mt-1"
+              />
+            </div>
+            <div>
+              <Label className="text-gray-400">Date *</Label>
+              <Input
+                type="date"
+                value={expenseForm.expense_date}
+                onChange={(e) => setExpenseForm({ ...expenseForm, expense_date: e.target.value })}
+                className="bg-gray-800 border-gray-700 text-white mt-1"
+              />
+            </div>
+            <div>
+              <Label className="text-gray-400">Notes</Label>
+              <Input
+                placeholder="Additional details"
+                value={expenseForm.notes}
+                onChange={(e) => setExpenseForm({ ...expenseForm, notes: e.target.value })}
+                className="bg-gray-800 border-gray-700 text-white mt-1"
+              />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => setExpenseDialogOpen(false)}
+                className="flex-1 border-gray-700 text-gray-300"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveExpense}
+                disabled={savingExpense || !expenseForm.category || !expenseForm.amount}
+                className="flex-1 bg-red-600 hover:bg-red-700"
+              >
+                {savingExpense ? "Saving..." : "Add Expense"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
