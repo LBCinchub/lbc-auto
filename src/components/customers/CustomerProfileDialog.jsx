@@ -1,15 +1,16 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle
 } from "@/components/ui/dialog";
 import {
-  Phone, Mail, MapPin, Car, Wrench, FileText, Lightbulb, Clock, Plus
+  Phone, Mail, MapPin, Car, Wrench, FileText, Lightbulb, Clock, Plus, Pencil
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StatusBadge from "../shared/StatusBadge";
+import VehicleFormDialog from "@/components/vehicles/VehicleFormDialog";
 
 function Section({ icon: Icon, title, children }) {
   return (
@@ -22,8 +23,12 @@ function Section({ icon: Icon, title, children }) {
   );
 }
 
-export default function CustomerProfileDialog({ customer, open, onClose }) {
+export default function CustomerProfileDialog({ customer, open, onClose, customers = [] }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [editingVehicle, setEditingVehicle] = useState(null);
+  const [showVehicleDialog, setShowVehicleDialog] = useState(false);
+
   const { data: orders = [] } = useQuery({
     queryKey: ["repairOrders"],
     queryFn: () => base44.entities.RepairOrder.list("-created_date", 200),
@@ -77,6 +82,18 @@ export default function CustomerProfileDialog({ customer, open, onClose }) {
   if (!customer) return null;
 
   return (
+    <>
+    <VehicleFormDialog
+      open={showVehicleDialog}
+      onClose={() => { setShowVehicleDialog(false); setEditingVehicle(null); }}
+      vehicle={editingVehicle}
+      customers={customers}
+      onSaved={() => {
+        queryClient.invalidateQueries({ queryKey: ["vehicles"] });
+        setShowVehicleDialog(false);
+        setEditingVehicle(null);
+      }}
+    />
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
@@ -129,9 +146,19 @@ export default function CustomerProfileDialog({ customer, open, onClose }) {
                 {customerVehicles.map(v => (
                   <div key={v.id} className="bg-gray-800/60 rounded-lg px-4 py-2 flex items-center gap-3 text-sm">
                     <Car className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                    <span className="text-white font-medium">{v.year} {v.make} {v.model}</span>
-                    {v.license_plate && <span className="text-gray-500">· {v.license_plate}</span>}
-                    {v.color && <span className="text-gray-500">· {v.color}</span>}
+                    <div className="flex-1 min-w-0">
+                      <span className="text-white font-medium">{v.year} {v.make} {v.model}</span>
+                      {v.license_plate && <span className="text-gray-500"> · {v.license_plate}</span>}
+                      {v.color && <span className="text-gray-500"> · {v.color}</span>}
+                      {v.vin && <p className="text-gray-600 text-xs mt-0.5">VIN: {v.vin}</p>}
+                    </div>
+                    <button
+                      onClick={() => { setEditingVehicle(v); setShowVehicleDialog(true); }}
+                      className="text-gray-500 hover:text-sky-400 transition-colors flex-shrink-0"
+                      title="Edit vehicle"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 ))}
               </div>
@@ -243,5 +270,6 @@ export default function CustomerProfileDialog({ customer, open, onClose }) {
         </div>
       </DialogContent>
     </Dialog>
+    </>
   );
 }

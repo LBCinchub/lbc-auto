@@ -120,6 +120,7 @@ export default function Customers() {
       <CustomerProfileDialog
         open={!!profileCustomer}
         customer={profileCustomer}
+        customers={customers}
         onClose={() => setProfileCustomer(null)}
       />
     </div>
