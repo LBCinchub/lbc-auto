@@ -27,6 +27,7 @@ export default function Analytics() {
   const [filterStatus, setFilterStatus] = useState("");
   const [filterPaymentMethod, setFilterPaymentMethod] = useState("");
   const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
+  const [paymentMethodModal, setPaymentMethodModal] = useState(null); // "cash" | "card" | "etransfer" | null
   const [expenseForm, setExpenseForm] = useState({ category: "supplies", description: "", amount: "", expense_date: format(new Date(), "yyyy-MM-dd"), notes: "" });
   const [savingExpense, setSavingExpense] = useState(false);
   const queryClient = useQueryClient();
@@ -873,7 +874,8 @@ export default function Analytics() {
 
         {/* Today's totals */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-4 flex items-center gap-3">
+          <button onClick={() => setPaymentMethodModal("cash")}
+            className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-4 flex items-center gap-3 hover:bg-emerald-500/20 hover:border-emerald-500/40 transition-all text-left w-full">
             <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
               <Banknote className="w-5 h-5 text-emerald-400" />
             </div>
@@ -881,8 +883,9 @@ export default function Analytics() {
               <p className="text-xs text-gray-400">Today — Cash</p>
               <p className="text-lg font-bold text-emerald-400">${todayData.cash.toFixed(2)}</p>
             </div>
-          </div>
-          <div className="rounded-lg bg-sky-500/10 border border-sky-500/20 p-4 flex items-center gap-3">
+          </button>
+          <button onClick={() => setPaymentMethodModal("card")}
+            className="rounded-lg bg-sky-500/10 border border-sky-500/20 p-4 flex items-center gap-3 hover:bg-sky-500/20 hover:border-sky-500/40 transition-all text-left w-full">
             <div className="w-10 h-10 rounded-full bg-sky-500/20 flex items-center justify-center">
               <CreditCard className="w-5 h-5 text-sky-400" />
             </div>
@@ -890,8 +893,9 @@ export default function Analytics() {
               <p className="text-xs text-gray-400">Today — Card</p>
               <p className="text-lg font-bold text-sky-400">${todayData.card.toFixed(2)}</p>
             </div>
-          </div>
-          <div className="rounded-lg bg-orange-500/10 border border-orange-500/20 p-4 flex items-center gap-3">
+          </button>
+          <button onClick={() => setPaymentMethodModal("etransfer")}
+            className="rounded-lg bg-orange-500/10 border border-orange-500/20 p-4 flex items-center gap-3 hover:bg-orange-500/20 hover:border-orange-500/40 transition-all text-left w-full">
             <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center">
               <DollarSign className="w-5 h-5 text-orange-400" />
             </div>
@@ -899,8 +903,9 @@ export default function Analytics() {
               <p className="text-xs text-gray-400">Today — E-Transfer</p>
               <p className="text-lg font-bold text-orange-400">${todayData.etransfer.toFixed(2)}</p>
             </div>
-          </div>
-          <div className="rounded-lg bg-purple-500/10 border border-purple-500/20 p-4 flex items-center gap-3">
+          </button>
+          <button onClick={() => setPaymentMethodModal("all")}
+            className="rounded-lg bg-purple-500/10 border border-purple-500/20 p-4 flex items-center gap-3 hover:bg-purple-500/20 hover:border-purple-500/40 transition-all text-left w-full">
             <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
               <DollarSign className="w-5 h-5 text-purple-400" />
             </div>
@@ -908,7 +913,7 @@ export default function Analytics() {
               <p className="text-xs text-gray-400">Today — Total</p>
               <p className="text-lg font-bold text-purple-400">${(todayData.cash + todayData.card + todayData.etransfer).toFixed(2)}</p>
             </div>
-          </div>
+          </button>
         </div>
 
         {/* 14-day bar chart */}
@@ -1101,6 +1106,66 @@ export default function Analytics() {
       )}
         </>
       )}
+
+      {/* Payment Method Invoices Modal */}
+      <Dialog open={!!paymentMethodModal} onOpenChange={() => setPaymentMethodModal(null)}>
+        <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="capitalize">
+              {paymentMethodModal === "all" ? "All" : paymentMethodModal === "etransfer" ? "E-Transfer" : paymentMethodModal} — Today's Invoices
+            </DialogTitle>
+          </DialogHeader>
+          {(() => {
+            const todayInvoices = invoices.filter(inv => {
+              if (inv.status !== "paid") return false;
+              const day = inv.paid_date || inv.created_date?.substring(0, 10);
+              if (day !== today) return false;
+              if (paymentMethodModal === "all") return true;
+              const method = inv.payment_method?.toLowerCase() || "cash";
+              if (paymentMethodModal === "etransfer") return method === "e-transfer" || method === "etransfer";
+              if (paymentMethodModal === "card") return method === "card" || !!inv.card_last4;
+              if (paymentMethodModal === "cash") return method === "cash" || (!method && !inv.card_last4);
+              return false;
+            });
+            if (todayInvoices.length === 0) {
+              return <p className="text-gray-400 text-sm py-4 text-center">No invoices found for today with this payment method.</p>;
+            }
+            return (
+              <table className="w-full text-sm mt-2">
+                <thead>
+                  <tr className="border-b border-gray-700">
+                    <th className="text-left text-xs text-gray-400 px-3 py-2">Invoice #</th>
+                    <th className="text-left text-xs text-gray-400 px-3 py-2">Customer</th>
+                    <th className="text-left text-xs text-gray-400 px-3 py-2">Vehicle</th>
+                    <th className="text-left text-xs text-gray-400 px-3 py-2">Method</th>
+                    <th className="text-right text-xs text-gray-400 px-3 py-2">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {todayInvoices.map(inv => (
+                    <tr key={inv.id} className="border-b border-gray-800/50 hover:bg-gray-800/30 cursor-pointer"
+                      onClick={() => { setPaymentMethodModal(null); window.location.href = `/InvoiceDetail/${inv.id}`; }}>
+                      <td className="px-3 py-2 text-sky-400 font-mono">{inv.invoice_number || inv.id.slice(0,8)}</td>
+                      <td className="px-3 py-2 text-gray-200">{inv.customer_name}</td>
+                      <td className="px-3 py-2 text-gray-400">{inv.vehicle_info || "—"}</td>
+                      <td className="px-3 py-2 text-gray-400 capitalize">{inv.payment_method || "cash"}</td>
+                      <td className="px-3 py-2 text-right text-emerald-400 font-semibold">${(inv.total || 0).toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t border-gray-700">
+                    <td colSpan={4} className="px-3 py-2 text-gray-400 font-semibold text-sm">Total</td>
+                    <td className="px-3 py-2 text-right text-emerald-400 font-bold">
+                      ${todayInvoices.reduce((s, i) => s + (i.total || 0), 0).toFixed(2)}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
 
       {/* Expense Dialog */}
       <Dialog open={expenseDialogOpen} onOpenChange={setExpenseDialogOpen}>
