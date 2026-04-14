@@ -1,7 +1,7 @@
 import React from "react";
-import { Link } from "react-router-dom";
-import { createPageUrl } from "@/utils";
+import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
+import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const statusConfig = {
@@ -13,6 +13,7 @@ const statusConfig = {
 };
 
 export default function RecentOrders({ orders }) {
+  const navigate = useNavigate();
   const sorted = [...orders].sort((a, b) => {
     const isDeliveredA = a.status === "delivered" ? 1 : 0;
     const isDeliveredB = b.status === "delivered" ? 1 : 0;
@@ -24,9 +25,9 @@ export default function RecentOrders({ orders }) {
     <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-white font-semibold">Recent Repair Orders</h3>
-        <Link to={createPageUrl("RepairOrders")} className="text-xs text-sky-400 hover:text-sky-300">
+        <button onClick={() => navigate("/RepairOrders")} className="text-xs text-sky-400 hover:text-sky-300 transition-colors">
           View all →
-        </Link>
+        </button>
       </div>
       <div className="space-y-3">
         {recent.length === 0 && (
@@ -35,19 +36,22 @@ export default function RecentOrders({ orders }) {
         {recent.map((order) => {
           const config = statusConfig[order.status] || statusConfig.waiting;
           return (
-            <Link
+            <button
               key={order.id}
-              to={createPageUrl(`RepairOrders?id=${order.id}`)}
-              className="flex items-center justify-between p-3 rounded-lg bg-gray-800/30 hover:bg-gray-800/60 transition-colors"
+              onClick={() => navigate(`/RepairOrderDetail/${order.id}`)}
+              className="w-full flex items-center justify-between p-3 rounded-lg bg-gray-800/30 hover:bg-gray-700/50 transition-colors text-left"
             >
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="text-sm text-white font-medium truncate">{order.vehicle_info || "Unknown Vehicle"}</p>
                 <p className="text-xs text-gray-500 truncate">{order.customer_name} · {order.order_number}</p>
               </div>
-              <Badge variant="outline" className={cn("text-xs flex-shrink-0 ml-3", config.class)}>
-                {config.label}
-              </Badge>
-            </Link>
+              <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                <Badge variant="outline" className={cn("text-xs", config.class)}>
+                  {config.label}
+                </Badge>
+                <ChevronRight className="w-4 h-4 text-gray-600" />
+              </div>
+            </button>
           );
         })}
       </div>

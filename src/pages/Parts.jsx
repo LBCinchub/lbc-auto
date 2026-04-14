@@ -126,50 +126,50 @@ export default function Parts() {
               </thead>
               <tbody>
                 {filtered.map(p => {
-                  const margin = p.sale_price > 0 ? ((p.sale_price - p.cost_price) / p.sale_price * 100) : 0;
-                  const lowStock = p.min_stock > 0 && p.quantity <= p.min_stock;
-                  return (
-                    <tr key={p.id} className="border-b border-gray-800/30 hover:bg-gray-800/20">
-                      <td className="px-5 py-3">
-                        <div>
-                          <span className="text-white text-sm font-medium">{p.name}</span>
-                          {p.part_number && (
-                            <span className="text-xs text-gray-600 ml-2">#{p.part_number}</span>
-                          )}
-                        </div>
-                        {p.category && <p className="text-xs text-gray-500">{p.category}</p>}
-                      </td>
-                      <td className="px-5 py-3 text-sm text-gray-400">{p.supplier || "—"}</td>
-                      <td className="px-5 py-3 text-sm text-gray-400 text-right">${p.cost_price?.toFixed(2)}</td>
-                      <td className="px-5 py-3 text-sm text-white text-right font-medium">${p.sale_price?.toFixed(2)}</td>
-                      <td className="px-5 py-3 text-sm text-right">
-                        <span className={margin > 30 ? "text-emerald-400" : margin > 0 ? "text-amber-400" : "text-rose-400"}>
-                          {margin.toFixed(0)}%
-                        </span>
-                      </td>
-                      <td className="px-5 py-3 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <span className={`text-sm font-medium ${lowStock ? "text-rose-400" : "text-white"}`}>
-                            {p.quantity}
-                          </span>
-                          {lowStock && <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />}
-                        </div>
-                      </td>
-                      <td className="px-5 py-3">
-                        <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-500 hover:text-white"
-                            onClick={() => { setEditingPart(p); setDialogOpen(true); }}>
-                            <Pencil className="w-3 h-3" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-500 hover:text-rose-400"
-                            onClick={() => handleDelete(p.id)}>
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                   const margin = p.sale_price > 0 ? ((p.sale_price - p.cost_price) / p.sale_price * 100) : 0;
+                   const lowStock = p.min_stock > 0 && p.quantity <= p.min_stock;
+                   return (
+                     <tr key={p.id} className="border-b border-gray-800/30 hover:bg-gray-800/40 cursor-pointer transition-colors" onClick={() => { setEditingPart(p); setDialogOpen(true); }}>
+                       <td className="px-5 py-3">
+                         <div>
+                           <span className="text-white text-sm font-medium">{p.name}</span>
+                           {p.part_number && (
+                             <span className="text-xs text-gray-600 ml-2">#{p.part_number}</span>
+                           )}
+                         </div>
+                         {p.category && <p className="text-xs text-gray-500">{p.category}</p>}
+                       </td>
+                       <td className="px-5 py-3 text-sm text-gray-400">{p.supplier || "—"}</td>
+                       <td className="px-5 py-3 text-sm text-gray-400 text-right">${p.cost_price?.toFixed(2)}</td>
+                       <td className="px-5 py-3 text-sm text-white text-right font-medium">${p.sale_price?.toFixed(2)}</td>
+                       <td className="px-5 py-3 text-sm text-right">
+                         <span className={margin > 30 ? "text-emerald-400" : margin > 0 ? "text-amber-400" : "text-rose-400"}>
+                           {margin.toFixed(0)}%
+                         </span>
+                       </td>
+                       <td className="px-5 py-3 text-right">
+                         <div className="flex items-center justify-end gap-2">
+                           <span className={`text-sm font-medium ${lowStock ? "text-rose-400" : "text-white"}`}>
+                             {p.quantity}
+                           </span>
+                           {lowStock && <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />}
+                         </div>
+                       </td>
+                       <td className="px-5 py-3" onClick={e => e.stopPropagation()}>
+                         <div className="flex justify-end gap-1">
+                           <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-500 hover:text-white"
+                             onClick={() => { setEditingPart(p); setDialogOpen(true); }}>
+                             <Pencil className="w-3 h-3" />
+                           </Button>
+                           <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-500 hover:text-rose-400"
+                             onClick={() => handleDelete(p.id)}>
+                             <Trash2 className="w-3 h-3" />
+                           </Button>
+                         </div>
+                       </td>
+                     </tr>
+                   );
+                 })}
               </tbody>
             </table>
           </div>

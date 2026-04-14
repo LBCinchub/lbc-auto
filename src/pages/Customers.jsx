@@ -87,20 +87,19 @@ export default function Customers() {
           actionLabel="Add Customer" />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map(customer => (
-            <div key={customer.id}
-              className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5 hover:border-sky-500/30 transition-colors">
-              <div className="flex items-start justify-between mb-3">
-                <button className="flex items-center gap-3 hover:opacity-80 transition-opacity text-left"
-                  onClick={() => setProfileCustomer(customer)}>
-                  <div className="w-10 h-10 rounded-full bg-sky-500/20 flex items-center justify-center">
-                    <span className="text-sky-400 font-semibold text-sm">
-                      {customer.full_name?.charAt(0)?.toUpperCase()}
-                    </span>
-                  </div>
-                  <h3 className="text-white font-semibold">{customer.full_name}</h3>
-                </button>
-                <div className="flex gap-1">
+           {filtered.map(customer => (
+             <button key={customer.id} onClick={() => setProfileCustomer(customer)}
+               className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5 hover:border-sky-500/30 hover:bg-gray-800/50 transition-all text-left">
+               <div className="flex items-start justify-between mb-3">
+                 <div className="flex items-center gap-3 flex-1 min-w-0">
+                   <div className="w-10 h-10 rounded-full bg-sky-500/20 flex items-center justify-center flex-shrink-0">
+                     <span className="text-sky-400 font-semibold text-sm">
+                       {customer.full_name?.charAt(0)?.toUpperCase()}
+                     </span>
+                   </div>
+                   <h3 className="text-white font-semibold truncate">{customer.full_name}</h3>
+                 </div>
+                 <div className="flex gap-1 ml-2 flex-shrink-0" onClick={e => e.stopPropagation()}>
                   <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-sky-400"
                     onClick={() => setProfileCustomer(customer)}>
                     <Eye className="w-3.5 h-3.5" />
@@ -131,10 +130,10 @@ export default function Customers() {
                     <MapPin className="w-3.5 h-3.5" /> {customer.address}
                   </div>
                 )}
-              </div>
-            </div>
-          ))}
-        </div>
+                </div>
+                </button>
+                ))}
+                </div>
       )}
 
       <CustomerFormDialog

@@ -104,38 +104,39 @@ export default function Appointments() {
               </h3>
               <div className="space-y-2">
                 {appts.map(a => (
-                  <div key={a.id}
-                    className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-4 hover:border-sky-500/30 transition-colors flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-4 min-w-0">
-                      <div className="w-16 text-center flex-shrink-0">
-                        <p className="text-sky-400 font-semibold text-sm">{a.time_slot}</p>
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-white font-medium text-sm">{a.customer_name}</span>
-                          <StatusBadge status={a.status} />
-                        </div>
-                        <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
-                          <span className="flex items-center gap-1"><Car className="w-3 h-3" />{a.vehicle_info}</span>
-                          <span>{a.service_type}</span>
-                          {a.mechanic_name && (
-                            <span className="flex items-center gap-1"><User className="w-3 h-3" />{a.mechanic_name}</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex gap-1 flex-shrink-0">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-white"
-                        onClick={() => { setEditing(a); setDialogOpen(true); }}>
-                        <Pencil className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-rose-400"
-                        onClick={() => handleDelete(a.id)}>
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                   <button key={a.id}
+                     onClick={() => { setEditing(a); setDialogOpen(true); }}
+                     className="w-full rounded-xl border border-gray-800/50 bg-gray-900/50 p-4 hover:border-sky-500/30 hover:bg-gray-800/50 transition-all flex items-center justify-between gap-4 text-left">
+                     <div className="flex items-center gap-4 min-w-0">
+                       <div className="w-16 text-center flex-shrink-0">
+                         <p className="text-sky-400 font-semibold text-sm">{a.time_slot}</p>
+                       </div>
+                       <div className="min-w-0">
+                         <div className="flex items-center gap-2 flex-wrap">
+                           <span className="text-white font-medium text-sm">{a.customer_name}</span>
+                           <StatusBadge status={a.status} />
+                         </div>
+                         <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                           <span className="flex items-center gap-1"><Car className="w-3 h-3" />{a.vehicle_info}</span>
+                           <span>{a.service_type}</span>
+                           {a.mechanic_name && (
+                             <span className="flex items-center gap-1"><User className="w-3 h-3" />{a.mechanic_name}</span>
+                           )}
+                         </div>
+                       </div>
+                     </div>
+                     <div className="flex gap-1 flex-shrink-0" onClick={e => e.stopPropagation()}>
+                       <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-white"
+                         onClick={(e) => { e.stopPropagation(); setEditing(a); setDialogOpen(true); }}>
+                         <Pencil className="w-3.5 h-3.5" />
+                       </Button>
+                       <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-rose-400"
+                         onClick={(e) => { e.stopPropagation(); handleDelete(a.id); }}>
+                         <Trash2 className="w-3.5 h-3.5" />
+                       </Button>
+                     </div>
+                   </button>
+                 ))}
               </div>
             </div>
           ))}
