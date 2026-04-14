@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
-import { Wrench, CheckCircle2, Clock, Calendar, X, Car } from "lucide-react";
+import { Wrench, CheckCircle2, Clock, Calendar, X, Car, ChevronRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import StatCard from "../components/dashboard/StatCard";
 import RecentOrders from "../components/dashboard/RecentOrders";
 import TodayAppointments from "../components/dashboard/TodayAppointments";
@@ -11,6 +12,7 @@ import StatusBadge from "../components/shared/StatusBadge";
 export default function Dashboard() {
   const [modal, setModal] = useState(null); // { title, items }
   const [user, setUser] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     base44.auth.me().then(setUser);
@@ -76,7 +78,8 @@ export default function Dashboard() {
               <p className="text-gray-500 text-center py-6">No items found.</p>
             )}
             {modal?.type === "order" && modal?.items?.map(o => (
-              <div key={o.id} className="bg-gray-800 rounded-lg p-3 flex items-center justify-between gap-3">
+              <button key={o.id} onClick={() => { setModal(null); navigate(`/RepairOrderDetail/${o.id}`); }}
+                className="w-full bg-gray-800 rounded-lg p-3 flex items-center justify-between gap-3 hover:bg-gray-700 transition-colors text-left">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0">
                     <Car className="w-4 h-4 text-gray-400" />
@@ -86,11 +89,15 @@ export default function Dashboard() {
                     <p className="text-gray-400 text-xs">{o.customer_name} · #{o.order_number || o.id?.slice(0,6)}</p>
                   </div>
                 </div>
-                <StatusBadge status={o.status} />
-              </div>
+                <div className="flex items-center gap-2">
+                  <StatusBadge status={o.status} />
+                  <ChevronRight className="w-4 h-4 text-gray-500" />
+                </div>
+              </button>
             ))}
             {modal?.type === "appt" && modal?.items?.map(a => (
-              <div key={a.id} className="bg-gray-800 rounded-lg p-3 flex items-center justify-between gap-3">
+              <button key={a.id} onClick={() => { setModal(null); navigate(`/Appointments`); }}
+                className="w-full bg-gray-800 rounded-lg p-3 flex items-center justify-between gap-3 hover:bg-gray-700 transition-colors text-left">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0">
                     <Car className="w-4 h-4 text-gray-400" />
@@ -100,8 +107,11 @@ export default function Dashboard() {
                     <p className="text-gray-400 text-xs">{a.customer_name} · {a.time_slot} · {a.service_type}</p>
                   </div>
                 </div>
-                <StatusBadge status={a.status} />
-              </div>
+                <div className="flex items-center gap-2">
+                  <StatusBadge status={a.status} />
+                  <ChevronRight className="w-4 h-4 text-gray-500" />
+                </div>
+              </button>
             ))}
           </div>
         </DialogContent>
