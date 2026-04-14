@@ -3,6 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Wrench, Pencil, Trash2, DollarSign, Clock, History, FileText, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import PageHeader from "../components/shared/PageHeader";
@@ -31,6 +32,7 @@ export default function RepairOrders() {
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [user, setUser] = useState(null);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   useEffect(() => {
     base44.auth.me().then(setUser);
@@ -138,7 +140,7 @@ export default function RepairOrders() {
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="text-white font-semibold">{order.order_number}</h3>
+                      <h3 className="text-white font-semibold cursor-pointer hover:text-sky-400 transition-colors" onClick={() => navigate(`/RepairOrderDetail/${order.id}`)}>{order.order_number}</h3>
                       <StatusBadge status={order.status} />
                     </div>
                     <p className="text-sm text-gray-400 truncate">
