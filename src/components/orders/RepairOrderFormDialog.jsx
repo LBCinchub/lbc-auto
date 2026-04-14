@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
-import { Plus, Trash2, X } from "lucide-react";
+import { Plus, Trash2, X, Loader2 } from "lucide-react";
 
 import CustomerSearchInput from "@/components/shared/CustomerSearchInput";
 
@@ -32,6 +32,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
   const [saving, setSaving] = useState(false);
   const [newCustomerForm, setNewCustomerForm] = useState(null);
   const [newVehicleForm, setNewVehicleForm] = useState(null);
+  const [decodingVin, setDecodingVin] = useState(false);
 
   // Live cost calculation (only if not custom/saved)
   const mechanic = mechanics.find(m => m.id === form.mechanic_id);
@@ -108,15 +109,56 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
     setNewCustomerForm(null);
   };
 
+  const decodeVinForNewVehicle = async () => {
+    if (!newVehicleForm?.vin || newVehicleForm.vin.length < 11) {
+      alert("Please enter a VIN with at least 11 characters.");
+      return;
+    }
+    setDecodingVin(true);
+    try {
+      const result = await base44.integrations.Core.InvokeLLM({
+        prompt: `Decode this VIN number: ${newVehicleForm.vin}. Return the vehicle make, model, year, engine type, and color if determinable.`,
+        add_context_from_internet: true,
+        response_json_schema: {
+          type: "object",
+          properties: {
+            make: { type: "string" },
+            model: { type: "string" },
+            year: { type: "number" },
+            engine_type: { type: "string" },
+            color: { type: "string" }
+          }
+        }
+      });
+      if (result?.make) {
+        setNewVehicleForm(prev => ({
+          ...prev,
+          make: result.make || prev.make,
+          model: result.model || prev.model,
+          year: result.year || prev.year,
+          engine_type: result.engine_type || prev.engine_type,
+          color: result.color || prev.color,
+        }));
+      }
+    } catch (err) {
+      alert("Error decoding VIN: " + (err?.message || "Please try again."));
+    } finally {
+      setDecodingVin(false);
+    }
+  };
+
   const saveNewVehicle = async () => {
     if (!newVehicleForm?.make || !newVehicleForm?.model || !newVehicleForm?.year) return;
     const created = await base44.entities.Vehicle.create({
       customer_id: form.customer_id,
       customer_name: form.customer_name,
+      vin: newVehicleForm.vin || "",
       make: newVehicleForm.make,
       model: newVehicleForm.model,
       year: Number(newVehicleForm.year),
       license_plate: newVehicleForm.license_plate || "",
+      color: newVehicleForm.color || "",
+      engine_type: newVehicleForm.engine_type || "",
     });
     setForm({ ...form, vehicle_id: created.id, vehicle_info: `${created.year} ${created.make} ${created.model}` });
     setNewVehicleForm(null);
@@ -279,6 +321,13 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                <Label className="text-gray-400">Vehicle *</Label>
                {newVehicleForm !== null ? (
                  <div className="bg-gray-800 border border-sky-500/30 rounded-lg p-2 mt-1 space-y-2">
+                   <input value={newVehicleForm.vin} onChange={e => setNewVehicleForm({...newVehicleForm, vin: e.target.value})}
+                     className="w-full px-2 py-1 bg-gray-700 border-gray-600 text-white rounded text-xs" placeholder="VIN (optional)" />
+                   {newVehicleForm.vin && (
+                     <Button size="sm" onClick={decodeVinForNewVehicle} disabled={decodingVin || newVehicleForm.vin.length < 11} className="w-full bg-purple-600 hover:bg-purple-700 text-white text-xs">
+                       {decodingVin ? <><Loader2 className="w-3 h-3 animate-spin" /> Decoding...</> : "Decode VIN"}
+                     </Button>
+                   )}
                    <input value={newVehicleForm.year} onChange={e => setNewVehicleForm({...newVehicleForm, year: e.target.value})}
                      className="w-full px-2 py-1 bg-gray-700 border-gray-600 text-white rounded text-xs" placeholder="Year *" />
                    <input value={newVehicleForm.make} onChange={e => setNewVehicleForm({...newVehicleForm, make: e.target.value})}
@@ -303,7 +352,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                          <SelectItem key={v.id} value={v.id}>{v.year} {v.make} {v.model}</SelectItem>
                        ))}
                        {form.customer_id && customerVehicles.length === 0 && (
-                         <button onClick={() => setNewVehicleForm({ year: "", make: "", model: "", license_plate: "" })}
+                         <button onClick={() => setNewVehicleForm({ vin: "", year: "", make: "", model: "", license_plate: "", color: "", engine_type: "" })}
                            className="w-full px-3 py-2 text-left text-sky-400 hover:bg-sky-500/20 flex items-center gap-2 text-sm">
                            <Plus className="w-3.5 h-3.5" /> Add vehicle
                          </button>
@@ -311,10 +360,10 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                      </SelectContent>
                    </Select>
                    {form.customer_id && customerVehicles.length > 0 && (
-                     <button onClick={() => setNewVehicleForm({ year: "", make: "", model: "", license_plate: "" })}
-                       className="mt-2 w-full px-3 py-1 rounded text-xs bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/40 text-sky-400 flex items-center justify-center gap-2">
-                       <Plus className="w-3 h-3" /> Add vehicle
-                     </button>
+                   <button onClick={() => setNewVehicleForm({ vin: "", year: "", make: "", model: "", license_plate: "", color: "", engine_type: "" })}
+                   className="mt-2 w-full px-3 py-1 rounded text-xs bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/40 text-sky-400 flex items-center justify-center gap-2">
+                   <Plus className="w-3 h-3" /> Add vehicle
+                   </button>
                    )}
                  </div>
                )}
