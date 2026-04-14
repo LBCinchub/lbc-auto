@@ -41,6 +41,12 @@ export default function CustomerProfileDialog({ customer, open, onClose, custome
     enabled: open,
   });
 
+  const { data: estimates = [] } = useQuery({
+    queryKey: ["estimates"],
+    queryFn: () => base44.entities.Estimate.list("-created_date", 200),
+    enabled: open,
+  });
+
   const { data: vehicles = [] } = useQuery({
     queryKey: ["vehicles"],
     queryFn: () => base44.entities.Vehicle.list("-created_date", 200),
@@ -60,6 +66,11 @@ export default function CustomerProfileDialog({ customer, open, onClose, custome
   const customerVehicles = useMemo(() =>
     vehicles.filter(v => v.customer_id === customer?.id),
     [vehicles, customer]
+  );
+
+  const customerEstimates = useMemo(() =>
+    estimates.filter(e => e.customer_id === customer?.id),
+    [estimates, customer]
   );
 
   // Simple recommendations based on order history
@@ -195,6 +206,46 @@ export default function CustomerProfileDialog({ customer, open, onClose, custome
                         <StatusBadge status={o.status} />
                         {o.total_cost > 0 && (
                           <span className="text-emerald-400 text-xs font-semibold">${o.total_cost.toFixed(2)}</span>
+                        )}
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-500" />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </Section>
+
+          {/* Estimates */}
+          <Section icon={FileText} title="Estimates">
+            {customerEstimates.length === 0 ? (
+              <p className="text-gray-500 text-sm">No estimates found.</p>
+            ) : (
+              <div className="space-y-2">
+                {customerEstimates.map(est => (
+                  <button key={est.id}
+                    onClick={() => { onClose(); navigate(`/EstimateDetail/${est.id}`); }}
+                    className="w-full bg-gray-800/60 rounded-lg p-3 flex items-start justify-between gap-3 hover:bg-gray-700/60 transition-colors text-left">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <FileText className="w-3.5 h-3.5 text-gray-400" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-white text-sm font-medium">#{est.estimate_number || est.id?.slice(0,6)}</p>
+                        <p className="text-gray-500 text-xs">{est.vehicle_info}</p>
+                        {est.created_date && (
+                          <p className="text-gray-600 text-xs mt-0.5 flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {new Date(est.created_date).toLocaleDateString()}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="flex flex-col items-end gap-1">
+                        <StatusBadge status={est.status} />
+                        {est.grand_total > 0 && (
+                          <span className="text-emerald-400 text-xs font-semibold">${(est.grand_total || 0).toFixed(2)}</span>
                         )}
                       </div>
                       <ChevronRight className="w-4 h-4 text-gray-500" />
