@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileText, Pencil, Trash2, Printer, Download, DollarSign, MessageSquare, ShieldCheck, Calendar, AlertCircle, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { jsPDF } from "jspdf";
 import PageHeader from "../components/shared/PageHeader";
 import SearchBar from "../components/shared/SearchBar";
@@ -15,6 +16,7 @@ import PaymentReceiptDialog from "../components/invoices/PaymentReceiptDialog";
 
 export default function Invoices() {
   const [search, setSearch] = useState("");
+  const [searchField, setSearchField] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState(null);
@@ -86,14 +88,15 @@ export default function Invoices() {
     .filter(i => {
       if (!search) return true;
       const q = search.toLowerCase();
+      if (searchField === "invoice_number") return i.invoice_number?.toLowerCase().includes(q);
+      if (searchField === "customer") return i.customer_name?.toLowerCase().includes(q);
+      if (searchField === "vehicle") return i.vehicle_info?.toLowerCase().includes(q);
+      // all
       if (i.invoice_number?.toLowerCase().includes(q)) return true;
       if (i.customer_name?.toLowerCase().includes(q)) return true;
       if (i.vehicle_info?.toLowerCase().includes(q)) return true;
       const customer = customers.find(c => c.id === i.customer_id);
       if (customer?.phone?.toLowerCase().includes(q)) return true;
-      const vehicle = vehicles.find(v => i.vehicle_info?.includes(v.make) && v.customer_id === i.customer_id);
-      if (vehicle?.license_plate?.toLowerCase().includes(q)) return true;
-      if (vehicle?.vin?.toLowerCase().includes(q)) return true;
       return false;
     });
 
@@ -212,8 +215,26 @@ export default function Invoices() {
         onAdd={() => { setEditingInvoice(null); setDialogOpen(true); }} addLabel="Create Invoice" />
 
       <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1">
-          <SearchBar value={search} onChange={setSearch} placeholder="Search by invoice # or customer..." />
+        <div className="flex flex-1 gap-2 items-center">
+          <Select value={searchField} onValueChange={setSearchField}>
+            <SelectTrigger className="w-36 bg-gray-900 border-gray-700 text-gray-300">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Fields</SelectItem>
+              <SelectItem value="invoice_number">Invoice #</SelectItem>
+              <SelectItem value="customer">Customer</SelectItem>
+              <SelectItem value="vehicle">Vehicle</SelectItem>
+            </SelectContent>
+          </Select>
+          <div className="flex-1">
+            <SearchBar value={search} onChange={setSearch} placeholder={
+              searchField === "invoice_number" ? "Search by invoice #..." :
+              searchField === "customer" ? "Search by customer..." :
+              searchField === "vehicle" ? "Search by vehicle..." :
+              "Search by invoice #, customer, or vehicle..."
+            } />
+          </div>
         </div>
         <Tabs value={statusFilter} onValueChange={setStatusFilter}>
           <TabsList className="bg-gray-800/50">

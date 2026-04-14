@@ -5,6 +5,7 @@ import { Wrench, Pencil, Trash2, DollarSign, Clock, History, FileText, Phone } f
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import PageHeader from "../components/shared/PageHeader";
 import SearchBar from "../components/shared/SearchBar";
@@ -24,6 +25,7 @@ const statusFilters = [
 
 export default function RepairOrders() {
   const [search, setSearch] = useState("");
+  const [searchField, setSearchField] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
@@ -77,11 +79,14 @@ export default function RepairOrders() {
 
   const filtered = orders
     .filter(o => statusFilter === "all" || o.status === statusFilter)
-    .filter(o =>
-      o.order_number?.toLowerCase().includes(search.toLowerCase()) ||
-      o.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
-      o.vehicle_info?.toLowerCase().includes(search.toLowerCase())
-    );
+    .filter(o => {
+      if (!search) return true;
+      const s = search.toLowerCase();
+      if (searchField === "order_number") return o.order_number?.toLowerCase().includes(s);
+      if (searchField === "customer") return o.customer_name?.toLowerCase().includes(s);
+      if (searchField === "vehicle") return o.vehicle_info?.toLowerCase().includes(s);
+      return o.order_number?.toLowerCase().includes(s) || o.customer_name?.toLowerCase().includes(s) || o.vehicle_info?.toLowerCase().includes(s);
+    });
 
   const handleDelete = async (id) => {
     if (window.confirm("Delete this repair order?")) {
@@ -104,8 +109,26 @@ export default function RepairOrders() {
         onAdd={() => { setEditingOrder(null); setDialogOpen(true); }} addLabel="New Order" />
 
       <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1">
-          <SearchBar value={search} onChange={setSearch} placeholder="Search by order #, customer, or vehicle..." />
+        <div className="flex flex-1 gap-2 items-center">
+          <Select value={searchField} onValueChange={setSearchField}>
+            <SelectTrigger className="w-36 bg-gray-900 border-gray-700 text-gray-300">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Fields</SelectItem>
+              <SelectItem value="order_number">Order #</SelectItem>
+              <SelectItem value="customer">Customer</SelectItem>
+              <SelectItem value="vehicle">Vehicle</SelectItem>
+            </SelectContent>
+          </Select>
+          <div className="flex-1">
+            <SearchBar value={search} onChange={setSearch} placeholder={
+              searchField === "order_number" ? "Search by order #..." :
+              searchField === "customer" ? "Search by customer..." :
+              searchField === "vehicle" ? "Search by vehicle..." :
+              "Search by order #, customer, or vehicle..."
+            } />
+          </div>
         </div>
         <Tabs value={statusFilter} onValueChange={setStatusFilter}>
           <TabsList className="bg-gray-800/50 flex-wrap h-auto">

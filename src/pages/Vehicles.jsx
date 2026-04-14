@@ -4,6 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Car, Pencil, Trash2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import PageHeader from "../components/shared/PageHeader";
 import SearchBar from "../components/shared/SearchBar";
 import EmptyState from "../components/shared/EmptyState";
@@ -11,6 +12,7 @@ import VehicleFormDialog from "../components/vehicles/VehicleFormDialog";
 
 export default function Vehicles() {
   const [search, setSearch] = useState("");
+  const [searchField, setSearchField] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState(null);
   const [user, setUser] = useState(null);
@@ -33,13 +35,15 @@ export default function Vehicles() {
     enabled: !!user,
   });
 
-  const filtered = vehicles.filter(v =>
-    v.make?.toLowerCase().includes(search.toLowerCase()) ||
-    v.model?.toLowerCase().includes(search.toLowerCase()) ||
-    v.license_plate?.toLowerCase().includes(search.toLowerCase()) ||
-    v.vin?.toLowerCase().includes(search.toLowerCase()) ||
-    v.customer_name?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = vehicles.filter(v => {
+    if (!search) return true;
+    const s = search.toLowerCase();
+    if (searchField === "make_model") return v.make?.toLowerCase().includes(s) || v.model?.toLowerCase().includes(s);
+    if (searchField === "customer") return v.customer_name?.toLowerCase().includes(s);
+    if (searchField === "plate") return v.license_plate?.toLowerCase().includes(s);
+    if (searchField === "vin") return v.vin?.toLowerCase().includes(s);
+    return v.make?.toLowerCase().includes(s) || v.model?.toLowerCase().includes(s) || v.license_plate?.toLowerCase().includes(s) || v.vin?.toLowerCase().includes(s) || v.customer_name?.toLowerCase().includes(s);
+  });
 
   const handleDelete = async (id) => {
     if (window.confirm("Delete this vehicle?")) {
@@ -53,7 +57,29 @@ export default function Vehicles() {
       <PageHeader title="Vehicles" subtitle={`${vehicles.length} vehicles registered`}
         onAdd={() => { setEditingVehicle(null); setDialogOpen(true); }} addLabel="Add Vehicle" />
 
-      <SearchBar value={search} onChange={setSearch} placeholder="Search by make, model, VIN, plate, or customer..." />
+      <div className="flex gap-2 items-center">
+        <Select value={searchField} onValueChange={setSearchField}>
+          <SelectTrigger className="w-36 bg-gray-900 border-gray-700 text-gray-300">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Fields</SelectItem>
+            <SelectItem value="make_model">Make/Model</SelectItem>
+            <SelectItem value="customer">Customer</SelectItem>
+            <SelectItem value="plate">License Plate</SelectItem>
+            <SelectItem value="vin">VIN</SelectItem>
+          </SelectContent>
+        </Select>
+        <div className="flex-1">
+          <SearchBar value={search} onChange={setSearch} placeholder={
+            searchField === "make_model" ? "Search by make or model..." :
+            searchField === "customer" ? "Search by customer..." :
+            searchField === "plate" ? "Search by license plate..." :
+            searchField === "vin" ? "Search by VIN..." :
+            "Search by make, model, VIN, plate, or customer..."
+          } />
+        </div>
+      </div>
 
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Package, Pencil, Trash2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import PageHeader from "../components/shared/PageHeader";
 import SearchBar from "../components/shared/SearchBar";
 import EmptyState from "../components/shared/EmptyState";
@@ -11,6 +12,7 @@ import PartFormDialog from "../components/parts/PartFormDialog";
 
 export default function Parts() {
   const [search, setSearch] = useState("");
+  const [searchField, setSearchField] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPart, setEditingPart] = useState(null);
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
@@ -25,11 +27,14 @@ export default function Parts() {
 
   const filtered = parts
     .filter(p => !showLowStockOnly || (p.min_stock > 0 && p.quantity <= p.min_stock))
-    .filter(p =>
-      p.name?.toLowerCase().includes(search.toLowerCase()) ||
-      p.part_number?.toLowerCase().includes(search.toLowerCase()) ||
-      p.supplier?.toLowerCase().includes(search.toLowerCase())
-    );
+    .filter(p => {
+      if (!search) return true;
+      const s = search.toLowerCase();
+      if (searchField === "name") return p.name?.toLowerCase().includes(s);
+      if (searchField === "part_number") return p.part_number?.toLowerCase().includes(s);
+      if (searchField === "supplier") return p.supplier?.toLowerCase().includes(s);
+      return p.name?.toLowerCase().includes(s) || p.part_number?.toLowerCase().includes(s) || p.supplier?.toLowerCase().includes(s);
+    });
 
   const handleDelete = async (id) => {
     if (window.confirm("Delete this part?")) {
@@ -77,7 +82,27 @@ export default function Parts() {
         </div>
       )}
 
-      <SearchBar value={search} onChange={setSearch} placeholder="Search by name, number, or supplier..." />
+      <div className="flex gap-2 items-center">
+        <Select value={searchField} onValueChange={setSearchField}>
+          <SelectTrigger className="w-36 bg-gray-900 border-gray-700 text-gray-300">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Fields</SelectItem>
+            <SelectItem value="name">Name</SelectItem>
+            <SelectItem value="part_number">Part #</SelectItem>
+            <SelectItem value="supplier">Supplier</SelectItem>
+          </SelectContent>
+        </Select>
+        <div className="flex-1">
+          <SearchBar value={search} onChange={setSearch} placeholder={
+            searchField === "name" ? "Search by part name..." :
+            searchField === "part_number" ? "Search by part number..." :
+            searchField === "supplier" ? "Search by supplier..." :
+            "Search by name, number, or supplier..."
+          } />
+        </div>
+      </div>
 
       {isLoading ? (
         <div className="h-64 rounded-xl bg-gray-800/30 animate-pulse" />

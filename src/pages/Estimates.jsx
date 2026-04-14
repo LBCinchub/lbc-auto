@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { ClipboardList, Pencil, Trash2, CheckCircle2, FileText, Phone } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import PageHeader from "../components/shared/PageHeader";
 import SearchBar from "../components/shared/SearchBar";
 import EmptyState from "../components/shared/EmptyState";
@@ -20,6 +21,7 @@ const STATUS_STYLES = {
 
 export default function Estimates() {
   const [search, setSearch] = useState("");
+  const [searchField, setSearchField] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
@@ -54,11 +56,14 @@ export default function Estimates() {
     queryFn: () => base44.entities.Vehicle.list("-created_date", 200),
   });
 
-  const filtered = estimates.filter(e =>
-    e.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
-    e.vehicle_info?.toLowerCase().includes(search.toLowerCase()) ||
-    e.estimate_number?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = estimates.filter(e => {
+    if (!search) return true;
+    const s = search.toLowerCase();
+    if (searchField === "customer") return e.customer_name?.toLowerCase().includes(s);
+    if (searchField === "vehicle") return e.vehicle_info?.toLowerCase().includes(s);
+    if (searchField === "estimate_number") return e.estimate_number?.toLowerCase().includes(s);
+    return e.customer_name?.toLowerCase().includes(s) || e.vehicle_info?.toLowerCase().includes(s) || e.estimate_number?.toLowerCase().includes(s);
+  });
 
   const handleDelete = async (id) => {
     if (window.confirm("Delete this estimate?")) {
@@ -109,7 +114,27 @@ export default function Estimates() {
         addLabel="New Estimate"
       />
 
-      <SearchBar value={search} onChange={setSearch} placeholder="Search by customer, vehicle, or estimate #..." />
+      <div className="flex gap-2 items-center">
+        <Select value={searchField} onValueChange={setSearchField}>
+          <SelectTrigger className="w-36 bg-gray-900 border-gray-700 text-gray-300">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Fields</SelectItem>
+            <SelectItem value="customer">Customer</SelectItem>
+            <SelectItem value="vehicle">Vehicle</SelectItem>
+            <SelectItem value="estimate_number">Estimate #</SelectItem>
+          </SelectContent>
+        </Select>
+        <div className="flex-1">
+          <SearchBar value={search} onChange={setSearch} placeholder={
+            searchField === "customer" ? "Search by customer..." :
+            searchField === "vehicle" ? "Search by vehicle..." :
+            searchField === "estimate_number" ? "Search by estimate #..." :
+            "Search by customer, vehicle, or estimate #..."
+          } />
+        </div>
+      </div>
 
       {isLoading ? (
         <div className="space-y-3">
