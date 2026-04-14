@@ -213,13 +213,11 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
                        </div>
                      </button>
                    ))}
-                   {filteredCustomers.length === 0 && (
-                     <button onClick={() => setNewCustomerForm({ full_name: customerSearch, phone: "", email: "" })}
-                       className="w-full text-left px-3 py-2 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/40 transition-colors flex items-center gap-3">
-                       <Plus className="w-4 h-4 text-sky-400" />
-                       <span className="text-sky-400 text-sm">Create new customer</span>
-                     </button>
-                   )}
+                   <button onClick={() => setNewCustomerForm({ full_name: customerSearch, phone: "", email: "" })}
+                     className="w-full text-left px-3 py-2 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/40 transition-colors flex items-center gap-3 mt-1">
+                     <Plus className="w-4 h-4 text-sky-400" />
+                     <span className="text-sky-400 text-sm">+ Create new customer</span>
+                   </button>
                  </div>
               </div>
             )}
@@ -261,10 +259,10 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
                     ))}
                   </SelectContent>
                 </Select>
-                {form.customer_id && customerVehicles.length === 0 && (
+                {form.customer_id && (
                   <button onClick={() => setNewVehicleForm({ vin: "", year: "", make: "", model: "", license_plate: "", color: "", engine_type: "" })}
                     className="mt-2 w-full px-3 py-2 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/40 text-sky-400 text-sm flex items-center justify-center gap-2">
-                    <Plus className="w-3.5 h-3.5" /> Add vehicle for this customer
+                    <Plus className="w-3.5 h-3.5" /> {customerVehicles.length === 0 ? "Add vehicle for this customer" : "Add new vehicle"}
                   </button>
                 )}
               </div>
