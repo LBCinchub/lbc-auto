@@ -36,6 +36,17 @@ export default function RepairOrders() {
     base44.auth.me().then(setUser);
   }, []);
 
+  // Auto-open new order dialog if coming from customer profile
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const customerId = urlParams.get("customerId");
+    const customerName = urlParams.get("customerName");
+    if (customerId) {
+      setEditingOrder({ customer_id: customerId, customer_name: customerName });
+      setDialogOpen(true);
+    }
+  }, []);
+
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["repairOrders", user?.email],
     queryFn: () => user ? base44.entities.RepairOrder.filter({created_by: user.email}, "-created_date", 200) : Promise.resolve([]),

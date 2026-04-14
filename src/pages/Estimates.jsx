@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
@@ -23,6 +23,18 @@ export default function Estimates() {
   const [editing, setEditing] = useState(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  // Auto-open new estimate dialog if coming from customer profile
+  const urlParams = new URLSearchParams(window.location.search);
+  const prefilledCustomerId = urlParams.get("customerId");
+  const prefilledCustomerName = urlParams.get("customerName");
+
+  React.useEffect(() => {
+    if (prefilledCustomerId) {
+      setEditing({ customer_id: prefilledCustomerId, customer_name: prefilledCustomerName });
+      setDialogOpen(true);
+    }
+  }, []);
 
   const { data: estimates = [], isLoading } = useQuery({
     queryKey: ["estimates"],

@@ -65,14 +65,15 @@ export default function Customers() {
             <div key={customer.id}
               className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5 hover:border-sky-500/30 transition-colors">
               <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3">
+                <button className="flex items-center gap-3 hover:opacity-80 transition-opacity text-left"
+                  onClick={() => setProfileCustomer(customer)}>
                   <div className="w-10 h-10 rounded-full bg-sky-500/20 flex items-center justify-center">
                     <span className="text-sky-400 font-semibold text-sm">
                       {customer.full_name?.charAt(0)?.toUpperCase()}
                     </span>
                   </div>
                   <h3 className="text-white font-semibold">{customer.full_name}</h3>
-                </div>
+                </button>
                 <div className="flex gap-1">
                   <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-sky-400"
                     onClick={() => setProfileCustomer(customer)}>

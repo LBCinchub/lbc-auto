@@ -1,12 +1,14 @@
 import React, { useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle
 } from "@/components/ui/dialog";
 import {
-  Phone, Mail, MapPin, Car, Wrench, FileText, Lightbulb, Clock
+  Phone, Mail, MapPin, Car, Wrench, FileText, Lightbulb, Clock, Plus
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import StatusBadge from "../shared/StatusBadge";
 
 function Section({ icon: Icon, title, children }) {
@@ -21,6 +23,7 @@ function Section({ icon: Icon, title, children }) {
 }
 
 export default function CustomerProfileDialog({ customer, open, onClose }) {
+  const navigate = useNavigate();
   const { data: orders = [] } = useQuery({
     queryKey: ["repairOrders"],
     queryFn: () => base44.entities.RepairOrder.list("-created_date", 200),
@@ -203,6 +206,28 @@ export default function CustomerProfileDialog({ customer, open, onClose }) {
               ))}
             </div>
           </Section>
+
+          {/* Quick Actions */}
+          <div className="border-t border-gray-800 pt-4">
+            <p className="text-gray-500 text-xs uppercase tracking-wide mb-3">Quick Actions</p>
+            <div className="grid grid-cols-3 gap-3">
+              <Button className="bg-emerald-600 hover:bg-emerald-700 text-white flex flex-col h-auto py-3 gap-1"
+                onClick={() => { onClose(); navigate(`/Estimates?customerId=${customer.id}&customerName=${encodeURIComponent(customer.full_name)}`); }}>
+                <FileText className="w-4 h-4" />
+                <span className="text-xs">New Estimate</span>
+              </Button>
+              <Button className="bg-sky-600 hover:bg-sky-700 text-white flex flex-col h-auto py-3 gap-1"
+                onClick={() => { onClose(); navigate(`/RepairOrders?customerId=${customer.id}&customerName=${encodeURIComponent(customer.full_name)}`); }}>
+                <Wrench className="w-4 h-4" />
+                <span className="text-xs">Repair Order</span>
+              </Button>
+              <Button className="bg-purple-600 hover:bg-purple-700 text-white flex flex-col h-auto py-3 gap-1"
+                onClick={() => { onClose(); navigate(`/Invoices?customerId=${customer.id}&customerName=${encodeURIComponent(customer.full_name)}`); }}>
+                <FileText className="w-4 h-4" />
+                <span className="text-xs">New Invoice</span>
+              </Button>
+            </div>
+          </div>
 
         </div>
       </DialogContent>

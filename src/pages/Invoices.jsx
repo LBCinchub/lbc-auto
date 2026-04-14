@@ -28,6 +28,17 @@ export default function Invoices() {
     base44.auth.me().then(setUser);
   }, []);
 
+  // Auto-open new invoice dialog if coming from customer profile
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const customerId = urlParams.get("customerId");
+    const customerName = urlParams.get("customerName");
+    if (customerId) {
+      setEditingInvoice({ customer_id: customerId, customer_name: customerName });
+      setDialogOpen(true);
+    }
+  }, []);
+
   const sendAuthSMS = async (inv) => {
     const customer = customers.find(c => c.id === inv.customer_id);
     const phone = customer?.phone;
