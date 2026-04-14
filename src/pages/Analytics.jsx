@@ -5,9 +5,11 @@ import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from "recharts";
-import { DollarSign, TrendingUp, Wrench, Users, Banknote, CreditCard, Clock, Printer } from "lucide-react";
+import { DollarSign, TrendingUp, Wrench, Users, Banknote, CreditCard, Clock, Printer, FileText } from "lucide-react";
 import { format, startOfDay, startOfWeek, startOfMonth, startOfYear, parseISO, isAfter } from "date-fns";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { jsPDF } from "jspdf";
 import StatCard from "../components/dashboard/StatCard";
 
 const COLORS = ["#0ea5e9", "#8b5cf6", "#10b981", "#f59e0b", "#ef4444", "#ec4899"];
@@ -16,6 +18,7 @@ const REVENUE_PERIODS = ["Day", "Week", "Month", "Year"];
 
 export default function Analytics() {
   const [revPeriod, setRevPeriod] = useState("Month");
+  const [activeTab, setActiveTab] = useState("overview");
 
   const { data: invoices = [] } = useQuery({
     queryKey: ["invoices"],
@@ -35,6 +38,11 @@ export default function Analytics() {
   const { data: timeEntries = [] } = useQuery({
     queryKey: ["timeEntries", "all"],
     queryFn: () => base44.entities.TimeEntry.list("-clock_in", 500),
+  });
+
+  const { data: parts = [] } = useQuery({
+    queryKey: ["parts"],
+    queryFn: () => base44.entities.Part.list("-created_date", 500),
   });
 
   const paidInvoices = invoices.filter(i => i.status === "paid");
@@ -136,6 +144,187 @@ export default function Analytics() {
     const days = [...new Set(entries.map(e => e.date))].length;
     return { name: m.name, hours: parseFloat((totalMinutes / 60).toFixed(1)), days, sessions: entries.length };
   }).filter(m => m.sessions > 0).sort((a, b) => b.hours - a.hours);
+
+  // Top-selling parts analysis
+  const partsUsageMap = {};
+  orders.forEach(order => {
+    if (order.parts_used && Array.isArray(order.parts_used)) {
+      order.parts_used.forEach(part => {
+        if (!partsUsageMap[part.name]) {
+          partsUsageMap[part.name] = { name: part.name, quantity: 0, revenue: 0, count: 0 };
+        }
+        partsUsageMap[part.name].quantity += part.quantity || 1;
+        partsUsageMap[part.name].revenue += part.total || 0;
+        partsUsageMap[part.name].count += 1;
+      });
+    }
+  });
+  const topParts = Object.values(partsUsageMap).sort((a, b) => b.revenue - a.revenue).slice(0, 10);
+
+  // Generate PDF reports
+  const generateMonthlyRevenueReport = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    let yPos = 20;
+
+    doc.setFontSize(20);
+    doc.setTextColor(14, 165, 233);
+    doc.text("Monthly Revenue Report", 20, yPos);
+
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 20, yPos + 8);
+    yPos += 20;
+
+    doc.setFontSize(12);
+    doc.setTextColor(0);
+    doc.text("Revenue by Month", 20, yPos);
+    yPos += 10;
+
+    doc.setFontSize(9);
+    doc.setTextColor(50);
+    doc.setDrawColor(220);
+    const tableData = [["Month", "Labor", "Parts", "Total"]];
+    monthlyChart.forEach(m => {
+      tableData.push([m.month, `$${m.labor.toFixed(2)}`, `$${m.parts.toFixed(2)}`, `$${m.revenue.toFixed(2)}`]);
+    });
+
+    doc.autoTable({
+      startY: yPos,
+      head: [tableData[0]],
+      body: tableData.slice(1),
+      headStyles: { fillColor: [14, 165, 233], textColor: 255, fontStyle: 'bold' },
+      bodyStyles: { textColor: 50 },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+      margin: { left: 20, right: 20 },
+      columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' } }
+    });
+
+    yPos = doc.lastAutoTable.finalY + 10;
+
+    doc.setFontSize(11);
+    doc.setTextColor(0);
+    doc.text("Summary", 20, yPos);
+    yPos += 8;
+
+    const totalRevenue = monthlyChart.reduce((sum, m) => sum + m.revenue, 0);
+    const totalLabor = monthlyChart.reduce((sum, m) => sum + m.labor, 0);
+    const totalParts = monthlyChart.reduce((sum, m) => sum + m.parts, 0);
+
+    doc.setFontSize(10);
+    doc.text(`Total Revenue: $${totalRevenue.toFixed(2)}`, 30, yPos);
+    doc.text(`Total Labor: $${totalLabor.toFixed(2)}`, 30, yPos + 6);
+    doc.text(`Total Parts: $${totalParts.toFixed(2)}`, 30, yPos + 12);
+
+    doc.save("Monthly-Revenue-Report.pdf");
+  };
+
+  const generateTopPartsReport = () => {
+    const doc = new jsPDF();
+    let yPos = 20;
+
+    doc.setFontSize(20);
+    doc.setTextColor(14, 165, 233);
+    doc.text("Top-Selling Parts Report", 20, yPos);
+
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 20, yPos + 8);
+    yPos += 20;
+
+    doc.setFontSize(12);
+    doc.setTextColor(0);
+    doc.text("Top 10 Parts by Revenue", 20, yPos);
+    yPos += 10;
+
+    doc.setFontSize(9);
+    const tableData = [["Part Name", "Quantity Sold", "Jobs", "Total Revenue"]];
+    topParts.forEach(p => {
+      tableData.push([p.name, String(p.quantity), String(p.count), `$${p.revenue.toFixed(2)}`]);
+    });
+
+    doc.autoTable({
+      startY: yPos,
+      head: [tableData[0]],
+      body: tableData.slice(1),
+      headStyles: { fillColor: [14, 165, 233], textColor: 255, fontStyle: 'bold' },
+      bodyStyles: { textColor: 50 },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+      margin: { left: 20, right: 20 },
+      columnStyles: { 1: { halign: 'center' }, 2: { halign: 'center' }, 3: { halign: 'right' } }
+    });
+
+    yPos = doc.lastAutoTable.finalY + 10;
+
+    doc.setFontSize(11);
+    doc.setTextColor(0);
+    doc.text("Summary", 20, yPos);
+    yPos += 8;
+
+    const totalRevenue = topParts.reduce((sum, p) => sum + p.revenue, 0);
+    const totalQuantity = topParts.reduce((sum, p) => sum + p.quantity, 0);
+
+    doc.setFontSize(10);
+    doc.text(`Total Parts Revenue: $${totalRevenue.toFixed(2)}`, 30, yPos);
+    doc.text(`Total Units Sold: ${totalQuantity}`, 30, yPos + 6);
+
+    doc.save("Top-Parts-Report.pdf");
+  };
+
+  const generateTechnicianProductivityReport = () => {
+    const doc = new jsPDF();
+    let yPos = 20;
+
+    doc.setFontSize(20);
+    doc.setTextColor(14, 165, 233);
+    doc.text("Technician Productivity Report", 20, yPos);
+
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 20, yPos + 8);
+    yPos += 20;
+
+    doc.setFontSize(12);
+    doc.setTextColor(0);
+    doc.text("Productivity by Technician", 20, yPos);
+    yPos += 10;
+
+    doc.setFontSize(9);
+    const tableData = [["Technician", "Completed Jobs", "Hours Worked", "Revenue Generated"]];
+    mechProductivity.forEach(m => {
+      tableData.push([m.name, String(m.completed), m.hours.toFixed(1), `$${m.revenue.toFixed(2)}`]);
+    });
+
+    doc.autoTable({
+      startY: yPos,
+      head: [tableData[0]],
+      body: tableData.slice(1),
+      headStyles: { fillColor: [14, 165, 233], textColor: 255, fontStyle: 'bold' },
+      bodyStyles: { textColor: 50 },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+      margin: { left: 20, right: 20 },
+      columnStyles: { 1: { halign: 'center' }, 2: { halign: 'right' }, 3: { halign: 'right' } }
+    });
+
+    yPos = doc.lastAutoTable.finalY + 10;
+
+    doc.setFontSize(11);
+    doc.setTextColor(0);
+    doc.text("Summary", 20, yPos);
+    yPos += 8;
+
+    const totalJobs = mechProductivity.reduce((sum, m) => sum + m.completed, 0);
+    const totalRevenue = mechProductivity.reduce((sum, m) => sum + m.revenue, 0);
+    const avgRevenuePerJob = totalJobs > 0 ? totalRevenue / totalJobs : 0;
+
+    doc.setFontSize(10);
+    doc.text(`Total Completed Jobs: ${totalJobs}`, 30, yPos);
+    doc.text(`Total Revenue Generated: $${totalRevenue.toFixed(2)}`, 30, yPos + 6);
+    doc.text(`Average Revenue Per Job: $${avgRevenuePerJob.toFixed(2)}`, 30, yPos + 12);
+
+    doc.save("Technician-Productivity-Report.pdf");
+  };
 
   // Daily hours chart (last 14 days)
   const dailyHoursMap = {};
@@ -299,6 +488,57 @@ export default function Analytics() {
         <p className="text-gray-400 text-sm mt-1">Financial overview and performance metrics</p>
       </div>
 
+      {/* Tab Navigation */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="bg-gray-800/50 border border-gray-700">
+          <TabsTrigger value="overview" className="text-sm data-[state=active]:bg-sky-500/20 data-[state=active]:text-sky-400">Overview</TabsTrigger>
+          <TabsTrigger value="reports" className="text-sm data-[state=active]:bg-sky-500/20 data-[state=active]:text-sky-400 flex items-center gap-2">
+            <FileText className="w-4 h-4" />
+            PDF Reports
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {activeTab === "reports" && (
+        <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-6 space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold text-white mb-1">Generate Automated Reports</h2>
+            <p className="text-gray-400 text-sm">Download detailed PDFs for monthly revenue, top parts, and technician productivity</p>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <Button
+              onClick={generateMonthlyRevenueReport}
+              className="bg-sky-500 hover:bg-sky-600 text-white gap-2 h-auto py-4 flex flex-col items-center justify-center"
+            >
+              <FileText className="w-5 h-5" />
+              <span>Monthly Revenue</span>
+              <span className="text-xs font-normal opacity-80">12-month breakdown</span>
+            </Button>
+
+            <Button
+              onClick={generateTopPartsReport}
+              className="bg-purple-500 hover:bg-purple-600 text-white gap-2 h-auto py-4 flex flex-col items-center justify-center"
+            >
+              <FileText className="w-5 h-5" />
+              <span>Top-Selling Parts</span>
+              <span className="text-xs font-normal opacity-80">Top 10 by revenue</span>
+            </Button>
+
+            <Button
+              onClick={generateTechnicianProductivityReport}
+              className="bg-amber-500 hover:bg-amber-600 text-white gap-2 h-auto py-4 flex flex-col items-center justify-center"
+            >
+              <FileText className="w-5 h-5" />
+              <span>Technician Report</span>
+              <span className="text-xs font-normal opacity-80">Productivity metrics</span>
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {activeTab === "overview" && (
+        <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Clickable Total Revenue card with period toggle */}
         <div className="rounded-xl border border-green-700/30 bg-gradient-to-br from-green-900/30 to-green-950/10 p-4 cursor-pointer select-none"
@@ -580,6 +820,8 @@ export default function Analytics() {
             </table>
           )}
         </div>
+      )}
+        </>
       )}
     </div>
   );
