@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
-import { Search, User } from "lucide-react";
+import { Search, User, Plus } from "lucide-react";
 
 const timeSlots = [
   "8:00 AM", "8:30 AM", "9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM",
@@ -24,6 +24,8 @@ const serviceTypes = [
 
 export default function AppointmentFormDialog({ open, onClose, appointment, onSaved, customers, vehicles, mechanics }) {
   const [customerSearch, setCustomerSearch] = useState("");
+  const [newCustomerForm, setNewCustomerForm] = useState(null);
+  const [newVehicleForm, setNewVehicleForm] = useState(null);
   const [form, setForm] = useState({
     customer_id: "", customer_name: "", vehicle_id: "", vehicle_info: "",
     mechanic_id: "", mechanic_name: "", service_type: "", date: "",
@@ -79,6 +81,31 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
     setForm({ ...form, mechanic_id: id, mechanic_name: m?.name || "" });
   };
 
+  const saveNewCustomer = async () => {
+    if (!newCustomerForm?.full_name || !newCustomerForm?.phone) return;
+    const created = await base44.entities.Customer.create({
+      full_name: newCustomerForm.full_name,
+      phone: newCustomerForm.phone,
+      email: newCustomerForm.email || "",
+    });
+    handleCustomerChange(created.id);
+    setNewCustomerForm(null);
+  };
+
+  const saveNewVehicle = async () => {
+    if (!newVehicleForm?.make || !newVehicleForm?.model || !newVehicleForm?.year) return;
+    const created = await base44.entities.Vehicle.create({
+      customer_id: form.customer_id,
+      customer_name: form.customer_name,
+      make: newVehicleForm.make,
+      model: newVehicleForm.model,
+      year: Number(newVehicleForm.year),
+      license_plate: newVehicleForm.license_plate || "",
+    });
+    setForm({ ...form, vehicle_id: created.id, vehicle_info: `${created.year} ${created.make} ${created.model}` });
+    setNewVehicleForm(null);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     if (appointment) {
@@ -98,6 +125,21 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
           <DialogTitle>{appointment ? "Edit Appointment" : "New Appointment"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 mt-2">
+          {newCustomerForm !== null && (
+            <div className="bg-gray-800 border border-sky-500/30 rounded-lg p-3 space-y-2 mb-2">
+              <p className="text-xs text-sky-400 font-medium">New Customer</p>
+              <Input value={newCustomerForm.full_name} onChange={e => setNewCustomerForm({...newCustomerForm, full_name: e.target.value})}
+                className="bg-gray-700 border-gray-600 text-white" placeholder="Full name *" />
+              <Input value={newCustomerForm.phone} onChange={e => setNewCustomerForm({...newCustomerForm, phone: e.target.value})}
+                className="bg-gray-700 border-gray-600 text-white" placeholder="Phone number *" />
+              <Input value={newCustomerForm.email} onChange={e => setNewCustomerForm({...newCustomerForm, email: e.target.value})}
+                className="bg-gray-700 border-gray-600 text-white" placeholder="Email" />
+              <div className="flex gap-2">
+                <Button size="sm" onClick={saveNewCustomer} disabled={!newCustomerForm.full_name || !newCustomerForm.phone} className="bg-sky-500 hover:bg-sky-600 text-white flex-1">Save</Button>
+                <Button size="sm" variant="ghost" onClick={() => setNewCustomerForm(null)} className="text-gray-400 flex-1">Cancel</Button>
+              </div>
+            </div>
+          )}
           <div>
             <Label className="text-gray-400">Customer *</Label>
             {form.customer_id ? (
@@ -117,36 +159,67 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
                     className="bg-gray-800 border-gray-700 text-white pl-8" placeholder="Search by name or phone..." />
                 </div>
                 <div className="max-h-40 overflow-y-auto space-y-1">
-                  {filteredCustomers.map(c => (
-                    <button key={c.id} onClick={() => handleCustomerChange(c.id)}
-                      className="w-full text-left px-3 py-2 rounded-lg bg-gray-800 hover:bg-sky-500/20 hover:border-sky-500/40 border border-transparent transition-colors flex items-center gap-3">
-                      <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0">
-                        <User className="w-3.5 h-3.5 text-gray-400" />
-                      </div>
-                      <div>
-                        <p className="text-white text-sm font-medium">{c.full_name}</p>
-                        <p className="text-gray-400 text-xs">{c.phone}</p>
-                      </div>
-                    </button>
-                  ))}
-                  {filteredCustomers.length === 0 && <p className="text-gray-500 text-xs text-center py-2">No customers found</p>}
-                </div>
+                   {filteredCustomers.map(c => (
+                     <button key={c.id} onClick={() => handleCustomerChange(c.id)}
+                       className="w-full text-left px-3 py-2 rounded-lg bg-gray-800 hover:bg-sky-500/20 hover:border-sky-500/40 border border-transparent transition-colors flex items-center gap-3">
+                       <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0">
+                         <User className="w-3.5 h-3.5 text-gray-400" />
+                       </div>
+                       <div>
+                         <p className="text-white text-sm font-medium">{c.full_name}</p>
+                         <p className="text-gray-400 text-xs">{c.phone}</p>
+                       </div>
+                     </button>
+                   ))}
+                   {filteredCustomers.length === 0 && (
+                     <button onClick={() => setNewCustomerForm({ full_name: customerSearch, phone: "", email: "" })}
+                       className="w-full text-left px-3 py-2 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/40 transition-colors flex items-center gap-3">
+                       <Plus className="w-4 h-4 text-sky-400" />
+                       <span className="text-sky-400 text-sm">Create new customer</span>
+                     </button>
+                   )}
+                 </div>
               </div>
             )}
           </div>
 
           <div>
             <Label className="text-gray-400">Vehicle *</Label>
-            <Select value={form.vehicle_id} onValueChange={handleVehicleChange}>
-              <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
-                <SelectValue placeholder="Select vehicle" />
-              </SelectTrigger>
-              <SelectContent className="bg-gray-800 border-gray-700">
-                {customerVehicles.map(v => (
-                  <SelectItem key={v.id} value={v.id}>{v.year} {v.make} {v.model}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {newVehicleForm !== null ? (
+              <div className="bg-gray-800 border border-sky-500/30 rounded-lg p-2 mt-1 space-y-2">
+                <input value={newVehicleForm.year} onChange={e => setNewVehicleForm({...newVehicleForm, year: e.target.value})}
+                  className="w-full px-2 py-1 bg-gray-700 border-gray-600 text-white rounded text-xs" placeholder="Year *" />
+                <input value={newVehicleForm.make} onChange={e => setNewVehicleForm({...newVehicleForm, make: e.target.value})}
+                  className="w-full px-2 py-1 bg-gray-700 border-gray-600 text-white rounded text-xs" placeholder="Make *" />
+                <input value={newVehicleForm.model} onChange={e => setNewVehicleForm({...newVehicleForm, model: e.target.value})}
+                  className="w-full px-2 py-1 bg-gray-700 border-gray-600 text-white rounded text-xs" placeholder="Model *" />
+                <input value={newVehicleForm.license_plate} onChange={e => setNewVehicleForm({...newVehicleForm, license_plate: e.target.value})}
+                  className="w-full px-2 py-1 bg-gray-700 border-gray-600 text-white rounded text-xs" placeholder="License plate" />
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={saveNewVehicle} disabled={!newVehicleForm.year || !newVehicleForm.make || !newVehicleForm.model} className="bg-sky-500 hover:bg-sky-600 text-white flex-1">Save</Button>
+                  <Button size="sm" variant="ghost" onClick={() => setNewVehicleForm(null)} className="text-gray-400 flex-1">Cancel</Button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <Select value={form.vehicle_id} onValueChange={handleVehicleChange}>
+                  <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
+                    <SelectValue placeholder="Select vehicle" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-800 border-gray-700">
+                    {customerVehicles.map(v => (
+                      <SelectItem key={v.id} value={v.id}>{v.year} {v.make} {v.model}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {form.customer_id && customerVehicles.length === 0 && (
+                  <button onClick={() => setNewVehicleForm({ year: "", make: "", model: "", license_plate: "" })}
+                    className="mt-2 w-full px-3 py-2 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/40 text-sky-400 text-sm flex items-center justify-center gap-2">
+                    <Plus className="w-3.5 h-3.5" /> Add vehicle for this customer
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           <div>

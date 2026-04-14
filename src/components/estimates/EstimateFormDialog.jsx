@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
-import { Plus, Trash2, Loader2 } from "lucide-react";
+import { Plus, Trash2, Loader2, X } from "lucide-react";
 
 const emptyLaborRow = () => ({ description: "", hours: "", rate: "", total: 0 });
 const emptyPartRow  = () => ({ name: "", part_number: "", quantity: "", unit_price: "", total: 0 });
@@ -23,6 +23,8 @@ const emptyForm = {
 export default function EstimateFormDialog({ open, onClose, estimate, customers, vehicles, repairOrderId, onSaved }) {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [newCustomerForm, setNewCustomerForm] = useState(null);
+  const [newVehicleForm, setNewVehicleForm] = useState(null);
 
   useEffect(() => {
     if (estimate) {
@@ -85,6 +87,31 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
     setForm(f => ({ ...f, vehicle_id: vid, vehicle_info: v ? `${v.year} ${v.make} ${v.model}` : "" }));
   };
 
+  const saveNewCustomer = async () => {
+    if (!newCustomerForm?.full_name || !newCustomerForm?.phone) return;
+    const created = await base44.entities.Customer.create({
+      full_name: newCustomerForm.full_name,
+      phone: newCustomerForm.phone,
+      email: newCustomerForm.email || "",
+    });
+    handleCustomerChange(created.id);
+    setNewCustomerForm(null);
+  };
+
+  const saveNewVehicle = async () => {
+    if (!newVehicleForm?.make || !newVehicleForm?.model || !newVehicleForm?.year) return;
+    const created = await base44.entities.Vehicle.create({
+      customer_id: form.customer_id,
+      customer_name: form.customer_name,
+      make: newVehicleForm.make,
+      model: newVehicleForm.model,
+      year: Number(newVehicleForm.year),
+      license_plate: newVehicleForm.license_plate || "",
+    });
+    setForm(f => ({ ...f, vehicle_id: created.id, vehicle_info: `${created.year} ${created.make} ${created.model}` }));
+    setNewVehicleForm(null);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     const estNum = estimate?.estimate_number || `EST-${Date.now().toString().slice(-6)}`;
@@ -120,33 +147,87 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
         </DialogHeader>
 
         <div className="space-y-6 mt-2">
-          {/* Customer & Vehicle */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label className="text-gray-400">Customer *</Label>
-              <Select value={form.customer_id} onValueChange={handleCustomerChange}>
-                <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
-                  <SelectValue placeholder="Select customer..." />
-                </SelectTrigger>
-                <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                  {customers.map(c => <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="text-gray-400">Vehicle *</Label>
-              <Select value={form.vehicle_id} onValueChange={handleVehicleChange} disabled={!form.customer_id}>
-                <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
-                  <SelectValue placeholder="Select vehicle..." />
-                </SelectTrigger>
-                <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                  {customerVehicles.map(v => (
-                    <SelectItem key={v.id} value={v.id}>{v.year} {v.make} {v.model} {v.license_plate ? `(${v.license_plate})` : ""}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+           {newCustomerForm !== null && (
+             <div className="bg-gray-800 border border-sky-500/30 rounded-lg p-3 space-y-2 mb-2">
+               <div className="flex items-center justify-between">
+                 <p className="text-xs text-sky-400 font-medium">New Customer</p>
+                 <button onClick={() => setNewCustomerForm(null)} className="text-gray-500 hover:text-gray-300">
+                   <X className="w-3.5 h-3.5" />
+                 </button>
+               </div>
+               <Input value={newCustomerForm.full_name} onChange={e => setNewCustomerForm({...newCustomerForm, full_name: e.target.value})}
+                 className="bg-gray-700 border-gray-600 text-white" placeholder="Full name *" />
+               <Input value={newCustomerForm.phone} onChange={e => setNewCustomerForm({...newCustomerForm, phone: e.target.value})}
+                 className="bg-gray-700 border-gray-600 text-white" placeholder="Phone number *" />
+               <Input value={newCustomerForm.email} onChange={e => setNewCustomerForm({...newCustomerForm, email: e.target.value})}
+                 className="bg-gray-700 border-gray-600 text-white" placeholder="Email" />
+               <div className="flex gap-2">
+                 <Button size="sm" onClick={saveNewCustomer} disabled={!newCustomerForm.full_name || !newCustomerForm.phone} className="bg-sky-500 hover:bg-sky-600 text-white flex-1">Save</Button>
+               </div>
+             </div>
+           )}
+           {/* Customer & Vehicle */}
+           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+             <div>
+               <Label className="text-gray-400">Customer *</Label>
+               <Select value={form.customer_id} onValueChange={handleCustomerChange}>
+                 <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
+                   <SelectValue placeholder="Select customer..." />
+                 </SelectTrigger>
+                 <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                   {customers.map(c => <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>)}
+                   <button onClick={() => setNewCustomerForm({ full_name: "", phone: "", email: "" })}
+                     className="w-full px-3 py-2 text-left text-sky-400 hover:bg-sky-500/20 flex items-center gap-2 text-sm">
+                     <Plus className="w-3.5 h-3.5" /> New customer
+                   </button>
+                 </SelectContent>
+               </Select>
+             </div>
+             <div>
+               <Label className="text-gray-400">Vehicle *</Label>
+               {newVehicleForm !== null ? (
+                 <div className="bg-gray-800 border border-sky-500/30 rounded-lg p-2 mt-1 space-y-2">
+                   <input value={newVehicleForm.year} onChange={e => setNewVehicleForm({...newVehicleForm, year: e.target.value})}
+                     className="w-full px-2 py-1 bg-gray-700 border-gray-600 text-white rounded text-xs" placeholder="Year *" />
+                   <input value={newVehicleForm.make} onChange={e => setNewVehicleForm({...newVehicleForm, make: e.target.value})}
+                     className="w-full px-2 py-1 bg-gray-700 border-gray-600 text-white rounded text-xs" placeholder="Make *" />
+                   <input value={newVehicleForm.model} onChange={e => setNewVehicleForm({...newVehicleForm, model: e.target.value})}
+                     className="w-full px-2 py-1 bg-gray-700 border-gray-600 text-white rounded text-xs" placeholder="Model *" />
+                   <input value={newVehicleForm.license_plate} onChange={e => setNewVehicleForm({...newVehicleForm, license_plate: e.target.value})}
+                     className="w-full px-2 py-1 bg-gray-700 border-gray-600 text-white rounded text-xs" placeholder="License plate" />
+                   <div className="flex gap-2">
+                     <Button size="sm" onClick={saveNewVehicle} disabled={!newVehicleForm.year || !newVehicleForm.make || !newVehicleForm.model} className="bg-sky-500 hover:bg-sky-600 text-white flex-1">Save</Button>
+                     <Button size="sm" variant="ghost" onClick={() => setNewVehicleForm(null)} className="text-gray-400 flex-1">Cancel</Button>
+                   </div>
+                 </div>
+               ) : (
+                 <div>
+                   <Select value={form.vehicle_id} onValueChange={handleVehicleChange} disabled={!form.customer_id}>
+                     <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
+                       <SelectValue placeholder="Select vehicle..." />
+                     </SelectTrigger>
+                     <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                       {customerVehicles.map(v => (
+                         <SelectItem key={v.id} value={v.id}>{v.year} {v.make} {v.model} {v.license_plate ? `(${v.license_plate})` : ""}</SelectItem>
+                       ))}
+                       {form.customer_id && customerVehicles.length === 0 && (
+                         <button onClick={() => setNewVehicleForm({ year: "", make: "", model: "", license_plate: "" })}
+                           className="w-full px-3 py-2 text-left text-sky-400 hover:bg-sky-500/20 flex items-center gap-2 text-sm">
+                           <Plus className="w-3.5 h-3.5" /> Add vehicle
+                         </button>
+                       )}
+                     </SelectContent>
+                   </Select>
+                   {form.customer_id && customerVehicles.length > 0 && (
+                     <button onClick={() => setNewVehicleForm({ year: "", make: "", model: "", license_plate: "" })}
+                       className="mt-2 w-full px-3 py-1 rounded text-xs bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/40 text-sky-400 flex items-center justify-center gap-2">
+                       <Plus className="w-3 h-3" /> Add another
+                     </button>
+                   )}
+                 </div>
+               )}
+             </div>
+           </div>
 
           {/* Status / Tax / Valid Until */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
