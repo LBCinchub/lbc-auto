@@ -183,7 +183,15 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
             </div>
           )}
           <div>
-            <Label className="text-gray-400">Customer *</Label>
+            <div className="flex items-center justify-between mb-1">
+              <Label className="text-gray-400">Customer *</Label>
+              {!form.customer_id && newCustomerForm === null && (
+                <button onClick={() => setNewCustomerForm({ full_name: "", phone: "", email: "" })}
+                  className="text-xs text-sky-400 hover:text-sky-300 flex items-center gap-1">
+                  <Plus className="w-3 h-3" /> New Customer
+                </button>
+              )}
+            </div>
             {form.customer_id ? (
               <div className="mt-1 flex items-center justify-between bg-sky-500/10 border border-sky-500/40 rounded-lg px-3 py-2">
                 <div>
@@ -213,11 +221,13 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
                        </div>
                      </button>
                    ))}
-                   <button onClick={() => setNewCustomerForm({ full_name: customerSearch, phone: "", email: "" })}
-                     className="w-full text-left px-3 py-2 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/40 transition-colors flex items-center gap-3 mt-1">
-                     <Plus className="w-4 h-4 text-sky-400" />
-                     <span className="text-sky-400 text-sm">+ Create new customer</span>
-                   </button>
+                   {filteredCustomers.length === 0 && (
+                     <button onClick={() => setNewCustomerForm({ full_name: customerSearch, phone: "", email: "" })}
+                       className="w-full text-left px-3 py-2 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/40 transition-colors flex items-center gap-3 mt-1">
+                       <Plus className="w-4 h-4 text-sky-400" />
+                       <span className="text-sky-400 text-sm">No results — create new customer</span>
+                     </button>
+                   )}
                  </div>
               </div>
             )}
