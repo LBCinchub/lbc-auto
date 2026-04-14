@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Users, Phone, Mail, MapPin, Pencil, Trash2, Eye } from "lucide-react";
+import { Users, Phone, Mail, MapPin, Pencil, Trash2 } from "lucide-react";
 import CustomerProfileDialog from "../components/customers/CustomerProfileDialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -100,10 +100,6 @@ export default function Customers() {
                    <h3 className="text-white font-semibold truncate">{customer.full_name}</h3>
                  </div>
                  <div className="flex gap-1 ml-2 flex-shrink-0" onClick={e => e.stopPropagation()}>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-sky-400"
-                    onClick={() => setProfileCustomer(customer)}>
-                    <Eye className="w-3.5 h-3.5" />
-                  </Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-white"
                     onClick={() => { setEditingCustomer(customer); setDialogOpen(true); }}>
                     <Pencil className="w-3.5 h-3.5" />
@@ -112,7 +108,7 @@ export default function Customers() {
                     onClick={() => handleDelete(customer.id)}>
                     <Trash2 className="w-3.5 h-3.5" />
                   </Button>
-                </div>
+                 </div>
               </div>
               <div className="space-y-1.5">
                 {customer.phone && (
