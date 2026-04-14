@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, FileText, Plus, Trash2, MoreVertical, Clock, History } from "lucide-react";
+import { ArrowLeft, FileText, Plus, Trash2, MoreVertical, Clock, History, Wrench } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,8 @@ export default function RepairOrderDetail() {
   const [showEstimateDialog, setShowEstimateDialog] = useState(false);
   const [showPartDialog, setShowPartDialog] = useState(false);
   const [newPart, setNewPart] = useState({ name: "", quantity: "", unit_price: "" });
+  const [showLaborDialog, setShowLaborDialog] = useState(false);
+  const [newLabor, setNewLabor] = useState({ description: "", hours: "", rate: "" });
 
   const { data: order, isLoading } = useQuery({
     queryKey: ["repairOrder", orderId],
@@ -189,6 +191,40 @@ export default function RepairOrderDetail() {
           </div>
         )}
 
+        {/* Labor Section */}
+        <div className="mt-8 pt-6 border-t border-gray-800">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <Wrench className="w-5 h-5 text-sky-400" /> Labor
+            </h3>
+            <button onClick={() => setShowLaborDialog(true)} className="text-sky-400 hover:text-sky-300 text-sm flex items-center gap-1">
+              <Plus className="w-4 h-4" /> Add Labor
+            </button>
+          </div>
+          {order.labor_items && order.labor_items.length > 0 ? (
+            <div className="space-y-3">
+              {order.labor_items.map((item, idx) => (
+                <div key={idx} className="flex justify-between items-center bg-gray-800/30 rounded-lg p-3">
+                  <div>
+                    <p className="text-white font-medium">{item.description}</p>
+                    <p className="text-gray-400 text-sm">{item.hours}h @ ${item.rate}/hr</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <p className="text-white font-semibold">${(item.hours * item.rate).toFixed(2)}</p>
+                    <button onClick={() => removeLabor(idx)} className="text-gray-600 hover:text-rose-400 transition-colors p-1">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <button onClick={() => setShowLaborDialog(true)} className="text-sky-400 hover:text-sky-300 flex items-center gap-2 font-medium">
+              <Plus className="w-5 h-5" /> Add First Labor Entry
+            </button>
+          )}
+        </div>
+
         {order.notes && (
           <div className="mt-8 pt-6 border-t border-gray-800">
             <h3 className="text-lg font-bold text-white mb-3">Notes</h3>
@@ -259,6 +295,40 @@ export default function RepairOrderDetail() {
         }}
       />
 
+      <Dialog open={showLaborDialog} onOpenChange={setShowLaborDialog}>
+        <DialogContent className="bg-gray-900 border-gray-800 text-white">
+          <DialogHeader>
+            <DialogTitle>Add Labor</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-gray-400">Description</Label>
+              <Input value={newLabor.description} onChange={e => setNewLabor({...newLabor, description: e.target.value})}
+                className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="e.g. Oil change, Brake replacement" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-gray-400">Hours</Label>
+                <Input type="number" step="0.5" value={newLabor.hours} onChange={e => setNewLabor({...newLabor, hours: e.target.value})}
+                  className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="0" />
+              </div>
+              <div>
+                <Label className="text-gray-400">Rate ($/hr)</Label>
+                <Input type="number" value={newLabor.rate} onChange={e => setNewLabor({...newLabor, rate: e.target.value})}
+                  className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="0.00" />
+              </div>
+            </div>
+            {newLabor.hours && newLabor.rate && (
+              <p className="text-sky-400 text-sm font-medium">Total: ${(parseFloat(newLabor.hours) * parseFloat(newLabor.rate)).toFixed(2)}</p>
+            )}
+            <div className="flex gap-3 pt-2">
+              <button onClick={() => setShowLaborDialog(false)} className="flex-1 px-4 py-2 rounded border border-gray-700 text-gray-300 hover:bg-gray-800">Cancel</button>
+              <button onClick={addLabor} className="flex-1 px-4 py-2 rounded bg-sky-500 hover:bg-sky-600 text-white font-medium">Add Labor</button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={showPartDialog} onOpenChange={setShowPartDialog}>
         <DialogContent className="bg-gray-900 border-gray-800 text-white">
           <DialogHeader>
@@ -307,6 +377,38 @@ export default function RepairOrderDetail() {
   function removePart(idx) {
     const updatedParts = order.parts_used.filter((_, i) => i !== idx);
     base44.entities.RepairOrder.update(orderId, { parts_used: updatedParts });
+    queryClient.invalidateQueries({ queryKey: ["repairOrder", orderId] });
+  }
+
+  function addLabor() {
+    if (!newLabor.description || !newLabor.hours || !newLabor.rate) return;
+    const hours = parseFloat(newLabor.hours) || 0;
+    const rate = parseFloat(newLabor.rate) || 0;
+    const item = { description: newLabor.description, hours, rate, total: hours * rate };
+    const updatedItems = [...(order.labor_items || []), item];
+    const newLaborCost = updatedItems.reduce((sum, i) => sum + i.hours * i.rate, 0);
+    const newTotal = newLaborCost + (order.parts_cost || 0);
+    base44.entities.RepairOrder.update(orderId, {
+      labor_items: updatedItems,
+      labor_hours: updatedItems.reduce((sum, i) => sum + i.hours, 0),
+      labor_cost: newLaborCost,
+      total_cost: newTotal,
+    });
+    setNewLabor({ description: "", hours: "", rate: "" });
+    setShowLaborDialog(false);
+    queryClient.invalidateQueries({ queryKey: ["repairOrder", orderId] });
+  }
+
+  function removeLabor(idx) {
+    const updatedItems = order.labor_items.filter((_, i) => i !== idx);
+    const newLaborCost = updatedItems.reduce((sum, i) => sum + i.hours * i.rate, 0);
+    const newTotal = newLaborCost + (order.parts_cost || 0);
+    base44.entities.RepairOrder.update(orderId, {
+      labor_items: updatedItems,
+      labor_hours: updatedItems.reduce((sum, i) => sum + i.hours, 0),
+      labor_cost: newLaborCost,
+      total_cost: newTotal,
+    });
     queryClient.invalidateQueries({ queryKey: ["repairOrder", orderId] });
   }
 }
