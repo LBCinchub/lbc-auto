@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Users, Phone, Mail, MapPin, Pencil, Trash2, Eye } from "lucide-react";
 import CustomerProfileDialog from "../components/customers/CustomerProfileDialog";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import PageHeader from "../components/shared/PageHeader";
 import SearchBar from "../components/shared/SearchBar";
 import EmptyState from "../components/shared/EmptyState";
@@ -11,6 +12,7 @@ import CustomerFormDialog from "../components/customers/CustomerFormDialog";
 
 export default function Customers() {
   const [search, setSearch] = useState("");
+  const [searchField, setSearchField] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [profileCustomer, setProfileCustomer] = useState(null);
@@ -28,11 +30,15 @@ export default function Customers() {
     enabled: !!user,
   });
 
-  const filtered = customers.filter(c =>
-    c.full_name?.toLowerCase().includes(search.toLowerCase()) ||
-    c.phone?.includes(search) ||
-    c.email?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = customers.filter(c => {
+    if (!search) return true;
+    const s = search.toLowerCase();
+    if (searchField === "name") return c.full_name?.toLowerCase().includes(s);
+    if (searchField === "phone") return c.phone?.includes(search);
+    if (searchField === "email") return c.email?.toLowerCase().includes(s);
+    // "all"
+    return c.full_name?.toLowerCase().includes(s) || c.phone?.includes(search) || c.email?.toLowerCase().includes(s);
+  });
 
   const handleDelete = async (id) => {
     if (window.confirm("Delete this customer?")) {
@@ -46,7 +52,27 @@ export default function Customers() {
       <PageHeader title="Customers" subtitle={`${customers.length} total customers`}
         onAdd={() => { setEditingCustomer(null); setDialogOpen(true); }} addLabel="Add Customer" />
 
-      <SearchBar value={search} onChange={setSearch} placeholder="Search by name, phone, or email..." />
+      <div className="flex gap-2 items-center">
+        <Select value={searchField} onValueChange={setSearchField}>
+          <SelectTrigger className="w-36 bg-gray-900 border-gray-700 text-gray-300">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Fields</SelectItem>
+            <SelectItem value="name">Name</SelectItem>
+            <SelectItem value="phone">Phone</SelectItem>
+            <SelectItem value="email">Email</SelectItem>
+          </SelectContent>
+        </Select>
+        <div className="flex-1">
+          <SearchBar value={search} onChange={setSearch} placeholder={
+            searchField === "name" ? "Search by name..." :
+            searchField === "phone" ? "Search by phone..." :
+            searchField === "email" ? "Search by email..." :
+            "Search by name, phone, or email..."
+          } />
+        </div>
+      </div>
 
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
