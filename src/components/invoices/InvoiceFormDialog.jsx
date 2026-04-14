@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { base44 } from "@/api/base44Client";
 import { Textarea } from "@/components/ui/textarea";
 
-export default function InvoiceFormDialog({ open, onClose, invoice, orders, customers, onSaved, initialOrderId }) {
+export default function InvoiceFormDialog({ open, onClose, invoice, orders, customers, onSaved, initialOrderId, sourceEstimate }) {
   const [form, setForm] = useState({
     repair_order_id: "", customer_id: "", customer_name: "", customer_phone: "", vehicle_info: "",
     parts_total: 0, labor_total: 0, tax_rate: 15, status: "unpaid",
@@ -67,7 +67,26 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         }));
       }
     }
-  }, [invoice, open, initialOrderId]);
+    // Auto-populate from estimate
+    if (!invoice && sourceEstimate) {
+      setForm(f => ({
+        ...f,
+        estimate_id: sourceEstimate.id,
+        customer_id: sourceEstimate.customer_id,
+        customer_name: sourceEstimate.customer_name,
+        vehicle_info: sourceEstimate.vehicle_info,
+        parts_total: sourceEstimate.parts_total || 0,
+        labor_total: sourceEstimate.labor_total || 0,
+        parts_used: sourceEstimate.parts_items?.map(p => ({
+          name: p.name,
+          quantity: p.quantity,
+          unit_price: p.unit_price,
+          total: p.total,
+        })) || [],
+        customer_note: sourceEstimate.notes || "",
+      }));
+    }
+  }, [invoice, open, initialOrderId, sourceEstimate]);
 
   const handleOrderSelect = async (orderId) => {
     const order = orders.find(o => o.id === orderId);
@@ -132,6 +151,12 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
      finalStatus = "partial";
    }
 
+   // Auto-detect overdue
+   if (finalStatus !== "paid" && form.due_date) {
+     const today = new Date().toISOString().split("T")[0];
+     if (form.due_date < today) finalStatus = "overdue";
+   }
+
    const data = {
      ...form,
      invoice_number: invoice?.invoice_number || `INV-${Date.now().toString(36).toUpperCase()}`,
@@ -143,6 +168,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
      status: finalStatus,
      paid_date: paidDate,
      line_items: lineItems,
+     estimate_id: form.estimate_id || sourceEstimate?.id || "",
    };
 
    if (invoice) {
@@ -159,24 +185,35 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-md max-h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>{invoice ? "Edit Invoice" : "Create Invoice"}</DialogTitle>
+          <DialogTitle>
+            {invoice ? "Edit Invoice" : sourceEstimate ? `Invoice from Estimate #${sourceEstimate.estimate_number}` : "Create Invoice"}
+          </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 mt-2 overflow-y-auto flex-1">
-          <div>
-            <Label className="text-gray-400">Repair Order</Label>
-            <Select value={form.repair_order_id} onValueChange={handleOrderSelect}>
-              <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
-                <SelectValue placeholder="Link to repair order" />
-              </SelectTrigger>
-              <SelectContent className="bg-gray-800 border-gray-700">
-                {orders.map(o => (
-                  <SelectItem key={o.id} value={o.id}>
-                    {o.order_number} - {o.customer_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {!sourceEstimate && (
+            <div>
+              <Label className="text-gray-400">Repair Order</Label>
+              <Select value={form.repair_order_id} onValueChange={handleOrderSelect}>
+                <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
+                  <SelectValue placeholder="Link to repair order" />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-700">
+                  {orders.map(o => (
+                    <SelectItem key={o.id} value={o.id}>
+                      {o.order_number} - {o.customer_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {sourceEstimate && (
+            <div className="rounded-lg bg-sky-500/10 border border-sky-500/20 p-3 text-sm">
+              <p className="text-sky-400 font-medium text-xs uppercase tracking-wider mb-1">Source: Estimate</p>
+              <p className="text-white">{sourceEstimate.estimate_number} — {sourceEstimate.customer_name}</p>
+              <p className="text-gray-400 text-xs">{sourceEstimate.vehicle_info}</p>
+            </div>
+          )}
 
           {form.customer_name && (
             <div className="rounded-lg bg-gray-800/50 p-3 text-sm">

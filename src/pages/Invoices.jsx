@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileText, Pencil, Trash2, Printer, CheckCircle2, XCircle, Download, DollarSign, MessageSquare, ShieldCheck } from "lucide-react";
+import { FileText, Pencil, Trash2, Printer, Download, DollarSign, MessageSquare, ShieldCheck, Calendar, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { jsPDF } from "jspdf";
@@ -247,11 +247,29 @@ export default function Invoices() {
                   <p className="text-sm text-gray-400 mt-0.5">
                     {inv.customer_name} · {inv.vehicle_info}
                   </p>
-                  {inv.parts_used && inv.parts_used.length > 0 && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      Parts: {inv.parts_used.map(p => p.name).join(', ')}
-                    </p>
-                  )}
+                  <div className="flex items-center gap-3 mt-1 flex-wrap">
+                    {inv.due_date && (
+                      <span className={`text-xs flex items-center gap-1 ${
+                        inv.status !== "paid" && inv.due_date < new Date().toISOString().split("T")[0]
+                          ? "text-rose-400 font-medium"
+                          : "text-gray-500"
+                      }`}>
+                        {inv.status !== "paid" && inv.due_date < new Date().toISOString().split("T")[0]
+                          ? <AlertCircle className="w-3 h-3" />
+                          : <Calendar className="w-3 h-3" />}
+                        Due {new Date(inv.due_date + "T00:00:00").toLocaleDateString()}
+                      </span>
+                    )}
+                    {inv.paid_date && inv.status === "paid" && (
+                      <span className="text-xs text-emerald-500 flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        Paid {new Date(inv.paid_date + "T00:00:00").toLocaleDateString()}
+                      </span>
+                    )}
+                    {inv.estimate_id && (
+                      <span className="text-xs text-sky-500/70">From Estimate</span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-4 flex-shrink-0">
                   <div className="text-right">
