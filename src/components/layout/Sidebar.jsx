@@ -190,6 +190,13 @@ export default function Sidebar({ currentPage }) {
           )}
         </div>
 
+        {/* Powered By */}
+        {!collapsed && (
+          <div className="px-4 pb-2 text-center">
+            <p className="text-[10px] text-gray-600">Powered by <a href="https://lbc.network" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-sky-400 transition-colors">lbc.network</a></p>
+          </div>
+        )}
+
         {/* Business Name */}
         {!collapsed && user?.business_name && (
           <div className="px-4 pb-4">
