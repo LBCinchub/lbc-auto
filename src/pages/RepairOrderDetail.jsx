@@ -2,13 +2,14 @@ import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, FileText, Plus, Trash2, MoreVertical, Clock, History, Wrench } from "lucide-react";
+import { ArrowLeft, FileText, Plus, Trash2, MoreVertical, Clock, History, Wrench, PenLine, CheckCircle2, XCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import EstimateFormDialog from "@/components/estimates/EstimateFormDialog";
+import SignaturePad from "@/components/orders/SignaturePad";
 
 export default function RepairOrderDetail() {
   const { orderId } = useParams();
@@ -19,6 +20,7 @@ export default function RepairOrderDetail() {
   const [newPart, setNewPart] = useState({ name: "", quantity: "", unit_price: "" });
   const [showLaborDialog, setShowLaborDialog] = useState(false);
   const [newLabor, setNewLabor] = useState({ description: "", hours: "", rate: "" });
+  const [showSignatureDialog, setShowSignatureDialog] = useState(false);
 
   const { data: order, isLoading } = useQuery({
     queryKey: ["repairOrder", orderId],
@@ -232,6 +234,50 @@ export default function RepairOrderDetail() {
           </div>
         )}
 
+        {/* Customer Signature Section */}
+        <div className="mt-8 pt-6 border-t border-gray-800">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <PenLine className="w-5 h-5 text-purple-400" /> Customer Sign-off
+            </h3>
+            {!order.customer_signature && (
+              <button onClick={() => setShowSignatureDialog(true)} className="text-purple-400 hover:text-purple-300 text-sm flex items-center gap-1">
+                <PenLine className="w-4 h-4" /> Request Signature
+              </button>
+            )}
+          </div>
+          {order.customer_signature ? (
+            <div className="rounded-lg border border-green-500/30 bg-green-500/5 p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-green-400" />
+                <div>
+                  <p className="text-green-400 font-medium text-sm">Signed by {order.customer_signature_name || "Customer"}</p>
+                  {order.customer_signature_date && (
+                    <p className="text-gray-500 text-xs">{new Date(order.customer_signature_date).toLocaleString()}</p>
+                  )}
+                </div>
+                <button onClick={() => setShowSignatureDialog(true)} className="ml-auto text-gray-600 hover:text-gray-400 text-xs">Re-sign</button>
+              </div>
+              <img
+                src={order.customer_signature}
+                alt="Customer signature"
+                className="max-h-20 rounded-lg bg-gray-800 p-2"
+              />
+            </div>
+          ) : (
+            <div className="rounded-lg border border-dashed border-gray-700 bg-gray-800/20 p-6 flex flex-col items-center gap-3 text-center">
+              <XCircle className="w-8 h-8 text-gray-600" />
+              <p className="text-gray-500 text-sm">No signature captured yet</p>
+              <button
+                onClick={() => setShowSignatureDialog(true)}
+                className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium flex items-center gap-2"
+              >
+                <PenLine className="w-4 h-4" /> Capture Signature
+              </button>
+            </div>
+          )}
+        </div>
+
         {/* Timestamps */}
         <div className="mt-6 pt-4 border-t border-gray-800 flex flex-wrap gap-4 text-xs text-gray-600">
           <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> Created: {new Date(order.created_date).toLocaleString()}</span>
@@ -294,6 +340,33 @@ export default function RepairOrderDetail() {
           navigate("/Estimates");
         }}
       />
+
+      <Dialog open={showSignatureDialog} onOpenChange={setShowSignatureDialog}>
+        <DialogContent className="bg-gray-900 border-gray-800 text-white sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <PenLine className="w-4 h-4 text-purple-400" /> Customer Signature
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-gray-400 text-sm -mt-1">
+            Have the customer sign below to approve the repair / estimate for <span className="text-white font-medium">{order.vehicle_info}</span>.
+          </p>
+          <SignaturePad
+            existingSignature={order.customer_signature}
+            signerName={order.customer_signature_name || order.customer_name}
+            onCancel={() => setShowSignatureDialog(false)}
+            onSave={({ signatureDataUrl, signerName, signedAt }) => {
+              base44.entities.RepairOrder.update(orderId, {
+                customer_signature: signatureDataUrl,
+                customer_signature_name: signerName,
+                customer_signature_date: signedAt,
+              });
+              queryClient.invalidateQueries({ queryKey: ["repairOrder", orderId] });
+              setShowSignatureDialog(false);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showLaborDialog} onOpenChange={setShowLaborDialog}>
         <DialogContent className="bg-gray-900 border-gray-800 text-white">

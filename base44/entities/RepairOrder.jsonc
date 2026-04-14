@@ -54,6 +54,27 @@
       "type": "number",
       "description": "Total labor cost"
     },
+    "labor_items": {
+      "type": "array",
+      "description": "Itemized labor entries",
+      "items": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "hours": {
+            "type": "number"
+          },
+          "rate": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          }
+        }
+      }
+    },
     "parts_used": {
       "type": "array",
       "description": "Parts used in repair",
@@ -101,6 +122,18 @@
       "type": "string",
       "format": "date",
       "description": "Estimated completion date"
+    },
+    "customer_signature": {
+      "type": "string",
+      "description": "Base64 PNG data URL of the customer signature"
+    },
+    "customer_signature_name": {
+      "type": "string",
+      "description": "Name of the person who signed"
+    },
+    "customer_signature_date": {
+      "type": "string",
+      "description": "ISO timestamp when the customer signed"
     },
     "history": {
       "type": "array",
