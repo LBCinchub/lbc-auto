@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, FileText, Plus, Trash2, MoreVertical, Clock, History, Wrench, PenLine, CheckCircle2, XCircle, ChevronDown } from "lucide-react";
+import { ArrowLeft, FileText, Plus, Trash2, MoreVertical, Clock, History, Wrench, PenLine, CheckCircle2, XCircle, Printer } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,6 +29,80 @@ export default function RepairOrderDetail() {
     queryFn: () => base44.entities.RepairOrder.get(orderId),
     enabled: !!orderId,
   });
+
+  const handlePrintWorkerCopy = () => {
+    if (!order) return;
+    const partsRows = (order.parts_used || []).map((p, i) => `
+      <tr style="background:${i%2===1?"#fafbff":"white"};border-bottom:1px solid #f1f5f9">
+        <td style="padding:12px;font-size:9px;color:#94a3b8">${i+1}</td>
+        <td style="padding:12px;font-size:11px;font-weight:700;color:#0f172a">${p.name}</td>
+        <td style="padding:12px;font-size:10px;color:#64748b">Part</td>
+        <td style="padding:12px;text-align:center;font-size:10.5px;color:#334155">${p.quantity}</td>
+        <td style="padding:12px;text-align:center"><div style="width:20px;height:20px;border:2px solid #cbd5e1;border-radius:4px;margin:0 auto"></div></td>
+      </tr>`).join("");
+    const laborRows = (order.labor_items || []).map((l, i) => `
+      <tr style="background:${(i + (order.parts_used||[]).length)%2===1?"#fafbff":"white"};border-bottom:1px solid #f1f5f9">
+        <td style="padding:12px;font-size:9px;color:#94a3b8">${(order.parts_used||[]).length+i+1}</td>
+        <td style="padding:12px;font-size:11px;font-weight:700;color:#0f172a">${l.description}</td>
+        <td style="padding:12px;font-size:10px;color:#64748b">Labor — ${l.hours}h</td>
+        <td style="padding:12px;text-align:center;font-size:10.5px;color:#334155">${l.hours}h</td>
+        <td style="padding:12px;text-align:center"><div style="width:20px;height:20px;border:2px solid #cbd5e1;border-radius:4px;margin:0 auto"></div></td>
+      </tr>`).join("");
+    const win = window.open("", "_blank");
+    win.document.write(`<html><head><title>RO #${order.order_number} — Worker Copy</title>
+      <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:11px;color:#1a1a2e;background:white}.page{max-width:780px;margin:0 auto;padding:36px}table{width:100%;border-collapse:collapse}@media print{.page{padding:24px}}</style>
+    </head><body><div class="page">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px">
+        <div>
+          <div style="font-size:22px;font-weight:700;color:#0f172a">Repair Order</div>
+          <div style="font-size:9px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:2px;margin-top:2px">Worker Copy</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:28px;font-weight:700;color:#0ea5e9;letter-spacing:-1px">RO #${order.order_number}</div>
+          <div style="font-size:10px;color:#64748b;margin-top:4px">Date: ${new Date(order.created_date).toLocaleDateString()}</div>
+          <div style="margin-top:8px;padding:4px 10px;background:#fef3c7;border-radius:6px;font-size:10px;font-weight:700;color:#92400e;display:inline-block">WORKER COPY — NO PRICES</div>
+        </div>
+      </div>
+      <div style="height:3px;background:linear-gradient(to right,#0ea5e9,#6366f1,#ec4899);border-radius:2px;margin-bottom:24px"></div>
+      <div style="display:flex;gap:20px;margin-bottom:28px">
+        <div style="flex:1;background:#f8fafc;border-radius:10px;padding:14px 16px;border-left:3px solid #0ea5e9">
+          <div style="font-size:8px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px">Customer</div>
+          <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:4px">${order.customer_name}</div>
+        </div>
+        <div style="flex:1;background:#f8fafc;border-radius:10px;padding:14px 16px;border-left:3px solid #6366f1">
+          <div style="font-size:8px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px">Vehicle</div>
+          <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:4px">${order.vehicle_info}</div>
+          ${order.mechanic_name ? `<div style="font-size:10px;color:#475569">Mechanic: ${order.mechanic_name}</div>` : ""}
+        </div>
+      </div>
+      ${order.description ? `<div style="margin-bottom:24px;background:#f8fafc;border-radius:8px;padding:14px;border-left:3px solid #94a3b8"><div style="font-size:8px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px">Description</div><div style="font-size:10.5px;color:#334155;line-height:1.6">${order.description}</div></div>` : ""}
+      <table>
+        <thead>
+          <tr style="background:#0f172a">
+            <th style="padding:10px 12px;text-align:left;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;width:5%">#</th>
+            <th style="padding:10px 12px;text-align:left;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#94a3b8">Item / Task</th>
+            <th style="padding:10px 12px;text-align:left;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#94a3b8">Details</th>
+            <th style="padding:10px 12px;text-align:center;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;width:12%">Qty</th>
+            <th style="padding:10px 12px;text-align:center;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;width:14%">Done ✓</th>
+          </tr>
+        </thead>
+        <tbody>${partsRows}${laborRows}</tbody>
+      </table>
+      ${order.notes ? `<div style="margin-top:24px;background:#fffbeb;border-radius:8px;border-left:3px solid #f59e0b;padding:12px 14px"><div style="font-size:8px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px">Notes</div><div style="font-size:10px;color:#78350f;line-height:1.6">${order.notes}</div></div>` : ""}
+      <div style="margin-top:40px;display:flex;justify-content:space-between;align-items:flex-end">
+        <div>
+          <div style="height:36px;border-bottom:1.5px solid #cbd5e1;width:240px;margin-bottom:6px"></div>
+          <div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px">Mechanic Signature</div>
+        </div>
+        <div>
+          <div style="height:36px;border-bottom:1.5px solid #cbd5e1;width:160px;margin-bottom:6px"></div>
+          <div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px">Date Completed</div>
+        </div>
+      </div>
+    </div></body></html>`);
+    win.document.close();
+    setTimeout(() => win.print(), 300);
+  };
 
   const { data: customers = [] } = useQuery({
     queryKey: ["customers"],
@@ -81,6 +155,9 @@ export default function RepairOrderDetail() {
           <ArrowLeft className="w-4 h-4" /> Back
         </Button>
         <div className="flex items-center gap-2">
+          <Button onClick={handlePrintWorkerCopy} variant="outline" className="border-gray-700 text-gray-300 hover:text-white gap-2">
+            <Printer className="w-4 h-4" /> Print Worker Copy
+          </Button>
           <Button onClick={() => setShowEstimateDialog(true)} className="bg-green-600 hover:bg-green-700 gap-2">
             <Plus className="w-4 h-4" /> Create Estimate
           </Button>

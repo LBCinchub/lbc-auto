@@ -1,6 +1,6 @@
 import React from "react";
 
-export default function PrintTemplate({ type = "Invoice", docNumber, createdDate, user, customer, vehicle, lineItems = [], paymentHistory = [], financials = {}, notes }) {
+export default function PrintTemplate({ type = "Invoice", docNumber, createdDate, user, customer, vehicle, lineItems = [], paymentHistory = [], financials = {}, notes, workerCopy = false }) {
   const {
     partsTotal = 0,
     laborTotal = 0,
@@ -14,13 +14,14 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
 
   const bizName = user?.business_name || "LBC Auto Services";
 
-  const handlePrint = () => {
-    const content = document.getElementById("print-template-body");
+  const handlePrint = (hidePrice = false) => {
+    const content = document.getElementById(`print-template-body${hidePrice ? "-worker" : ""}`);
     const win = window.open("", "_blank");
+    const printTitle = hidePrice ? `${type} ${docNumber} - Worker Copy` : `${type} ${docNumber}`;
     win.document.write(`
       <html>
       <head>
-        <title>${type} ${docNumber}</title>
+        <title>${printTitle}</title>
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
           * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -110,6 +111,7 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
       <body>
         <div class="page">
           ${content.innerHTML}
+          ${hidePrice ? `<div style="margin-top:24px;padding:12px 16px;background:#f1f5f9;border-radius:8px;text-align:center;font-size:10px;color:#64748b;font-weight:600;letter-spacing:1px;text-transform:uppercase;">WORKER COPY — NO PRICES</div>` : ""}
         </div>
       </body>
       </html>
@@ -120,10 +122,99 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
 
   return (
     <div>
-      <div className="flex justify-end mb-4 no-print">
-        <button onClick={handlePrint} className="bg-sky-600 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-sky-700 flex items-center gap-2 shadow">
+      <div className="flex justify-end mb-4 no-print gap-2">
+        <button onClick={() => handlePrint(true)} className="bg-gray-600 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-gray-700 flex items-center gap-2 shadow">
+          🔧 Print Worker Copy
+        </button>
+        <button onClick={() => handlePrint(false)} className="bg-sky-600 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-sky-700 flex items-center gap-2 shadow">
           🖨️ Print / Save PDF
         </button>
+      </div>
+
+      {/* Hidden worker copy (no prices) */}
+      <div id="print-template-body-worker" style={{ display: "none" }}>
+        {/* Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28 }}>
+          <div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: "#0f172a", letterSpacing: -0.5 }}>{bizName}</div>
+            <div style={{ fontSize: 9, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: 2, marginTop: 2 }}>Auto Services</div>
+            <div style={{ marginTop: 10, fontSize: 10, color: "#475569", lineHeight: 1.8 }}>
+              {user?.phone && <div>{user.phone}</div>}
+              {user?.email && <div>{user.email}</div>}
+              {user?.address && <div>{user.address}</div>}
+            </div>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: 28, fontWeight: 700, color: "#0ea5e9", letterSpacing: -1, textTransform: "uppercase" }}>{type}</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#0f172a", marginTop: 4 }}># {docNumber}</div>
+            <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>Date: {createdDate}</div>
+            <div style={{ marginTop: 8, padding: "4px 10px", background: "#fef3c7", borderRadius: 6, fontSize: 10, fontWeight: 700, color: "#92400e", display: "inline-block" }}>WORKER COPY</div>
+          </div>
+        </div>
+        <div style={{ height: 3, background: "linear-gradient(to right, #0ea5e9, #6366f1, #ec4899)", borderRadius: 2, marginBottom: 24 }} />
+        {/* Bill To + Vehicle */}
+        <div style={{ display: "flex", gap: 20, marginBottom: 28 }}>
+          <div style={{ flex: 1, background: "#f8fafc", borderRadius: 10, padding: "14px 16px", borderLeft: "3px solid #0ea5e9" }}>
+            <div style={{ fontSize: 8, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 8 }}>Customer</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 4 }}>{customer?.name || customer?.full_name}</div>
+            <div style={{ fontSize: 10, color: "#475569", lineHeight: 1.7 }}>
+              {customer?.phone && <div>{customer.phone}</div>}
+            </div>
+          </div>
+          {vehicle?.info && (
+            <div style={{ flex: 1, background: "#f8fafc", borderRadius: 10, padding: "14px 16px", borderLeft: "3px solid #6366f1" }}>
+              <div style={{ fontSize: 8, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 8 }}>Vehicle</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 4 }}>{vehicle.info}</div>
+              <div style={{ fontSize: 10, color: "#475569", lineHeight: 1.7 }}>
+                {vehicle?.vin && <div>VIN: {vehicle.vin}</div>}
+                {vehicle?.mileage && <div>Mileage: {vehicle.mileage.toLocaleString()} km</div>}
+                {vehicle?.license_plate && <div>Plate: {vehicle.license_plate}</div>}
+              </div>
+            </div>
+          )}
+        </div>
+        {/* Work Items — no prices */}
+        <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 24 }}>
+          <thead>
+            <tr style={{ background: "#0f172a" }}>
+              <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 9, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, color: "#94a3b8", width: "5%" }}>#</th>
+              <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 9, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, color: "#94a3b8" }}>Item / Task</th>
+              <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 9, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, color: "#94a3b8" }}>Details</th>
+              <th style={{ padding: "10px 12px", textAlign: "center", fontSize: 9, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, color: "#94a3b8", width: "12%" }}>Qty</th>
+              <th style={{ padding: "10px 12px", textAlign: "center", fontSize: 9, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, color: "#94a3b8", width: "14%" }}>Done ✓</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lineItems.map((item, i) => (
+              <tr key={i} style={{ background: i % 2 === 1 ? "#fafbff" : "white", borderBottom: "1px solid #f1f5f9" }}>
+                <td style={{ padding: "12px 12px", fontSize: 9, fontWeight: 600, color: "#94a3b8" }}>{i + 1}</td>
+                <td style={{ padding: "12px 12px", fontSize: 11, fontWeight: 700, color: "#0f172a" }}>{item.name}</td>
+                <td style={{ padding: "12px 12px", fontSize: 10, color: "#64748b" }}>{item.description}</td>
+                <td style={{ padding: "12px 12px", fontSize: 10.5, color: "#334155", textAlign: "center" }}>{item.qty}</td>
+                <td style={{ padding: "12px 12px", textAlign: "center" }}>
+                  <div style={{ width: 20, height: 20, border: "2px solid #cbd5e1", borderRadius: 4, margin: "0 auto" }}></div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {notes && (
+          <div style={{ marginTop: 24, background: "#fffbeb", borderRadius: 8, borderLeft: "3px solid #f59e0b", padding: "12px 14px" }}>
+            <div style={{ fontSize: 8, fontWeight: 700, color: "#92400e", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 4 }}>Notes</div>
+            <div style={{ fontSize: 10, color: "#78350f", lineHeight: 1.6 }}>{notes}</div>
+          </div>
+        )}
+        {/* Mechanic sign-off */}
+        <div style={{ marginTop: 36, display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+          <div>
+            <div style={{ height: 36, borderBottom: "1.5px solid #cbd5e1", width: 240, marginBottom: 6 }}></div>
+            <div style={{ fontSize: 9, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1 }}>Mechanic Signature</div>
+          </div>
+          <div>
+            <div style={{ height: 36, borderBottom: "1.5px solid #cbd5e1", width: 160, marginBottom: 6 }}></div>
+            <div style={{ fontSize: 9, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1 }}>Date Completed</div>
+          </div>
+        </div>
       </div>
 
       <div id="print-template-body" style={{ fontFamily: "'Inter', Arial, sans-serif", fontSize: 11, color: "#1a1a2e", background: "white" }}>
