@@ -198,11 +198,9 @@ export default function Estimates() {
                   <p className="text-lg font-bold text-sky-400">${(est.grand_total || 0).toFixed(2)}</p>
                 </div>
                 <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                  {(est.status === "approved" || est.status === "sent") && (
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-sky-400" title="Convert to Invoice" onClick={() => openInvoiceFromEstimate(est)}>
-                      <FileText className="w-3.5 h-3.5" />
-                    </Button>
-                  )}
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-sky-400" title="Convert to Invoice" onClick={() => openInvoiceFromEstimate(est)}>
+                    <FileText className="w-3.5 h-3.5" />
+                  </Button>
                   {est.status === "approved" && (
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-green-400" title="Convert to Repair Order" onClick={() => handleConvertToRepairOrder(est)}>
                       <CheckCircle2 className="w-3.5 h-3.5" />
