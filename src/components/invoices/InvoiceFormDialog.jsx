@@ -127,13 +127,15 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
     const subtotalAfterDiscount = subtotal - discountAmount;
     const isCash = form.payment_method === "cash";
 
-    const taxableAmount = (form.labor_total || 0) + (form.parts_total || 0);
+    let taxableAmount = 0;
+    if (form.apply_tax_labor) taxableAmount += form.labor_total || 0;
+    if (form.apply_tax_parts) taxableAmount += form.parts_total || 0;
 
     const taxAmount = isCash ? 0 : taxableAmount * ((form.tax_rate || 0) / 100);
     const total = subtotalAfterDiscount + taxAmount;
     const balanceDue = total - (form.amount_paid || 0);
     return { subtotal, discountAmount, subtotalAfterDiscount, isCash, taxAmount, total, balanceDue };
-  }, [form.parts_total, form.labor_total, form.discount_type, form.discount_value, form.payment_method, form.tax_rate, form.amount_paid]);
+  }, [form.parts_total, form.labor_total, form.discount_type, form.discount_value, form.payment_method, form.tax_rate, form.amount_paid, form.apply_tax_labor, form.apply_tax_parts]);
 
   const { subtotal, discountAmount, isCash, taxAmount, total, balanceDue } = calculations;
 
@@ -266,8 +268,19 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
                 onChange={e => setForm({...form, tax_rate: Number(e.target.value)})}
                 className="bg-gray-800 border-gray-700 text-white mt-1.5" />
             </div>
-            <div className="pt-1">
-              <span className="text-xs text-sky-400 font-medium">Tax applies to both Parts &amp; Labor</span>
+            <div className="flex gap-4 pt-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={form.apply_tax_labor}
+                  onChange={e => setForm({...form, apply_tax_labor: e.target.checked})}
+                  className="w-4 h-4 rounded" />
+                <span className="text-sm text-gray-300">Tax on Labor</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={form.apply_tax_parts}
+                  onChange={e => setForm({...form, apply_tax_parts: e.target.checked})}
+                  className="w-4 h-4 rounded" />
+                <span className="text-sm text-gray-300">Tax on Parts</span>
+              </label>
             </div>
             <div>
               <Label className="text-gray-300 text-sm">Due Date</Label>

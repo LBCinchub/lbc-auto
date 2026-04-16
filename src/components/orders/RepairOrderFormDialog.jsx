@@ -45,7 +45,11 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
     : form.discount_type === "fixed" ? (form.discount_value || 0) : 0;
   const afterDiscount = subtotal - discountAmount;
 
-  const taxableAmount = afterDiscount; // always tax both parts + labor
+  const taxAppliesTo = form.tax_applies_to || "both";
+  let taxableAmount = 0;
+  if (taxAppliesTo === "both") taxableAmount = afterDiscount;
+  else if (taxAppliesTo === "labor") taxableAmount = laborCost - (form.discount_type !== "none" ? discountAmount : 0);
+  else if (taxAppliesTo === "parts") taxableAmount = partsCost;
 
   const taxAmount = form.apply_tax ? taxableAmount * 0.15 : 0;
   const calculatedTotal = afterDiscount + taxAmount;
@@ -609,7 +613,16 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                   Tax 15%
                 </button>
                 {form.apply_tax && (
-                  <span className="text-xs text-sky-400 font-medium">Parts + Labor</span>
+                  <Select value={form.tax_applies_to || "both"} onValueChange={v => setForm(f => ({ ...f, tax_applies_to: v }))}>
+                    <SelectTrigger className="bg-gray-800 border-gray-700 text-white w-20 h-7">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-800 border-gray-700">
+                      <SelectItem value="both">Both</SelectItem>
+                      <SelectItem value="labor">Labor</SelectItem>
+                      <SelectItem value="parts">Parts</SelectItem>
+                    </SelectContent>
+                  </Select>
                 )}
               </div>
             </div>

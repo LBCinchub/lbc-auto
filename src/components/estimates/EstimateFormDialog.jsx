@@ -103,11 +103,11 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
   const subtotal   = laborTotal + partsTotal;
   const taxRate    = form.apply_tax ? TAX_RATE : 0;
 
+  const taxAppliesTo = form.tax_applies_to || "both";
   let taxableAmount = 0;
-  const taxAppliesTo = form.tax_applies_to || "labor";
   if (taxAppliesTo === "labor") taxableAmount = laborTotal;
   else if (taxAppliesTo === "parts") taxableAmount = partsTotal;
-  else if (taxAppliesTo === "both") taxableAmount = subtotal;
+  else taxableAmount = subtotal;
 
   const taxAmount  = taxableAmount * (taxRate / 100);
   const grandTotal = subtotal + taxAmount;
@@ -374,7 +374,16 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
                   {form.apply_tax ? "Applied" : "Not Applied"}
                 </button>
                 {form.apply_tax && (
-                  <span className="text-xs text-sky-400 font-medium">Parts + Labor</span>
+                  <Select value={form.tax_applies_to || "both"} onValueChange={v => setForm(f => ({ ...f, tax_applies_to: v }))}>
+                    <SelectTrigger className="bg-gray-800 border-gray-700 text-white w-24 h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-800 border-gray-700">
+                      <SelectItem value="both">Both</SelectItem>
+                      <SelectItem value="labor">Labor</SelectItem>
+                      <SelectItem value="parts">Parts</SelectItem>
+                    </SelectContent>
+                  </Select>
                 )}
               </div>
             </div>
