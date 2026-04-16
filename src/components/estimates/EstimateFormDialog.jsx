@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { base44 } from "@/api/base44Client";
 import { Plus, Trash2, Loader2, X, Search } from "lucide-react";
 
-const emptyLaborRow = () => ({ description: "", hours: "", rate: "", total: 0 });
+const emptyLaborRow = () => ({ description: "", hours: "", rate: "120", total: 0 });
 const emptyPartRow  = () => ({ name: "", part_number: "", quantity: "", unit_price: "", total: 0 });
 
 const TAX_RATE = 15;
@@ -39,7 +39,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
         apply_tax: estimate.apply_tax !== false,
         tax_rate: String(estimate.tax_rate ?? TAX_RATE),
         tax_applies_to: "both",
-        labor_items: estimate.labor_items?.length ? estimate.labor_items.map(i => ({ ...i, hours: String(i.hours), rate: String(i.rate) })) : [emptyLaborRow()],
+        labor_items: estimate.labor_items?.length ? estimate.labor_items.map(i => ({ ...i, hours: String(i.hours), rate: String(i.rate ?? 120) })) : [emptyLaborRow()],
         parts_items: estimate.parts_items?.length ? estimate.parts_items.map(i => ({ ...i, quantity: String(i.quantity), unit_price: String(i.unit_price) })) : [emptyPartRow()],
       });
     } else {
@@ -76,7 +76,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
     const items = form.labor_items.map((row, i) => {
       if (i !== idx) return row;
       const updated = { ...row, [field]: value };
-      updated.total = (parseFloat(updated.hours) || 0) * 120;
+      updated.total = (parseFloat(updated.hours) || 0) * (parseFloat(updated.rate) || 0);
       return updated;
     });
     setForm(f => ({ ...f, labor_items: items }));
@@ -98,7 +98,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
   const removePart = (idx) => setForm(f => ({ ...f, parts_items: f.parts_items.filter((_, i) => i !== idx) }));
 
   // ---- Totals ----
-  const laborTotal = form.labor_items.reduce((s, r) => s + ((parseFloat(r.hours) || 0) * 120), 0);
+  const laborTotal = form.labor_items.reduce((s, r) => s + ((parseFloat(r.hours) || 0) * (parseFloat(r.rate) || 0)), 0);
   const partsTotal = form.parts_items.reduce((s, r) => s + (r.total || 0), 0);
   const subtotal   = laborTotal + partsTotal;
   const taxRate    = form.apply_tax ? TAX_RATE : 0;
@@ -196,7 +196,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
       estimate_number: estNum,
       apply_tax: form.apply_tax,
       tax_rate: taxRate,
-      labor_items: form.labor_items.map(r => ({ ...r, hours: parseFloat(r.hours) || 0, rate: 120 })),
+      labor_items: form.labor_items.map(r => ({ ...r, hours: parseFloat(r.hours) || 0, rate: parseFloat(r.rate) || 120 })),
       parts_items: form.parts_items.map(r => ({ ...r, quantity: parseFloat(r.quantity) || 0, unit_price: parseFloat(r.unit_price) || 0 })),
       labor_total: laborTotal,
       parts_total: partsTotal,
@@ -423,8 +423,11 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
                         <Input type="number" value={row.hours} onChange={e => updateLabor(idx, "hours", e.target.value)}
                           className="bg-gray-800 border-0 text-white h-8 text-sm text-right" placeholder="0" step="0.5" />
                       </td>
-                      <td className="px-2 py-1.5 text-right text-gray-300">$120</td>
-                      <td className="px-3 py-1.5 text-right text-gray-300 font-medium">${row.total.toFixed(2)}</td>
+                      <td className="px-2 py-1.5">
+                        <Input type="number" value={row.rate} onChange={e => updateLabor(idx, "rate", e.target.value)}
+                          className="bg-gray-800 border-0 text-white h-8 text-sm text-right" placeholder="120" step="1" />
+                      </td>
+                      <td className="px-3 py-1.5 text-right text-gray-300 font-medium">${((parseFloat(row.hours)||0)*(parseFloat(row.rate)||0)).toFixed(2)}</td>
                       <td className="pr-2 py-1.5">
                         <button onClick={() => removeLabor(idx)} className="text-gray-600 hover:text-rose-400 transition-colors">
                           <Trash2 className="w-3.5 h-3.5" />
