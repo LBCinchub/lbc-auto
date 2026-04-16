@@ -7,11 +7,12 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Phone, Mail, MapPin, Car, Wrench, FileText, Lightbulb, Clock, Plus, Pencil, ChevronRight, Calendar
+  Phone, Mail, MapPin, Car, Wrench, FileText, Lightbulb, Clock, Plus, Pencil, ChevronRight, Calendar, MessageSquare
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StatusBadge from "../shared/StatusBadge";
 import VehicleFormDialog from "@/components/vehicles/VehicleFormDialog";
+import SendSMSDialog from "./SendSMSDialog";
 
 function Section({ icon: Icon, title, children }) {
   return (
@@ -29,6 +30,7 @@ export default function CustomerProfileDialog({ customer, open, onClose, custome
   const queryClient = useQueryClient();
   const [editingVehicle, setEditingVehicle] = useState(null);
   const [showVehicleDialog, setShowVehicleDialog] = useState(false);
+  const [showSMSDialog, setShowSMSDialog] = useState(false);
   const [activeTab, setActiveTab] = useState("orders");
 
   const { data: orders = [] } = useQuery({
@@ -122,6 +124,11 @@ export default function CustomerProfileDialog({ customer, open, onClose, custome
         setEditingVehicle(null);
       }}
     />
+    <SendSMSDialog
+      open={showSMSDialog}
+      onClose={() => setShowSMSDialog(false)}
+      customer={customer}
+    />
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
@@ -161,6 +168,9 @@ export default function CustomerProfileDialog({ customer, open, onClose, custome
             {customer.phone && (
               <div className="flex items-center gap-2 text-sm text-gray-300">
                 <Phone className="w-4 h-4 text-sky-400 flex-shrink-0" /> {customer.phone}
+                <button onClick={() => setShowSMSDialog(true)} title="Send SMS" className="ml-1 text-gray-500 hover:text-sky-400 transition-colors">
+                  <MessageSquare className="w-3.5 h-3.5" />
+                </button>
               </div>
             )}
             {customer.email && (
@@ -432,11 +442,11 @@ export default function CustomerProfileDialog({ customer, open, onClose, custome
             {/* Quick Actions */}
           <div className="border-t border-gray-800 pt-4">
             <p className="text-gray-500 text-xs uppercase tracking-wide mb-3">Quick Actions</p>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-4 gap-2">
               <Button className="bg-sky-600 hover:bg-sky-700 text-white flex flex-col h-auto py-3 gap-1"
                 onClick={() => { onClose(); navigate(`/Estimates?customerId=${customer.id}&customerName=${encodeURIComponent(customer.full_name)}`); }}>
                 <FileText className="w-4 h-4" />
-                <span className="text-xs">New Estimate</span>
+                <span className="text-xs">Estimate</span>
               </Button>
               <Button className="bg-sky-600 hover:bg-sky-700 text-white flex flex-col h-auto py-3 gap-1"
                 onClick={() => { onClose(); navigate(`/RepairOrders?customerId=${customer.id}&customerName=${encodeURIComponent(customer.full_name)}`); }}>
@@ -446,8 +456,15 @@ export default function CustomerProfileDialog({ customer, open, onClose, custome
               <Button className="bg-sky-600 hover:bg-sky-700 text-white flex flex-col h-auto py-3 gap-1"
                 onClick={() => { onClose(); navigate(`/Invoices?customerId=${customer.id}&customerName=${encodeURIComponent(customer.full_name)}`); }}>
                 <FileText className="w-4 h-4" />
-                <span className="text-xs">New Invoice</span>
+                <span className="text-xs">Invoice</span>
               </Button>
+              {customer?.phone && (
+                <Button className="bg-emerald-700 hover:bg-emerald-600 text-white flex flex-col h-auto py-3 gap-1"
+                  onClick={() => setShowSMSDialog(true)}>
+                  <MessageSquare className="w-4 h-4" />
+                  <span className="text-xs">Send SMS</span>
+                </Button>
+              )}
             </div>
           </div>
 
