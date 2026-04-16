@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileText, Pencil, Trash2, Printer, Download, DollarSign, MessageSquare, ShieldCheck, Calendar, AlertCircle, Phone } from "lucide-react";
+import { FileText, Pencil, Trash2, Printer, Download, DollarSign, MessageSquare, ShieldCheck, Calendar, AlertCircle, Phone, Mail, Hash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -270,16 +270,31 @@ export default function Invoices() {
                   </p>
                   {(() => {
                     const customer = customers.find(c => c.id === inv.customer_id);
-                    return customer?.phone ? (
-                      <a
-                        href={`tel:${customer.phone}`}
-                        onClick={e => e.stopPropagation()}
-                        className="inline-flex items-center gap-1.5 mt-1 text-xs text-sky-400 hover:text-sky-300 font-medium"
-                      >
-                        <Phone className="w-3 h-3" />
-                        {customer.phone}
-                      </a>
-                    ) : null;
+                    const vehicle = vehicles.find(v => v.id === inv.vehicle_id || (inv.repair_order_id && orders.find(o => o.id === inv.repair_order_id)?.vehicle_id === v.id));
+                    return (
+                      <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1">
+                        {customer?.phone && (
+                          <a href={`tel:${customer.phone}`} onClick={e => e.stopPropagation()} className="inline-flex items-center gap-1 text-xs text-sky-400 hover:text-sky-300 font-medium">
+                            <Phone className="w-3 h-3" />{customer.phone}
+                          </a>
+                        )}
+                        {customer?.email && (
+                          <a href={`mailto:${customer.email}`} onClick={e => e.stopPropagation()} className="inline-flex items-center gap-1 text-xs text-sky-400 hover:text-sky-300 font-medium">
+                            <Mail className="w-3 h-3" />{customer.email}
+                          </a>
+                        )}
+                        {vehicle?.license_plate && (
+                          <span className="inline-flex items-center gap-1 text-xs text-gray-400 font-mono">
+                            <Hash className="w-3 h-3" />{vehicle.license_plate}
+                          </span>
+                        )}
+                        {vehicle?.vin && (
+                          <span className="inline-flex items-center gap-1 text-xs text-gray-500 font-mono">
+                            VIN: {vehicle.vin}
+                          </span>
+                        )}
+                      </div>
+                    );
                   })()}
                   <div className="flex items-center gap-3 mt-1 flex-wrap">
                     {inv.due_date && (

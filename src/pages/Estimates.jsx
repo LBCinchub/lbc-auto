@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { ClipboardList, Pencil, Trash2, CheckCircle2, FileText, Phone } from "lucide-react";
+import { ClipboardList, Pencil, Trash2, CheckCircle2, FileText, Phone, Mail, Hash } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import PageHeader from "../components/shared/PageHeader";
 import SearchBar from "../components/shared/SearchBar";
@@ -179,11 +179,31 @@ export default function Estimates() {
                 <p className="text-sm text-gray-400 mt-0.5">{est.vehicle_info}</p>
                 {(() => {
                   const customer = customers.find(c => c.id === est.customer_id);
-                  return customer?.phone ? (
-                    <a href={`tel:${customer.phone}`} onClick={e => e.stopPropagation()} className="inline-flex items-center gap-1.5 text-xs text-sky-400 hover:text-sky-300 font-medium mt-0.5">
-                      <Phone className="w-3 h-3" />{customer.phone}
-                    </a>
-                  ) : null;
+                  const vehicle = vehicles.find(v => v.id === est.vehicle_id);
+                  return (
+                    <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1">
+                      {customer?.phone && (
+                        <a href={`tel:${customer.phone}`} onClick={e => e.stopPropagation()} className="inline-flex items-center gap-1 text-xs text-sky-400 hover:text-sky-300 font-medium">
+                          <Phone className="w-3 h-3" />{customer.phone}
+                        </a>
+                      )}
+                      {customer?.email && (
+                        <a href={`mailto:${customer.email}`} onClick={e => e.stopPropagation()} className="inline-flex items-center gap-1 text-xs text-sky-400 hover:text-sky-300 font-medium">
+                          <Mail className="w-3 h-3" />{customer.email}
+                        </a>
+                      )}
+                      {vehicle?.license_plate && (
+                        <span className="inline-flex items-center gap-1 text-xs text-gray-400 font-mono">
+                          <Hash className="w-3 h-3" />{vehicle.license_plate}
+                        </span>
+                      )}
+                      {vehicle?.vin && (
+                        <span className="inline-flex items-center gap-1 text-xs text-gray-500 font-mono">
+                          VIN: {vehicle.vin}
+                        </span>
+                      )}
+                    </div>
+                  );
                 })()}
                 {est.notes && <p className="text-xs text-gray-600 mt-1 truncate">{est.notes}</p>}
                 <p className="text-xs text-gray-600 mt-0.5">
