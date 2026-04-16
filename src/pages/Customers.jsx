@@ -5,6 +5,7 @@ import { Users, Phone, Mail, MapPin, Pencil, Trash2 } from "lucide-react";
 import CustomerProfileDialog from "../components/customers/CustomerProfileDialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { fuzzyMatch } from "@/utils/fuzzySearch";
 import PageHeader from "../components/shared/PageHeader";
 import SearchBar from "../components/shared/SearchBar";
 import EmptyState from "../components/shared/EmptyState";
@@ -31,13 +32,10 @@ export default function Customers() {
   });
 
   const filtered = customers.filter(c => {
-    if (!search) return true;
-    const s = search.toLowerCase();
-    if (searchField === "name") return c.full_name?.toLowerCase().includes(s);
-    if (searchField === "phone") return c.phone?.includes(search);
-    if (searchField === "email") return c.email?.toLowerCase().includes(s);
-    // "all"
-    return c.full_name?.toLowerCase().includes(s) || c.phone?.includes(search) || c.email?.toLowerCase().includes(s);
+    if (searchField === "name") return fuzzyMatch(search, [c.full_name]);
+    if (searchField === "phone") return fuzzyMatch(search, [c.phone]);
+    if (searchField === "email") return fuzzyMatch(search, [c.email]);
+    return fuzzyMatch(search, [c.full_name, c.phone, c.email, c.address]);
   });
 
   const handleDelete = async (id) => {

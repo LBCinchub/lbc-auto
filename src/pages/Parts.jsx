@@ -5,6 +5,7 @@ import { Package, Pencil, Trash2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { fuzzyMatch } from "@/utils/fuzzySearch";
 import PageHeader from "../components/shared/PageHeader";
 import SearchBar from "../components/shared/SearchBar";
 import EmptyState from "../components/shared/EmptyState";
@@ -28,12 +29,10 @@ export default function Parts() {
   const filtered = parts
     .filter(p => !showLowStockOnly || (p.min_stock > 0 && p.quantity <= p.min_stock))
     .filter(p => {
-      if (!search) return true;
-      const s = search.toLowerCase();
-      if (searchField === "name") return p.name?.toLowerCase().includes(s);
-      if (searchField === "part_number") return p.part_number?.toLowerCase().includes(s);
-      if (searchField === "supplier") return p.supplier?.toLowerCase().includes(s);
-      return p.name?.toLowerCase().includes(s) || p.part_number?.toLowerCase().includes(s) || p.supplier?.toLowerCase().includes(s);
+      if (searchField === "name") return fuzzyMatch(search, [p.name]);
+      if (searchField === "part_number") return fuzzyMatch(search, [p.part_number]);
+      if (searchField === "supplier") return fuzzyMatch(search, [p.supplier]);
+      return fuzzyMatch(search, [p.name, p.part_number, p.supplier, p.category]);
     });
 
   const handleDelete = async (id) => {

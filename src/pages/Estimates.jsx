@@ -5,6 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { ClipboardList, Pencil, Trash2, CheckCircle2, FileText, Phone, Mail, Hash } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { fuzzyMatch } from "@/utils/fuzzySearch";
 import PageHeader from "../components/shared/PageHeader";
 import SearchBar from "../components/shared/SearchBar";
 import EmptyState from "../components/shared/EmptyState";
@@ -71,12 +72,11 @@ export default function Estimates() {
   });
 
   const filtered = estimates.filter(e => {
-    if (!search) return true;
-    const s = search.toLowerCase();
-    if (searchField === "customer") return e.customer_name?.toLowerCase().includes(s);
-    if (searchField === "vehicle") return e.vehicle_info?.toLowerCase().includes(s);
-    if (searchField === "estimate_number") return e.estimate_number?.toLowerCase().includes(s);
-    return e.customer_name?.toLowerCase().includes(s) || e.vehicle_info?.toLowerCase().includes(s) || e.estimate_number?.toLowerCase().includes(s);
+    if (searchField === "customer") return fuzzyMatch(search, [e.customer_name]);
+    if (searchField === "vehicle") return fuzzyMatch(search, [e.vehicle_info]);
+    if (searchField === "estimate_number") return fuzzyMatch(search, [e.estimate_number]);
+    const customer = customers.find(c => c.id === e.customer_id);
+    return fuzzyMatch(search, [e.estimate_number, e.customer_name, e.vehicle_info, e.notes, customer?.phone]);
   });
 
   const handleDelete = async (id) => {

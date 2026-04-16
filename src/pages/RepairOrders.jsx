@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { fuzzyMatch } from "@/utils/fuzzySearch";
 import PageHeader from "../components/shared/PageHeader";
 import SearchBar from "../components/shared/SearchBar";
 import EmptyState from "../components/shared/EmptyState";
@@ -80,12 +81,11 @@ export default function RepairOrders() {
   const filtered = orders
     .filter(o => statusFilter === "all" || o.status === statusFilter)
     .filter(o => {
-      if (!search) return true;
-      const s = search.toLowerCase();
-      if (searchField === "order_number") return o.order_number?.toLowerCase().includes(s);
-      if (searchField === "customer") return o.customer_name?.toLowerCase().includes(s);
-      if (searchField === "vehicle") return o.vehicle_info?.toLowerCase().includes(s);
-      return o.order_number?.toLowerCase().includes(s) || o.customer_name?.toLowerCase().includes(s) || o.vehicle_info?.toLowerCase().includes(s);
+      if (searchField === "order_number") return fuzzyMatch(search, [o.order_number]);
+      if (searchField === "customer") return fuzzyMatch(search, [o.customer_name]);
+      if (searchField === "vehicle") return fuzzyMatch(search, [o.vehicle_info]);
+      const customer = customers.find(c => c.id === o.customer_id);
+      return fuzzyMatch(search, [o.order_number, o.customer_name, o.vehicle_info, o.description, o.mechanic_name, customer?.phone]);
     });
 
   const handleDelete = async (id) => {

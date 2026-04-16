@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Car, Pencil, Trash2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { fuzzyMatch } from "@/utils/fuzzySearch";
 import PageHeader from "../components/shared/PageHeader";
 import SearchBar from "../components/shared/SearchBar";
 import EmptyState from "../components/shared/EmptyState";
@@ -36,13 +37,11 @@ export default function Vehicles() {
   });
 
   const filtered = vehicles.filter(v => {
-    if (!search) return true;
-    const s = search.toLowerCase();
-    if (searchField === "make_model") return v.make?.toLowerCase().includes(s) || v.model?.toLowerCase().includes(s);
-    if (searchField === "customer") return v.customer_name?.toLowerCase().includes(s);
-    if (searchField === "plate") return v.license_plate?.toLowerCase().includes(s);
-    if (searchField === "vin") return v.vin?.toLowerCase().includes(s);
-    return v.make?.toLowerCase().includes(s) || v.model?.toLowerCase().includes(s) || v.license_plate?.toLowerCase().includes(s) || v.vin?.toLowerCase().includes(s) || v.customer_name?.toLowerCase().includes(s);
+    if (searchField === "make_model") return fuzzyMatch(search, [v.make, v.model, String(v.year || "")]);
+    if (searchField === "customer") return fuzzyMatch(search, [v.customer_name]);
+    if (searchField === "plate") return fuzzyMatch(search, [v.license_plate]);
+    if (searchField === "vin") return fuzzyMatch(search, [v.vin]);
+    return fuzzyMatch(search, [v.customer_name, v.make, v.model, String(v.year || ""), v.license_plate, v.vin, v.color, v.engine_type]);
   });
 
   const handleDelete = async (id) => {

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { jsPDF } from "jspdf";
+import { fuzzyMatch } from "@/utils/fuzzySearch";
 import PageHeader from "../components/shared/PageHeader";
 import SearchBar from "../components/shared/SearchBar";
 import EmptyState from "../components/shared/EmptyState";
@@ -86,18 +87,11 @@ export default function Invoices() {
   const filtered = invoices
     .filter(i => statusFilter === "all" || i.status === statusFilter || (statusFilter === "unpaid" && i.status === "partial"))
     .filter(i => {
-      if (!search) return true;
-      const q = search.toLowerCase();
-      if (searchField === "invoice_number") return i.invoice_number?.toLowerCase().includes(q);
-      if (searchField === "customer") return i.customer_name?.toLowerCase().includes(q);
-      if (searchField === "vehicle") return i.vehicle_info?.toLowerCase().includes(q);
-      // all
-      if (i.invoice_number?.toLowerCase().includes(q)) return true;
-      if (i.customer_name?.toLowerCase().includes(q)) return true;
-      if (i.vehicle_info?.toLowerCase().includes(q)) return true;
+      if (searchField === "invoice_number") return fuzzyMatch(search, [i.invoice_number]);
+      if (searchField === "customer") return fuzzyMatch(search, [i.customer_name]);
+      if (searchField === "vehicle") return fuzzyMatch(search, [i.vehicle_info]);
       const customer = customers.find(c => c.id === i.customer_id);
-      if (customer?.phone?.toLowerCase().includes(q)) return true;
-      return false;
+      return fuzzyMatch(search, [i.invoice_number, i.customer_name, i.vehicle_info, customer?.phone, customer?.email]);
     });
 
   const handleDelete = async (id) => {

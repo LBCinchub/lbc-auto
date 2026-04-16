@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Calendar, Pencil, Trash2, User, Car } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { fuzzyMatch } from "@/utils/fuzzySearch";
 import PageHeader from "../components/shared/PageHeader";
 import SearchBar from "../components/shared/SearchBar";
 import EmptyState from "../components/shared/EmptyState";
@@ -42,10 +43,7 @@ export default function Appointments() {
       if (view === "past") return a.date < today;
       return true;
     })
-    .filter(a =>
-      a.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
-      a.service_type?.toLowerCase().includes(search.toLowerCase())
-    )
+    .filter(a => fuzzyMatch(search, [a.customer_name, a.service_type, a.vehicle_info, a.mechanic_name, a.notes]))
     .sort((a, b) => {
       if (a.date === b.date) return (a.time_slot || "").localeCompare(b.time_slot || "");
       return a.date.localeCompare(b.date);
