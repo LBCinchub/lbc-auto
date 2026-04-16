@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
+import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, Loader2, X, Search } from "lucide-react";
 
 const emptyLaborRow = () => ({ description: "", hours: "", rate: "120", total: 0 });
@@ -24,6 +25,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [newCustomerForm, setNewCustomerForm] = useState(null);
+  const queryClient = useQueryClient();
   const [newVehicleForm, setNewVehicleForm] = useState(null);
   const [decodingVin, setDecodingVin] = useState(false);
   const [customerSearch, setCustomerSearch] = useState("");
@@ -131,6 +133,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
     });
     handleCustomerChange(created.id);
     setNewCustomerForm(null);
+    queryClient.invalidateQueries({ queryKey: ["customers"] });
   };
 
   const decodeVinForNewVehicle = async () => {
