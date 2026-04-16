@@ -2,7 +2,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
 const TWILIO_ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID");
 const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN");
-const TWILIO_PHONE_NUMBER = Deno.env.get("TWILIO_PHONE_NUMBER");
+const TWILIO_MESSAGING_SERVICE_SID = Deno.env.get("TWILIO_MESSAGING_SERVICE_SID");
 
 Deno.serve(async (req) => {
     try {
@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
         
         const formData = new URLSearchParams();
         formData.append('To', phone);
-        formData.append('From', TWILIO_PHONE_NUMBER);
+        formData.append('MessagingServiceSid', TWILIO_MESSAGING_SERVICE_SID);
         formData.append('Body', message);
 
         const response = await fetch(twilioUrl, {
