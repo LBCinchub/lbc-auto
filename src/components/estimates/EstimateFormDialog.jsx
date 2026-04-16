@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
-import { Plus, Trash2, Loader2, X } from "lucide-react";
+import { Plus, Trash2, Loader2, X, Search } from "lucide-react";
 
 const emptyLaborRow = () => ({ description: "", hours: "", rate: "", total: 0 });
 const emptyPartRow  = () => ({ name: "", part_number: "", quantity: "", unit_price: "", total: 0 });
@@ -20,12 +20,16 @@ const emptyForm = {
   repair_order_id: "",
 };
 
-export default function EstimateFormDialog({ open, onClose, estimate, customers, vehicles, repairOrderId, onSaved }) {
+export default function EstimateFormDialog({ open, onClose, estimate, customers, vehicles, parts = [], repairOrderId, onSaved }) {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [newCustomerForm, setNewCustomerForm] = useState(null);
   const [newVehicleForm, setNewVehicleForm] = useState(null);
   const [decodingVin, setDecodingVin] = useState(false);
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [vehicleSearch, setVehicleSearch] = useState("");
+  const [partSearch, setPartSearch] = useState("");
+  const [showPartSearch, setShowPartSearch] = useState(null); // idx of parts row being searched
 
   useEffect(() => {
     if (estimate) {
@@ -42,7 +46,29 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
     }
   }, [estimate, open, repairOrderId]);
 
+  const filteredCustomers = customers.filter(c =>
+    !customerSearch || c.full_name.toLowerCase().includes(customerSearch.toLowerCase()) || (c.phone || "").includes(customerSearch)
+  );
+
   const customerVehicles = vehicles.filter(v => v.customer_id === form.customer_id);
+  const filteredVehicles = customerVehicles.filter(v =>
+    !vehicleSearch || `${v.year} ${v.make} ${v.model} ${v.license_plate || ""}`.toLowerCase().includes(vehicleSearch.toLowerCase())
+  );
+
+  const filteredParts = parts.filter(p =>
+    !partSearch || p.name.toLowerCase().includes(partSearch.toLowerCase()) || (p.part_number || "").toLowerCase().includes(partSearch.toLowerCase())
+  );
+
+  const selectPartFromInventory = (idx, part) => {
+    const items = form.parts_items.map((row, i) => {
+      if (i !== idx) return row;
+      const qty = parseFloat(row.quantity) || 1;
+      return { ...row, name: part.name, part_number: part.part_number || "", unit_price: String(part.sale_price || 0), total: qty * (part.sale_price || 0) };
+    });
+    setForm(f => ({ ...f, parts_items: items }));
+    setShowPartSearch(null);
+    setPartSearch("");
+  };
 
   // ---- Labor helpers ----
   const updateLabor = (idx, field, value) => {
@@ -219,12 +245,28 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
              <div>
                <Label className="text-gray-400">Customer *</Label>
-               <Select value={form.customer_id} onValueChange={handleCustomerChange}>
+               <Select value={form.customer_id} onValueChange={(v) => { handleCustomerChange(v); setCustomerSearch(""); }}>
                  <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
                    <SelectValue placeholder="Select customer..." />
                  </SelectTrigger>
                  <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                   {customers.map(c => <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>)}
+                   <div className="px-2 pb-1 pt-1">
+                     <div className="relative">
+                       <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+                       <input
+                         value={customerSearch}
+                         onChange={e => setCustomerSearch(e.target.value)}
+                         placeholder="Search by name or phone..."
+                         className="w-full pl-7 pr-2 py-1.5 bg-gray-700 border border-gray-600 rounded text-xs text-white placeholder-gray-500 focus:outline-none"
+                         onKeyDown={e => e.stopPropagation()}
+                         onClick={e => e.stopPropagation()}
+                       />
+                     </div>
+                   </div>
+                   {filteredCustomers.map(c => (
+                     <SelectItem key={c.id} value={c.id}>{c.full_name} {c.phone ? `— ${c.phone}` : ""}</SelectItem>
+                   ))}
+                   {filteredCustomers.length === 0 && <div className="px-3 py-2 text-xs text-gray-500">No customers found</div>}
                    <button onClick={() => setNewCustomerForm({ full_name: "", phone: "", email: "" })}
                      className="w-full px-3 py-2 text-left text-sky-400 hover:bg-sky-500/20 flex items-center gap-2 text-sm">
                      <Plus className="w-3.5 h-3.5" /> New customer
@@ -258,22 +300,37 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
                  </div>
                ) : (
                  <div>
-                   <Select value={form.vehicle_id} onValueChange={handleVehicleChange} disabled={!form.customer_id}>
-                     <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
-                       <SelectValue placeholder="Select vehicle..." />
-                     </SelectTrigger>
-                     <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                       {customerVehicles.map(v => (
-                         <SelectItem key={v.id} value={v.id}>{v.year} {v.make} {v.model} {v.license_plate ? `(${v.license_plate})` : ""}</SelectItem>
-                       ))}
-                       {form.customer_id && customerVehicles.length === 0 && (
-                         <button onClick={() => setNewVehicleForm({ vin: "", year: "", make: "", model: "", license_plate: "", color: "", engine_type: "" })}
-                           className="w-full px-3 py-2 text-left text-sky-400 hover:bg-sky-500/20 flex items-center gap-2 text-sm">
-                           <Plus className="w-3.5 h-3.5" /> Add vehicle
-                         </button>
-                       )}
-                     </SelectContent>
-                   </Select>
+                   <Select value={form.vehicle_id} onValueChange={(v) => { handleVehicleChange(v); setVehicleSearch(""); }} disabled={!form.customer_id}>
+                       <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
+                         <SelectValue placeholder="Select vehicle..." />
+                       </SelectTrigger>
+                       <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                         {customerVehicles.length > 3 && (
+                           <div className="px-2 pb-1 pt-1">
+                             <div className="relative">
+                               <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+                               <input
+                                 value={vehicleSearch}
+                                 onChange={e => setVehicleSearch(e.target.value)}
+                                 placeholder="Search vehicle..."
+                                 className="w-full pl-7 pr-2 py-1.5 bg-gray-700 border border-gray-600 rounded text-xs text-white placeholder-gray-500 focus:outline-none"
+                                 onKeyDown={e => e.stopPropagation()}
+                                 onClick={e => e.stopPropagation()}
+                               />
+                             </div>
+                           </div>
+                         )}
+                         {filteredVehicles.map(v => (
+                           <SelectItem key={v.id} value={v.id}>{v.year} {v.make} {v.model} {v.license_plate ? `(${v.license_plate})` : ""}</SelectItem>
+                         ))}
+                         {form.customer_id && filteredVehicles.length === 0 && (
+                           <button onClick={() => setNewVehicleForm({ vin: "", year: "", make: "", model: "", license_plate: "", color: "", engine_type: "" })}
+                             className="w-full px-3 py-2 text-left text-sky-400 hover:bg-sky-500/20 flex items-center gap-2 text-sm">
+                             <Plus className="w-3.5 h-3.5" /> Add vehicle
+                           </button>
+                         )}
+                       </SelectContent>
+                     </Select>
                    {form.customer_id && customerVehicles.length > 0 && (
                    <button onClick={() => setNewVehicleForm({ vin: "", year: "", make: "", model: "", license_plate: "", color: "", engine_type: "" })}
                    className="mt-2 w-full px-3 py-1 rounded text-xs bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/40 text-sky-400 flex items-center justify-center gap-2">
@@ -401,10 +458,41 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
                 </thead>
                 <tbody className="divide-y divide-gray-800">
                   {form.parts_items.map((row, idx) => (
-                    <tr key={idx} className="bg-gray-900">
+                    <React.Fragment key={idx}>
+                    <tr className="bg-gray-900">
                       <td className="px-2 py-1.5">
-                        <Input value={row.name} onChange={e => updatePart(idx, "name", e.target.value)}
-                          className="bg-gray-800 border-0 text-white h-8 text-sm" placeholder="e.g. Oil Filter" />
+                        <div className="flex gap-1">
+                          <Input value={row.name} onChange={e => updatePart(idx, "name", e.target.value)}
+                            className="bg-gray-800 border-0 text-white h-8 text-sm" placeholder="e.g. Oil Filter" />
+                          {parts.length > 0 && (
+                            <button onClick={() => { setShowPartSearch(showPartSearch === idx ? null : idx); setPartSearch(""); }}
+                              className="h-8 w-8 flex-shrink-0 flex items-center justify-center rounded bg-gray-700 hover:bg-sky-500/30 text-gray-400 hover:text-sky-400 transition-colors"
+                              title="Search inventory">
+                              <Search className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                        {showPartSearch === idx && (
+                          <div className="mt-1">
+                            <input
+                              value={partSearch}
+                              onChange={e => setPartSearch(e.target.value)}
+                              placeholder="Search inventory..."
+                              autoFocus
+                              className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-xs text-white placeholder-gray-500 focus:outline-none"
+                            />
+                            <div className="mt-1 max-h-32 overflow-y-auto rounded border border-gray-700 bg-gray-800">
+                              {filteredParts.slice(0, 10).map(p => (
+                                <button key={p.id} onClick={() => selectPartFromInventory(idx, p)}
+                                  className="w-full px-2 py-1.5 text-left hover:bg-sky-500/20 text-xs text-white flex justify-between gap-2">
+                                  <span className="font-medium truncate">{p.name}</span>
+                                  <span className="text-gray-400 flex-shrink-0">${(p.sale_price || 0).toFixed(2)}</span>
+                                </button>
+                              ))}
+                              {filteredParts.length === 0 && <div className="px-2 py-2 text-xs text-gray-500">No parts found</div>}
+                            </div>
+                          </div>
+                        )}
                       </td>
                       <td className="px-2 py-1.5">
                         <Input value={row.part_number} onChange={e => updatePart(idx, "part_number", e.target.value)}
@@ -424,8 +512,9 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </td>
-                    </tr>
-                  ))}
+                      </tr>
+                      </React.Fragment>
+                      ))}
                 </tbody>
               </table>
             </div>

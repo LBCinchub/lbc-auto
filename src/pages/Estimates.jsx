@@ -56,6 +56,11 @@ export default function Estimates() {
     queryFn: () => base44.entities.Vehicle.list("-created_date", 200),
   });
 
+  const { data: parts = [] } = useQuery({
+    queryKey: ["parts"],
+    queryFn: () => base44.entities.Part.list("-created_date", 500),
+  });
+
   const filtered = estimates.filter(e => {
     if (!search) return true;
     const s = search.toLowerCase();
@@ -222,6 +227,7 @@ export default function Estimates() {
         estimate={editing}
         customers={customers}
         vehicles={vehicles}
+        parts={parts}
         onSaved={() => queryClient.invalidateQueries({ queryKey: ["estimates"] })}
       />
 
