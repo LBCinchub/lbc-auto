@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
+import { useQueryClient } from "@tanstack/react-query";
 import { Search, User, Plus, Loader2, X } from "lucide-react";
 
 const timeSlots = [
@@ -33,6 +34,7 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
     time_slot: "", notes: "", status: "scheduled"
   });
   const [saving, setSaving] = useState(false);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (appointment) {
@@ -91,6 +93,7 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
     });
     handleCustomerChange(created.id);
     setNewCustomerForm(null);
+    queryClient.invalidateQueries({ queryKey: ["customers"] });
   };
 
   const decodeVinForNewVehicle = async () => {
