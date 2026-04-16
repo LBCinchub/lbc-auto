@@ -189,6 +189,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
     });
     setForm(f => ({ ...f, vehicle_id: created.id, vehicle_info: `${created.year} ${created.make} ${created.model}` }));
     setNewVehicleForm(null);
+    queryClient.invalidateQueries({ queryKey: ["vehicles"] });
   };
 
   const handleSave = async () => {

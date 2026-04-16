@@ -173,6 +173,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
     });
     setForm({ ...form, vehicle_id: created.id, vehicle_info: `${created.year} ${created.make} ${created.model}` });
     setNewVehicleForm(null);
+    queryClient.invalidateQueries({ queryKey: ["vehicles"] });
   };
 
   const [partSearches, setPartSearches] = useState({});

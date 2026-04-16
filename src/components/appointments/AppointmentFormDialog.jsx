@@ -149,6 +149,7 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
     });
     setForm({ ...form, vehicle_id: created.id, vehicle_info: `${created.year} ${created.make} ${created.model}` });
     setNewVehicleForm(null);
+    queryClient.invalidateQueries({ queryKey: ["vehicles"] });
   };
 
   const handleSave = async () => {
