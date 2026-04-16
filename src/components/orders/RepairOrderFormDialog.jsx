@@ -299,28 +299,28 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
           <DialogTitle>{order ? "Edit Repair Order" : "New Repair Order"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 mt-2">
-           {newCustomerForm !== null && (
-             <div className="bg-gray-800 border border-sky-500/30 rounded-lg p-3 space-y-2 mb-2">
-               <div className="flex items-center justify-between">
-                 <p className="text-xs text-sky-400 font-medium">New Customer</p>
-                 <button onClick={() => setNewCustomerForm(null)} className="text-gray-500 hover:text-gray-300">
-                   <X className="w-3.5 h-3.5" />
-                 </button>
-               </div>
-               <Input value={newCustomerForm.full_name} onChange={e => setNewCustomerForm({...newCustomerForm, full_name: e.target.value})}
-                 className="bg-gray-700 border-gray-600 text-white" placeholder="Full name *" />
-               <Input value={newCustomerForm.phone} onChange={e => setNewCustomerForm({...newCustomerForm, phone: e.target.value})}
-                 className="bg-gray-700 border-gray-600 text-white" placeholder="Phone number *" />
-               <Input value={newCustomerForm.email} onChange={e => setNewCustomerForm({...newCustomerForm, email: e.target.value})}
-                 className="bg-gray-700 border-gray-600 text-white" placeholder="Email" />
-               <div className="flex gap-2">
-                 <Button size="sm" onClick={saveNewCustomer} disabled={!newCustomerForm.full_name || !newCustomerForm.phone} className="bg-sky-500 hover:bg-sky-600 text-white flex-1">Save</Button>
-               </div>
-             </div>
-           )}
            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
              <div>
                <Label className="text-gray-400">Customer *</Label>
+               {newCustomerForm !== null && (
+                 <div className="bg-gray-800 border border-sky-500/30 rounded-lg p-3 space-y-2 mt-1 mb-1">
+                   <div className="flex items-center justify-between">
+                     <p className="text-xs text-sky-400 font-medium">New Customer</p>
+                     <button onClick={() => setNewCustomerForm(null)} className="text-gray-500 hover:text-gray-300">
+                       <X className="w-3.5 h-3.5" />
+                     </button>
+                   </div>
+                   <Input value={newCustomerForm.full_name} onChange={e => setNewCustomerForm({...newCustomerForm, full_name: e.target.value})}
+                     className="bg-gray-700 border-gray-600 text-white" placeholder="Full name *" />
+                   <Input value={newCustomerForm.phone} onChange={e => setNewCustomerForm({...newCustomerForm, phone: e.target.value})}
+                     className="bg-gray-700 border-gray-600 text-white" placeholder="Phone number *" />
+                   <Input value={newCustomerForm.email} onChange={e => setNewCustomerForm({...newCustomerForm, email: e.target.value})}
+                     className="bg-gray-700 border-gray-600 text-white" placeholder="Email" />
+                   <div className="flex gap-2">
+                     <Button size="sm" onClick={saveNewCustomer} disabled={!newCustomerForm.full_name || !newCustomerForm.phone} className="bg-sky-500 hover:bg-sky-600 text-white flex-1">Save</Button>
+                   </div>
+                 </div>
+               )}
                <div className="mt-1">
                  <CustomerSearchInput customers={customers} value={form.customer_id} onChange={handleCustomerChange} />
                  <button onClick={() => setNewCustomerForm({ full_name: "", phone: "", email: "" })}

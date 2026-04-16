@@ -171,31 +171,36 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
           <DialogTitle>{appointment ? "Edit Appointment" : "New Appointment"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 mt-2">
-          {newCustomerForm !== null && (
-            <div className="bg-gray-800 border border-sky-500/30 rounded-lg p-3 space-y-2 mb-2">
-              <p className="text-xs text-sky-400 font-medium">New Customer</p>
-              <Input value={newCustomerForm.full_name} onChange={e => setNewCustomerForm({...newCustomerForm, full_name: e.target.value})}
-                className="bg-gray-700 border-gray-600 text-white" placeholder="Full name *" />
-              <Input value={newCustomerForm.phone} onChange={e => setNewCustomerForm({...newCustomerForm, phone: e.target.value})}
-                className="bg-gray-700 border-gray-600 text-white" placeholder="Phone number *" />
-              <Input value={newCustomerForm.email} onChange={e => setNewCustomerForm({...newCustomerForm, email: e.target.value})}
-                className="bg-gray-700 border-gray-600 text-white" placeholder="Email" />
-              <div className="flex gap-2">
-                <Button size="sm" onClick={saveNewCustomer} disabled={!newCustomerForm.full_name || !newCustomerForm.phone} className="bg-sky-500 hover:bg-sky-600 text-white flex-1">Save</Button>
-                <Button size="sm" variant="ghost" onClick={() => setNewCustomerForm(null)} className="text-gray-400 flex-1">Cancel</Button>
-              </div>
-            </div>
-          )}
           <div>
             <div className="flex items-center justify-between mb-1">
               <Label className="text-gray-400">Customer *</Label>
-              {!form.customer_id && newCustomerForm === null && (
-                <button onClick={() => setNewCustomerForm({ full_name: "", phone: "", email: "" })}
-                  className="text-xs text-sky-400 hover:text-sky-300 flex items-center gap-1">
-                  <Plus className="w-3 h-3" /> New Customer
-                </button>
-              )}
             </div>
+            {newCustomerForm !== null && (
+              <div className="bg-gray-800 border border-sky-500/30 rounded-lg p-3 space-y-2 mb-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-sky-400 font-medium">New Customer</p>
+                  <button onClick={() => setNewCustomerForm(null)} className="text-gray-500 hover:text-gray-300">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <Input value={newCustomerForm.full_name} onChange={e => setNewCustomerForm({...newCustomerForm, full_name: e.target.value})}
+                  className="bg-gray-700 border-gray-600 text-white" placeholder="Full name *" />
+                <Input value={newCustomerForm.phone} onChange={e => setNewCustomerForm({...newCustomerForm, phone: e.target.value})}
+                  className="bg-gray-700 border-gray-600 text-white" placeholder="Phone number *" />
+                <Input value={newCustomerForm.email} onChange={e => setNewCustomerForm({...newCustomerForm, email: e.target.value})}
+                  className="bg-gray-700 border-gray-600 text-white" placeholder="Email" />
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={saveNewCustomer} disabled={!newCustomerForm.full_name || !newCustomerForm.phone} className="bg-sky-500 hover:bg-sky-600 text-white flex-1">Save</Button>
+                  <Button size="sm" variant="ghost" onClick={() => setNewCustomerForm(null)} className="text-gray-400 flex-1">Cancel</Button>
+                </div>
+              </div>
+            )}
+            {!form.customer_id && newCustomerForm === null && (
+              <button onClick={() => setNewCustomerForm({ full_name: "", phone: "", email: "" })}
+                className="text-xs text-sky-400 hover:text-sky-300 flex items-center gap-1 mb-1">
+                <Plus className="w-3 h-3" /> New Customer
+              </button>
+            )}
             {form.customer_id ? (
               <div className="mt-1 flex items-center justify-between bg-sky-500/10 border border-sky-500/40 rounded-lg px-3 py-2">
                 <div>
