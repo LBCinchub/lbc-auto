@@ -14,7 +14,7 @@ const TAX_RATE = 15;
 
 const emptyForm = {
   customer_id: "", customer_name: "", vehicle_id: "", vehicle_info: "",
-  status: "draft", notes: "", tax_rate: String(TAX_RATE), apply_tax: true, tax_applies_to: "labor", valid_until: "",
+  status: "draft", notes: "", tax_rate: String(TAX_RATE), apply_tax: true, tax_applies_to: "both", valid_until: "",
   labor_items: [emptyLaborRow()],
   parts_items: [emptyPartRow()],
   repair_order_id: "",
@@ -38,6 +38,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
         ...estimate,
         apply_tax: estimate.apply_tax !== false,
         tax_rate: String(estimate.tax_rate ?? TAX_RATE),
+        tax_applies_to: "both",
         labor_items: estimate.labor_items?.length ? estimate.labor_items.map(i => ({ ...i, hours: String(i.hours), rate: String(i.rate) })) : [emptyLaborRow()],
         parts_items: estimate.parts_items?.length ? estimate.parts_items.map(i => ({ ...i, quantity: String(i.quantity), unit_price: String(i.unit_price) })) : [emptyPartRow()],
       });
@@ -373,16 +374,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
                   {form.apply_tax ? "Applied" : "Not Applied"}
                 </button>
                 {form.apply_tax && (
-                  <Select value={form.tax_applies_to || "labor"} onValueChange={v => setForm(f => ({ ...f, tax_applies_to: v }))}>
-                    <SelectTrigger className="bg-gray-800 border-gray-700 text-white w-24 h-9">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-800 border-gray-700">
-                      <SelectItem value="labor">Labor</SelectItem>
-                      <SelectItem value="parts">Parts</SelectItem>
-                      <SelectItem value="both">Both</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <span className="text-xs text-sky-400 font-medium">Parts + Labor</span>
                 )}
               </div>
             </div>

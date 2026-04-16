@@ -27,7 +27,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
     labor_hours: "", labor_items: [{ description: "", hours: "", total: 0 }],
     notes: "", parts_used: [], estimated_completion: "",
     discount_type: "none", discount_value: 0, total_cost: 0, custom_total: false,
-    apply_tax: true, tax_applies_to: "labor"
+    apply_tax: true, tax_applies_to: "both"
   });
   const [saving, setSaving] = useState(false);
   const [newCustomerForm, setNewCustomerForm] = useState(null);
@@ -45,11 +45,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
     : form.discount_type === "fixed" ? (form.discount_value || 0) : 0;
   const afterDiscount = subtotal - discountAmount;
 
-  let taxableAmount = 0;
-  const taxAppliesTo = form.tax_applies_to || "labor";
-  if (taxAppliesTo === "labor") taxableAmount = laborCost;
-  else if (taxAppliesTo === "parts") taxableAmount = partsCost;
-  else if (taxAppliesTo === "both") taxableAmount = afterDiscount;
+  const taxableAmount = afterDiscount; // always tax both parts + labor
 
   const taxAmount = form.apply_tax ? taxableAmount * 0.15 : 0;
   const calculatedTotal = afterDiscount + taxAmount;
@@ -76,7 +72,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         total_cost: order.total_cost || 0,
         custom_total: order.total_cost ? true : false,
         apply_tax: order.apply_tax !== false,
-        tax_applies_to: order.tax_applies_to || "labor",
+        tax_applies_to: "both",
       });
     } else {
       setForm({
@@ -85,7 +81,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         labor_hours: "", labor_items: [{ description: "", hours: "", total: 0 }],
         notes: "", parts_used: [], estimated_completion: "",
         discount_type: "none", discount_value: 0, total_cost: 0, custom_total: false,
-        apply_tax: true, tax_applies_to: "labor"
+        apply_tax: true, tax_applies_to: "both"
       });
     }
   }, [order, open]);
@@ -613,16 +609,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                   Tax 15%
                 </button>
                 {form.apply_tax && (
-                  <Select value={form.tax_applies_to || "labor"} onValueChange={v => setForm(f => ({ ...f, tax_applies_to: v }))}>
-                    <SelectTrigger className="bg-gray-800 border-gray-700 text-white w-20 h-7">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-800 border-gray-700">
-                      <SelectItem value="labor">Labor</SelectItem>
-                      <SelectItem value="parts">Parts</SelectItem>
-                      <SelectItem value="both">Both</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <span className="text-xs text-sky-400 font-medium">Parts + Labor</span>
                 )}
               </div>
             </div>
