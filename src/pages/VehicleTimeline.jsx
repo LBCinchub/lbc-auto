@@ -2,7 +2,7 @@ import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Wrench, FileText } from "lucide-react";
+import { ArrowLeft, Wrench, FileText, Phone, Mail, Hash, Car } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function VehicleTimeline() {
@@ -74,35 +74,48 @@ export default function VehicleTimeline() {
 
       {/* Vehicle Header */}
       <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <h1 className="text-3xl font-bold text-white">{vehicle.year} {vehicle.make} {vehicle.model}</h1>
-            <p className="text-gray-400 mt-1">{vehicle.customer_name}</p>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+        <h1 className="text-2xl font-bold text-white mb-1">{vehicle.year} {vehicle.make} {vehicle.model}</h1>
+        {vehicle.color && <p className="text-gray-500 text-sm mb-4">{vehicle.color}</p>}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3 text-sm">
+          {/* Customer Name */}
+          {vehicle.customer_name && (
+            <div className="flex items-center gap-2">
+              <Car className="w-4 h-4 text-gray-500 flex-shrink-0" />
+              <span className="text-gray-400 w-20 flex-shrink-0">Owner</span>
+              <span className="text-white font-medium">{vehicle.customer_name}</span>
+            </div>
+          )}
+          {/* Phone */}
+          {vehicle.phone && (
+            <div className="flex items-center gap-2">
+              <Phone className="w-4 h-4 text-gray-500 flex-shrink-0" />
+              <span className="text-gray-400 w-20 flex-shrink-0">Phone</span>
+              <a href={`tel:${vehicle.phone}`} className="text-sky-400 hover:text-sky-300 font-medium">{vehicle.phone}</a>
+            </div>
+          )}
+          {/* License Plate */}
           {vehicle.license_plate && (
-            <div>
-              <p className="text-gray-500 text-xs uppercase">License Plate</p>
-              <p className="text-white font-mono">{vehicle.license_plate}</p>
+            <div className="flex items-center gap-2">
+              <Hash className="w-4 h-4 text-gray-500 flex-shrink-0" />
+              <span className="text-gray-400 w-20 flex-shrink-0">Plate</span>
+              <span className="text-white font-mono font-medium">{vehicle.license_plate}</span>
             </div>
           )}
+          {/* VIN */}
           {vehicle.vin && (
-            <div>
-              <p className="text-gray-500 text-xs uppercase">VIN</p>
-              <p className="text-white font-mono text-xs">{vehicle.vin}</p>
+            <div className="flex items-center gap-2">
+              <Hash className="w-4 h-4 text-gray-500 flex-shrink-0" />
+              <span className="text-gray-400 w-20 flex-shrink-0">VIN</span>
+              <span className="text-white font-mono text-xs">{vehicle.vin}</span>
             </div>
           )}
+          {/* Mileage */}
           {vehicle.mileage > 0 && (
-            <div>
-              <p className="text-gray-500 text-xs uppercase">Mileage</p>
-              <p className="text-white">{vehicle.mileage?.toLocaleString()} miles</p>
-            </div>
-          )}
-          {vehicle.color && (
-            <div>
-              <p className="text-gray-500 text-xs uppercase">Color</p>
-              <p className="text-white">{vehicle.color}</p>
+            <div className="flex items-center gap-2">
+              <span className="w-4 h-4 flex-shrink-0" />
+              <span className="text-gray-400 w-20 flex-shrink-0">Mileage</span>
+              <span className="text-white">{vehicle.mileage?.toLocaleString()} mi</span>
             </div>
           )}
         </div>
