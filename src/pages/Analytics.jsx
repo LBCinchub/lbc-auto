@@ -141,17 +141,33 @@ export default function Analytics() {
     // Use the full total for paid invoices
     const amount = inv.total || 0;
     const method = inv.payment_method?.toLowerCase() || "";
-    
-    // Track by payment method
-    if (method === "e-transfer" || method === "etransfer") {
-      dailyPayments[day].etransfer += amount;
-    } else if (method === "card" || inv.card_last4) {
-      dailyPayments[day].card += amount;
-    } else if (method === "cash") {
-      dailyPayments[day].cash += amount;
+
+    // Handle split/combined payment methods (e.g. "cash+card")
+    const methods = method.split("+").map(m => m.trim());
+    const history = inv.payment_history || [];
+
+    if (history.length > 0) {
+      // Use actual payment_history for accurate per-method breakdown
+      history.forEach(entry => {
+        const m = entry.method?.toLowerCase() || "cash";
+        const entryAmount = entry.amount || 0;
+        if (m === "e-transfer" || m === "etransfer") {
+          dailyPayments[day].etransfer += entryAmount;
+        } else if (m === "card") {
+          dailyPayments[day].card += entryAmount;
+        } else {
+          dailyPayments[day].cash += entryAmount;
+        }
+      });
     } else {
-      // Default to cash if not specified
-      dailyPayments[day].cash += amount;
+      // Fallback for old invoices without payment_history
+      if (method === "e-transfer" || method === "etransfer") {
+        dailyPayments[day].etransfer += amount;
+      } else if (method === "card" || inv.card_last4) {
+        dailyPayments[day].card += amount;
+      } else {
+        dailyPayments[day].cash += amount;
+      }
     }
   });
   const today = new Date().toISOString().substring(0, 10);

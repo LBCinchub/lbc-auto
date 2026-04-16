@@ -50,10 +50,17 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved }
     const newBalance = (invoice.total || 0) - newAmountPaid;
     const newStatus = newBalance <= 0 ? "paid" : "partial";
 
+    // Determine combined payment method label for the invoice
+    const existingMethods = (invoice.payment_history || []).map(p => p.method).filter(Boolean);
+    const allMethods = [...new Set([...existingMethods, form.payment_method])];
+    const combinedMethod = allMethods.length > 1 ? allMethods.join("+") : allMethods[0] || form.payment_method;
+
     await base44.entities.Invoice.update(invoice.id, {
       amount_paid: newAmountPaid,
       balance_due: Math.max(0, newBalance),
       status: newStatus,
+      payment_method: combinedMethod,
+      card_last4: form.card_last4 || invoice.card_last4 || undefined,
       paid_date: newStatus === "paid" ? new Date().toISOString().split("T")[0] : undefined,
       payment_history: [...(invoice.payment_history || []), paymentEntry],
     });
