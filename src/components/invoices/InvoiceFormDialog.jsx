@@ -21,7 +21,10 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    if (!open) return; // Only populate when dialog opens
+
     if (invoice) {
+      // Editing existing invoice
       setForm({
         repair_order_id: invoice.repair_order_id || "",
         customer_id: invoice.customer_id || "",
@@ -45,33 +48,9 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         discount_value: invoice.discount_value || 0,
         apply_tax_parts: invoice.apply_tax_parts !== false,
         apply_tax_labor: invoice.apply_tax_labor !== false,
-        });
-    } else {
-      setForm({
-        repair_order_id: "", customer_id: "", customer_name: "", customer_phone: "", vehicle_info: "",
-        parts_total: 0, labor_total: 0, tax_rate: 15, apply_tax_parts: true, apply_tax_labor: true, status: "unpaid",
-        due_date: "", payment_method: "", amount_paid: 0, payment_history: [],
-        receipt_number: "", card_last4: "", cashier_name: "", parts_used: [], customer_note: "",
-        discount_type: "none", discount_value: 0
       });
-    }
-    // Auto-select order if opened from RepairOrders
-    if (!invoice && initialOrderId) {
-      const order = orders.find(o => o.id === initialOrderId);
-      if (order) {
-        setForm(f => ({
-          ...f,
-          repair_order_id: order.id,
-          customer_id: order.customer_id,
-          customer_name: order.customer_name,
-          vehicle_info: order.vehicle_info,
-          parts_total: order.parts_cost || 0,
-          labor_total: order.labor_cost || 0,
-        }));
-      }
-    }
-    // Auto-populate from estimate
-    if (!invoice && sourceEstimate) {
+    } else if (sourceEstimate) {
+      // Creating from estimate
       setForm(f => ({
         ...f,
         estimate_id: sourceEstimate.id,
@@ -88,8 +67,32 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         })) || [],
         customer_note: sourceEstimate.notes || "",
       }));
+    } else if (initialOrderId) {
+      // Creating from repair order
+      const order = orders.find(o => o.id === initialOrderId);
+      if (order) {
+        setForm(f => ({
+          ...f,
+          repair_order_id: order.id,
+          customer_id: order.customer_id,
+          customer_name: order.customer_name,
+          vehicle_info: order.vehicle_info,
+          parts_total: order.parts_cost || 0,
+          labor_total: order.labor_cost || 0,
+          parts_used: order.parts_used || [],
+        }));
+      }
+    } else {
+      // New blank invoice
+      setForm({
+        repair_order_id: "", customer_id: "", customer_name: "", customer_phone: "", vehicle_info: "",
+        parts_total: 0, labor_total: 0, tax_rate: 15, apply_tax_parts: true, apply_tax_labor: true, status: "unpaid",
+        due_date: "", payment_method: "", amount_paid: 0, payment_history: [],
+        receipt_number: "", card_last4: "", cashier_name: "", parts_used: [], customer_note: "",
+        discount_type: "none", discount_value: 0
+      });
     }
-  }, [invoice, open, initialOrderId, sourceEstimate]);
+  }, [open, invoice, initialOrderId, sourceEstimate, orders]);
 
   const handleOrderSelect = useCallback(async (orderId) => {
     const order = orders.find(o => o.id === orderId);
