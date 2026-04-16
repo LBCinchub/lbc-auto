@@ -26,8 +26,13 @@ export default function Estimates() {
   const [editing, setEditing] = useState(null);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [invoiceFromEstimate, setInvoiceFromEstimate] = useState(null);
+  const [user, setUser] = useState(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    base44.auth.me().then(setUser);
+  }, []);
 
   // Auto-open new estimate dialog if coming from customer profile
   const urlParams = new URLSearchParams(window.location.search);
@@ -42,23 +47,27 @@ export default function Estimates() {
   }, []);
 
   const { data: estimates = [], isLoading } = useQuery({
-    queryKey: ["estimates"],
-    queryFn: () => base44.entities.Estimate.list("-created_date", 200),
+    queryKey: ["estimates", user?.email],
+    queryFn: () => user ? base44.entities.Estimate.filter({created_by: user.email}, "-created_date", 200) : Promise.resolve([]),
+    enabled: !!user,
   });
 
   const { data: customers = [] } = useQuery({
-    queryKey: ["customers"],
-    queryFn: () => base44.entities.Customer.list("-created_date", 200),
+    queryKey: ["customers", user?.email],
+    queryFn: () => user ? base44.entities.Customer.filter({created_by: user.email}, "-created_date", 200) : Promise.resolve([]),
+    enabled: !!user,
   });
 
   const { data: vehicles = [] } = useQuery({
-    queryKey: ["vehicles"],
-    queryFn: () => base44.entities.Vehicle.list("-created_date", 200),
+    queryKey: ["vehicles", user?.email],
+    queryFn: () => user ? base44.entities.Vehicle.filter({created_by: user.email}, "-created_date", 200) : Promise.resolve([]),
+    enabled: !!user,
   });
 
   const { data: parts = [] } = useQuery({
-    queryKey: ["parts"],
-    queryFn: () => base44.entities.Part.list("-created_date", 500),
+    queryKey: ["parts", user?.email],
+    queryFn: () => user ? base44.entities.Part.filter({created_by: user.email}, "-created_date", 500) : Promise.resolve([]),
+    enabled: !!user,
   });
 
   const filtered = estimates.filter(e => {
