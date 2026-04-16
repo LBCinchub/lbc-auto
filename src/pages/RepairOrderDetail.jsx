@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, FileText, Plus, Trash2, MoreVertical, Clock, History, Wrench, PenLine, CheckCircle2, XCircle, Printer } from "lucide-react";
+import { ArrowLeft, FileText, Plus, Trash2, MoreVertical, Clock, History, Wrench, PenLine, CheckCircle2, XCircle, Printer, ShoppingCart } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +23,8 @@ export default function RepairOrderDetail() {
   const [newLabor, setNewLabor] = useState({ description: "", hours: "", rate: "" });
   const [showSignatureDialog, setShowSignatureDialog] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [showOrderedPartDialog, setShowOrderedPartDialog] = useState(false);
+  const [newOrderedPart, setNewOrderedPart] = useState({ name: "", part_number: "", supplier: "", quantity: "", unit_price: "", notes: "" });
 
   const { data: order, isLoading } = useQuery({
     queryKey: ["repairOrder", orderId],
@@ -278,6 +280,61 @@ export default function RepairOrderDetail() {
           </div>
         )}
 
+        {/* Parts Ordered Section */}
+        <div className="mt-8 pt-6 border-t border-gray-800">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <ShoppingCart className="w-5 h-5 text-amber-400" /> Parts Ordered
+            </h3>
+            <button onClick={() => setShowOrderedPartDialog(true)} className="text-amber-400 hover:text-amber-300 text-sm flex items-center gap-1">
+              <Plus className="w-4 h-4" /> Add Ordered Part
+            </button>
+          </div>
+          {order.parts_ordered && order.parts_ordered.length > 0 ? (
+            <div className="space-y-3">
+              {order.parts_ordered.map((part, idx) => (
+                <div key={idx} className="flex justify-between items-start bg-gray-800/30 rounded-lg p-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-white font-medium">{part.name}</p>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                        part.status === "received" ? "bg-green-500/20 text-green-400" :
+                        part.status === "cancelled" ? "bg-rose-500/20 text-rose-400" :
+                        "bg-amber-500/20 text-amber-400"
+                      }`}>{part.status || "ordered"}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1">
+                      {part.part_number && <p className="text-gray-500 text-xs">PN: {part.part_number}</p>}
+                      {part.supplier && <p className="text-gray-500 text-xs">Supplier: {part.supplier}</p>}
+                      <p className="text-gray-400 text-sm">Qty: {part.quantity}</p>
+                    </div>
+                    {part.notes && <p className="text-gray-500 text-xs mt-1 italic">{part.notes}</p>}
+                  </div>
+                  <div className="flex items-center gap-2 ml-3 flex-shrink-0">
+                    {part.unit_price > 0 && <p className="text-white font-semibold">${((part.quantity || 1) * part.unit_price).toFixed(2)}</p>}
+                    <select
+                      value={part.status || "ordered"}
+                      onChange={e => updateOrderedPartStatus(idx, e.target.value)}
+                      className="text-xs bg-gray-700 border border-gray-600 text-white rounded px-1.5 py-1"
+                    >
+                      <option value="ordered">Ordered</option>
+                      <option value="received">Received</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                    <button onClick={() => removeOrderedPart(idx)} className="text-gray-600 hover:text-rose-400 transition-colors p-1">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <button onClick={() => setShowOrderedPartDialog(true)} className="text-amber-400 hover:text-amber-300 flex items-center gap-2 font-medium">
+              <Plus className="w-5 h-5" /> Add First Ordered Part
+            </button>
+          )}
+        </div>
+
         {/* Labor Section */}
         <div className="mt-8 pt-6 border-t border-gray-800">
           <div className="flex items-center justify-between mb-4">
@@ -487,6 +544,52 @@ export default function RepairOrderDetail() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={showOrderedPartDialog} onOpenChange={setShowOrderedPartDialog}>
+        <DialogContent className="bg-gray-900 border-gray-800 text-white">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><ShoppingCart className="w-4 h-4 text-amber-400" /> Add Ordered Part</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <Label className="text-gray-400">Part Name</Label>
+                <Input value={newOrderedPart.name} onChange={e => setNewOrderedPart({...newOrderedPart, name: e.target.value})}
+                  className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="e.g. Brake Pad Set" />
+              </div>
+              <div>
+                <Label className="text-gray-400">Part Number</Label>
+                <Input value={newOrderedPart.part_number} onChange={e => setNewOrderedPart({...newOrderedPart, part_number: e.target.value})}
+                  className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="e.g. BP-12345" />
+              </div>
+              <div>
+                <Label className="text-gray-400">Supplier</Label>
+                <Input value={newOrderedPart.supplier} onChange={e => setNewOrderedPart({...newOrderedPart, supplier: e.target.value})}
+                  className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="e.g. AutoZone" />
+              </div>
+              <div>
+                <Label className="text-gray-400">Quantity</Label>
+                <Input type="number" value={newOrderedPart.quantity} onChange={e => setNewOrderedPart({...newOrderedPart, quantity: e.target.value})}
+                  className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="1" />
+              </div>
+              <div>
+                <Label className="text-gray-400">Unit Price (optional)</Label>
+                <Input type="number" value={newOrderedPart.unit_price} onChange={e => setNewOrderedPart({...newOrderedPart, unit_price: e.target.value})}
+                  className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="0.00" />
+              </div>
+              <div className="col-span-2">
+                <Label className="text-gray-400">Notes (optional)</Label>
+                <Input value={newOrderedPart.notes} onChange={e => setNewOrderedPart({...newOrderedPart, notes: e.target.value})}
+                  className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="e.g. ETA 2 days" />
+              </div>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button onClick={() => setShowOrderedPartDialog(false)} className="flex-1 px-4 py-2 rounded border border-gray-700 text-gray-300 hover:bg-gray-800">Cancel</button>
+              <button onClick={addOrderedPart} className="flex-1 px-4 py-2 rounded bg-amber-500 hover:bg-amber-600 text-white font-medium">Add Part</button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={showPartDialog} onOpenChange={setShowPartDialog}>
         <DialogContent className="bg-gray-900 border-gray-800 text-white">
           <DialogHeader>
@@ -554,6 +657,37 @@ export default function RepairOrderDetail() {
     });
     setNewLabor({ description: "", hours: "", rate: "" });
     setShowLaborDialog(false);
+    queryClient.invalidateQueries({ queryKey: ["repairOrder", orderId] });
+  }
+
+  function addOrderedPart() {
+    if (!newOrderedPart.name || !newOrderedPart.quantity) return;
+    const part = {
+      name: newOrderedPart.name,
+      part_number: newOrderedPart.part_number,
+      supplier: newOrderedPart.supplier,
+      quantity: parseFloat(newOrderedPart.quantity) || 1,
+      unit_price: parseFloat(newOrderedPart.unit_price) || 0,
+      status: "ordered",
+      order_date: new Date().toISOString().split("T")[0],
+      notes: newOrderedPart.notes,
+    };
+    const updated = [...(order.parts_ordered || []), part];
+    base44.entities.RepairOrder.update(orderId, { parts_ordered: updated });
+    setNewOrderedPart({ name: "", part_number: "", supplier: "", quantity: "", unit_price: "", notes: "" });
+    setShowOrderedPartDialog(false);
+    queryClient.invalidateQueries({ queryKey: ["repairOrder", orderId] });
+  }
+
+  function removeOrderedPart(idx) {
+    const updated = order.parts_ordered.filter((_, i) => i !== idx);
+    base44.entities.RepairOrder.update(orderId, { parts_ordered: updated });
+    queryClient.invalidateQueries({ queryKey: ["repairOrder", orderId] });
+  }
+
+  function updateOrderedPartStatus(idx, status) {
+    const updated = order.parts_ordered.map((p, i) => i === idx ? { ...p, status } : p);
+    base44.entities.RepairOrder.update(orderId, { parts_ordered: updated });
     queryClient.invalidateQueries({ queryKey: ["repairOrder", orderId] });
   }
 
