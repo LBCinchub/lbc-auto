@@ -24,7 +24,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
   const [form, setForm] = useState({
     customer_id: "", customer_name: "", vehicle_id: "", vehicle_info: "",
     mechanic_id: "", mechanic_name: "", description: "", status: "waiting",
-    labor_hours: "", labor_items: [{ description: "", hours: "", total: 0 }],
+    labor_hours: "", labor_items: [{ description: "", hours: "", rate: "120", total: 0 }],
     notes: "", parts_used: [], estimated_completion: "",
     discount_type: "none", discount_value: 0, total_cost: 0, custom_total: false,
     apply_tax: true, tax_applies_to: "both"
@@ -36,7 +36,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
 
   // Live cost calculation (only if not custom/saved)
   const mechanic = mechanics.find(m => m.id === form.mechanic_id);
-  const laborCost = (Number(form.labor_hours) || 0) * 120; // $120 per hour
+  const laborCost = (form.labor_items || []).reduce((s, r) => s + (parseFloat(r.hours) || 0) * (parseFloat(r.rate) || 120), 0);
   const partsCost = form.parts_used.reduce((sum, p) => sum + (Number(p.unit_price) || 0) * (Number(p.quantity) || 0), 0);
   const TAX_RATE = 15;
   const subtotal = laborCost + partsCost;
@@ -67,7 +67,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         description: order.description || "",
         status: order.status || "waiting",
         labor_hours: order.labor_hours || "",
-        labor_items: order.labor_items?.length ? order.labor_items : [{ description: order.description || "", hours: String(order.labor_hours || ""), total: (order.labor_hours || 0) * 120 }],
+        labor_items: order.labor_items?.length ? order.labor_items.map(i => ({ ...i, rate: String(i.rate ?? 120) })) : [{ description: order.description || "", hours: String(order.labor_hours || ""), rate: "120", total: (order.labor_hours || 0) * 120 }],
         notes: order.notes || "",
         parts_used: order.parts_used || [],
         estimated_completion: order.estimated_completion || "",
@@ -82,7 +82,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
       setForm({
         customer_id: "", customer_name: "", vehicle_id: "", vehicle_info: "",
         mechanic_id: "", mechanic_name: "", description: "", status: "waiting",
-        labor_hours: "", labor_items: [{ description: "", hours: "", total: 0 }],
+        labor_hours: "", labor_items: [{ description: "", hours: "", rate: "120", total: 0 }],
         notes: "", parts_used: [], estimated_completion: "",
         discount_type: "none", discount_value: 0, total_cost: 0, custom_total: false,
         apply_tax: true, tax_applies_to: "both"
@@ -221,7 +221,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
     setSaving(true);
     try {
       const laborHours = Number(form.labor_hours) || 0;
-      const laborCost = laborHours * 120;
+      const laborCost = (form.labor_items || []).reduce((s, r) => s + (parseFloat(r.hours) || 0) * (parseFloat(r.rate) || 120), 0);
       const partsCost = form.parts_used.reduce((sum, p) => sum + (p.total || 0), 0);
       const subtotal = laborCost + partsCost;
       const discountAmount = form.discount_type === "percentage" 
@@ -413,7 +413,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
           <div>
             <div className="flex items-center justify-between mb-2">
               <Label className="text-gray-300 font-semibold">Labor</Label>
-              <Button size="sm" variant="ghost" onClick={() => setForm(f => ({ ...f, labor_items: [...(f.labor_items || []), { description: "", hours: "", total: 0 }] }))}
+              <Button size="sm" variant="ghost" onClick={() => setForm(f => ({ ...f, labor_items: [...(f.labor_items || []), { description: "", hours: "", rate: "120", total: 0 }] }))}
                 className="text-sky-400 hover:text-sky-300 h-7 px-2">
                 <Plus className="w-4 h-4 mr-1" /> Add Labor
               </Button>
@@ -442,13 +442,19 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                       <td className="px-2 py-1.5">
                         <Input type="number" value={row.hours} onChange={e => {
                           const items = [...(form.labor_items || [])];
-                          items[idx] = { ...items[idx], hours: e.target.value, total: (parseFloat(e.target.value) || 0) * 120 };
+                          items[idx] = { ...items[idx], hours: e.target.value, total: (parseFloat(e.target.value) || 0) * (parseFloat(items[idx].rate) || 120) };
                           const totalHours = items.reduce((s, r) => s + (parseFloat(r.hours) || 0), 0);
                           setForm(f => ({ ...f, labor_items: items, labor_hours: totalHours }));
                         }} className="bg-gray-800 border-0 text-white h-8 text-sm text-right" placeholder="0" step="0.5" />
                       </td>
-                      <td className="px-2 py-1.5 text-right text-gray-300">$120</td>
-                      <td className="px-3 py-1.5 text-right text-gray-300 font-medium">${((parseFloat(row.hours) || 0) * 120).toFixed(2)}</td>
+                      <td className="px-2 py-1.5">
+                        <Input type="number" value={row.rate ?? "120"} onChange={e => {
+                          const items = [...(form.labor_items || [])];
+                          items[idx] = { ...items[idx], rate: e.target.value, total: (parseFloat(items[idx].hours) || 0) * (parseFloat(e.target.value) || 0) };
+                          setForm(f => ({ ...f, labor_items: items }));
+                        }} className="bg-gray-800 border-0 text-white h-8 text-sm text-right" placeholder="120" step="1" />
+                      </td>
+                      <td className="px-3 py-1.5 text-right text-gray-300 font-medium">${((parseFloat(row.hours) || 0) * (parseFloat(row.rate) || 120)).toFixed(2)}</td>
                       <td className="pr-2 py-1.5">
                         <button onClick={() => {
                           const items = (form.labor_items || []).filter((_, i) => i !== idx);
@@ -629,7 +635,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
             {!form.custom_total ? (
               <>
                 <div className="flex justify-between text-gray-400">
-                  <span>Labor ({form.labor_hours || 0}h × $120/hr)</span>
+                  <span>Labor ({form.labor_hours || 0}h)</span>
                   <span className="text-white">${laborCost.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-gray-400">
