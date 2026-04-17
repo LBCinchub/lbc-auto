@@ -58,7 +58,8 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
   const totalCost = form.custom_total ? Number(form.total_cost) || 0 : calculatedTotal;
 
   useEffect(() => {
-    if (order) {
+    if (order && order.id) {
+      // Editing an existing repair order
       setForm({
         customer_id: order.customer_id || "",
         customer_name: order.customer_name || "",
@@ -81,8 +82,11 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         tax_applies_to: "both",
       });
     } else {
+      // New repair order (possibly pre-filled with customer info from customer profile)
       setForm({
-        customer_id: "", customer_name: "", vehicle_id: "", vehicle_info: "",
+        customer_id: order?.customer_id || "",
+        customer_name: order?.customer_name || "",
+        vehicle_id: "", vehicle_info: "",
         mechanic_id: "", mechanic_name: "", description: "", status: "waiting",
         labor_hours: "", labor_items: [{ description: "", hours: "", rate: "120", total: 0 }],
         notes: "", parts_used: [], estimated_completion: "",
@@ -256,7 +260,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         order_number: order?.order_number || `RO-${Date.now().toString(36).toUpperCase()}`,
       };
 
-      if (order) {
+      if (order && order.id) {
         const changes = {};
         if (order.status !== data.status) changes.status = { from: order.status, to: data.status };
         if (order.mechanic_name !== data.mechanic_name) changes.mechanic = { from: order.mechanic_name, to: data.mechanic_name };
