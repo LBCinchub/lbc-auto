@@ -23,7 +23,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
   useEffect(() => {
     if (!open) return; // Only populate when dialog opens
 
-    if (invoice) {
+    if (invoice && invoice.id) {
       // Editing existing invoice
       setForm({
         repair_order_id: invoice.repair_order_id || "",
@@ -49,6 +49,13 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         apply_tax_parts: invoice.apply_tax_parts !== false,
         apply_tax_labor: invoice.apply_tax_labor !== false,
       });
+    } else if (invoice && !invoice.id) {
+      // New invoice pre-filled from customer profile (has customer_id but no id)
+      setForm(f => ({
+        ...f,
+        customer_id: invoice.customer_id || "",
+        customer_name: invoice.customer_name || "",
+      }));
     } else if (sourceEstimate) {
       // Creating from estimate
       setForm(f => ({
@@ -184,7 +191,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
      estimate_id: form.estimate_id || sourceEstimate?.id || "",
    };
 
-   if (invoice) {
+   if (invoice && invoice.id) {
      await base44.entities.Invoice.update(invoice.id, data);
    } else {
      await base44.entities.Invoice.create(data);

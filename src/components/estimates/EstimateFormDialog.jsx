@@ -34,7 +34,8 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
   const [showPartSearch, setShowPartSearch] = useState(null); // idx of parts row being searched
 
   useEffect(() => {
-    if (estimate) {
+    if (estimate && estimate.id) {
+      // Editing an existing estimate
       setForm({
         ...emptyForm,
         ...estimate,
@@ -45,7 +46,13 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
         parts_items: estimate.parts_items?.length ? estimate.parts_items.map(i => ({ ...i, quantity: String(i.quantity), unit_price: String(i.unit_price) })) : [emptyPartRow()],
       });
     } else {
-      setForm({ ...emptyForm, repair_order_id: repairOrderId || "" });
+      // New estimate (possibly pre-filled with customer info from customer profile)
+      setForm({
+        ...emptyForm,
+        repair_order_id: repairOrderId || "",
+        customer_id: estimate?.customer_id || "",
+        customer_name: estimate?.customer_name || "",
+      });
     }
   }, [estimate, open, repairOrderId]);
 
@@ -207,7 +214,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
       tax_amount: taxAmount,
       grand_total: grandTotal,
     };
-    if (estimate) {
+    if (estimate && estimate.id) {
       await base44.entities.Estimate.update(estimate.id, payload);
     } else {
       await base44.entities.Estimate.create(payload);
