@@ -31,12 +31,16 @@ export default function InvoicePrintView({ invoice, onClose }) {
     : (invoice.line_items || []).filter(li => li.type === "part" || li.type === "parts");
 
   partsRows.forEach(p => {
+    const descParts = [];
+    if (p.part_number) descParts.push(`Part #: ${p.part_number}`);
+    if (p.supplier) descParts.push(`Supplier: ${p.supplier}`);
     lineItems.push({
       name: p.name || p.description || "Part",
-      description: p.part_number ? `Part #: ${p.part_number}` : "",
+      description: descParts.join(" · "),
       unit_price: p.unit_price || 0,
       qty: p.quantity || 1,
       amount: p.total || (p.unit_price || 0) * (p.quantity || 1),
+      supplier: p.supplier || "",
     });
   });
 
