@@ -235,10 +235,28 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
             </div>
           )}
 
-          {form.customer_name && (
+          {form.repair_order_id ? (
             <div className="rounded-lg bg-sky-500/10 border border-sky-500/20 p-4">
               <p className="text-white font-medium">{form.customer_name}</p>
               <p className="text-gray-400 text-sm mt-1">{form.vehicle_info}</p>
+            </div>
+          ) : !sourceEstimate && (
+            <div className="bg-gray-800/20 rounded-lg p-4 border border-gray-700/50 space-y-3">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Customer Info (Manual)</p>
+              <div>
+                <Label className="text-gray-300 text-sm">Customer Name</Label>
+                <Input value={form.customer_name || ""}
+                  onChange={e => setForm({...form, customer_name: e.target.value})}
+                  className="bg-gray-800 border-gray-700 text-white mt-1.5"
+                  placeholder="e.g. John Smith" />
+              </div>
+              <div>
+                <Label className="text-gray-300 text-sm">Vehicle Info</Label>
+                <Input value={form.vehicle_info || ""}
+                  onChange={e => setForm({...form, vehicle_info: e.target.value})}
+                  className="bg-gray-800 border-gray-700 text-white mt-1.5"
+                  placeholder="e.g. 2020 Honda Civic" />
+              </div>
             </div>
           )}
 
@@ -441,7 +459,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
 
           <div className="flex gap-3 pt-4 border-t border-gray-700">
             <Button variant="outline" onClick={onClose} className="flex-1 border-gray-700 text-gray-300 hover:bg-gray-800">Cancel</Button>
-            <Button onClick={handleSave} disabled={saving || !form.customer_id}
+            <Button onClick={handleSave} disabled={saving || (!form.customer_id && !form.customer_name)}
               className="flex-1 bg-sky-500 hover:bg-sky-600 text-white font-semibold">
               {saving ? "Saving..." : invoice ? "Update Invoice" : "Create Invoice"}
             </Button>
