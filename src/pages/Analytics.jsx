@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -30,36 +30,47 @@ export default function Analytics() {
   const [paymentMethodModal, setPaymentMethodModal] = useState(null); // "cash" | "card" | "etransfer" | null
   const [expenseForm, setExpenseForm] = useState({ category: "supplies", description: "", amount: "", expense_date: format(new Date(), "yyyy-MM-dd"), notes: "" });
   const [savingExpense, setSavingExpense] = useState(false);
+  const [user, setUser] = useState(null);
   const queryClient = useQueryClient();
 
+  useEffect(() => {
+    base44.auth.me().then(setUser);
+  }, []);
+
   const { data: invoices = [] } = useQuery({
-    queryKey: ["invoices"],
-    queryFn: () => base44.entities.Invoice.list("-created_date", 500),
+    queryKey: ["invoices", user?.email],
+    queryFn: () => base44.entities.Invoice.filter({ created_by: user.email }, "-created_date", 500),
+    enabled: !!user,
   });
 
   const { data: orders = [] } = useQuery({
-    queryKey: ["repairOrders"],
-    queryFn: () => base44.entities.RepairOrder.list("-created_date", 500),
+    queryKey: ["repairOrders", user?.email],
+    queryFn: () => base44.entities.RepairOrder.filter({ created_by: user.email }, "-created_date", 500),
+    enabled: !!user,
   });
 
   const { data: mechanics = [] } = useQuery({
-    queryKey: ["mechanics"],
-    queryFn: () => base44.entities.Mechanic.list("-created_date", 50),
+    queryKey: ["mechanics", user?.email],
+    queryFn: () => base44.entities.Mechanic.filter({ created_by: user.email }, "-created_date", 50),
+    enabled: !!user,
   });
 
   const { data: timeEntries = [] } = useQuery({
-    queryKey: ["timeEntries", "all"],
-    queryFn: () => base44.entities.TimeEntry.list("-clock_in", 500),
+    queryKey: ["timeEntries", "all", user?.email],
+    queryFn: () => base44.entities.TimeEntry.filter({ created_by: user.email }, "-clock_in", 500),
+    enabled: !!user,
   });
 
   const { data: parts = [] } = useQuery({
-    queryKey: ["parts"],
-    queryFn: () => base44.entities.Part.list("-created_date", 500),
+    queryKey: ["parts", user?.email],
+    queryFn: () => base44.entities.Part.filter({ created_by: user.email }, "-created_date", 500),
+    enabled: !!user,
   });
 
   const { data: expenses = [] } = useQuery({
-    queryKey: ["expenses"],
-    queryFn: () => base44.entities.Expense.list("-expense_date", 500),
+    queryKey: ["expenses", user?.email],
+    queryFn: () => base44.entities.Expense.filter({ created_by: user.email }, "-expense_date", 500),
+    enabled: !!user,
   });
 
   // Apply data filters
