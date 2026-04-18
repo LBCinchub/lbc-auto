@@ -150,8 +150,34 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
   const { subtotal, discountAmount, isCash, taxAmount, total, balanceDue } = calculations;
 
   const handleSave = useCallback(async () => {
-   setSaving(true);
-   const lineItems = [];
+  setSaving(true);
+
+  // If manual entry (no repair order, no existing customer_id), create Customer + Vehicle
+  let resolvedCustomerId = form.customer_id;
+  if (!form.repair_order_id && !form.customer_id && form.customer_name) {
+    const newCustomer = await base44.entities.Customer.create({
+      full_name: form.customer_name,
+      phone: form.customer_phone || "",
+    });
+    resolvedCustomerId = newCustomer.id;
+
+    // Parse vehicle info (e.g. "2020 Honda Civic") into year/make/model
+    if (form.vehicle_info) {
+      const parts = form.vehicle_info.trim().split(" ");
+      const year = parseInt(parts[0]) || new Date().getFullYear();
+      const make = parts[1] || "Unknown";
+      const model = parts.slice(2).join(" ") || "Unknown";
+      await base44.entities.Vehicle.create({
+        customer_id: newCustomer.id,
+        customer_name: form.customer_name,
+        year,
+        make,
+        model,
+      });
+    }
+  }
+
+  const lineItems = [];
    if (form.labor_total > 0) lineItems.push({ description: "Labor", type: "labor", quantity: 1, unit_price: form.labor_total, total: form.labor_total });
    if (form.parts_used && form.parts_used.length > 0) {
      form.parts_used.forEach(p => {
@@ -179,6 +205,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
 
    const data = {
      ...form,
+     customer_id: resolvedCustomerId,
      invoice_number: invoice?.invoice_number || `INV-${Date.now().toString(36).toUpperCase()}`,
      customer_phone: form.customer_phone || "",
      parts_used: form.parts_used || [],
@@ -249,6 +276,13 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
                   onChange={e => setForm({...form, customer_name: e.target.value})}
                   className="bg-gray-800 border-gray-700 text-white mt-1.5"
                   placeholder="e.g. John Smith" />
+              </div>
+              <div>
+                <Label className="text-gray-300 text-sm">Phone</Label>
+                <Input value={form.customer_phone || ""}
+                  onChange={e => setForm({...form, customer_phone: e.target.value})}
+                  className="bg-gray-800 border-gray-700 text-white mt-1.5"
+                  placeholder="e.g. 555-123-4567" />
               </div>
               <div>
                 <Label className="text-gray-300 text-sm">Vehicle Info</Label>
