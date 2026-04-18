@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function InvoiceDetail() {
@@ -155,6 +155,33 @@ export default function InvoiceDetail() {
             </div>
           )}
         </div>
+
+        {invoice.parts_used && invoice.parts_used.length > 0 && (
+          <div className="mt-6 pt-6 border-t border-gray-800">
+            <div className="flex items-center gap-2 mb-3">
+              <Store className="w-4 h-4 text-sky-400" />
+              <h3 className="text-lg font-bold text-white">Parts & Suppliers</h3>
+              <span className="text-xs text-gray-500 ml-1">(for warranty tracking)</span>
+            </div>
+            <div className="space-y-2">
+              {invoice.parts_used.map((p, i) => (
+                <div key={i} className="flex items-center justify-between bg-gray-800/40 rounded-lg px-3 py-2.5">
+                  <div>
+                    <p className="text-white text-sm font-medium">{p.name} <span className="text-gray-500">x{p.quantity}</span></p>
+                    {p.supplier ? (
+                      <p className="text-sky-400 text-xs mt-0.5 flex items-center gap-1">
+                        <Store className="w-3 h-3" /> {p.supplier}
+                      </p>
+                    ) : (
+                      <p className="text-gray-600 text-xs mt-0.5 italic">No supplier recorded</p>
+                    )}
+                  </div>
+                  <span className="text-gray-300 text-sm">${(p.total || 0).toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {invoice.customer_note && (
           <div className="mt-6 pt-6 border-t border-gray-800">

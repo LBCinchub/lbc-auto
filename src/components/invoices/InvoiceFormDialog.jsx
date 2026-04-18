@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Store } from "lucide-react";
 
 export default function InvoiceFormDialog({ open, onClose, invoice, orders, customers, onSaved, initialOrderId, sourceEstimate }) {
   const [form, setForm] = useState({
@@ -243,13 +243,32 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
           )}
 
           {form.parts_used && form.parts_used.length > 0 && (
-            <div className="rounded-lg border border-gray-700/50 p-3 space-y-2">
-              <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Parts Used</p>
-              <div className="space-y-1">
+            <div className="rounded-lg border border-gray-700/50 p-3 space-y-3">
+              <div className="flex items-center gap-2">
+                <Store className="w-3.5 h-3.5 text-sky-400" />
+                <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Parts Used & Suppliers</p>
+              </div>
+              <div className="space-y-2">
                 {form.parts_used.map((p, i) => (
-                  <div key={i} className="flex justify-between text-sm">
-                    <span className="text-gray-300">{p.name} <span className="text-gray-500">x{p.quantity}</span></span>
-                    <span className="text-white">${(p.total || 0).toFixed(2)}</span>
+                  <div key={i} className="space-y-1.5 bg-gray-800/40 rounded-lg p-2.5">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-300 font-medium">{p.name} <span className="text-gray-500">x{p.quantity}</span></span>
+                      <span className="text-white">${(p.total || 0).toFixed(2)}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Store className="w-3 h-3 text-gray-500 flex-shrink-0" />
+                      <Input
+                        value={p.supplier || ""}
+                        onChange={e => {
+                          const updated = form.parts_used.map((part, idx) =>
+                            idx === i ? { ...part, supplier: e.target.value } : part
+                          );
+                          setForm({ ...form, parts_used: updated });
+                        }}
+                        className="bg-gray-700/50 border-gray-600 text-white h-7 text-xs placeholder-gray-500"
+                        placeholder="Supplier / where bought (for warranty)"
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
