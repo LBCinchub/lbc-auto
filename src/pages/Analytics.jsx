@@ -168,8 +168,11 @@ export default function Analytics() {
     const methods = method.split("+").map(m => m.trim());
     const history = inv.payment_history || [];
 
-    if (history.length > 0) {
-      // Use actual payment_history for accurate per-method breakdown
+    const historyTotal = history.reduce((s, e) => s + (e.amount || 0), 0);
+    const historyMatchesTotal = history.length > 0 && Math.abs(historyTotal - amount) < 0.01;
+
+    if (historyMatchesTotal) {
+      // Use payment_history only when it accurately reflects the current total
       history.forEach(entry => {
         const m = entry.method?.toLowerCase() || "cash";
         const entryAmount = entry.amount || 0;
@@ -182,7 +185,7 @@ export default function Analytics() {
         }
       });
     } else {
-      // Fallback for old invoices without payment_history
+      // Use current payment_method as source of truth
       if (method === "e-transfer" || method === "etransfer") {
         dailyPayments[day].etransfer += amount;
       } else if (method === "card" || inv.card_last4) {
