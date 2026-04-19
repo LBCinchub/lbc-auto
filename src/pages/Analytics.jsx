@@ -41,7 +41,17 @@ export default function Analytics() {
     queryKey: ["invoices", user?.email],
     queryFn: () => base44.entities.Invoice.filter({ created_by: user.email }, "-created_date", 500),
     enabled: !!user,
+    staleTime: 0,
   });
+
+  // Real-time: refetch invoices whenever any invoice is created/updated/deleted
+  useEffect(() => {
+    if (!user) return;
+    const unsubscribe = base44.entities.Invoice.subscribe(() => {
+      queryClient.invalidateQueries({ queryKey: ["invoices", user.email] });
+    });
+    return unsubscribe;
+  }, [user, queryClient]);
 
   const { data: orders = [] } = useQuery({
     queryKey: ["repairOrders", user?.email],
