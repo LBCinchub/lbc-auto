@@ -327,9 +327,25 @@ export default function Payroll() {
           <div className="space-y-4">
             <div>
               <Label className="text-gray-400">Employee *</Label>
-              <div className="text-sm text-gray-200 mt-1 px-3 py-2 bg-gray-800 rounded border border-gray-700">
-                {selectedMechanic ? selectedMechanic.name : "Select an employee"}
-              </div>
+              {selectedMechanic ? (
+                <div className="text-sm text-gray-200 mt-1 px-3 py-2 bg-gray-800 rounded border border-gray-700">
+                  {selectedMechanic.name}
+                </div>
+              ) : (
+                <Select
+                  value={selectedMechanic?.id || ""}
+                  onValueChange={(id) => setSelectedMechanic(mechanics.find(m => m.id === id) || null)}
+                >
+                  <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
+                    <SelectValue placeholder="Select an employee" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-900 border-gray-700 text-gray-200">
+                    {mechanics.map(m => (
+                      <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div>
               <Label className="text-gray-400">Amount ($) *</Label>
