@@ -100,7 +100,8 @@ export default function Vehicles() {
                   </div>
                   <div>
                     <h3 className="text-white font-semibold">{v.year} {v.make} {v.model}</h3>
-                    <p className="text-xs text-gray-500">{v.customer_name}</p>
+                    <p className="text-xs text-gray-400 font-medium">{v.customer_name}</p>
+                    {(() => { const c = customers.find(c => c.id === v.customer_id); return c?.phone ? <p className="text-xs text-sky-400">{c.phone}</p> : null; })()}
                   </div>
                 </div>
                 <div className="flex gap-1">
