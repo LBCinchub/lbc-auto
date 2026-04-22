@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Users, Phone, Mail, MapPin, Pencil, Trash2 } from "lucide-react";
+import { Users, Phone, Mail, MapPin, Pencil, Trash2, Car } from "lucide-react";
 import CustomerProfileDialog from "../components/customers/CustomerProfileDialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -31,11 +31,21 @@ export default function Customers() {
     enabled: !!user,
   });
 
+  const { data: vehicles = [] } = useQuery({
+    queryKey: ["vehicles", user?.email],
+    queryFn: () => user ? base44.entities.Vehicle.filter({created_by: user.email}, "-created_date", 500) : Promise.resolve([]),
+    enabled: !!user,
+  });
+
   const filtered = customers.filter(c => {
+    const customerVehicles = vehicles.filter(v => v.customer_id === c.id);
+    const vins = customerVehicles.map(v => v.vin).join(" ");
+    const plates = customerVehicles.map(v => v.license_plate).join(" ");
+    const carInfo = customerVehicles.map(v => `${v.year} ${v.make} ${v.model}`).join(" ");
     if (searchField === "name") return fuzzyMatch(search, [c.full_name]);
     if (searchField === "phone") return fuzzyMatch(search, [c.phone]);
     if (searchField === "email") return fuzzyMatch(search, [c.email]);
-    return fuzzyMatch(search, [c.full_name, c.phone, c.email, c.address]);
+    return fuzzyMatch(search, [c.full_name, c.phone, c.email, c.address, vins, plates, carInfo]);
   });
 
   const handleDelete = async (id) => {
@@ -127,6 +137,25 @@ export default function Customers() {
                   </div>
                 )}
                 </div>
+                {/* Vehicles */}
+                {(() => {
+                  const cVehicles = vehicles.filter(v => v.customer_id === customer.id);
+                  if (cVehicles.length === 0) return null;
+                  return (
+                    <div className="mt-3 pt-3 border-t border-gray-800/60 space-y-1.5">
+                      {cVehicles.map(v => (
+                        <div key={v.id} className="flex items-center gap-2">
+                          <Car className="w-3.5 h-3.5 text-sky-500 flex-shrink-0" />
+                          <div className="text-xs text-gray-400 min-w-0">
+                            <span className="text-gray-300">{v.year} {v.make} {v.model}</span>
+                            {v.license_plate && <span className="ml-2 text-gray-500 font-mono">{v.license_plate}</span>}
+                            {v.vin && <span className="ml-2 text-gray-600 font-mono truncate">VIN: {v.vin}</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
                 </button>
                 ))}
                 </div>

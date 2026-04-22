@@ -84,8 +84,10 @@ export default function RepairOrders() {
       if (searchField === "order_number") return fuzzyMatch(search, [o.order_number]);
       if (searchField === "customer") return fuzzyMatch(search, [o.customer_name]);
       if (searchField === "vehicle") return fuzzyMatch(search, [o.vehicle_info]);
+      const vehicle = vehicles.find(v => v.id === o.vehicle_id);
+      if (searchField === "vin") return fuzzyMatch(search, [vehicle?.vin, vehicle?.license_plate]);
       const customer = customers.find(c => c.id === o.customer_id);
-      return fuzzyMatch(search, [o.order_number, o.customer_name, o.vehicle_info, o.description, o.mechanic_name, customer?.phone]);
+      return fuzzyMatch(search, [o.order_number, o.customer_name, o.vehicle_info, o.description, o.mechanic_name, customer?.phone, vehicle?.vin, vehicle?.license_plate]);
     });
 
   const handleDelete = async (id) => {
@@ -114,10 +116,11 @@ export default function RepairOrders() {
              <SelectValue />
            </SelectTrigger>
            <SelectContent>
-             <SelectItem value="all">All Fields</SelectItem>
-             <SelectItem value="order_number">Order #</SelectItem>
-             <SelectItem value="customer">Customer</SelectItem>
-             <SelectItem value="vehicle">Vehicle</SelectItem>
+           <SelectItem value="all">All Fields</SelectItem>
+            <SelectItem value="order_number">Order #</SelectItem>
+            <SelectItem value="customer">Customer</SelectItem>
+            <SelectItem value="vehicle">Vehicle</SelectItem>
+            <SelectItem value="vin">VIN</SelectItem>
            </SelectContent>
          </Select>
          <div className="flex-1">
@@ -167,6 +170,16 @@ export default function RepairOrders() {
                     <a href={`tel:${customer.phone}`} onClick={e => e.stopPropagation()} className="inline-flex items-center gap-1.5 text-xs text-sky-400 hover:text-sky-300 font-medium mt-0.5">
                       <Phone className="w-3 h-3" />{customer.phone}
                     </a>
+                  ) : null;
+                })()}
+                {(() => {
+                  const v = vehicles.find(veh => veh.id === order.vehicle_id);
+                  return (v?.vin || v?.license_plate) ? (
+                    <p className="text-xs text-gray-600 font-mono mt-0.5">
+                      {v.vin && <span>VIN: {v.vin}</span>}
+                      {v.vin && v.license_plate && <span className="mx-1">·</span>}
+                      {v.license_plate && <span>{v.license_plate}</span>}
+                    </p>
                   ) : null;
                 })()}
                 {order.description && <p className="text-xs text-gray-600 mt-1 truncate">{order.description}</p>}
