@@ -114,6 +114,7 @@ export default function Appointments() {
                            <span className="text-white font-medium text-sm">{a.customer_name}</span>
                            <StatusBadge status={a.status} />
                          </div>
+                         {(() => { const c = customers.find(c => c.id === a.customer_id); return c?.phone ? <p className="text-xs text-sky-400">{c.phone}{c.email ? ` · ${c.email}` : ""}</p> : null; })()}
                          <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
                            <span className="flex items-center gap-1"><Car className="w-3 h-3" />{a.vehicle_info}</span>
                            <span>{a.service_type}</span>
