@@ -183,6 +183,11 @@ export default function InvoiceDetail() {
             <p className="text-white font-semibold text-sm">{invoice.vehicle_info || "—"}</p>
           </div>
           <div>
+            <p className="text-gray-500 text-xs uppercase mb-1">Customer</p>
+            <p className="text-white font-semibold text-sm">{customer?.full_name || invoice.customer_name || "—"}</p>
+            {customer?.phone && <p className="text-sky-400 text-xs">{customer.phone}</p>}
+          </div>
+          <div>
             <p className="text-gray-500 text-xs uppercase mb-1">Due Date</p>
             <p className="text-white text-sm">{invoice.due_date ? new Date(invoice.due_date + "T00:00:00").toLocaleDateString() : "N/A"}</p>
           </div>
@@ -308,10 +313,22 @@ export default function InvoiceDetail() {
 
         {/* Totals */}
         <div className="rounded-xl border border-gray-700 bg-gray-800/40 p-4 space-y-2 text-sm">
-          <div className="flex justify-between text-gray-400"><span>Labor Subtotal</span><span>${laborTotal.toFixed(2)}</span></div>
-          <div className="flex justify-between text-gray-400"><span>Parts Subtotal</span><span>${partsTotal.toFixed(2)}</span></div>
+          {/* Individual labor items */}
+          {laborItems.map((row, idx) => (
+            <div key={`l-${idx}`} className="flex justify-between text-gray-400">
+              <span>{row.description || "Labor"} <span className="text-gray-600 text-xs">({row.hours}h × ${parseFloat(row.rate || 0).toFixed(2)}/hr)</span></span>
+              <span>${((parseFloat(row.hours) || 0) * (parseFloat(row.rate) || 0)).toFixed(2)}</span>
+            </div>
+          ))}
+          {/* Individual parts items */}
+          {partsItems.map((row, idx) => (
+            <div key={`p-${idx}`} className="flex justify-between text-gray-400">
+              <span>{row.name || "Part"} <span className="text-gray-600 text-xs">(x{row.quantity})</span></span>
+              <span>${((parseFloat(row.quantity) || 0) * (parseFloat(row.unit_price) || 0)).toFixed(2)}</span>
+            </div>
+          ))}
           {taxRate > 0 && (
-            <div className="flex justify-between text-gray-400"><span>Tax ({taxRate}%)</span><span>${taxAmount.toFixed(2)}</span></div>
+            <div className="flex justify-between text-gray-400 border-t border-gray-700/50 pt-2"><span>Tax ({taxRate}%)</span><span>${taxAmount.toFixed(2)}</span></div>
           )}
           <div className="flex justify-between text-white font-bold text-base border-t border-gray-700 pt-2">
             <span>Grand Total</span>
