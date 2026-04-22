@@ -114,8 +114,8 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
       } catch (error) {
         console.error("Error fetching data:", error);
       }
-      setForm({
-        ...form,
+      setForm(prev => ({
+        ...prev,
         repair_order_id: orderId,
         customer_id: order.customer_id,
         customer_name: order.customer_name,
@@ -125,9 +125,9 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         labor_total: order.labor_cost || (order.labor_hours ? order.labor_hours * 120 : 0),
         parts_used: order.parts_used || [],
         customer_note: description,
-      });
+      }));
     }
-  }, [orders, form]);
+  }, [orders]);
 
   const calculations = useMemo(() => {
     const subtotal = (form.parts_total || 0) + (form.labor_total || 0);
@@ -149,7 +149,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
 
   const { subtotal, discountAmount, isCash, taxAmount, total, balanceDue } = calculations;
 
-  const handleSave = useCallback(async () => {
+  const handleSave = async () => {
   setSaving(true);
 
   // If manual entry (no repair order, no existing customer_id), create Customer + Vehicle
@@ -226,7 +226,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
    setSaving(false);
    onSaved();
    onClose();
-  }, [form, invoice, sourceEstimate, taxAmount, total, balanceDue, onSaved, onClose]);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>

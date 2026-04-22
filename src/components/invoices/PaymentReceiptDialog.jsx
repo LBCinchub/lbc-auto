@@ -27,7 +27,8 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved }
 
   if (!invoice) return null;
 
-  const balanceDue = invoice.balance_due ?? invoice.total ?? 0;
+  // Compute live balance: total minus what's already been paid
+  const balanceDue = Math.max(0, (invoice.total || 0) - (invoice.amount_paid || 0));
 
   const handleSave = async () => {
     const amount = Number(form.amount);
