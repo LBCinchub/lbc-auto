@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Clock, User, ChevronRight } from "lucide-react";
 
-export default function TodayAppointments({ appointments, onApptClick }) {
+export default function TodayAppointments({ appointments, customers = [], onApptClick }) {
   const today = new Date().toISOString().split("T")[0];
   const todayAppts = appointments.filter(a => a.date === today);
 
@@ -29,6 +29,7 @@ export default function TodayAppointments({ appointments, onApptClick }) {
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm text-white font-medium truncate">{appt.customer_name}</p>
+              {(() => { const c = customers.find(c => c.id === appt.customer_id); return c?.phone ? <p className="text-xs text-sky-400">{c.phone}</p> : null; })()}
               <p className="text-xs text-gray-500">{appt.time_slot} · {appt.service_type}</p>
               {appt.vehicle_info && <p className="text-xs text-gray-600 truncate">{appt.vehicle_info}</p>}
             </div>

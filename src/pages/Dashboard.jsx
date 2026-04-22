@@ -31,6 +31,12 @@ export default function Dashboard() {
     enabled: !!user,
   });
 
+  const { data: customers = [] } = useQuery({
+    queryKey: ["customers", user?.email],
+    queryFn: () => user ? base44.entities.Customer.filter({created_by: user.email}, "-created_date", 200) : Promise.resolve([]),
+    enabled: !!user,
+  });
+
   const today = new Date().toISOString().split("T")[0];
 
   const waiting = orders.filter(o => o.status === "waiting");
@@ -60,8 +66,8 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <TodayAppointments appointments={appointments} onApptClick={(appt) => { setModal({ title: "Today's Appointments", items: todayAppts, type: "appt" }); setSelectedAppt(appt); }} />
-        <RecentOrders orders={orders} />
+        <TodayAppointments appointments={appointments} customers={customers} onApptClick={(appt) => { setModal({ title: "Today's Appointments", items: todayAppts, type: "appt" }); setSelectedAppt(appt); }} />
+        <RecentOrders orders={orders} customers={customers} />
       </div>
 
       {/* Modal */}
@@ -121,9 +127,12 @@ export default function Dashboard() {
                 </button>
                 <div className="bg-gray-800 rounded-xl p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <p className="text-white font-semibold text-base">{selectedAppt.customer_name}</p>
-                    <StatusBadge status={selectedAppt.status} />
-                  </div>
+                     <div>
+                       <p className="text-white font-semibold text-base">{selectedAppt.customer_name}</p>
+                       {(() => { const c = customers.find(c => c.id === selectedAppt.customer_id); return c?.phone ? <p className="text-sky-400 text-sm">{c.phone}</p> : null; })()}
+                     </div>
+                     <StatusBadge status={selectedAppt.status} />
+                   </div>
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div>
                       <p className="text-gray-500 text-xs uppercase mb-1">Date</p>

@@ -12,7 +12,7 @@ const statusConfig = {
   delivered: { label: "Delivered", class: "bg-gray-500/20 text-gray-400 border-gray-500/30" },
 };
 
-export default function RecentOrders({ orders }) {
+export default function RecentOrders({ orders, customers = [] }) {
   const navigate = useNavigate();
   const sorted = [...orders].sort((a, b) => {
     const isDeliveredA = a.status === "delivered" ? 1 : 0;
@@ -43,6 +43,7 @@ export default function RecentOrders({ orders }) {
               <div className="min-w-0 flex-1">
                 <p className="text-sm text-white font-medium truncate">{order.vehicle_info || "Unknown Vehicle"}</p>
                 <p className="text-xs text-gray-500 truncate">{order.customer_name} · {order.order_number}</p>
+                {(() => { const c = customers.find(c => c.id === order.customer_id); return c?.phone ? <p className="text-xs text-sky-400">{c.phone}</p> : null; })()}
               </div>
               <div className="flex items-center gap-2 flex-shrink-0 ml-3">
                 <Badge variant="outline" className={cn("text-xs", config.class)}>
