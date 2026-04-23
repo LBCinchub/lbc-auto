@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { base44 } from "@/api/base44Client";
+import { TAX_RATE } from "@/lib/constants";
 import PrintTemplate from "@/components/shared/PrintTemplate";
 
 export default function InvoicePrintView({ invoice, onClose }) {
@@ -59,7 +60,7 @@ export default function InvoicePrintView({ invoice, onClose }) {
     partsTotal: invoice.parts_total || 0,
     laborTotal: invoice.labor_total || 0,
     subtotal,
-    taxRate: invoice.tax_rate || 0,
+    taxRate: TAX_RATE,
     taxAmount: invoice.tax_amount || 0,
     grandTotal: invoice.total || 0,
     amountPaid: invoice.amount_paid || 0,

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { jsPDF } from "jspdf";
+import { TAX_RATE } from "@/lib/constants";
 import { fuzzyMatch } from "@/utils/fuzzySearch";
 import PageHeader from "../components/shared/PageHeader";
 import SearchBar from "../components/shared/SearchBar";
@@ -173,7 +174,7 @@ export default function Invoices() {
     doc.text(`$${(inv.labor_total || 0).toFixed(2)}`, 170, y);
     
     y += 7;
-    doc.text(`Tax (${inv.tax_rate || 0}%):`, 120, y);
+    doc.text(`Tax (${TAX_RATE}%):`, 120, y);
     doc.text(`$${(inv.tax_amount || 0).toFixed(2)}`, 170, y);
     
     y += 10;
