@@ -160,39 +160,37 @@ export default function Analytics() {
     if (!day) return;
     if (!dailyPayments[day]) dailyPayments[day] = { date: day, cash: 0, card: 0, etransfer: 0 };
     
-    // Use the full total for paid invoices
     const amount = inv.total || 0;
-    const method = inv.payment_method?.toLowerCase() || "";
-
-    // Handle split/combined payment methods (e.g. "cash+card")
-    const methods = method.split("+").map(m => m.trim());
     const history = inv.payment_history || [];
 
-    const historyTotal = history.reduce((s, e) => s + (e.amount || 0), 0);
-    const historyMatchesTotal = history.length > 0 && Math.abs(historyTotal - amount) < 0.01;
-
-    if (historyMatchesTotal) {
-      // Use payment_history only when it accurately reflects the current total
-      history.forEach(entry => {
-        const m = entry.method?.toLowerCase() || "cash";
-        const entryAmount = entry.amount || 0;
-        if (m === "e-transfer" || m === "etransfer") {
-          dailyPayments[day].etransfer += entryAmount;
-        } else if (m === "card") {
-          dailyPayments[day].card += entryAmount;
-        } else {
-          dailyPayments[day].cash += entryAmount;
-        }
-      });
-    } else {
-      // Use current payment_method as source of truth
-      if (method === "e-transfer" || method === "etransfer") {
-        dailyPayments[day].etransfer += amount;
-      } else if (method === "card" || inv.card_last4) {
-        dailyPayments[day].card += amount;
-      } else {
-        dailyPayments[day].cash += amount;
+    // ALWAYS use payment_history if it exists and adds up to the total (most accurate)
+    if (history.length > 0) {
+      const historyTotal = history.reduce((s, e) => s + (e.amount || 0), 0);
+      // Only use history if amounts match (allowing small rounding differences)
+      if (Math.abs(historyTotal - amount) < 0.01) {
+        history.forEach(entry => {
+          const m = entry.method?.toLowerCase() || "cash";
+          const entryAmount = entry.amount || 0;
+          if (m === "e-transfer" || m === "etransfer") {
+            dailyPayments[day].etransfer += entryAmount;
+          } else if (m === "card") {
+            dailyPayments[day].card += entryAmount;
+          } else {
+            dailyPayments[day].cash += entryAmount;
+          }
+        });
+        return; // Exit early - we've already processed this invoice
       }
+    }
+
+    // Fallback: use payment_method field
+    const method = inv.payment_method?.toLowerCase() || "";
+    if (method === "e-transfer" || method === "etransfer") {
+      dailyPayments[day].etransfer += amount;
+    } else if (method === "card" || inv.card_last4) {
+      dailyPayments[day].card += amount;
+    } else {
+      dailyPayments[day].cash += amount;
     }
   });
   const today = new Date().toISOString().substring(0, 10);
