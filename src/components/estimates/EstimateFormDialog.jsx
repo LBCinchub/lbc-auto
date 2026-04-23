@@ -11,7 +11,7 @@ import { Plus, Trash2, Loader2, X, Search } from "lucide-react";
 const emptyLaborRow = () => ({ description: "", hours: "", rate: "120", total: 0 });
 const emptyPartRow  = () => ({ name: "", part_number: "", quantity: "", unit_price: "", total: 0 });
 
-const TAX_RATE = 15;
+import { TAX_RATE } from "@/lib/constants";
 
 const emptyForm = {
   customer_id: "", customer_name: "", vehicle_id: "", vehicle_info: "",
@@ -370,7 +370,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
               </Select>
             </div>
             <div>
-              <Label className="text-gray-400">Tax (15%)</Label>
+              <Label className="text-gray-400">Tax ({TAX_RATE}%)</Label>
               <div className="flex gap-2 mt-1">
                 <button
                   type="button"
@@ -548,7 +548,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
             <div className="flex justify-between text-gray-400"><span>Labor Subtotal</span><span>${laborTotal.toFixed(2)}</span></div>
             <div className="flex justify-between text-gray-400"><span>Parts Subtotal</span><span>${partsTotal.toFixed(2)}</span></div>
             <div className="flex justify-between text-gray-400">
-              <span>Tax (15%)</span>
+              <span>Tax ({TAX_RATE}%)</span>
               <span className={form.apply_tax ? "" : "line-through opacity-50"}>{form.apply_tax ? `$${taxAmount.toFixed(2)}` : "Not applied"}</span>
             </div>
             <div className="flex justify-between text-white font-bold text-base border-t border-gray-700 pt-2 mt-2">
