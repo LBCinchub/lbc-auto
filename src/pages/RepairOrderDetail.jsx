@@ -633,6 +633,8 @@ export default function RepairOrderDetail() {
     setNewPart({ name: "", quantity: "", unit_price: "" });
     setShowPartDialog(false);
     queryClient.invalidateQueries({ queryKey: ["repairOrder", orderId] });
+    // Recalculate totals
+    base44.functions.invoke('updateRepairOrderTotals', { orderId });
   }
 
   function removePart(idx) {
@@ -647,17 +649,14 @@ export default function RepairOrderDetail() {
     const rate = parseFloat(newLabor.rate) || 0;
     const item = { description: newLabor.description, hours, rate, total: hours * rate };
     const updatedItems = [...(order.labor_items || []), item];
-    const newLaborCost = updatedItems.reduce((sum, i) => sum + i.hours * i.rate, 0);
-    const newTotal = newLaborCost + (order.parts_cost || 0);
     base44.entities.RepairOrder.update(orderId, {
       labor_items: updatedItems,
-      labor_hours: updatedItems.reduce((sum, i) => sum + i.hours, 0),
-      labor_cost: newLaborCost,
-      total_cost: newTotal,
     });
     setNewLabor({ description: "", hours: "", rate: "" });
     setShowLaborDialog(false);
     queryClient.invalidateQueries({ queryKey: ["repairOrder", orderId] });
+    // Recalculate totals
+    base44.functions.invoke('updateRepairOrderTotals', { orderId });
   }
 
   function addOrderedPart() {

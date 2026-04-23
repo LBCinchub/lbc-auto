@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronDown, Store } from "lucide-react";
+import { ChevronDown, Store, Search, X } from "lucide-react";
 import { TAX_RATE } from "@/lib/constants";
 
 export default function InvoiceFormDialog({ open, onClose, invoice, orders, customers, onSaved, initialOrderId, sourceEstimate }) {
@@ -20,6 +20,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
     discount_type: "none", discount_value: 0
   });
   const [saving, setSaving] = useState(false);
+  const [orderSearch, setOrderSearch] = useState("");
 
   useEffect(() => {
     if (!open) return; // Only populate when dialog opens
@@ -123,12 +124,20 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         customer_phone: customerPhone,
         vehicle_info: order.vehicle_info,
         parts_total: order.parts_cost || 0,
-        labor_total: order.labor_cost || (order.labor_hours ? order.labor_hours * 120 : 0),
+        labor_total: order.labor_cost || 0,
         parts_used: order.parts_used || [],
         customer_note: description,
       }));
+      setOrderSearch("");
     }
   }, [orders]);
+
+  const filteredOrders = orders.filter(o => 
+    !orderSearch || 
+    o.order_number.toLowerCase().includes(orderSearch.toLowerCase()) ||
+    o.customer_name.toLowerCase().includes(orderSearch.toLowerCase()) ||
+    o.vehicle_info.toLowerCase().includes(orderSearch.toLowerCase())
+  );
 
   const calculations = useMemo(() => {
     const subtotal = (form.parts_total || 0) + (form.labor_total || 0);
@@ -239,20 +248,40 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
           </DialogHeader>
           <div className="space-y-5 mt-4 overflow-y-auto flex-1">
           {!sourceEstimate && (
-            <div className="bg-gray-800/30 rounded-lg p-4 border border-gray-700/50">
+            <div className="bg-gray-800/30 rounded-lg p-4 border border-gray-700/50 space-y-3">
               <Label className="text-gray-300 font-semibold text-sm">Repair Order</Label>
-              <Select value={form.repair_order_id} onValueChange={handleOrderSelect}>
-                <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-2">
-                  <SelectValue placeholder="Link to repair order" />
-                </SelectTrigger>
-                <SelectContent className="bg-gray-800 border-gray-700">
-                  {orders.map(o => (
-                    <SelectItem key={o.id} value={o.id}>
-                      {o.order_number} - {o.customer_name}
-                    </SelectItem>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                <input
+                  type="text"
+                  value={orderSearch}
+                  onChange={e => setOrderSearch(e.target.value)}
+                  placeholder="Search by #, customer, or vehicle..."
+                  className="w-full pl-10 pr-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white text-sm placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                />
+                {orderSearch && (
+                  <button onClick={() => setOrderSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              {filteredOrders.length > 0 && (
+                <div className="max-h-48 overflow-y-auto rounded-md border border-gray-700 bg-gray-800 space-y-1">
+                  {filteredOrders.map(o => (
+                    <button
+                      key={o.id}
+                      onClick={() => handleOrderSelect(o.id)}
+                      className="w-full text-left px-3 py-2 hover:bg-gray-700 transition-colors text-sm"
+                    >
+                      <div className="text-white font-medium">#{o.order_number}</div>
+                      <div className="text-gray-400 text-xs">{o.customer_name} · {o.vehicle_info}</div>
+                    </button>
                   ))}
-                </SelectContent>
-              </Select>
+                </div>
+              )}
+              {orderSearch && filteredOrders.length === 0 && (
+                <div className="text-xs text-gray-500 text-center py-2">No repair orders found</div>
+              )}
             </div>
           )}
           {sourceEstimate && (
