@@ -37,7 +37,7 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (appointment) {
+    if (appointment && !appointment._prefillCustomerId) {
       setForm({
         customer_id: appointment.customer_id || "",
         customer_name: appointment.customer_name || "",
@@ -50,6 +50,15 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
         time_slot: appointment.time_slot || "",
         notes: appointment.notes || "",
         status: appointment.status || "scheduled",
+      });
+    } else if (appointment?._prefillCustomerId) {
+      // Pre-fill from customer profile
+      setForm({
+        customer_id: appointment._prefillCustomerId,
+        customer_name: appointment._prefillCustomerName || "",
+        vehicle_id: "", vehicle_info: "",
+        mechanic_id: "", mechanic_name: "", service_type: "", date: "",
+        time_slot: "", notes: "", status: "scheduled"
       });
     } else {
       setForm({
@@ -154,7 +163,7 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
 
   const handleSave = async () => {
     setSaving(true);
-    if (appointment) {
+    if (appointment && appointment.id && !appointment._prefillCustomerId) {
       await base44.entities.Appointment.update(appointment.id, form);
     } else {
       await base44.entities.Appointment.create(form);

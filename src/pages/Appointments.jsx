@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Calendar, Pencil, Trash2, User, Car } from "lucide-react";
@@ -17,6 +18,16 @@ export default function Appointments() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const queryClient = useQueryClient();
+
+  // Auto-open dialog if coming from customer profile
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const customerId = params.get("customerId");
+    if (customerId) {
+      setEditing({ _prefillCustomerId: customerId, _prefillCustomerName: params.get("customerName") || "" });
+      setDialogOpen(true);
+    }
+  }, []);
 
   const { data: appointments = [], isLoading } = useQuery({
     queryKey: ["appointments"],

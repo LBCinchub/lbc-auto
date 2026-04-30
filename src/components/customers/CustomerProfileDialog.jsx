@@ -442,7 +442,7 @@ export default function CustomerProfileDialog({ customer, open, onClose, custome
             {/* Quick Actions */}
           <div className="border-t border-gray-800 pt-4">
             <p className="text-gray-500 text-xs uppercase tracking-wide mb-3">Quick Actions</p>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-5 gap-2">
               <Button className="bg-sky-600 hover:bg-sky-700 text-white flex flex-col h-auto py-3 gap-1"
                 onClick={() => { onClose(); navigate(`/Estimates?customerId=${customer.id}&customerName=${encodeURIComponent(customer.full_name)}`); }}>
                 <FileText className="w-4 h-4" />
@@ -457,6 +457,11 @@ export default function CustomerProfileDialog({ customer, open, onClose, custome
                 onClick={() => { onClose(); navigate(`/Invoices?customerId=${customer.id}&customerName=${encodeURIComponent(customer.full_name)}`); }}>
                 <FileText className="w-4 h-4" />
                 <span className="text-xs">Invoice</span>
+              </Button>
+              <Button className="bg-sky-600 hover:bg-sky-700 text-white flex flex-col h-auto py-3 gap-1"
+                onClick={() => { onClose(); navigate(`/Appointments?customerId=${customer.id}&customerName=${encodeURIComponent(customer.full_name)}`); }}>
+                <Calendar className="w-4 h-4" />
+                <span className="text-xs">Appointment</span>
               </Button>
               {customer?.phone && (
                 <Button className="bg-emerald-700 hover:bg-emerald-600 text-white flex flex-col h-auto py-3 gap-1"
