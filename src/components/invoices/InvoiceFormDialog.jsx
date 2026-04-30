@@ -203,6 +203,8 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
 
    let finalStatus = form.status;
    let paidDate = invoice?.paid_date;
+   let paymentHistory = form.payment_history || [];
+
    if (balanceDue <= 0) {
      finalStatus = "paid";
      if (invoice?.status !== "paid") {
@@ -210,6 +212,15 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
      }
    } else if (form.amount_paid > 0) {
      finalStatus = "partial";
+     // Record payment in history for partial/cash payments
+     if (form.amount_paid > 0 && form.payment_method) {
+       paymentHistory = [...paymentHistory, {
+         date: new Date().toISOString().substring(0, 10),
+         amount: form.amount_paid,
+         method: form.payment_method,
+         note: "Payment received"
+       }];
+     }
    }
 
    if (finalStatus !== "paid" && form.due_date) {
@@ -228,6 +239,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
      balance_due: balanceDue,
      status: finalStatus,
      paid_date: paidDate,
+     payment_history: paymentHistory,
      line_items: lineItems,
      estimate_id: form.estimate_id || sourceEstimate?.id || "",
    };
