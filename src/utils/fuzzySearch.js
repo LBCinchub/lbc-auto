@@ -3,7 +3,7 @@
  * Splits the query into whitespace-separated tokens and requires
  * ALL tokens to match somewhere across the provided field values.
  *
- * Example: "John 555" matches a record where full_name="John Doe" and phone="555-1234"
+ * Handles null/undefined fields safely.
  *
  * @param {string} query - The raw search string from the user.
  * @param {string[]} fieldValues - Array of field values from the record (strings or nullish).

@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/lib/ThemeContext";
+import GlobalSearch from "@/components/shared/GlobalSearch";
 
 const navItems = [
   { name: "Dashboard", icon: LayoutDashboard, page: "Dashboard" },
@@ -108,6 +109,13 @@ export default function Sidebar({ currentPage }) {
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {/* Global Search */}
+        {!collapsed && (
+          <div className="px-3 py-2 border-b border-gray-800/50">
+            <GlobalSearch />
+          </div>
+        )}
 
         {/* Nav */}
         <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
