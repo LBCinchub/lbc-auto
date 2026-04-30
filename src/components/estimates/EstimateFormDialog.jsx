@@ -220,6 +220,41 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
     };
     if (estimate && estimate.id) {
       await base44.entities.Estimate.update(estimate.id, payload);
+
+      // Sync to linked Invoice(s) that reference this estimate
+      try {
+        const linkedInvoices = await base44.entities.Invoice.filter({ estimate_id: estimate.id });
+        for (const inv of linkedInvoices) {
+          await base44.entities.Invoice.update(inv.id, {
+            customer_id: payload.customer_id,
+            customer_name: payload.customer_name,
+            vehicle_info: payload.vehicle_info,
+            parts_total: payload.parts_total,
+            labor_total: payload.labor_total,
+            parts_used: payload.parts_items?.map(p => ({ name: p.name, part_number: p.part_number || "", quantity: p.quantity, unit_price: p.unit_price, total: p.total })) || inv.parts_used,
+            customer_note: payload.notes || inv.customer_note,
+          });
+        }
+      } catch (e) { console.warn("Sync to invoice failed:", e); }
+
+      // Sync to linked Repair Order (if estimate has repair_order_id)
+      if (payload.repair_order_id) {
+        try {
+          const ro = await base44.entities.RepairOrder.get(payload.repair_order_id);
+          if (ro) {
+            await base44.entities.RepairOrder.update(payload.repair_order_id, {
+              customer_id: payload.customer_id,
+              customer_name: payload.customer_name,
+              vehicle_info: payload.vehicle_info,
+              labor_cost: payload.labor_total,
+              parts_cost: payload.parts_total,
+              notes: payload.notes || ro.notes,
+              labor_items: payload.labor_items || ro.labor_items,
+              parts_used: payload.parts_items?.map(p => ({ name: p.name, part_number: p.part_number || "", quantity: p.quantity, unit_price: p.unit_price, total: p.total })) || ro.parts_used,
+            });
+          }
+        } catch (e) { console.warn("Sync to repair order failed:", e); }
+      }
     } else {
       await base44.entities.Estimate.create(payload);
     }
