@@ -138,9 +138,9 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
 
   const filteredOrders = orders.filter(o => 
     !orderSearch || 
-    o.order_number.toLowerCase().includes(orderSearch.toLowerCase()) ||
-    o.customer_name.toLowerCase().includes(orderSearch.toLowerCase()) ||
-    o.vehicle_info.toLowerCase().includes(orderSearch.toLowerCase())
+    (o.order_number || "").toLowerCase().includes(orderSearch.toLowerCase()) ||
+    (o.customer_name || "").toLowerCase().includes(orderSearch.toLowerCase()) ||
+    (o.vehicle_info || "").toLowerCase().includes(orderSearch.toLowerCase())
   );
 
   const calculations = useMemo(() => {
