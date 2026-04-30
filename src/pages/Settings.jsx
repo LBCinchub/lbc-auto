@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import PageHeader from "@/components/shared/PageHeader";
-import { MessageSquare, Mail, Bell } from "lucide-react";
+import { MessageSquare, Mail, Bell, Upload, Sparkles, X, Loader2 } from "lucide-react";
 
 const NOTIF_SETTINGS = [
   {
@@ -52,6 +52,10 @@ export default function Settings() {
   const [notifPrefs, setNotifPrefs] = useState({});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [logoUrl, setLogoUrl] = useState("");
+  const [generatingLogo, setGeneratingLogo] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -63,6 +67,7 @@ export default function Settings() {
       setGstNumber(currentUser?.gst_number || "");
       setHstNumber(currentUser?.hst_number || "");
       setTaxRate(currentUser?.tax_rate != null ? String(currentUser.tax_rate) : "");
+      setLogoUrl(currentUser?.business_logo || "");
       // Load notification prefs (default SMS on, email off)
       const prefs = {};
       NOTIF_SETTINGS.forEach(({ key }) => {
@@ -86,7 +91,7 @@ export default function Settings() {
         notifData[`notif_sms_${key}`] = notifPrefs[`sms_${key}`] !== false;
         notifData[`notif_email_${key}`] = notifPrefs[`email_${key}`] === true;
       });
-      await base44.auth.updateMe({ business_name: businessName, phone: shopPhone, address: shopAddress, gst_number: gstNumber, hst_number: hstNumber, tax_rate: taxRate !== "" ? parseFloat(taxRate) : 0, ...notifData });
+      await base44.auth.updateMe({ business_name: businessName, phone: shopPhone, address: shopAddress, gst_number: gstNumber, hst_number: hstNumber, tax_rate: taxRate !== "" ? parseFloat(taxRate) : 0, business_logo: logoUrl, ...notifData });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
@@ -98,6 +103,25 @@ export default function Settings() {
 
   const setNotif = (key, value) => {
     setNotifPrefs(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingLogo(true);
+    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    setLogoUrl(file_url);
+    setUploadingLogo(false);
+  };
+
+  const handleGenerateLogo = async () => {
+    if (!businessName.trim()) { alert("Enter your business name first so we can generate a relevant logo."); return; }
+    setGeneratingLogo(true);
+    const result = await base44.integrations.Core.GenerateImage({
+      prompt: `Professional auto shop logo for "${businessName}". Clean, modern, bold design suitable for invoices and business cards. Use automotive/mechanic theme with wrench, gear, or car silhouette. White or transparent background, high contrast, minimal.`,
+    });
+    setLogoUrl(result.url);
+    setGeneratingLogo(false);
   };
 
   return (
@@ -172,6 +196,35 @@ export default function Settings() {
             />
             <p className="text-gray-500 text-sm mt-2">This rate will be pre-filled on all new invoices and estimates</p>
           </div>
+          {/* Business Logo */}
+          <div>
+            <Label className="text-gray-400 mb-2 block">Business Logo</Label>
+            <div className="flex flex-col gap-3">
+              {logoUrl && (
+                <div className="relative w-40 h-24 rounded-lg border border-gray-700 bg-gray-800 flex items-center justify-center overflow-hidden">
+                  <img src={logoUrl} alt="Business Logo" className="max-w-full max-h-full object-contain p-2" />
+                  <button onClick={() => setLogoUrl("")} className="absolute top-1 right-1 bg-gray-900/80 rounded-full p-0.5 text-gray-400 hover:text-rose-400">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+              <div className="flex gap-2 flex-wrap">
+                <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+                <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingLogo} className="border-gray-700 text-gray-300 hover:text-white gap-2">
+                  {uploadingLogo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                  {uploadingLogo ? "Uploading..." : "Upload Logo"}
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={handleGenerateLogo}
+                  disabled={generatingLogo} className="border-purple-700 text-purple-400 hover:text-purple-300 gap-2">
+                  {generatingLogo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                  {generatingLogo ? "Generating..." : "Generate with AI"}
+                </Button>
+              </div>
+              <p className="text-gray-500 text-sm">Logo will appear on all your invoices and estimates</p>
+            </div>
+          </div>
+
           <p className="text-gray-500 text-sm -mt-2">GST/HST numbers will appear on invoices and estimates</p>
           <div className="bg-gray-800 border border-gray-700 rounded p-4">
             <p className="text-gray-400 text-sm"><strong>Email:</strong> {user?.email}</p>

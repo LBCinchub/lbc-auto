@@ -57,14 +57,19 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
     <>
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-        <div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: "#0f172a", letterSpacing: -0.5 }}>{bizName}</div>
-          <div style={{ fontSize: 7, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: 2, marginTop: 1 }}>Auto Services</div>
-          <div style={{ marginTop: 5, fontSize: 8, color: "#475569", lineHeight: 1.6 }}>
-            {user?.phone && <div>{user.phone}</div>}
-            {user?.email && <div>{user.email}</div>}
-            {user?.address && <div>{user.address}</div>}
-            {user?.gst_number && <div>GST/Business #: {user.gst_number}</div>}
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+          {user?.business_logo && (
+            <img src={user.business_logo} alt="Logo" style={{ height: 56, maxWidth: 120, objectFit: "contain", borderRadius: 6 }} />
+          )}
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "#0f172a", letterSpacing: -0.5 }}>{bizName}</div>
+            <div style={{ fontSize: 7, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: 2, marginTop: 1 }}>Auto Services</div>
+            <div style={{ marginTop: 5, fontSize: 8, color: "#475569", lineHeight: 1.6 }}>
+              {user?.phone && <div>{user.phone}</div>}
+              {user?.email && <div>{user.email}</div>}
+              {user?.address && <div>{user.address}</div>}
+              {user?.gst_number && <div>GST/Business #: {user.gst_number}</div>}
+            </div>
           </div>
         </div>
         <div style={{ textAlign: "right" }}>
