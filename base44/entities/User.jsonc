@@ -18,6 +18,23 @@
       "type": "string",
       "description": "Shop phone number"
     },
+    "address": {
+      "type": "string",
+      "description": "Shop address"
+    },
+    "gst_number": {
+      "type": "string",
+      "description": "GST registration number"
+    },
+    "hst_number": {
+      "type": "string",
+      "description": "HST registration number"
+    },
+    "tax_rate": {
+      "type": "number",
+      "description": "Default tax rate percentage applied to invoices and estimates",
+      "default": 0
+    },
     "trial_started_date": {
       "type": "string",
       "description": "Date user started 7-day free trial"

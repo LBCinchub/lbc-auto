@@ -48,6 +48,7 @@ export default function Settings() {
   const [shopAddress, setShopAddress] = useState("");
   const [gstNumber, setGstNumber] = useState("");
   const [hstNumber, setHstNumber] = useState("");
+  const [taxRate, setTaxRate] = useState("");
   const [notifPrefs, setNotifPrefs] = useState({});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -61,6 +62,7 @@ export default function Settings() {
       setShopAddress(currentUser?.address || "");
       setGstNumber(currentUser?.gst_number || "");
       setHstNumber(currentUser?.hst_number || "");
+      setTaxRate(currentUser?.tax_rate != null ? String(currentUser.tax_rate) : "");
       // Load notification prefs (default SMS on, email off)
       const prefs = {};
       NOTIF_SETTINGS.forEach(({ key }) => {
@@ -84,7 +86,7 @@ export default function Settings() {
         notifData[`notif_sms_${key}`] = notifPrefs[`sms_${key}`] !== false;
         notifData[`notif_email_${key}`] = notifPrefs[`email_${key}`] === true;
       });
-      await base44.auth.updateMe({ business_name: businessName, phone: shopPhone, address: shopAddress, gst_number: gstNumber, hst_number: hstNumber, ...notifData });
+      await base44.auth.updateMe({ business_name: businessName, phone: shopPhone, address: shopAddress, gst_number: gstNumber, hst_number: hstNumber, tax_rate: taxRate !== "" ? parseFloat(taxRate) : 0, ...notifData });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
@@ -155,6 +157,20 @@ export default function Settings() {
                 className="bg-gray-800 border-gray-700 text-white"
               />
             </div>
+          </div>
+          <div>
+            <Label className="text-gray-400 mb-2 block">Default Tax Rate (%)</Label>
+            <Input
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              value={taxRate}
+              onChange={(e) => setTaxRate(e.target.value)}
+              placeholder="e.g. 13 for 13%"
+              className="bg-gray-800 border-gray-700 text-white"
+            />
+            <p className="text-gray-500 text-sm mt-2">This rate will be pre-filled on all new invoices and estimates</p>
           </div>
           <p className="text-gray-500 text-sm -mt-2">GST/HST numbers will appear on invoices and estimates</p>
           <div className="bg-gray-800 border border-gray-700 rounded p-4">
