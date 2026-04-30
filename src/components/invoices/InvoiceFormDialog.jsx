@@ -205,6 +205,8 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
    let paidDate = invoice?.paid_date;
    let paymentHistory = form.payment_history || [];
 
+   const invoiceNum = invoice?.invoice_number || `INV-${Date.now().toString(36).toUpperCase()}`;
+
    if (balanceDue <= 0) {
      finalStatus = "paid";
      if (invoice?.status !== "paid") {
@@ -240,7 +242,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
    const data = {
      ...form,
      customer_id: resolvedCustomerId,
-     invoice_number: invoice?.invoice_number || `INV-${Date.now().toString(36).toUpperCase()}`,
+     invoice_number: invoiceNum,
      customer_phone: form.customer_phone || "",
      parts_used: form.parts_used || [],
      tax_amount: taxAmount,

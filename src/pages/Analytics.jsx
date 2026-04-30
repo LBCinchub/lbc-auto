@@ -1212,7 +1212,6 @@ export default function Analytics() {
                              <th className="text-left text-xs text-gray-400 px-3 py-2">Invoice #</th>
                              <th className="text-left text-xs text-gray-400 px-3 py-2">Customer</th>
                              <th className="text-left text-xs text-gray-400 px-3 py-2">Vehicle</th>
-                             <th className="text-left text-xs text-gray-400 px-3 py-2">Note</th>
                              <th className="text-right text-xs text-gray-400 px-3 py-2">Amount</th>
                            </tr>
                          </thead>
@@ -1220,15 +1219,14 @@ export default function Analytics() {
                            {todayPayments.map((p, i) => (
                              <tr key={i} className="border-b border-gray-800/50 hover:bg-gray-800/30 cursor-pointer"
                                onClick={() => { setPaymentMethodModal(null); window.location.href = `/InvoiceDetail/${p.invoiceId}`; }}>
-                               <td className="px-3 py-2 text-sky-400 font-mono">{p.invoiceNumber}</td>
+                               <td className="px-3 py-2 text-sky-400 font-mono font-semibold">{p.invoiceNumber}</td>
                                <td className="px-3 py-2 text-gray-200">{p.customer}</td>
-                               <td className="px-3 py-2 text-gray-400">{p.vehicle || "—"}</td>
-                               <td className="px-3 py-2 text-gray-500 text-xs">{p.note}</td>
+                               <td className="px-3 py-2 text-gray-400 text-xs">{p.vehicle || "—"}</td>
                                <td className="px-3 py-2 text-right text-emerald-400 font-semibold">${(p.amount || 0).toFixed(2)}</td>
                              </tr>
                            ))}
                            <tr className="border-t border-gray-700 bg-gray-900/50">
-                             <td colSpan={4} className="px-3 py-2 text-gray-400 font-semibold text-sm">Today Total</td>
+                             <td colSpan={3} className="px-3 py-2 text-gray-400 font-semibold text-sm">Today Total</td>
                              <td className="px-3 py-2 text-right text-emerald-400 font-bold">
                                ${todayPayments.reduce((s, p) => s + (p.amount || 0), 0).toFixed(2)}
                              </td>
