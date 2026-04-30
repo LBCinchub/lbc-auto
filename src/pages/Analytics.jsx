@@ -149,48 +149,49 @@ export default function Analytics() {
     return { name: m.name, completed, hours, revenue, id: m.id };
   }).filter(m => !filterMechanic || m.id === filterMechanic);
 
-  // Daily cash vs card vs e-transfer report
+  // Daily cash vs card vs e-transfer report (track ALL payments including partial)
   const dailyPayments = {};
   invoices.forEach(inv => {
-    // Only count paid invoices
-    if (inv.status !== "paid") return;
+    // Track ALL invoices with payment (paid OR partial), not just fully paid
+    if (inv.status !== "paid" && inv.status !== "partial") return;
     
-    // Get payment date (when it was actually paid)
-    const day = inv.paid_date || inv.created_date?.substring(0, 10);
-    if (!day) return;
-    if (!dailyPayments[day]) dailyPayments[day] = { date: day, cash: 0, card: 0, etransfer: 0 };
-    
-    const amount = inv.total || 0;
     const history = inv.payment_history || [];
 
-    // ALWAYS use payment_history if it exists and adds up to the total (most accurate)
+    // PRIORITY: Use payment_history entries (most accurate for partial payments)
     if (history.length > 0) {
-      const historyTotal = history.reduce((s, e) => s + (e.amount || 0), 0);
-      // Only use history if amounts match (allowing small rounding differences)
-      if (Math.abs(historyTotal - amount) < 0.01) {
-        history.forEach(entry => {
-          const m = entry.method?.toLowerCase() || "cash";
-          const entryAmount = entry.amount || 0;
-          if (m === "e-transfer" || m === "etransfer") {
-            dailyPayments[day].etransfer += entryAmount;
-          } else if (m === "card") {
-            dailyPayments[day].card += entryAmount;
-          } else {
-            dailyPayments[day].cash += entryAmount;
-          }
-        });
-        return; // Exit early - we've already processed this invoice
-      }
+      history.forEach(entry => {
+        const day = entry.date;
+        if (!day) return;
+        if (!dailyPayments[day]) dailyPayments[day] = { date: day, cash: 0, card: 0, etransfer: 0 };
+        
+        const m = entry.method?.toLowerCase() || "cash";
+        const entryAmount = entry.amount || 0;
+        if (m === "e-transfer" || m === "etransfer") {
+          dailyPayments[day].etransfer += entryAmount;
+        } else if (m === "card") {
+          dailyPayments[day].card += entryAmount;
+        } else {
+          dailyPayments[day].cash += entryAmount;
+        }
+      });
+      return; // Use history and skip fallback
     }
 
-    // Fallback: use payment_method field
-    const method = inv.payment_method?.toLowerCase() || "";
-    if (method === "e-transfer" || method === "etransfer") {
-      dailyPayments[day].etransfer += amount;
-    } else if (method === "card" || inv.card_last4) {
-      dailyPayments[day].card += amount;
-    } else {
-      dailyPayments[day].cash += amount;
+    // Fallback: if no payment_history, use paid_date + payment_method (for fully paid invoices)
+    if (inv.status === "paid") {
+      const day = inv.paid_date || inv.created_date?.substring(0, 10);
+      if (!day) return;
+      if (!dailyPayments[day]) dailyPayments[day] = { date: day, cash: 0, card: 0, etransfer: 0 };
+      
+      const amount = inv.total || 0;
+      const method = inv.payment_method?.toLowerCase() || "";
+      if (method === "e-transfer" || method === "etransfer") {
+        dailyPayments[day].etransfer += amount;
+      } else if (method === "card" || inv.card_last4) {
+        dailyPayments[day].card += amount;
+      } else {
+        dailyPayments[day].cash += amount;
+      }
     }
   });
   const today = new Date().toISOString().substring(0, 10);
