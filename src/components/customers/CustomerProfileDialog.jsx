@@ -196,6 +196,12 @@ export default function CustomerProfileDialog({ customer, open, onClose, custome
           {/* Vehicles Tab */}
           {activeTab === "vehicles" && (
            <Section icon={Car} title="Vehicles">
+            <div className="flex justify-end mb-2">
+              <Button size="sm" className="bg-sky-600 hover:bg-sky-700 text-white gap-1"
+                onClick={() => { setEditingVehicle({ customer_id: customer.id, customer_name: customer.full_name }); setShowVehicleDialog(true); }}>
+                <Plus className="w-3.5 h-3.5" /> Add Vehicle
+              </Button>
+            </div>
             {customerVehicles.length === 0 ? (
               <p className="text-gray-500 text-sm">No vehicles on file.</p>
             ) : (
