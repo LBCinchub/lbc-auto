@@ -147,7 +147,10 @@ export default function CustomerProfileDialog({ customer, open, onClose, custome
 
           {/* Tabs Navigation */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4 bg-gray-800/50 border border-gray-700">
+            <TabsList className="grid w-full grid-cols-5 bg-gray-800/50 border border-gray-700">
+              <TabsTrigger value="history" className="data-[state=active]:bg-sky-500/20 data-[state=active]:text-sky-400 text-xs sm:text-sm">
+                <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1" /> History
+              </TabsTrigger>
               <TabsTrigger value="orders" className="data-[state=active]:bg-sky-500/20 data-[state=active]:text-sky-400 text-xs sm:text-sm">
                 <Wrench className="w-3 h-3 sm:w-4 sm:h-4 mr-1" /> Repairs
               </TabsTrigger>
@@ -192,6 +195,113 @@ export default function CustomerProfileDialog({ customer, open, onClose, custome
               <span className="text-white font-semibold">{customerVehicles.length}</span>
             </div>
           </div>
+
+          {/* History Tab */}
+          {activeTab === "history" && (
+           <div className="space-y-4">
+             <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
+               <div className="grid grid-cols-3 gap-4 mb-4">
+                 <div>
+                   <p className="text-gray-500 text-xs uppercase tracking-wide">Total Spending</p>
+                   <p className="text-emerald-400 font-bold text-xl mt-1">${totalSpent.toFixed(2)}</p>
+                 </div>
+                 <div>
+                   <p className="text-gray-500 text-xs uppercase tracking-wide">Total Invoices</p>
+                   <p className="text-sky-400 font-bold text-xl mt-1">{customerInvoices.length}</p>
+                 </div>
+                 <div>
+                   <p className="text-gray-500 text-xs uppercase tracking-wide">Total Estimates</p>
+                   <p className="text-purple-400 font-bold text-xl mt-1">{customerEstimates.length}</p>
+                 </div>
+               </div>
+               {customerInvoices.length > 0 && (
+                 <div className="pt-3 border-t border-gray-700">
+                   <p className="text-gray-500 text-xs">Average Invoice Value</p>
+                   <p className="text-amber-400 font-semibold text-lg">${(totalSpent / customerInvoices.length).toFixed(2)}</p>
+                 </div>
+               )}
+             </div>
+
+             <div>
+               <h3 className="text-sky-400 font-semibold text-sm uppercase tracking-wide mb-3 flex items-center gap-2">
+                 <Clock className="w-4 h-4" /> Chronological Timeline
+               </h3>
+               {(() => {
+                 const timeline = [
+                   ...customerInvoices.map(inv => ({
+                     id: inv.id,
+                     type: 'invoice',
+                     date: inv.created_date,
+                     number: inv.invoice_number || inv.id.slice(0, 6),
+                     amount: inv.total,
+                     status: inv.status,
+                     vehicle: inv.vehicle_info
+                   })),
+                   ...customerEstimates.map(est => ({
+                     id: est.id,
+                     type: 'estimate',
+                     date: est.created_date,
+                     number: est.estimate_number || est.id.slice(0, 6),
+                     amount: est.grand_total,
+                     status: est.status,
+                     vehicle: est.vehicle_info
+                   }))
+                 ].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                 if (timeline.length === 0) {
+                   return <p className="text-gray-500 text-sm">No invoices or estimates found.</p>;
+                 }
+
+                 return (
+                   <div className="space-y-2">
+                     {timeline.map((item, idx) => (
+                       <button
+                         key={item.id}
+                         onClick={() => {
+                           onClose();
+                           if (item.type === 'invoice') {
+                             navigate(`/InvoiceDetail/${item.id}`);
+                           } else {
+                             navigate(`/EstimateDetail/${item.id}`);
+                           }
+                         }}
+                         className="w-full bg-gray-800/60 rounded-lg p-3 flex items-start justify-between gap-3 hover:bg-gray-700/60 transition-colors text-left group"
+                       >
+                         <div className="flex items-start gap-3 min-w-0 flex-1">
+                           <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${item.type === 'invoice' ? 'bg-emerald-500/20' : 'bg-purple-500/20'}`}>
+                             <FileText className={`w-3.5 h-3.5 ${item.type === 'invoice' ? 'text-emerald-400' : 'text-purple-400'}`} />
+                           </div>
+                           <div className="min-w-0 flex-1">
+                             <div className="flex items-center gap-2">
+                               <p className="text-white text-sm font-medium">
+                                 {item.type === 'invoice' ? 'Invoice' : 'Estimate'} #{item.number}
+                               </p>
+                               <span className={`text-xs px-2 py-0.5 rounded font-semibold ${
+                                 item.type === 'invoice' 
+                                   ? item.status === 'paid' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-gray-700 text-gray-300'
+                                   : item.status === 'approved' ? 'bg-blue-500/20 text-blue-300' : 'bg-gray-700 text-gray-300'
+                               }`}>
+                                 {item.status}
+                               </span>
+                             </div>
+                             <p className="text-gray-500 text-xs mt-0.5">{item.vehicle || '—'}</p>
+                             <p className="text-gray-600 text-xs mt-1">
+                               {new Date(item.date).toLocaleDateString()} · {new Date(item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                             </p>
+                           </div>
+                         </div>
+                         <div className="flex items-center gap-2 flex-shrink-0">
+                           <span className="text-emerald-400 font-semibold text-sm">${(item.amount || 0).toFixed(2)}</span>
+                           <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-gray-400" />
+                         </div>
+                       </button>
+                     ))}
+                   </div>
+                 );
+               })()}
+             </div>
+           </div>
+          )}
 
           {/* Vehicles Tab */}
           {activeTab === "vehicles" && (
