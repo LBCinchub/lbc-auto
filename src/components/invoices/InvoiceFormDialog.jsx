@@ -210,15 +210,24 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
      if (invoice?.status !== "paid") {
        paidDate = new Date().toISOString().substring(0, 10);
      }
-   } else if (form.amount_paid > 0) {
-     finalStatus = "partial";
-     // Record payment in history for partial/cash payments
+     // Record full payment in history for cash, card, or e-transfer
      if (form.amount_paid > 0 && form.payment_method) {
        paymentHistory = [...paymentHistory, {
          date: new Date().toISOString().substring(0, 10),
          amount: form.amount_paid,
          method: form.payment_method,
          note: "Payment received"
+       }];
+     }
+   } else if (form.amount_paid > 0) {
+     finalStatus = "partial";
+     // Record partial payment in history for cash, card, or e-transfer
+     if (form.payment_method) {
+       paymentHistory = [...paymentHistory, {
+         date: new Date().toISOString().substring(0, 10),
+         amount: form.amount_paid,
+         method: form.payment_method,
+         note: "Partial payment received"
        }];
      }
    }
