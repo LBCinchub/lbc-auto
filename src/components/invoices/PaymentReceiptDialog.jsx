@@ -51,13 +51,13 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved }
     setSaving(true);
     const newAmountPaid = (invoice.amount_paid || 0) + totalFromPayments;
     const newBalance = (invoice.total || 0) - newAmountPaid;
-    const newStatus = newBalance <= 0 ? "paid" : "partial";
+    const newStatus = newBalance <= 0.01 ? "paid" : "partial";
 
     // Create payment history entries for each payment
     const newPaymentHistory = payments.map(p => ({
       date: new Date().toISOString().split("T")[0],
       amount: p.amount,
-      method: p.method,
+      method: p.payment_method,
       note: [
         p.card_last4 ? `Card ****${p.card_last4}` : "",
         receiptNumber ? `Receipt #${receiptNumber}` : "",
@@ -67,7 +67,7 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved }
 
     // Determine combined payment method label
     const existingMethods = (invoice.payment_history || []).map(p => p.method).filter(Boolean);
-    const allNewMethods = payments.map(p => p.method);
+    const allNewMethods = payments.map(p => p.payment_method);
     const allMethods = [...new Set([...existingMethods, ...allNewMethods])];
     const combinedMethod = allMethods.length > 1 ? allMethods.join("+") : allMethods[0] || "cash";
 
