@@ -1156,54 +1156,112 @@ export default function Analytics() {
             </DialogTitle>
           </DialogHeader>
           {(() => {
-            const todayInvoices = invoices.filter(inv => {
-              if (inv.status !== "paid") return false;
-              const day = inv.paid_date || inv.created_date?.substring(0, 10);
-              if (day !== today) return false;
-              if (paymentMethodModal === "all") return true;
-              const method = inv.payment_method?.toLowerCase() || "cash";
-              if (paymentMethodModal === "etransfer") return method === "e-transfer" || method === "etransfer";
-              if (paymentMethodModal === "card") return method === "card" || !!inv.card_last4;
-              if (paymentMethodModal === "cash") return method === "cash" || (!method && !inv.card_last4);
-              return false;
-            });
-            if (todayInvoices.length === 0) {
-              return <p className="text-gray-400 text-sm py-4 text-center">No invoices found for today with this payment method.</p>;
-            }
-            return (
-              <table className="w-full text-sm mt-2">
-                <thead>
-                  <tr className="border-b border-gray-700">
-                    <th className="text-left text-xs text-gray-400 px-3 py-2">Invoice #</th>
-                    <th className="text-left text-xs text-gray-400 px-3 py-2">Customer</th>
-                    <th className="text-left text-xs text-gray-400 px-3 py-2">Vehicle</th>
-                    <th className="text-left text-xs text-gray-400 px-3 py-2">Method</th>
-                    <th className="text-right text-xs text-gray-400 px-3 py-2">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {todayInvoices.map(inv => (
-                    <tr key={inv.id} className="border-b border-gray-800/50 hover:bg-gray-800/30 cursor-pointer"
-                      onClick={() => { setPaymentMethodModal(null); window.location.href = `/InvoiceDetail/${inv.id}`; }}>
-                      <td className="px-3 py-2 text-sky-400 font-mono">{inv.invoice_number || inv.id.slice(0,8)}</td>
-                      <td className="px-3 py-2 text-gray-200">{inv.customer_name}</td>
-                      <td className="px-3 py-2 text-gray-400">{inv.vehicle_info || "—"}</td>
-                      <td className="px-3 py-2 text-gray-400 capitalize">{inv.payment_method || "cash"}</td>
-                      <td className="px-3 py-2 text-right text-emerald-400 font-semibold">${(inv.total || 0).toFixed(2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className="border-t border-gray-700">
-                    <td colSpan={4} className="px-3 py-2 text-gray-400 font-semibold text-sm">Total</td>
-                    <td className="px-3 py-2 text-right text-emerald-400 font-bold">
-                      ${todayInvoices.reduce((s, i) => s + (i.total || 0), 0).toFixed(2)}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            );
-          })()}
+                 // Get payment history entries for today filtered by method
+                 const todayPayments = [];
+                 invoices.forEach(inv => {
+                   const history = inv.payment_history || [];
+                   history.forEach(entry => {
+                     const entryDay = entry.date;
+                     if (entryDay !== today) return;
+
+                     const m = entry.method?.toLowerCase() || "cash";
+                     let methodMatch = false;
+                     if (paymentMethodModal === "all") methodMatch = true;
+                     else if (paymentMethodModal === "etransfer") methodMatch = (m === "e-transfer" || m === "etransfer");
+                     else if (paymentMethodModal === "card") methodMatch = (m === "card");
+                     else if (paymentMethodModal === "cash") methodMatch = (m === "cash" || !m);
+
+                     if (methodMatch) {
+                       todayPayments.push({
+                         invoiceNumber: inv.invoice_number || inv.id.slice(0, 8),
+                         customer: inv.customer_name,
+                         vehicle: inv.vehicle_info,
+                         method: entry.method,
+                         amount: entry.amount,
+                         note: entry.note,
+                         invoiceId: inv.id
+                       });
+                     }
+                   });
+                 });
+
+                 // Fallback to old logic for invoices without payment_history
+                 const todayInvoices = invoices.filter(inv => {
+                   if (inv.status !== "paid" && inv.status !== "partial") return false;
+                   if ((inv.payment_history || []).length > 0) return false; // Skip if already in todayPayments
+                   const day = inv.paid_date || inv.created_date?.substring(0, 10);
+                   if (day !== today) return false;
+                   if (paymentMethodModal === "all") return true;
+                   const method = inv.payment_method?.toLowerCase() || "cash";
+                   if (paymentMethodModal === "etransfer") return method === "e-transfer" || method === "etransfer";
+                   if (paymentMethodModal === "card") return method === "card" || !!inv.card_last4;
+                   if (paymentMethodModal === "cash") return method === "cash" || (!method && !inv.card_last4);
+                   return false;
+                 });
+
+                 if (todayPayments.length === 0 && todayInvoices.length === 0) {
+                   return <p className="text-gray-400 text-sm py-4 text-center">No payments found for today with this method.</p>;
+                 }
+
+                 return (
+                   <>
+                     {todayPayments.length > 0 && (
+                       <table className="w-full text-sm mt-2">
+                         <thead>
+                           <tr className="border-b border-gray-700">
+                             <th className="text-left text-xs text-gray-400 px-3 py-2">Invoice #</th>
+                             <th className="text-left text-xs text-gray-400 px-3 py-2">Customer</th>
+                             <th className="text-left text-xs text-gray-400 px-3 py-2">Vehicle</th>
+                             <th className="text-left text-xs text-gray-400 px-3 py-2">Note</th>
+                             <th className="text-right text-xs text-gray-400 px-3 py-2">Amount</th>
+                           </tr>
+                         </thead>
+                         <tbody>
+                           {todayPayments.map((p, i) => (
+                             <tr key={i} className="border-b border-gray-800/50 hover:bg-gray-800/30 cursor-pointer"
+                               onClick={() => { setPaymentMethodModal(null); window.location.href = `/InvoiceDetail/${p.invoiceId}`; }}>
+                               <td className="px-3 py-2 text-sky-400 font-mono">{p.invoiceNumber}</td>
+                               <td className="px-3 py-2 text-gray-200">{p.customer}</td>
+                               <td className="px-3 py-2 text-gray-400">{p.vehicle || "—"}</td>
+                               <td className="px-3 py-2 text-gray-500 text-xs">{p.note}</td>
+                               <td className="px-3 py-2 text-right text-emerald-400 font-semibold">${(p.amount || 0).toFixed(2)}</td>
+                             </tr>
+                           ))}
+                           <tr className="border-t border-gray-700 bg-gray-900/50">
+                             <td colSpan={4} className="px-3 py-2 text-gray-400 font-semibold text-sm">Today Total</td>
+                             <td className="px-3 py-2 text-right text-emerald-400 font-bold">
+                               ${todayPayments.reduce((s, p) => s + (p.amount || 0), 0).toFixed(2)}
+                             </td>
+                           </tr>
+                         </tbody>
+                       </table>
+                     )}
+                     {todayInvoices.length > 0 && (
+                       <table className="w-full text-sm mt-4">
+                         <thead>
+                           <tr className="border-b border-gray-700">
+                             <th className="text-left text-xs text-gray-400 px-3 py-2">Invoice #</th>
+                             <th className="text-left text-xs text-gray-400 px-3 py-2">Customer</th>
+                             <th className="text-left text-xs text-gray-400 px-3 py-2">Vehicle</th>
+                             <th className="text-right text-xs text-gray-400 px-3 py-2">Total</th>
+                           </tr>
+                         </thead>
+                         <tbody>
+                           {todayInvoices.map(inv => (
+                             <tr key={inv.id} className="border-b border-gray-800/50 hover:bg-gray-800/30 cursor-pointer"
+                               onClick={() => { setPaymentMethodModal(null); window.location.href = `/InvoiceDetail/${inv.id}`; }}>
+                               <td className="px-3 py-2 text-sky-400 font-mono">{inv.invoice_number || inv.id.slice(0,8)}</td>
+                               <td className="px-3 py-2 text-gray-200">{inv.customer_name}</td>
+                               <td className="px-3 py-2 text-gray-400">{inv.vehicle_info || "—"}</td>
+                               <td className="px-3 py-2 text-right text-emerald-400 font-semibold">${(inv.total || 0).toFixed(2)}</td>
+                             </tr>
+                           ))}
+                         </tbody>
+                       </table>
+                     )}
+                   </>
+                 );
+               })()}
         </DialogContent>
       </Dialog>
 
