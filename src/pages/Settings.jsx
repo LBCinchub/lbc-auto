@@ -218,7 +218,7 @@ export default function Settings() {
                 <Button type="button" variant="outline" size="sm" onClick={handleGenerateLogo}
                   disabled={generatingLogo} className="border-purple-700 text-purple-400 hover:text-purple-300 gap-2">
                   {generatingLogo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                  {generatingLogo ? "Generating..." : "Generate with AI"}
+                  {generatingLogo ? "Generating..." : "Generate with Lumina AI"}
                 </Button>
               </div>
               <p className="text-gray-500 text-sm">Logo will appear on all your invoices and estimates</p>
