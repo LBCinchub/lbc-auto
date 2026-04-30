@@ -35,11 +35,11 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
   const queryClient = useQueryClient();
   const [newVehicleForm, setNewVehicleForm] = useState(null);
   const [decodingVin, setDecodingVin] = useState(false);
-  const [userTaxRate, setUserTaxRate] = useState(15);
+  const [userTaxRate, setUserTaxRate] = useState(0);
 
   useEffect(() => {
     base44.auth.me().then(u => {
-      if (u?.tax_rate != null && u.tax_rate > 0) setUserTaxRate(u.tax_rate);
+      setUserTaxRate(u?.tax_rate != null ? u.tax_rate : 0);
     });
   }, []);
 

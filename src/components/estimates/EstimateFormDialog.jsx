@@ -11,11 +11,9 @@ import { Plus, Trash2, Loader2, X, Search } from "lucide-react";
 const emptyLaborRow = () => ({ description: "", hours: "", rate: "120", total: 0 });
 const emptyPartRow  = () => ({ name: "", part_number: "", quantity: "", unit_price: "", total: 0 });
 
-import { TAX_RATE } from "@/lib/constants";
-
 const emptyForm = {
   customer_id: "", customer_name: "", vehicle_id: "", vehicle_info: "",
-  status: "draft", notes: "", tax_rate: String(TAX_RATE), apply_tax: true, tax_applies_to: "both", valid_until: "",
+  status: "draft", notes: "", tax_rate: "0", apply_tax: true, tax_applies_to: "both", valid_until: "",
   labor_items: [emptyLaborRow()],
   parts_items: [emptyPartRow()],
   repair_order_id: "",
@@ -34,13 +32,19 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
   const [showPartSearch, setShowPartSearch] = useState(null); // idx of parts row being searched
 
   useEffect(() => {
+    // Load user's saved tax rate
+    base44.auth.me().then(u => {
+      const userTaxRate = u?.tax_rate != null ? u.tax_rate : 0;
+      setForm(f => ({ ...f, tax_rate: f.tax_rate === "0" || !f.tax_rate ? String(userTaxRate) : f.tax_rate }));
+    });
+
     if (estimate && estimate.id) {
       // Editing an existing estimate
       setForm({
         ...emptyForm,
         ...estimate,
         apply_tax: estimate.apply_tax !== false,
-        tax_rate: String(estimate.tax_rate ?? TAX_RATE),
+        tax_rate: String(estimate.tax_rate ?? 0),
         tax_applies_to: "both",
         labor_items: estimate.labor_items?.length ? estimate.labor_items.map(i => ({ ...i, hours: String(i.hours), rate: String(i.rate ?? 120) })) : [emptyLaborRow()],
         parts_items: estimate.parts_items?.length ? estimate.parts_items.map(i => ({ ...i, quantity: String(i.quantity), unit_price: String(i.unit_price) })) : [emptyPartRow()],
@@ -110,7 +114,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
   const laborTotal = form.labor_items.reduce((s, r) => s + ((parseFloat(r.hours) || 0) * (parseFloat(r.rate) || 0)), 0);
   const partsTotal = form.parts_items.reduce((s, r) => s + (r.total || 0), 0);
   const subtotal   = laborTotal + partsTotal;
-  const taxRate    = form.apply_tax ? TAX_RATE : 0;
+  const taxRate    = form.apply_tax ? (parseFloat(form.tax_rate) || 0) : 0;
 
   const taxAppliesTo = form.tax_applies_to || "both";
   let taxableAmount = 0;
@@ -370,7 +374,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
               </Select>
             </div>
             <div>
-              <Label className="text-gray-400">Tax ({TAX_RATE}%)</Label>
+              <Label className="text-gray-400">Tax ({parseFloat(form.tax_rate) || 0}%)</Label>
               <div className="flex gap-2 mt-1">
                 <button
                   type="button"
@@ -548,7 +552,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
             <div className="flex justify-between text-gray-400"><span>Labor Subtotal</span><span>${laborTotal.toFixed(2)}</span></div>
             <div className="flex justify-between text-gray-400"><span>Parts Subtotal</span><span>${partsTotal.toFixed(2)}</span></div>
             <div className="flex justify-between text-gray-400">
-              <span>Tax ({TAX_RATE}%)</span>
+              <span>Tax ({parseFloat(form.tax_rate) || 0}%)</span>
               <span className={form.apply_tax ? "" : "line-through opacity-50"}>{form.apply_tax ? `$${taxAmount.toFixed(2)}` : "Not applied"}</span>
             </div>
             <div className="flex justify-between text-white font-bold text-base border-t border-gray-700 pt-2 mt-2">
