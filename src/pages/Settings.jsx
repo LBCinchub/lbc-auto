@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import PageHeader from "@/components/shared/PageHeader";
 import { MessageSquare, Mail, Bell, Upload, Sparkles, X, Loader2 } from "lucide-react";
+import { useTheme } from "@/lib/ThemeContext";
 
 const NOTIF_SETTINGS = [
   {
@@ -42,6 +43,7 @@ function Toggle({ checked, onChange }) {
 }
 
 export default function Settings() {
+  const { theme } = useTheme();
   const [user, setUser] = useState(null);
   const [businessName, setBusinessName] = useState("");
   const [shopPhone, setShopPhone] = useState("");
@@ -125,65 +127,65 @@ export default function Settings() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950">
+    <div className={`min-h-screen ${theme === "light" ? "bg-gray-100" : "bg-gray-950"}`}>
       <PageHeader title="Settings" />
       <div className="max-w-2xl mx-auto p-6 space-y-6">
 
         {/* Business Info */}
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 space-y-4">
-          <h2 className="text-xl font-semibold text-white mb-2">Business Information</h2>
+        <div className={`${theme === "light" ? "bg-white border-gray-200" : "bg-gray-900 border-gray-800"} border rounded-lg p-6 space-y-4`}>
+          <h2 className={`text-xl font-semibold ${theme === "light" ? "text-gray-900" : "text-white"} mb-2`}>Business Information</h2>
           <div>
-            <Label className="text-gray-400 mb-2 block">Business Name *</Label>
+            <Label className={`${theme === "light" ? "text-gray-700" : "text-gray-400"} mb-2 block`}>Business Name *</Label>
             <Input
               value={businessName}
               onChange={(e) => setBusinessName(e.target.value)}
               placeholder="Enter your auto shop name"
-              className="bg-gray-800 border-gray-700 text-white"
+              className={`${theme === "light" ? "bg-gray-50 border-gray-300 text-gray-900" : "bg-gray-800 border-gray-700 text-white"}`}
             />
-            <p className="text-gray-500 text-sm mt-2">This will appear as your shop's name throughout the app</p>
+            <p className={`${theme === "light" ? "text-gray-600" : "text-gray-500"} text-sm mt-2`}>This will appear as your shop's name throughout the app</p>
           </div>
           <div>
-            <Label className="text-gray-400 mb-2 block">Shop Phone Number</Label>
+            <Label className={`${theme === "light" ? "text-gray-700" : "text-gray-400"} mb-2 block`}>Shop Phone Number</Label>
             <Input
               value={shopPhone}
               onChange={(e) => setShopPhone(e.target.value)}
               placeholder="Enter your shop phone number"
-              className="bg-gray-800 border-gray-700 text-white"
+              className={`${theme === "light" ? "bg-gray-50 border-gray-300 text-gray-900" : "bg-gray-800 border-gray-700 text-white"}`}
             />
-            <p className="text-gray-500 text-sm mt-2">This will appear on invoices</p>
+            <p className={`${theme === "light" ? "text-gray-600" : "text-gray-500"} text-sm mt-2`}>This will appear on invoices</p>
           </div>
           <div>
-            <Label className="text-gray-400 mb-2 block">Shop Address</Label>
+            <Label className={`${theme === "light" ? "text-gray-700" : "text-gray-400"} mb-2 block`}>Shop Address</Label>
             <Input
               value={shopAddress}
               onChange={(e) => setShopAddress(e.target.value)}
               placeholder="Enter your shop address"
-              className="bg-gray-800 border-gray-700 text-white"
+              className={`${theme === "light" ? "bg-gray-50 border-gray-300 text-gray-900" : "bg-gray-800 border-gray-700 text-white"}`}
             />
-            <p className="text-gray-500 text-sm mt-2">This will appear on invoices and estimates</p>
+            <p className={`${theme === "light" ? "text-gray-600" : "text-gray-500"} text-sm mt-2`}>This will appear on invoices and estimates</p>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label className="text-gray-400 mb-2 block">GST Number</Label>
+              <Label className={`${theme === "light" ? "text-gray-700" : "text-gray-400"} mb-2 block`}>GST Number</Label>
               <Input
                 value={gstNumber}
                 onChange={(e) => setGstNumber(e.target.value)}
                 placeholder="e.g. 123456789RT0001"
-                className="bg-gray-800 border-gray-700 text-white"
+                className={`${theme === "light" ? "bg-gray-50 border-gray-300 text-gray-900" : "bg-gray-800 border-gray-700 text-white"}`}
               />
             </div>
             <div>
-              <Label className="text-gray-400 mb-2 block">HST Number</Label>
+              <Label className={`${theme === "light" ? "text-gray-700" : "text-gray-400"} mb-2 block`}>HST Number</Label>
               <Input
                 value={hstNumber}
                 onChange={(e) => setHstNumber(e.target.value)}
                 placeholder="e.g. 123456789RT0001"
-                className="bg-gray-800 border-gray-700 text-white"
+                className={`${theme === "light" ? "bg-gray-50 border-gray-300 text-gray-900" : "bg-gray-800 border-gray-700 text-white"}`}
               />
             </div>
           </div>
           <div>
-            <Label className="text-gray-400 mb-2 block">Default Tax Rate (%)</Label>
+            <Label className={`${theme === "light" ? "text-gray-700" : "text-gray-400"} mb-2 block`}>Default Tax Rate (%)</Label>
             <Input
               type="number"
               min="0"
@@ -192,18 +194,18 @@ export default function Settings() {
               value={taxRate}
               onChange={(e) => setTaxRate(e.target.value)}
               placeholder="e.g. 13 for 13%"
-              className="bg-gray-800 border-gray-700 text-white"
+              className={`${theme === "light" ? "bg-gray-50 border-gray-300 text-gray-900" : "bg-gray-800 border-gray-700 text-white"}`}
             />
-            <p className="text-gray-500 text-sm mt-2">This rate will be pre-filled on all new invoices and estimates</p>
+            <p className={`${theme === "light" ? "text-gray-600" : "text-gray-500"} text-sm mt-2`}>This rate will be pre-filled on all new invoices and estimates</p>
           </div>
           {/* Business Logo */}
           <div>
-            <Label className="text-gray-400 mb-2 block">Business Logo</Label>
+            <Label className={`${theme === "light" ? "text-gray-700" : "text-gray-400"} mb-2 block`}>Business Logo</Label>
             <div className="flex flex-col gap-3">
               {logoUrl && (
-                <div className="relative w-40 h-24 rounded-lg border border-gray-700 bg-gray-800 flex items-center justify-center overflow-hidden">
+                <div className={`relative w-40 h-24 rounded-lg border ${theme === "light" ? "border-gray-300 bg-gray-50" : "border-gray-700 bg-gray-800"} flex items-center justify-center overflow-hidden`}>
                   <img src={logoUrl} alt="Business Logo" className="max-w-full max-h-full object-contain p-2" />
-                  <button onClick={() => setLogoUrl("")} className="absolute top-1 right-1 bg-gray-900/80 rounded-full p-0.5 text-gray-400 hover:text-rose-400">
+                  <button onClick={() => setLogoUrl("")} className={`absolute top-1 right-1 ${theme === "light" ? "bg-white/80" : "bg-gray-900/80"} rounded-full p-0.5 ${theme === "light" ? "text-gray-600 hover:text-rose-600" : "text-gray-400 hover:text-rose-400"}`}>
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -211,51 +213,51 @@ export default function Settings() {
               <div className="flex gap-2 flex-wrap">
                 <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
                 <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}
-                  disabled={uploadingLogo} className="border-gray-700 text-gray-300 hover:text-white gap-2">
+                  disabled={uploadingLogo} className={`${theme === "light" ? "border-gray-300 text-gray-700 hover:text-gray-900" : "border-gray-700 text-gray-300 hover:text-white"} gap-2`}>
                   {uploadingLogo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                   {uploadingLogo ? "Uploading..." : "Upload Logo"}
                 </Button>
                 <Button type="button" variant="outline" size="sm" onClick={handleGenerateLogo}
-                  disabled={generatingLogo} className="border-purple-700 text-purple-400 hover:text-purple-300 gap-2">
+                  disabled={generatingLogo} className={`${theme === "light" ? "border-purple-400 text-purple-600 hover:text-purple-700" : "border-purple-700 text-purple-400 hover:text-purple-300"} gap-2`}>
                   {generatingLogo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                   {generatingLogo ? "Generating..." : "Generate with Lumina AI"}
                 </Button>
               </div>
-              <p className="text-gray-500 text-sm">Logo will appear on all your invoices and estimates</p>
+              <p className={`${theme === "light" ? "text-gray-600" : "text-gray-500"} text-sm`}>Logo will appear on all your invoices and estimates</p>
             </div>
           </div>
 
-          <p className="text-gray-500 text-sm -mt-2">GST/HST numbers will appear on invoices and estimates</p>
-          <div className="bg-gray-800 border border-gray-700 rounded p-4">
-            <p className="text-gray-400 text-sm"><strong>Email:</strong> {user?.email}</p>
+          <p className={`${theme === "light" ? "text-gray-600" : "text-gray-500"} text-sm -mt-2`}>GST/HST numbers will appear on invoices and estimates</p>
+          <div className={`${theme === "light" ? "bg-gray-50 border-gray-300" : "bg-gray-800 border-gray-700"} border rounded p-4`}>
+            <p className={`${theme === "light" ? "text-gray-700" : "text-gray-400"} text-sm`}><strong>Email:</strong> {user?.email}</p>
           </div>
         </div>
 
         {/* Notification Preferences */}
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
+        <div className={`${theme === "light" ? "bg-white border-gray-200" : "bg-gray-900 border-gray-800"} border rounded-lg p-6`}>
           <div className="flex items-center gap-2 mb-1">
             <Bell className="w-5 h-5 text-sky-400" />
-            <h2 className="text-xl font-semibold text-white">Notification Preferences</h2>
+            <h2 className={`text-xl font-semibold ${theme === "light" ? "text-gray-900" : "text-white"}`}>Notification Preferences</h2>
           </div>
-          <p className="text-gray-500 text-sm mb-6">Choose how customers are notified for each event type.</p>
+          <p className={`${theme === "light" ? "text-gray-600" : "text-gray-500"} text-sm mb-6`}>Choose how customers are notified for each event type.</p>
 
           {/* Header row */}
           <div className="grid grid-cols-3 gap-2 mb-3 px-1">
-            <div className="text-xs text-gray-500 uppercase tracking-wider col-span-1">Event</div>
-            <div className="flex items-center justify-center gap-1 text-xs text-gray-500 uppercase tracking-wider">
+            <div className={`text-xs ${theme === "light" ? "text-gray-600" : "text-gray-500"} uppercase tracking-wider col-span-1`}>Event</div>
+            <div className={`flex items-center justify-center gap-1 text-xs ${theme === "light" ? "text-gray-600" : "text-gray-500"} uppercase tracking-wider`}>
               <MessageSquare className="w-3 h-3" /> SMS
             </div>
-            <div className="flex items-center justify-center gap-1 text-xs text-gray-500 uppercase tracking-wider">
+            <div className={`flex items-center justify-center gap-1 text-xs ${theme === "light" ? "text-gray-600" : "text-gray-500"} uppercase tracking-wider`}>
               <Mail className="w-3 h-3" /> Email
             </div>
           </div>
 
           <div className="space-y-3">
             {NOTIF_SETTINGS.map(({ key, label, desc }) => (
-              <div key={key} className="grid grid-cols-3 gap-2 items-center bg-gray-800/50 rounded-lg px-4 py-3 border border-gray-700/50">
+              <div key={key} className={`grid grid-cols-3 gap-2 items-center ${theme === "light" ? "bg-gray-50 border-gray-200" : "bg-gray-800/50 border-gray-700/50"} rounded-lg px-4 py-3 border`}>
                 <div className="col-span-1">
-                  <p className="text-white text-sm font-medium">{label}</p>
-                  <p className="text-gray-500 text-xs mt-0.5">{desc}</p>
+                  <p className={`${theme === "light" ? "text-gray-900" : "text-white"} text-sm font-medium`}>{label}</p>
+                  <p className={`${theme === "light" ? "text-gray-600" : "text-gray-500"} text-xs mt-0.5`}>{desc}</p>
                 </div>
                 <div className="flex justify-center">
                   <Toggle
@@ -273,7 +275,7 @@ export default function Settings() {
             ))}
           </div>
 
-          <p className="text-gray-600 text-xs mt-4">
+          <p className={`${theme === "light" ? "text-gray-600" : "text-gray-600"} text-xs mt-4`}>
             SMS uses Twilio. Email uses the built-in email service. Customer contact info must be saved on their profile.
           </p>
         </div>
