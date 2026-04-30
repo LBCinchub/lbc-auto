@@ -39,6 +39,7 @@ const navItems = [
   { name: "Repair Orders", icon: Wrench, page: "RepairOrders" },
   { name: "Invoices", icon: FileText, page: "Invoices" },
   { name: "Parts", icon: Package, page: "Parts" },
+  { name: "Parts Lookup", icon: Package, page: "PartsLookup" },
   { name: "Appointments", icon: Calendar, page: "Appointments" },
   { name: "Mechanics", icon: HardHat, page: "Mechanics" },
   { name: "Time Tracking", icon: Clock, page: "TimeTracking" },
