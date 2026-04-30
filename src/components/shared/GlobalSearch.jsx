@@ -6,14 +6,21 @@ import { useQuery } from "@tanstack/react-query";
 
 function highlight(text, query) {
   if (!text || !query) return text;
-  const idx = String(text).toLowerCase().indexOf(query.toLowerCase());
-  if (idx === -1) return text;
   const str = String(text);
+  const tokens = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return str;
+
+  // Build a regex that matches any of the tokens
+  const pattern = new RegExp(`(${tokens.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "gi");
+  const parts = str.split(pattern);
+
   return (
     <>
-      {str.slice(0, idx)}
-      <mark className="bg-sky-500/30 text-sky-300 rounded px-0.5">{str.slice(idx, idx + query.length)}</mark>
-      {str.slice(idx + query.length)}
+      {parts.map((part, i) =>
+        tokens.some(t => part.toLowerCase() === t.toLowerCase())
+          ? <mark key={i} className="bg-sky-500/30 text-sky-300 rounded px-0.5">{part}</mark>
+          : part
+      )}
     </>
   );
 }
@@ -169,8 +176,6 @@ export default function GlobalSearch() {
     return "";
   };
 
-  const firstToken = query.trim().split(/\s+/)[0];
-
   return (
     <div ref={ref} className="relative w-full max-w-md">
       <div className="relative">
@@ -215,11 +220,11 @@ export default function GlobalSearch() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm text-white font-medium truncate">
-                        {highlight(title, firstToken)}
+                        {highlight(title, query)}
                       </div>
                       {subtitle && (
                         <div className="text-xs text-gray-500 truncate mt-0.5">
-                          {highlight(subtitle, firstToken)}
+                          {highlight(subtitle, query)}
                         </div>
                       )}
                     </div>
