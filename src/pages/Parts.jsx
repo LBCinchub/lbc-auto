@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Package, Pencil, Trash2, AlertTriangle, Download } from "lucide-react";
+import { Package, Pencil, Trash2, AlertTriangle, Download, Barcode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,6 +11,8 @@ import SearchBar from "../components/shared/SearchBar";
 import EmptyState from "../components/shared/EmptyState";
 import PartFormDialog from "../components/parts/PartFormDialog";
 import RockAutoImportDialog from "../components/parts/RockAutoImportDialog";
+import BarcodeScanner from "../components/parts/BarcodeScanner";
+import QuickStockUpdate from "../components/parts/QuickStockUpdate";
 
 export default function Parts() {
   const [search, setSearch] = useState("");
@@ -19,6 +21,9 @@ export default function Parts() {
   const [editingPart, setEditingPart] = useState(null);
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [stockUpdateOpen, setStockUpdateOpen] = useState(false);
+  const [scannedPart, setScannedPart] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: parts = [], isLoading } = useQuery({
@@ -42,6 +47,28 @@ export default function Parts() {
       await base44.entities.Part.delete(id);
       queryClient.invalidateQueries({ queryKey: ["parts"] });
     }
+  };
+
+  const handleScan = (scannedValue) => {
+    const foundPart = parts.find(p => 
+      p.part_number === scannedValue || 
+      p.part_number.includes(scannedValue) ||
+      scannedValue.includes(p.part_number)
+    );
+
+    if (foundPart) {
+      setScannedPart(foundPart);
+      setScannerOpen(false);
+      setStockUpdateOpen(true);
+    } else {
+      alert(`Part not found: ${scannedValue}`);
+      setScannerOpen(true);
+    }
+  };
+
+  const handleStockUpdate = async (partId, newQuantity) => {
+    await base44.entities.Part.update(partId, { quantity: newQuantity });
+    queryClient.invalidateQueries({ queryKey: ["parts"] });
   };
 
   return (
@@ -113,6 +140,15 @@ export default function Parts() {
             "Search by name, number, or supplier..."
           } />
         </div>
+        <Button
+          variant="outline"
+          size="icon"
+          className="border-gray-700 text-gray-300 hover:bg-gray-800"
+          onClick={() => setScannerOpen(true)}
+          title="Scan barcode or QR code"
+        >
+          <Barcode className="w-4 h-4" />
+        </Button>
       </div>
 
       {isLoading ? (
@@ -201,6 +237,23 @@ export default function Parts() {
           setImportDialogOpen(false);
           queryClient.invalidateQueries({ queryKey: ["parts"] });
         }}
+      />
+
+      {scannerOpen && (
+        <BarcodeScanner
+          onScan={handleScan}
+          onClose={() => setScannerOpen(false)}
+        />
+      )}
+
+      <QuickStockUpdate
+        open={stockUpdateOpen}
+        part={scannedPart}
+        onClose={() => {
+          setStockUpdateOpen(false);
+          setScannedPart(null);
+        }}
+        onUpdate={handleStockUpdate}
       />
     </div>
   );
