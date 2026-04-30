@@ -105,9 +105,14 @@ export default function CustomerFormDialog({ open, onClose, customer, onSaved, o
   };
 
   const handleQuickAction = (page) => {
-    // For appointments, use callback to open dialog with prefilled data
-    if (page === "Appointments" && onQuickAction) {
-      onQuickAction(page, { _prefillCustomerId: savedCustomer.id, _prefillCustomerName: savedCustomer.full_name });
+    // For dialogs, use callback to open with prefilled customer data
+    if (["Appointments", "Invoices", "Estimates", "RepairOrders"].includes(page) && onQuickAction) {
+      onQuickAction(page, { 
+        _prefillCustomerId: savedCustomer.id, 
+        _prefillCustomerName: savedCustomer.full_name,
+        customer_id: savedCustomer.id,
+        customer_name: savedCustomer.full_name
+      });
     } else {
       onClose();
       navigate(`/${page}`);
@@ -130,52 +135,52 @@ export default function CustomerFormDialog({ open, onClose, customer, onSaved, o
             </p>
             <div className="grid grid-cols-1 gap-3">
               <button
-                onClick={() => handleQuickAction("Estimates")}
-                className="flex items-center gap-3 p-4 rounded-lg bg-gray-800 hover:bg-sky-500/10 border border-gray-700 hover:border-sky-500/50 transition-all text-left"
+               onClick={() => handleQuickAction("Estimates")}
+               className="flex items-center gap-3 p-4 rounded-lg bg-gray-800 hover:bg-sky-500/10 border border-gray-700 hover:border-sky-500/50 transition-all text-left"
               >
-                <div className="w-9 h-9 rounded-full bg-sky-500/20 flex items-center justify-center flex-shrink-0">
-                  <FileText className="w-4 h-4 text-sky-400" />
-                </div>
-                <div>
-                  <p className="text-white font-medium text-sm">Create Estimate</p>
-                  <p className="text-gray-500 text-xs">Provide a service quote for this customer</p>
-                </div>
+               <div className="w-9 h-9 rounded-full bg-sky-500/20 flex items-center justify-center flex-shrink-0">
+                 <FileText className="w-4 h-4 text-sky-400" />
+               </div>
+               <div>
+                 <p className="text-white font-medium text-sm">Create Estimate</p>
+                 <p className="text-gray-500 text-xs">Open estimate form with customer info pre-filled</p>
+               </div>
               </button>
               <button
-                onClick={() => handleQuickAction("RepairOrders")}
-                className="flex items-center gap-3 p-4 rounded-lg bg-gray-800 hover:bg-amber-500/10 border border-gray-700 hover:border-amber-500/50 transition-all text-left"
+               onClick={() => handleQuickAction("RepairOrders")}
+               className="flex items-center gap-3 p-4 rounded-lg bg-gray-800 hover:bg-amber-500/10 border border-gray-700 hover:border-amber-500/50 transition-all text-left"
               >
-                <div className="w-9 h-9 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-                  <Wrench className="w-4 h-4 text-amber-400" />
-                </div>
-                <div>
-                  <p className="text-white font-medium text-sm">Create Repair Order</p>
-                  <p className="text-gray-500 text-xs">Start a new repair job for this customer</p>
-                </div>
+               <div className="w-9 h-9 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                 <Wrench className="w-4 h-4 text-amber-400" />
+               </div>
+               <div>
+                 <p className="text-white font-medium text-sm">Create Repair Order</p>
+                 <p className="text-gray-500 text-xs">Open repair order form with customer info pre-filled</p>
+               </div>
               </button>
               <button
-                onClick={() => handleQuickAction("Invoices")}
-                className="flex items-center gap-3 p-4 rounded-lg bg-gray-800 hover:bg-emerald-500/10 border border-gray-700 hover:border-emerald-500/50 transition-all text-left"
+               onClick={() => handleQuickAction("Invoices")}
+               className="flex items-center gap-3 p-4 rounded-lg bg-gray-800 hover:bg-emerald-500/10 border border-gray-700 hover:border-emerald-500/50 transition-all text-left"
               >
-                <div className="w-9 h-9 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
-                  <Receipt className="w-4 h-4 text-emerald-400" />
-                </div>
-                <div>
-                  <p className="text-white font-medium text-sm">Create Invoice</p>
-                  <p className="text-gray-500 text-xs">Bill this customer for completed work</p>
-                </div>
+               <div className="w-9 h-9 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                 <Receipt className="w-4 h-4 text-emerald-400" />
+               </div>
+               <div>
+                 <p className="text-white font-medium text-sm">Create Invoice</p>
+                 <p className="text-gray-500 text-xs">Open invoice form with customer info pre-filled</p>
+               </div>
               </button>
               <button
-                onClick={() => handleQuickAction("Appointments")}
-                className="flex items-center gap-3 p-4 rounded-lg bg-gray-800 hover:bg-purple-500/10 border border-gray-700 hover:border-purple-500/50 transition-all text-left"
+               onClick={() => handleQuickAction("Appointments")}
+               className="flex items-center gap-3 p-4 rounded-lg bg-gray-800 hover:bg-purple-500/10 border border-gray-700 hover:border-purple-500/50 transition-all text-left"
               >
-                <div className="w-9 h-9 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
-                  <CalendarDays className="w-4 h-4 text-purple-400" />
-                </div>
-                <div>
-                  <p className="text-white font-medium text-sm">Book Appointment</p>
-                  <p className="text-gray-500 text-xs">Schedule a service appointment for this customer</p>
-                </div>
+               <div className="w-9 h-9 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                 <CalendarDays className="w-4 h-4 text-purple-400" />
+               </div>
+               <div>
+                 <p className="text-white font-medium text-sm">Book Appointment</p>
+                 <p className="text-gray-500 text-xs">Open appointment form with customer info pre-filled</p>
+               </div>
               </button>
             </div>
             <Button variant="outline" onClick={onClose} className="w-full border-gray-700 text-gray-300">

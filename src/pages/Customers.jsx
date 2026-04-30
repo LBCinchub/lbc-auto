@@ -11,6 +11,9 @@ import SearchBar from "../components/shared/SearchBar";
 import EmptyState from "../components/shared/EmptyState";
 import CustomerFormDialog from "../components/customers/CustomerFormDialog";
 import AppointmentFormDialog from "../components/appointments/AppointmentFormDialog";
+import EstimateFormDialog from "../components/estimates/EstimateFormDialog";
+import RepairOrderFormDialog from "../components/orders/RepairOrderFormDialog";
+import InvoiceFormDialog from "../components/invoices/InvoiceFormDialog";
 
 export default function Customers() {
   const [search, setSearch] = useState("");
@@ -18,8 +21,8 @@ export default function Customers() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [profileCustomer, setProfileCustomer] = useState(null);
-  const [appointmentDialogOpen, setAppointmentDialogOpen] = useState(false);
-  const [appointmentData, setAppointmentData] = useState(null);
+  const [activeQuickAction, setActiveQuickAction] = useState(null);
+  const [quickActionData, setQuickActionData] = useState(null);
   const queryClient = useQueryClient();
 
   const [user, setUser] = useState(null);
@@ -46,6 +49,24 @@ export default function Customers() {
     enabled: !!user,
   });
 
+  const { data: estimates = [] } = useQuery({
+    queryKey: ["estimates", user?.email],
+    queryFn: () => user ? base44.entities.Estimate.filter({created_by: user.email}, "-created_date", 500) : Promise.resolve([]),
+    enabled: !!user,
+  });
+
+  const { data: orders = [] } = useQuery({
+    queryKey: ["orders", user?.email],
+    queryFn: () => user ? base44.entities.RepairOrder.filter({created_by: user.email}, "-created_date", 500) : Promise.resolve([]),
+    enabled: !!user,
+  });
+
+  const { data: invoices = [] } = useQuery({
+    queryKey: ["invoices", user?.email],
+    queryFn: () => user ? base44.entities.Invoice.filter({created_by: user.email}, "-created_date", 500) : Promise.resolve([]),
+    enabled: !!user,
+  });
+
   const filtered = customers.filter(c => {
     const customerVehicles = vehicles.filter(v => v.customer_id === c.id);
     const vins = customerVehicles.map(v => v.vin).join(" ");
@@ -65,11 +86,9 @@ export default function Customers() {
   };
 
   const handleQuickAction = (page, data) => {
-    if (page === "Appointments") {
-      setAppointmentData(data);
-      setAppointmentDialogOpen(true);
-      setDialogOpen(false);
-    }
+    setActiveQuickAction(page);
+    setQuickActionData(data);
+    setDialogOpen(false);
   };
 
   return (
@@ -192,13 +211,39 @@ export default function Customers() {
         onClose={() => setProfileCustomer(null)}
       />
       <AppointmentFormDialog
-        open={appointmentDialogOpen}
-        onClose={() => setAppointmentDialogOpen(false)}
-        appointment={appointmentData}
+        open={activeQuickAction === "Appointments"}
+        onClose={() => setActiveQuickAction(null)}
+        appointment={quickActionData}
         onSaved={() => queryClient.invalidateQueries({ queryKey: ["appointments"] })}
         customers={customers}
         vehicles={vehicles}
         mechanics={mechanics}
+      />
+      <EstimateFormDialog
+        open={activeQuickAction === "Estimates"}
+        onClose={() => setActiveQuickAction(null)}
+        estimate={quickActionData}
+        onSaved={() => queryClient.invalidateQueries({ queryKey: ["estimates"] })}
+        customers={customers}
+        vehicles={vehicles}
+      />
+      <RepairOrderFormDialog
+        open={activeQuickAction === "RepairOrders"}
+        onClose={() => setActiveQuickAction(null)}
+        order={quickActionData}
+        onSaved={() => queryClient.invalidateQueries({ queryKey: ["orders"] })}
+        customers={customers}
+        vehicles={vehicles}
+        mechanics={mechanics}
+        parts={[]}
+      />
+      <InvoiceFormDialog
+        open={activeQuickAction === "Invoices"}
+        onClose={() => setActiveQuickAction(null)}
+        invoice={quickActionData}
+        onSaved={() => queryClient.invalidateQueries({ queryKey: ["invoices"] })}
+        orders={orders}
+        customers={customers}
       />
     </div>
   );
