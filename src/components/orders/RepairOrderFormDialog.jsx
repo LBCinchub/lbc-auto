@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { fuzzyMatch } from "@/utils/fuzzySearch";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -559,7 +560,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                                 onKeyDown={e => e.stopPropagation()}
                               />
                             </div>
-                            {parts.filter(p => !partSearches[idx] || p.name.toLowerCase().includes((partSearches[idx] || "").toLowerCase())).map(p => (
+                            {parts.filter(p => !partSearches[idx] || fuzzyMatch(partSearches[idx], [p.name, p.part_number, p.supplier, p.category])).map(p => (
                               <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                             ))}
                           </SelectContent>

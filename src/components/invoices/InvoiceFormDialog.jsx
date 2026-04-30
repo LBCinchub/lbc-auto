@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { base44 } from "@/api/base44Client";
 import { Textarea } from "@/components/ui/textarea";
 import { ChevronDown, Store, Search, X } from "lucide-react";
+import { fuzzyMatch } from "@/utils/fuzzySearch";
 export default function InvoiceFormDialog({ open, onClose, invoice, orders, customers, onSaved, initialOrderId, sourceEstimate }) {
   const [form, setForm] = useState({
     repair_order_id: "", customer_id: "", customer_name: "", customer_phone: "", vehicle_info: "",
@@ -136,11 +137,8 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
     }
   }, [orders]);
 
-  const filteredOrders = orders.filter(o => 
-    !orderSearch || 
-    (o.order_number || "").toLowerCase().includes(orderSearch.toLowerCase()) ||
-    (o.customer_name || "").toLowerCase().includes(orderSearch.toLowerCase()) ||
-    (o.vehicle_info || "").toLowerCase().includes(orderSearch.toLowerCase())
+  const filteredOrders = orders.filter(o =>
+    !orderSearch || fuzzyMatch(orderSearch, [o.order_number, o.customer_name, o.vehicle_info])
   );
 
   const calculations = useMemo(() => {

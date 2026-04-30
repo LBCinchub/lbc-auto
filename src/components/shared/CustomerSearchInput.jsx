@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
+import { fuzzyMatch } from "@/utils/fuzzySearch";
 
 export default function CustomerSearchInput({ customers = [], value, onChange }) {
   const selected = customers.find(c => c.id === value);
@@ -19,8 +20,7 @@ export default function CustomerSearchInput({ customers = [], value, onChange })
   }, []);
 
   const filtered = customers.filter(c =>
-    (c.full_name || "").toLowerCase().includes(query.toLowerCase()) ||
-    (c.phone && c.phone.includes(query))
+    fuzzyMatch(query, [c.full_name, c.phone, c.email])
   );
 
   const handleSelect = (customer) => {
