@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
-import { FileText, Wrench, Receipt, CheckCircle2 } from "lucide-react";
+import { FileText, Wrench, Receipt, CheckCircle2, CalendarDays } from "lucide-react";
 
 export default function CustomerFormDialog({ open, onClose, customer, onSaved }) {
   const navigate = useNavigate();
@@ -158,6 +158,18 @@ export default function CustomerFormDialog({ open, onClose, customer, onSaved })
                 <div>
                   <p className="text-white font-medium text-sm">Create Invoice</p>
                   <p className="text-gray-500 text-xs">Bill this customer for completed work</p>
+                </div>
+              </button>
+              <button
+                onClick={() => handleQuickAction("Appointments")}
+                className="flex items-center gap-3 p-4 rounded-lg bg-gray-800 hover:bg-purple-500/10 border border-gray-700 hover:border-purple-500/50 transition-all text-left"
+              >
+                <div className="w-9 h-9 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                  <CalendarDays className="w-4 h-4 text-purple-400" />
+                </div>
+                <div>
+                  <p className="text-white font-medium text-sm">Book Appointment</p>
+                  <p className="text-gray-500 text-xs">Schedule a service appointment for this customer</p>
                 </div>
               </button>
             </div>
