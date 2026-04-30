@@ -19,7 +19,7 @@ export default function CustomerSearchInput({ customers = [], value, onChange })
   }, []);
 
   const filtered = customers.filter(c =>
-    c.full_name.toLowerCase().includes(query.toLowerCase()) ||
+    (c.full_name || "").toLowerCase().includes(query.toLowerCase()) ||
     (c.phone && c.phone.includes(query))
   );
 
