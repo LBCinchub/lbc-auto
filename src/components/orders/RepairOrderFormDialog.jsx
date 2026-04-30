@@ -285,7 +285,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         data.history = [...(order.history || []), historyEntry];
         await base44.entities.RepairOrder.update(order.id, data);
 
-        // Sync to linked Invoice(s)
+        // Sync to linked Invoice(s) (preserve original invoice notes)
         try {
           const linkedInvoices = await base44.entities.Invoice.filter({ repair_order_id: order.id });
           for (const inv of linkedInvoices) {
@@ -296,12 +296,12 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
               parts_total: data.parts_cost,
               labor_total: data.labor_cost,
               parts_used: data.parts_used || [],
-              customer_note: data.notes || inv.customer_note,
+              customer_note: inv.customer_note,
             });
           }
         } catch (e) { console.warn("Sync to invoice failed:", e); }
 
-        // Sync to linked Estimate(s) via estimate_id stored on invoice
+        // Sync to linked Estimate(s) via estimate_id stored on invoice (preserve original estimate notes)
         try {
           const linkedInvoices2 = await base44.entities.Invoice.filter({ repair_order_id: order.id });
           const estimateIds = [...new Set(linkedInvoices2.map(i => i.estimate_id).filter(Boolean))];
@@ -314,7 +314,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                 vehicle_info: data.vehicle_info,
                 labor_total: data.labor_cost,
                 parts_total: data.parts_cost,
-                notes: data.notes || est.notes,
+                notes: est.notes,
                 labor_items: data.labor_items || est.labor_items,
                 parts_items: data.parts_used?.map(p => ({ name: p.name, part_number: p.part_number || "", quantity: p.quantity, unit_price: p.unit_price, total: p.total })) || est.parts_items,
               });

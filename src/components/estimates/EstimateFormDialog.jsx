@@ -221,7 +221,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
     if (estimate && estimate.id) {
       await base44.entities.Estimate.update(estimate.id, payload);
 
-      // Sync to linked Invoice(s) that reference this estimate
+      // Sync to linked Invoice(s) that reference this estimate (preserve original invoice notes)
       try {
         const linkedInvoices = await base44.entities.Invoice.filter({ estimate_id: estimate.id });
         for (const inv of linkedInvoices) {
@@ -232,12 +232,12 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
             parts_total: payload.parts_total,
             labor_total: payload.labor_total,
             parts_used: payload.parts_items?.map(p => ({ name: p.name, part_number: p.part_number || "", quantity: p.quantity, unit_price: p.unit_price, total: p.total })) || inv.parts_used,
-            customer_note: payload.notes || inv.customer_note,
+            customer_note: inv.customer_note,
           });
         }
       } catch (e) { console.warn("Sync to invoice failed:", e); }
 
-      // Sync to linked Repair Order (if estimate has repair_order_id)
+      // Sync to linked Repair Order (if estimate has repair_order_id, preserve original description and notes)
       if (payload.repair_order_id) {
         try {
           const ro = await base44.entities.RepairOrder.get(payload.repair_order_id);
@@ -248,7 +248,8 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
               vehicle_info: payload.vehicle_info,
               labor_cost: payload.labor_total,
               parts_cost: payload.parts_total,
-              notes: payload.notes || ro.notes,
+              description: ro.description,
+              notes: ro.notes,
               labor_items: payload.labor_items || ro.labor_items,
               parts_used: payload.parts_items?.map(p => ({ name: p.name, part_number: p.part_number || "", quantity: p.quantity, unit_price: p.unit_price, total: p.total })) || ro.parts_used,
             });

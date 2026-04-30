@@ -113,11 +113,13 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
     if (order) {
       let customerPhone = "";
       let description = "";
+      let notes = "";
       try {
         const customer = await base44.entities.Customer.get(order.customer_id);
         customerPhone = customer.phone || "";
         const fullOrder = await base44.entities.RepairOrder.get(orderId);
         description = fullOrder.description || "";
+        notes = fullOrder.notes || "";
       } catch (error) {
         console.error("Error fetching data:", error);
       }
@@ -131,7 +133,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         parts_total: order.parts_cost || 0,
         labor_total: order.labor_cost || 0,
         parts_used: order.parts_used || [],
-        customer_note: description,
+        customer_note: notes || description || "",
       }));
       setOrderSearch("");
     }
@@ -233,7 +235,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
    if (invoice && invoice.id) {
      await base44.entities.Invoice.update(invoice.id, data);
 
-     // Sync to linked Repair Order
+     // Sync to linked Repair Order (preserve original description and notes)
      if (data.repair_order_id) {
        try {
          const ro = await base44.entities.RepairOrder.get(data.repair_order_id);
@@ -245,7 +247,8 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
              labor_cost: data.labor_total,
              parts_cost: data.parts_total,
              parts_used: data.parts_used || ro.parts_used,
-             notes: data.customer_note || ro.notes,
+             description: ro.description,
+             notes: ro.notes,
            });
          }
        } catch (e) { console.warn("Sync to repair order failed:", e); }

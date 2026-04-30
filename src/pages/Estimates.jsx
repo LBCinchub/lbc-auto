@@ -89,15 +89,17 @@ export default function Estimates() {
   const handleConvertToRepairOrder = async (estimate) => {
     if (!window.confirm("Convert this estimate to a repair order?")) return;
     try {
+      const description = estimate.notes || estimate.labor_items?.map(i => i.description).filter(Boolean).join(", ") || "Created from estimate #" + estimate.estimate_number;
       await base44.entities.RepairOrder.create({
         customer_id: estimate.customer_id,
         customer_name: estimate.customer_name,
         vehicle_id: estimate.vehicle_id,
         vehicle_info: estimate.vehicle_info,
-        description: estimate.notes || "Created from estimate #" + estimate.estimate_number,
+        description: description,
         status: "waiting",
         labor_hours: estimate.labor_items?.reduce((sum, item) => sum + (parseFloat(item.hours) || 0), 0) || 0,
         labor_cost: estimate.labor_total || 0,
+        labor_items: estimate.labor_items || [],
         parts_used: estimate.parts_items?.map(item => ({
           name: item.name,
           part_number: item.part_number,
@@ -107,6 +109,7 @@ export default function Estimates() {
         })) || [],
         parts_cost: estimate.parts_total || 0,
         total_cost: estimate.grand_total || 0,
+        notes: estimate.notes || "",
       });
       await base44.entities.Estimate.update(estimate.id, { status: "approved" });
       queryClient.invalidateQueries({ queryKey: ["estimates", "repairOrders"] });
