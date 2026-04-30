@@ -35,12 +35,19 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
   const queryClient = useQueryClient();
   const [newVehicleForm, setNewVehicleForm] = useState(null);
   const [decodingVin, setDecodingVin] = useState(false);
+  const [userTaxRate, setUserTaxRate] = useState(15);
+
+  useEffect(() => {
+    base44.auth.me().then(u => {
+      if (u?.tax_rate != null && u.tax_rate > 0) setUserTaxRate(u.tax_rate);
+    });
+  }, []);
 
   // Live cost calculation (only if not custom/saved)
   const mechanic = mechanics.find(m => m.id === form.mechanic_id);
   const laborCost = (form.labor_items || []).reduce((s, r) => s + (parseFloat(r.hours) || 0) * (parseFloat(r.rate) || 120), 0);
   const partsCost = form.parts_used.reduce((sum, p) => sum + (Number(p.unit_price) || 0) * (Number(p.quantity) || 0), 0);
-  const TAX_RATE = 15;
+  const TAX_RATE = userTaxRate;
   const subtotal = laborCost + partsCost;
   const discountAmount = form.discount_type === "percentage" 
     ? subtotal * ((form.discount_value || 0) / 100)
@@ -53,7 +60,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
   else if (taxAppliesTo === "labor") taxableAmount = laborCost - (form.discount_type !== "none" ? discountAmount : 0);
   else if (taxAppliesTo === "parts") taxableAmount = partsCost;
 
-  const taxAmount = form.apply_tax ? taxableAmount * 0.15 : 0;
+  const taxAmount = form.apply_tax ? taxableAmount * (TAX_RATE / 100) : 0;
   const calculatedTotal = afterDiscount + taxAmount;
   const totalCost = form.custom_total ? Number(form.total_cost) || 0 : calculatedTotal;
 
@@ -236,7 +243,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         ? subtotal * ((form.discount_value || 0) / 100)
         : form.discount_type === "fixed" ? (form.discount_value || 0) : 0;
       const afterDiscount = subtotal - discountAmount;
-      const taxAmt = form.apply_tax ? afterDiscount * 0.15 : 0;
+      const taxAmt = form.apply_tax ? afterDiscount * (userTaxRate / 100) : 0;
       const calculatedTotal = afterDiscount + taxAmt;
       const finalTotal = form.custom_total ? Number(form.total_cost) || 0 : calculatedTotal;
 
@@ -624,7 +631,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                   }`}
                 >
                   <span className={`w-1.5 h-1.5 rounded-full ${form.apply_tax ? "bg-sky-400" : "bg-gray-600"}`} />
-                  Tax 15%
+                  Tax {TAX_RATE}%
                 </button>
                 {form.apply_tax && (
                   <Select value={form.tax_applies_to || "both"} onValueChange={v => setForm(f => ({ ...f, tax_applies_to: v }))}>
@@ -657,7 +664,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                   </div>
                 )}
                 <div className="flex justify-between text-gray-400">
-                  <span>Tax (15%)</span>
+                  <span>Tax ({TAX_RATE}%)</span>
                   <span className={form.apply_tax ? "" : "line-through opacity-50"}>{form.apply_tax ? `$${taxAmount.toFixed(2)}` : "Not applied"}</span>
                 </div>
               </>
