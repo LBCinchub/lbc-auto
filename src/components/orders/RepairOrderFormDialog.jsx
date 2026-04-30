@@ -294,7 +294,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         await base44.entities.RepairOrder.create(data);
       }
       
-      onSaved();
+      onSaved(data.status);
       onClose();
     } catch (error) {
       console.error('Error saving repair order:', error);

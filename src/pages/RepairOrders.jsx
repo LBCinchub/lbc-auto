@@ -97,8 +97,9 @@ export default function RepairOrders() {
     }
   };
 
-  const refresh = () => {
+  const refresh = (savedStatus) => {
     queryClient.invalidateQueries({ queryKey: ["repairOrders"] });
+    if (savedStatus) setStatusFilter(savedStatus);
   };
 
   const refreshParts = () => {
