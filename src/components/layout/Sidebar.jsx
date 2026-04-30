@@ -23,9 +23,12 @@ import {
   Settings as SettingsIcon,
   LogOut,
   HelpCircle,
-  CreditCard
+  CreditCard,
+  Sun,
+  Moon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/lib/ThemeContext";
 
 const navItems = [
   { name: "Dashboard", icon: LayoutDashboard, page: "Dashboard" },
@@ -47,6 +50,8 @@ export default function Sidebar({ currentPage }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [user, setUser] = useState(null);
+  const { theme, toggleTheme } = useTheme();
+  const isLight = theme === "light";
 
   useEffect(() => {
     const loadUser = async () => {
@@ -61,7 +66,7 @@ export default function Sidebar({ currentPage }) {
       {/* Mobile hamburger */}
       <button
         onClick={() => setMobileOpen(true)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-gray-900 text-white shadow-lg"
+        className={cn("lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg shadow-lg", isLight ? "bg-white text-gray-800 border border-gray-200" : "bg-gray-900 text-white")}
       >
         <Menu className="w-5 h-5" />
       </button>
@@ -77,20 +82,21 @@ export default function Sidebar({ currentPage }) {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed top-0 left-0 h-full bg-gray-950 border-r border-gray-800/50 z-50 flex flex-col transition-all duration-300",
+          "fixed top-0 left-0 h-full z-50 flex flex-col transition-all duration-300",
+          isLight ? "bg-white border-r border-gray-200" : "bg-gray-950 border-r border-gray-800/50",
           collapsed ? "w-[72px]" : "w-64",
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
       >
         {/* Logo */}
-        <div className="h-16 flex items-center px-4 border-b border-gray-800/50">
+        <div className={cn("h-16 flex items-center px-4 border-b", isLight ? "border-gray-200" : "border-gray-800/50")}>
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center flex-shrink-0">
               <Zap className="w-5 h-5 text-white" />
             </div>
             {!collapsed && (
               <div className="min-w-0">
-                <h1 className="text-white font-bold text-lg leading-tight tracking-tight">LBC Auto</h1>
+                <h1 className={cn("font-bold text-lg leading-tight tracking-tight", isLight ? "text-gray-900" : "text-white")}>LBC Auto</h1>
                 <p className="text-[10px] text-sky-400 tracking-wider uppercase">Smart Management</p>
               </div>
             )}
@@ -115,8 +121,10 @@ export default function Sidebar({ currentPage }) {
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
                   isActive
-                    ? "bg-sky-500/10 text-sky-400 shadow-sm"
-                    : "text-gray-400 hover:text-white hover:bg-gray-800/50"
+                    ? "bg-sky-500/10 text-sky-500 shadow-sm"
+                    : isLight
+                      ? "text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+                      : "text-gray-400 hover:text-white hover:bg-gray-800/50"
                 )}
               >
                 <item.icon className={cn("w-5 h-5 flex-shrink-0", isActive && "text-sky-400")} />
@@ -130,15 +138,15 @@ export default function Sidebar({ currentPage }) {
         </nav>
 
         {/* Settings & Footer */}
-        <div className="p-3 border-t border-gray-800/50 space-y-2">
+        <div className={cn("p-3 border-t space-y-2", isLight ? "border-gray-200" : "border-gray-800/50")}>
           <Link
             to="/Billing"
             onClick={() => setMobileOpen(false)}
             className={cn(
               "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
               currentPage === "Billing"
-                ? "bg-sky-500/10 text-sky-400 shadow-sm"
-                : "text-gray-400 hover:text-white hover:bg-gray-800/50"
+                ? "bg-sky-500/10 text-sky-500 shadow-sm"
+                : isLight ? "text-gray-500 hover:text-gray-900 hover:bg-gray-100" : "text-gray-400 hover:text-white hover:bg-gray-800/50"
             )}
           >
             <CreditCard className="w-5 h-5 flex-shrink-0" />
@@ -150,8 +158,8 @@ export default function Sidebar({ currentPage }) {
             className={cn(
               "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
               currentPage === "Settings"
-                ? "bg-sky-500/10 text-sky-400 shadow-sm"
-                : "text-gray-400 hover:text-white hover:bg-gray-800/50"
+                ? "bg-sky-500/10 text-sky-500 shadow-sm"
+                : isLight ? "text-gray-500 hover:text-gray-900 hover:bg-gray-100" : "text-gray-400 hover:text-white hover:bg-gray-800/50"
             )}
           >
             <SettingsIcon className="w-5 h-5 flex-shrink-0" />
@@ -162,7 +170,7 @@ export default function Sidebar({ currentPage }) {
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => setMobileOpen(false)}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 transition-all"
+            className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all", isLight ? "text-gray-500 hover:text-gray-900 hover:bg-gray-100" : "text-gray-400 hover:text-white hover:bg-gray-800/50")}
           >
             <HelpCircle className="w-5 h-5 flex-shrink-0" />
             {!collapsed && <span>Support</span>}
@@ -172,16 +180,24 @@ export default function Sidebar({ currentPage }) {
               base44.auth.logout();
               setMobileOpen(false);
             }}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 transition-all"
+            className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all", isLight ? "text-gray-500 hover:text-gray-900 hover:bg-gray-100" : "text-gray-400 hover:text-white hover:bg-gray-800/50")}
           >
             <LogOut className="w-5 h-5 flex-shrink-0" />
             {!collapsed && <span>Logout</span>}
+          </button>
+          {/* Theme toggle */}
+          <button
+            onClick={toggleTheme}
+            className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all", isLight ? "text-gray-500 hover:text-gray-900 hover:bg-gray-100" : "text-gray-400 hover:text-white hover:bg-gray-800/50")}
+          >
+            {isLight ? <Moon className="w-5 h-5 flex-shrink-0" /> : <Sun className="w-5 h-5 flex-shrink-0" />}
+            {!collapsed && <span>{isLight ? "Dark Mode" : "Light Mode"}</span>}
           </button>
           {!collapsed && (
             <div className="hidden lg:block pt-2">
               <button
                 onClick={() => setCollapsed(!collapsed)}
-                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-gray-500 hover:text-gray-300 hover:bg-gray-800/50 transition-colors text-xs"
+                className={cn("w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition-colors text-xs", isLight ? "text-gray-400 hover:text-gray-700 hover:bg-gray-100" : "text-gray-500 hover:text-gray-300 hover:bg-gray-800/50")}
               >
                 {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
                 <span>Collapse</span>
@@ -193,16 +209,16 @@ export default function Sidebar({ currentPage }) {
         {/* Powered By */}
         {!collapsed && (
           <div className="px-4 pb-2 text-center">
-            <p className="text-[10px] text-gray-600">Powered by <a href="https://lbc.network" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-sky-400 transition-colors">lbc.network</a></p>
+            <p className={cn("text-[10px]", isLight ? "text-gray-400" : "text-gray-600")}>Powered by <a href="https://lbc.network" target="_blank" rel="noopener noreferrer" className="hover:text-sky-400 transition-colors">{isLight ? "lbc.network" : "lbc.network"}</a></p>
           </div>
         )}
 
         {/* Business Name */}
         {!collapsed && user?.business_name && (
           <div className="px-4 pb-4">
-            <div className="px-3 py-2 rounded-lg bg-gray-900/50 border border-gray-800/50">
-              <p className="text-[10px] text-gray-500 tracking-wider">YOUR SHOP</p>
-              <p className="text-xs text-gray-300 font-medium truncate">{user.business_name}</p>
+            <div className={cn("px-3 py-2 rounded-lg border", isLight ? "bg-gray-50 border-gray-200" : "bg-gray-900/50 border-gray-800/50")}>
+              <p className={cn("text-[10px] tracking-wider", isLight ? "text-gray-400" : "text-gray-500")}>YOUR SHOP</p>
+              <p className={cn("text-xs font-medium truncate", isLight ? "text-gray-700" : "text-gray-300")}>{user.business_name}</p>
             </div>
           </div>
         )}

@@ -1,10 +1,12 @@
 import React from "react";
 import Sidebar from "./components/layout/Sidebar";
 import FloatingNote from "./components/shared/FloatingNote";
+import { useTheme } from "./lib/ThemeContext";
 
 export default function Layout({ children, currentPageName }) {
+  const { theme } = useTheme();
   return (
-    <div className="min-h-screen bg-gray-950">
+    <div className={`min-h-screen ${theme === "light" ? "bg-gray-100" : "bg-gray-950"}`}>
       <style>{`
         :root {
           --sidebar-width: 256px;
