@@ -14,7 +14,7 @@ import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
 import { FileText, Wrench, Receipt, CheckCircle2, CalendarDays } from "lucide-react";
 
-export default function CustomerFormDialog({ open, onClose, customer, onSaved }) {
+export default function CustomerFormDialog({ open, onClose, customer, onSaved, onQuickAction }) {
   const navigate = useNavigate();
   const [form, setForm] = useState({
     full_name: "", phone: "", email: "", address: "", notes: ""
@@ -105,8 +105,13 @@ export default function CustomerFormDialog({ open, onClose, customer, onSaved })
   };
 
   const handleQuickAction = (page) => {
-    onClose();
-    navigate(`/${page}`);
+    // For appointments, use callback to open dialog with prefilled data
+    if (page === "Appointments" && onQuickAction) {
+      onQuickAction(page, { _prefillCustomerId: savedCustomer.id, _prefillCustomerName: savedCustomer.full_name });
+    } else {
+      onClose();
+      navigate(`/${page}`);
+    }
   };
 
   if (savedCustomer) {

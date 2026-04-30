@@ -10,6 +10,7 @@ import PageHeader from "../components/shared/PageHeader";
 import SearchBar from "../components/shared/SearchBar";
 import EmptyState from "../components/shared/EmptyState";
 import CustomerFormDialog from "../components/customers/CustomerFormDialog";
+import AppointmentFormDialog from "../components/appointments/AppointmentFormDialog";
 
 export default function Customers() {
   const [search, setSearch] = useState("");
@@ -17,6 +18,8 @@ export default function Customers() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [profileCustomer, setProfileCustomer] = useState(null);
+  const [appointmentDialogOpen, setAppointmentDialogOpen] = useState(false);
+  const [appointmentData, setAppointmentData] = useState(null);
   const queryClient = useQueryClient();
 
   const [user, setUser] = useState(null);
@@ -37,6 +40,12 @@ export default function Customers() {
     enabled: !!user,
   });
 
+  const { data: mechanics = [] } = useQuery({
+    queryKey: ["mechanics", user?.email],
+    queryFn: () => user ? base44.entities.Mechanic.filter({created_by: user.email}, "-created_date", 200) : Promise.resolve([]),
+    enabled: !!user,
+  });
+
   const filtered = customers.filter(c => {
     const customerVehicles = vehicles.filter(v => v.customer_id === c.id);
     const vins = customerVehicles.map(v => v.vin).join(" ");
@@ -52,6 +61,14 @@ export default function Customers() {
     if (window.confirm("Delete this customer?")) {
       await base44.entities.Customer.delete(id);
       queryClient.invalidateQueries({ queryKey: ["customers"] });
+    }
+  };
+
+  const handleQuickAction = (page, data) => {
+    if (page === "Appointments") {
+      setAppointmentData(data);
+      setAppointmentDialogOpen(true);
+      setDialogOpen(false);
     }
   };
 
@@ -166,12 +183,22 @@ export default function Customers() {
         onClose={() => setDialogOpen(false)}
         customer={editingCustomer}
         onSaved={() => queryClient.invalidateQueries({ queryKey: ["customers"] })}
+        onQuickAction={handleQuickAction}
       />
       <CustomerProfileDialog
         open={!!profileCustomer}
         customer={profileCustomer}
         customers={customers}
         onClose={() => setProfileCustomer(null)}
+      />
+      <AppointmentFormDialog
+        open={appointmentDialogOpen}
+        onClose={() => setAppointmentDialogOpen(false)}
+        appointment={appointmentData}
+        onSaved={() => queryClient.invalidateQueries({ queryKey: ["appointments"] })}
+        customers={customers}
+        vehicles={vehicles}
+        mechanics={mechanics}
       />
     </div>
   );
