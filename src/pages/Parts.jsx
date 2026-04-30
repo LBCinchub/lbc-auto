@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Package, Pencil, Trash2, AlertTriangle } from "lucide-react";
+import { Package, Pencil, Trash2, AlertTriangle, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,6 +10,7 @@ import PageHeader from "../components/shared/PageHeader";
 import SearchBar from "../components/shared/SearchBar";
 import EmptyState from "../components/shared/EmptyState";
 import PartFormDialog from "../components/parts/PartFormDialog";
+import RockAutoImportDialog from "../components/parts/RockAutoImportDialog";
 
 export default function Parts() {
   const [search, setSearch] = useState("");
@@ -17,6 +18,7 @@ export default function Parts() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPart, setEditingPart] = useState(null);
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: parts = [], isLoading } = useQuery({
@@ -44,8 +46,18 @@ export default function Parts() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Parts Inventory" subtitle={`${parts.length} parts in stock`}
-        onAdd={() => { setEditingPart(null); setDialogOpen(true); }} addLabel="Add Part" />
+      <div className="flex items-center justify-between">
+        <PageHeader title="Parts Inventory" subtitle={`${parts.length} parts in stock`}
+          onAdd={() => { setEditingPart(null); setDialogOpen(true); }} addLabel="Add Part" />
+        <Button 
+          variant="outline" 
+          className="gap-2 border-gray-700 text-gray-300 hover:bg-gray-800"
+          onClick={() => setImportDialogOpen(true)}
+        >
+          <Download className="w-4 h-4" />
+          Import from RockAuto
+        </Button>
+      </div>
 
       {lowStockParts.length > 0 && (
         <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-4">
@@ -180,6 +192,15 @@ export default function Parts() {
         onClose={() => setDialogOpen(false)}
         part={editingPart}
         onSaved={() => queryClient.invalidateQueries({ queryKey: ["parts"] })}
+      />
+
+      <RockAutoImportDialog
+        open={importDialogOpen}
+        onClose={() => setImportDialogOpen(false)}
+        onImportSuccess={() => {
+          setImportDialogOpen(false);
+          queryClient.invalidateQueries({ queryKey: ["parts"] });
+        }}
       />
     </div>
   );
