@@ -62,30 +62,26 @@ export default function FloatingNote() {
           {/* History Section */}
           {sortedDates.length > 0 && (
             <div className="max-h-48 overflow-y-auto">
-              <div className="text-xs text-yellow-700 font-semibold px-4 py-2 bg-yellow-100/70">
-                Note History
-              </div>
-              <div className="space-y-1">
+              <div className="space-y-2 p-3">
                 {sortedDates.map(date => (
-                  <div key={date} className="px-4 py-2 border-b border-yellow-200/50 last:border-0 hover:bg-yellow-100/50">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-yellow-700 font-semibold">
-                          {new Date(date + "T00:00:00").toLocaleDateString("en-US", {
-                            weekday: "short",
-                            month: "short",
-                            day: "numeric"
-                          })}
-                        </p>
-                        <p className="text-xs text-gray-700 mt-0.5 line-clamp-2">{notes[date]}</p>
-                      </div>
+                  <div key={date} className="bg-white rounded-lg p-3 border-l-4 border-yellow-400">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <p className="text-xs font-bold text-yellow-700 bg-yellow-100 px-2 py-1 rounded">
+                        {new Date(date + "T00:00:00").toLocaleDateString("en-US", {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric"
+                        })}
+                      </p>
                       <button
                         onClick={() => handleDelete(date)}
-                        className="text-yellow-600 hover:text-red-600 flex-shrink-0 mt-0.5"
+                        className="text-yellow-600 hover:text-red-600 flex-shrink-0"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
+                    <p className="text-xs text-gray-700">{notes[date]}</p>
                   </div>
                 ))}
               </div>
