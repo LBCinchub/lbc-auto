@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { ClipboardList, Pencil, Trash2, CheckCircle2, FileText, Phone, Mail, Hash } from "lucide-react";
+import { ClipboardList, Pencil, Trash2, CheckCircle2, FileText, Phone, Mail, Hash, Sheet } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { fuzzyMatch } from "@/utils/fuzzySearch";
 import PageHeader from "../components/shared/PageHeader";
@@ -115,18 +115,48 @@ export default function Estimates() {
     }
   };
 
+  const exportCSV = () => {
+    const headers = ["Estimate #", "Date", "Customer", "Vehicle", "Status", "Labor", "Parts", "Tax", "Grand Total", "Valid Until", "Notes"];
+    const rows = filtered.map(est => [
+      est.estimate_number || "",
+      new Date(est.created_date).toLocaleDateString(),
+      est.customer_name || "",
+      est.vehicle_info || "",
+      est.status || "",
+      (est.labor_total || 0).toFixed(2),
+      (est.parts_total || 0).toFixed(2),
+      (est.tax_amount || 0).toFixed(2),
+      (est.grand_total || 0).toFixed(2),
+      est.valid_until || "",
+      est.notes || "",
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `estimates-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const openNew = () => { setEditing(null); setDialogOpen(true); };
   const openEdit = (e) => { setEditing(e); setDialogOpen(true); };
   const openInvoiceFromEstimate = (est) => { setInvoiceFromEstimate(est); setInvoiceDialogOpen(true); };
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Estimates"
-        subtitle={`${estimates.length} estimates`}
-        onAdd={openNew}
-        addLabel="New Estimate"
-      />
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <PageHeader
+          title="Estimates"
+          subtitle={`${estimates.length} estimates`}
+          onAdd={openNew}
+          addLabel="New Estimate"
+        />
+        <Button variant="outline" size="sm" onClick={exportCSV} className="border-gray-700 text-gray-300 hover:text-white gap-2 flex-shrink-0">
+          <Sheet className="w-4 h-4" /> Export CSV ({filtered.length})
+        </Button>
+      </div>
 
       <div className="flex gap-2 items-center">
         <Select value={searchField} onValueChange={setSearchField}>

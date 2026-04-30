@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileText, Pencil, Trash2, Printer, Download, DollarSign, MessageSquare, ShieldCheck, Calendar, AlertCircle, Phone, Mail, Hash } from "lucide-react";
+import { FileText, Pencil, Trash2, Printer, Download, DollarSign, MessageSquare, ShieldCheck, Calendar, AlertCircle, Phone, Mail, Hash, Sheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -110,6 +110,34 @@ export default function Invoices() {
     queryClient.invalidateQueries({ queryKey: ["invoices"] });
   };
 
+  const exportCSV = () => {
+    const headers = ["Invoice #", "Date", "Customer", "Vehicle", "Status", "Parts", "Labor", "Tax", "Total", "Amount Paid", "Balance Due", "Due Date", "Paid Date", "Payment Method"];
+    const rows = filtered.map(inv => [
+      inv.invoice_number || "",
+      new Date(inv.created_date).toLocaleDateString(),
+      inv.customer_name || "",
+      inv.vehicle_info || "",
+      inv.status || "",
+      (inv.parts_total || 0).toFixed(2),
+      (inv.labor_total || 0).toFixed(2),
+      (inv.tax_amount || 0).toFixed(2),
+      (inv.total || 0).toFixed(2),
+      (inv.amount_paid || 0).toFixed(2),
+      (inv.balance_due || 0).toFixed(2),
+      inv.due_date || "",
+      inv.paid_date || "",
+      inv.payment_method || "",
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `invoices-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const downloadPDF = (inv) => {
     const doc = new jsPDF();
     
@@ -206,8 +234,13 @@ export default function Invoices() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Invoices" subtitle={`${invoices.length} total invoices`}
-        onAdd={() => { setEditingInvoice(null); setDialogOpen(true); }} addLabel="Create Invoice" />
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <PageHeader title="Invoices" subtitle={`${invoices.length} total invoices`}
+          onAdd={() => { setEditingInvoice(null); setDialogOpen(true); }} addLabel="Create Invoice" />
+        <Button variant="outline" size="sm" onClick={exportCSV} className="border-gray-700 text-gray-300 hover:text-white gap-2 flex-shrink-0">
+          <Sheet className="w-4 h-4" /> Export CSV ({filtered.length})
+        </Button>
+      </div>
 
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex flex-1 gap-2 items-center">
