@@ -355,6 +355,12 @@ export default function Invoices() {
                   </div>
                 </div>
                 <div className="flex items-center gap-4 flex-shrink-0">
+                  {inv.tax_amount > 0 && (
+                    <div className="text-right border-r border-gray-700/50 pr-4">
+                      <p className="text-xs text-gray-500">GST/HST ({inv.tax_rate ?? 0}%)</p>
+                      <p className="text-sm font-semibold text-amber-400">${(inv.tax_amount || 0).toFixed(2)}</p>
+                    </div>
+                  )}
                   <div className="text-right">
                     <p className="text-xs text-gray-500">Total</p>
                     <p className="text-base font-bold text-white">${(inv.total || 0).toFixed(2)}</p>
