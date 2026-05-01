@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Package, Pencil, Trash2, AlertTriangle, Download, Barcode } from "lucide-react";
+import { Package, Pencil, Trash2, AlertTriangle, Download, Barcode, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,6 +11,7 @@ import SearchBar from "../components/shared/SearchBar";
 import EmptyState from "../components/shared/EmptyState";
 import PartFormDialog from "../components/parts/PartFormDialog";
 import RockAutoImportDialog from "../components/parts/RockAutoImportDialog";
+import CsvImportDialog from "../components/parts/CsvImportDialog";
 import BarcodeScanner from "../components/parts/BarcodeScanner";
 import QuickStockUpdate from "../components/parts/QuickStockUpdate";
 
@@ -21,6 +22,7 @@ export default function Parts() {
   const [editingPart, setEditingPart] = useState(null);
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [csvImportOpen, setCsvImportOpen] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [stockUpdateOpen, setStockUpdateOpen] = useState(false);
   const [scannedPart, setScannedPart] = useState(null);
@@ -76,14 +78,24 @@ export default function Parts() {
       <div className="flex items-center justify-between">
         <PageHeader title="Parts Inventory" subtitle={`${parts.length} parts in stock`}
           onAdd={() => { setEditingPart(null); setDialogOpen(true); }} addLabel="Add Part" />
-        <Button 
-          variant="outline" 
-          className="gap-2 border-gray-700 text-gray-300 hover:bg-gray-800"
-          onClick={() => setImportDialogOpen(true)}
-        >
-          <Download className="w-4 h-4" />
-          Import from RockAuto
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            className="gap-2 border-gray-700 text-gray-300 hover:bg-gray-800"
+            onClick={() => setCsvImportOpen(true)}
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            Import CSV / Excel
+          </Button>
+          <Button 
+            variant="outline" 
+            className="gap-2 border-gray-700 text-gray-300 hover:bg-gray-800"
+            onClick={() => setImportDialogOpen(true)}
+          >
+            <Download className="w-4 h-4" />
+            Import from RockAuto
+          </Button>
+        </div>
       </div>
 
       {lowStockParts.length > 0 && (
@@ -228,6 +240,15 @@ export default function Parts() {
         onClose={() => setDialogOpen(false)}
         part={editingPart}
         onSaved={() => queryClient.invalidateQueries({ queryKey: ["parts"] })}
+      />
+
+      <CsvImportDialog
+        open={csvImportOpen}
+        onClose={() => setCsvImportOpen(false)}
+        onImportSuccess={() => {
+          setCsvImportOpen(false);
+          queryClient.invalidateQueries({ queryKey: ["parts"] });
+        }}
       />
 
       <RockAutoImportDialog
