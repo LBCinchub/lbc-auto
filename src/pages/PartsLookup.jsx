@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Search, AlertCircle } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const YEARS = Array.from({ length: 40 }, (_, i) => new Date().getFullYear() - i);
 
@@ -16,48 +15,38 @@ export default function PartsLookup() {
   const [selectedEngine, setSelectedEngine] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [showResults, setShowResults] = useState(false);
-  const queryClient = useQueryClient();
 
   const { data: parts = [] } = useQuery({
     queryKey: ["parts"],
     queryFn: () => base44.entities.Part.list("-created_date", 500),
   });
 
-  // Get unique makes for selected year
   const makes = [...new Set(parts.map(p => p.make).filter(Boolean))].sort();
-
-  // Get unique models for selected year/make
   const models = selectedMake
     ? [...new Set(parts.filter(p => p.make === selectedMake).map(p => p.model).filter(Boolean))].sort()
     : [];
-
-  // Get unique engines for selected year/make/model
   const engines = selectedModel
     ? [...new Set(parts.filter(p => p.make === selectedMake && p.model === selectedModel).map(p => p.engine_type).filter(Boolean))].sort()
     : [];
 
   const handleVinLookup = () => {
     if (!vinNumber.trim()) return;
-    
-    const resultsForVin = parts.filter(p => 
-      p.name.toLowerCase().includes(vinNumber.toLowerCase()) ||
-      p.part_number.toLowerCase().includes(vinNumber.toLowerCase())
+    const resultsForVin = parts.filter(p =>
+      (p.name || "").toLowerCase().includes(vinNumber.toLowerCase()) ||
+      (p.part_number || "").toLowerCase().includes(vinNumber.toLowerCase())
     );
-    
     setSearchResults(resultsForVin);
     setShowResults(true);
   };
 
   const handleVehicleSearch = () => {
     if (!selectedYear || !selectedMake || !selectedModel) return;
-
-    const results = parts.filter(p => 
+    const results = parts.filter(p =>
       (!selectedYear || p.year == selectedYear) &&
       (!selectedMake || p.make === selectedMake) &&
       (!selectedModel || p.model === selectedModel) &&
       (!selectedEngine || !p.engine_type || p.engine_type === selectedEngine)
     );
-
     setSearchResults(results);
     setShowResults(true);
   };
@@ -71,199 +60,171 @@ export default function PartsLookup() {
     setShowResults(false);
   };
 
+  const listboxClass = "w-full border border-gray-400 rounded bg-white text-sm overflow-auto h-48 focus:outline-none focus:ring-2 focus:ring-blue-500";
+
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-4xl mx-auto p-6">
         {/* Header */}
         <div className="border-b pb-4 mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Parts Catalog</h1>
-          <p className="text-sm text-gray-600 mt-1">Vehicle</p>
-        </div>
-
-        {/* Info Section */}
-        <div className="mb-8 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-          <p className="font-semibold text-gray-900 mb-3">Here you can:</p>
-          <ul className="list-disc list-inside space-y-2 text-gray-700 text-sm">
-            <li>Find any part or component with part numbers and descriptions</li>
-            <li>Search the database by vehicle year, make, and model</li>
-            <li>Look up parts using VIN number</li>
-            <li>Create a printable list of parts you need</li>
-          </ul>
+          <p className="text-sm text-gray-500 mt-1">Search inventory by vehicle or VIN</p>
         </div>
 
         {/* VIN Lookup */}
-        <div className="mb-8 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-          <label className="block text-sm font-semibold text-gray-900 mb-2">
-            VIN Lookup
-          </label>
-          <div className="flex gap-2">
-            <Input
-              type="text"
-              maxLength="17"
-              placeholder="Enter VIN number"
-              value={vinNumber}
-              onChange={(e) => setVinNumber(e.target.value.toUpperCase())}
-              onKeyPress={(e) => e.key === 'Enter' && handleVinLookup()}
-              className="border-gray-900 max-w-xs"
-            />
-            <Button
-              onClick={handleVinLookup}
-              className="bg-gray-900 text-white hover:bg-gray-800"
-            >
-              Go
-            </Button>
-          </div>
+        <div className="mb-6 flex items-center gap-3">
+          <label className="text-sm font-semibold text-gray-800 whitespace-nowrap">VIN Lookup</label>
+          <Input
+            type="text"
+            maxLength={17}
+            placeholder="Enter 17-character VIN"
+            value={vinNumber}
+            onChange={(e) => setVinNumber(e.target.value.toUpperCase())}
+            onKeyDown={(e) => e.key === "Enter" && handleVinLookup()}
+            className="max-w-xs"
+          />
+          <Button onClick={handleVinLookup} className="bg-gray-900 text-white hover:bg-gray-800">
+            Go
+          </Button>
         </div>
 
         {/* Vehicle Selection */}
-        <div className="mb-8 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+        <div className="mb-6 p-4 border border-gray-300 rounded-lg bg-gray-50">
           <p className="font-semibold text-gray-900 mb-4">Select a Vehicle:</p>
 
-          <div className="grid grid-cols-4 gap-4 mb-6">
-            {/* Year Column */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+            {/* Year */}
             <div>
-              <label className="text-xs font-bold text-gray-700 bg-gray-300 p-2 block mb-1">
-                Year
-              </label>
-              <Select value={selectedYear} onValueChange={setSelectedYear}>
-                <SelectTrigger className="border-gray-900 h-64">
-                  <SelectValue placeholder="Select year" />
-                </SelectTrigger>
-                <SelectContent>
-                  {YEARS.map(year => (
-                    <SelectItem key={year} value={String(year)}>
-                      {year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="text-xs font-bold text-gray-700 bg-gray-300 px-2 py-1 mb-1">Year</div>
+              <select
+                className={listboxClass}
+                size={8}
+                value={selectedYear}
+                onChange={(e) => {
+                  setSelectedYear(e.target.value);
+                  setSelectedMake("");
+                  setSelectedModel("");
+                  setSelectedEngine("");
+                }}
+              >
+                {YEARS.map(year => (
+                  <option key={year} value={String(year)}>{year}</option>
+                ))}
+              </select>
             </div>
 
-            {/* Make Column */}
+            {/* Make */}
             <div>
-              <label className="text-xs font-bold text-gray-700 bg-gray-300 p-2 block mb-1">
-                Make
-              </label>
-              <Select value={selectedMake} onValueChange={(val) => {
-                setSelectedMake(val);
-                setSelectedModel("");
-                setSelectedEngine("");
-              }} disabled={!selectedYear}>
-                <SelectTrigger className="border-gray-900 h-64">
-                  <SelectValue placeholder="Select make" />
-                </SelectTrigger>
-                <SelectContent>
-                  {makes.map(make => (
-                    <SelectItem key={make} value={make}>
-                      {make}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="text-xs font-bold text-gray-700 bg-gray-300 px-2 py-1 mb-1">Make</div>
+              <select
+                className={listboxClass}
+                size={8}
+                value={selectedMake}
+                onChange={(e) => {
+                  setSelectedMake(e.target.value);
+                  setSelectedModel("");
+                  setSelectedEngine("");
+                }}
+                disabled={!selectedYear}
+              >
+                {makes.length === 0 && <option disabled>No makes available</option>}
+                {makes.map(make => (
+                  <option key={make} value={make}>{make}</option>
+                ))}
+              </select>
             </div>
 
-            {/* Model Column */}
+            {/* Model */}
             <div>
-              <label className="text-xs font-bold text-gray-700 bg-gray-300 p-2 block mb-1">
-                Model
-              </label>
-              <Select value={selectedModel} onValueChange={(val) => {
-                setSelectedModel(val);
-                setSelectedEngine("");
-              }} disabled={!selectedMake}>
-                <SelectTrigger className="border-gray-900 h-64">
-                  <SelectValue placeholder="Select model" />
-                </SelectTrigger>
-                <SelectContent>
-                  {models.map(model => (
-                    <SelectItem key={model} value={model}>
-                      {model}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="text-xs font-bold text-gray-700 bg-gray-300 px-2 py-1 mb-1">Model</div>
+              <select
+                className={listboxClass}
+                size={8}
+                value={selectedModel}
+                onChange={(e) => {
+                  setSelectedModel(e.target.value);
+                  setSelectedEngine("");
+                }}
+                disabled={!selectedMake}
+              >
+                {models.length === 0 && <option disabled>Select a make first</option>}
+                {models.map(model => (
+                  <option key={model} value={model}>{model}</option>
+                ))}
+              </select>
             </div>
 
-            {/* Engine Column */}
+            {/* Engine */}
             <div>
-              <label className="text-xs font-bold text-gray-700 bg-gray-300 p-2 block mb-1">
-                Engine
-              </label>
-              <Select value={selectedEngine} onValueChange={setSelectedEngine} disabled={!selectedModel}>
-                <SelectTrigger className="border-gray-900 h-64">
-                  <SelectValue placeholder="Select engine" />
-                </SelectTrigger>
-                <SelectContent>
-                  {engines.map(engine => (
-                    <SelectItem key={engine} value={engine}>
-                      {engine}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="text-xs font-bold text-gray-700 bg-gray-300 px-2 py-1 mb-1">Engine</div>
+              <select
+                className={listboxClass}
+                size={8}
+                value={selectedEngine}
+                onChange={(e) => setSelectedEngine(e.target.value)}
+                disabled={!selectedModel}
+              >
+                {engines.length === 0 && <option disabled>Select a model first</option>}
+                {engines.map(engine => (
+                  <option key={engine} value={engine}>{engine}</option>
+                ))}
+              </select>
             </div>
           </div>
 
-          <div className="flex gap-2 justify-center">
+          {/* Selected summary */}
+          {selectedYear && (
+            <p className="text-sm text-gray-600 mb-3">
+              Selected: <span className="font-medium">{selectedYear} {selectedMake} {selectedModel} {selectedEngine}</span>
+            </p>
+          )}
+
+          <div className="flex gap-2">
             <Button
               onClick={handleVehicleSearch}
-              disabled={!selectedModel}
+              disabled={!selectedYear || !selectedMake || !selectedModel}
               className="bg-gray-900 text-white hover:bg-gray-800"
             >
               Search Parts
             </Button>
-            <Button
-              onClick={handleClear}
-              variant="outline"
-              className="border-gray-900 text-gray-900"
-            >
+            <Button onClick={handleClear} variant="outline">
               Clear
             </Button>
           </div>
         </div>
 
-        {/* Search Results */}
+        {/* Results */}
         {showResults && (
-          <div className="mt-8">
+          <div className="mt-6">
             <h2 className="text-lg font-bold text-gray-900 mb-4">
-              Search Results ({searchResults.length} parts found)
+              Search Results — {searchResults.length} part{searchResults.length !== 1 ? "s" : ""} found
             </h2>
 
             {searchResults.length === 0 ? (
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg flex gap-3">
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg flex gap-3 items-center">
                 <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0" />
-                <p className="text-blue-800">No parts found for the selected vehicle.</p>
+                <p className="text-blue-800 text-sm">No parts found for the selected vehicle.</p>
               </div>
             ) : (
               <div className="border border-gray-300 rounded-lg overflow-hidden">
-                <table className="w-full">
+                <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-gray-900 text-white">
-                      <th className="px-4 py-3 text-left text-sm font-semibold">Part Number</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold">Part Name</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold">Supplier</th>
-                      <th className="px-4 py-3 text-right text-sm font-semibold">Price</th>
-                      <th className="px-4 py-3 text-right text-sm font-semibold">Stock</th>
+                      <th className="px-4 py-3 text-left font-semibold">Part Number</th>
+                      <th className="px-4 py-3 text-left font-semibold">Part Name</th>
+                      <th className="px-4 py-3 text-left font-semibold">Supplier</th>
+                      <th className="px-4 py-3 text-right font-semibold">Price</th>
+                      <th className="px-4 py-3 text-right font-semibold">Stock</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {searchResults.map((part, idx) => (
                       <tr key={part.id} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                        <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                          {part.part_number}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-700">
-                          {part.name}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-600">
-                          {part.supplier || "—"}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-900 text-right font-medium">
-                          ${part.sale_price?.toFixed(2)}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-900 text-right">
-                          {part.quantity} units
-                        </td>
+                        <td className="px-4 py-3 font-medium text-gray-900">{part.part_number || "—"}</td>
+                        <td className="px-4 py-3 text-gray-700">{part.name}</td>
+                        <td className="px-4 py-3 text-gray-600">{part.supplier || "—"}</td>
+                        <td className="px-4 py-3 text-right font-medium text-gray-900">${part.sale_price?.toFixed(2)}</td>
+                        <td className="px-4 py-3 text-right text-gray-900">{part.quantity} units</td>
                       </tr>
                     ))}
                   </tbody>
