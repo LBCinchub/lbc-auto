@@ -258,45 +258,54 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
    if (invoice && invoice.id) {
      await base44.entities.Invoice.update(invoice.id, data);
 
-     // Sync to linked Repair Order (preserve original description and notes)
-     if (data.repair_order_id) {
-       try {
-         const ro = await base44.entities.RepairOrder.get(data.repair_order_id);
-         if (ro) {
-           await base44.entities.RepairOrder.update(data.repair_order_id, {
-             customer_id: data.customer_id,
-             customer_name: data.customer_name,
-             vehicle_info: data.vehicle_info,
-             labor_cost: data.labor_total,
-             parts_cost: data.parts_total,
-             parts_used: data.parts_used || ro.parts_used,
-             description: ro.description,
-             notes: ro.notes,
-           });
-         }
-       } catch (e) { console.warn("Sync to repair order failed:", e); }
-     }
+      // Sync to linked Repair Order (preserve original description and notes)
+      if (data.repair_order_id) {
+        try {
+          const ro = await base44.entities.RepairOrder.get(data.repair_order_id);
+          if (ro) {
+            const roLaborCost = data.labor_total;
+            const roPartsCost = data.parts_total;
+            const roTotal = roLaborCost + roPartsCost;
+            await base44.entities.RepairOrder.update(data.repair_order_id, {
+              customer_id: data.customer_id,
+              customer_name: data.customer_name,
+              vehicle_info: data.vehicle_info,
+              labor_cost: roLaborCost,
+              parts_cost: roPartsCost,
+              total_cost: roTotal,
+              parts_used: data.parts_used?.length ? data.parts_used : ro.parts_used,
+              description: ro.description,
+              notes: ro.notes,
+            });
+          }
+        } catch (e) { console.warn("Sync to repair order failed:", e); }
+      }
 
-     // Sync to linked Estimate
-     if (data.estimate_id) {
-       try {
-         const est = await base44.entities.Estimate.get(data.estimate_id);
-         if (est) {
-           await base44.entities.Estimate.update(data.estimate_id, {
-             customer_id: data.customer_id,
-             customer_name: data.customer_name,
-             vehicle_info: data.vehicle_info,
-             labor_total: data.labor_total,
-             parts_total: data.parts_total,
-             notes: data.customer_note || est.notes,
-             parts_items: data.parts_used?.map(p => ({ name: p.name, part_number: p.part_number || "", quantity: p.quantity, unit_price: p.unit_price, total: p.total })) || est.parts_items,
-           });
-         }
-       } catch (e) { console.warn("Sync to estimate failed:", e); }
-     }
-   } else {
-     await base44.entities.Invoice.create(data);
-   }
+      // Sync to linked Estimate
+      if (data.estimate_id) {
+        try {
+          const est = await base44.entities.Estimate.get(data.estimate_id);
+          if (est) {
+            const estTaxAmount = est.apply_tax ? (data.labor_total + data.parts_total) * ((est.tax_rate || 0) / 100) : 0;
+            await base44.entities.Estimate.update(data.estimate_id, {
+              customer_id: data.customer_id,
+              customer_name: data.customer_name,
+              vehicle_info: data.vehicle_info,
+              labor_total: data.labor_total,
+              parts_total: data.parts_total,
+              tax_amount: estTaxAmount,
+              grand_total: data.labor_total + data.parts_total + estTaxAmount,
+              notes: est.notes,
+              parts_items: data.parts_used?.length
+                ? data.parts_used.map(p => ({ name: p.name, part_number: p.part_number || "", quantity: p.quantity, unit_price: p.unit_price, total: p.total }))
+                : est.parts_items,
+            });
+          }
+        } catch (e) { console.warn("Sync to estimate failed:", e); }
+      }
+    } else {
+      await base44.entities.Invoice.create(data);
+    }
    setSaving(false);
    onSaved();
    onClose();

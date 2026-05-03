@@ -623,24 +623,51 @@ export default function RepairOrderDetail() {
     </div>
   );
 
+  async function syncLinkedInvoices(updatedParts, updatedLaborItems) {
+    try {
+      const linkedInvoices = await base44.entities.Invoice.filter({ repair_order_id: orderId });
+      const partsTotal = updatedParts.reduce((s, p) => s + (p.total || 0), 0);
+      const laborTotal = updatedLaborItems.reduce((s, l) => s + ((l.hours || 0) * (l.rate || 0)), 0);
+      const newTotal = partsTotal + laborTotal;
+      for (const inv of linkedInvoices) {
+        const balanceDue = newTotal - (inv.amount_paid || 0);
+        await base44.entities.Invoice.update(inv.id, {
+          parts_total: partsTotal,
+          labor_total: laborTotal,
+          total: newTotal,
+          balance_due: balanceDue > 0 ? balanceDue : 0,
+          parts_used: updatedParts,
+          line_items: [
+            ...updatedParts.filter(p => p.name).map(p => ({ description: p.name, type: "part", quantity: p.quantity, unit_price: p.unit_price, total: p.total })),
+            ...updatedLaborItems.filter(l => l.description).map(l => ({ description: l.description, type: "labor", quantity: l.hours, unit_price: l.rate, total: l.hours * l.rate })),
+          ],
+          customer_note: inv.customer_note,
+        });
+      }
+    } catch (e) { console.warn("Sync to invoice failed:", e); }
+  }
+
   function addPart() {
     if (!newPart.name || !newPart.quantity || !newPart.unit_price) return;
     const qty = parseFloat(newPart.quantity) || 0;
     const price = parseFloat(newPart.unit_price) || 0;
     const part = { name: newPart.name, quantity: qty, unit_price: price, total: qty * price };
     const updatedParts = [...(order.parts_used || []), part];
+    const currentLabor = order.labor_items || [];
     base44.entities.RepairOrder.update(orderId, { parts_used: updatedParts });
     setNewPart({ name: "", quantity: "", unit_price: "" });
     setShowPartDialog(false);
     queryClient.invalidateQueries({ queryKey: ["repairOrder", orderId] });
-    // Recalculate totals
     base44.functions.invoke('updateRepairOrderTotals', { orderId });
+    syncLinkedInvoices(updatedParts, currentLabor);
   }
 
   function removePart(idx) {
     const updatedParts = order.parts_used.filter((_, i) => i !== idx);
+    const currentLabor = order.labor_items || [];
     base44.entities.RepairOrder.update(orderId, { parts_used: updatedParts });
     queryClient.invalidateQueries({ queryKey: ["repairOrder", orderId] });
+    syncLinkedInvoices(updatedParts, currentLabor);
   }
 
   function addLabor() {
@@ -649,14 +676,13 @@ export default function RepairOrderDetail() {
     const rate = parseFloat(newLabor.rate) || 0;
     const item = { description: newLabor.description, hours, rate, total: hours * rate };
     const updatedItems = [...(order.labor_items || []), item];
-    base44.entities.RepairOrder.update(orderId, {
-      labor_items: updatedItems,
-    });
+    const currentParts = order.parts_used || [];
+    base44.entities.RepairOrder.update(orderId, { labor_items: updatedItems });
     setNewLabor({ description: "", hours: "", rate: "" });
     setShowLaborDialog(false);
     queryClient.invalidateQueries({ queryKey: ["repairOrder", orderId] });
-    // Recalculate totals
     base44.functions.invoke('updateRepairOrderTotals', { orderId });
+    syncLinkedInvoices(currentParts, updatedItems);
   }
 
   function addOrderedPart() {
@@ -694,6 +720,7 @@ export default function RepairOrderDetail() {
     const updatedItems = order.labor_items.filter((_, i) => i !== idx);
     const newLaborCost = updatedItems.reduce((sum, i) => sum + i.hours * i.rate, 0);
     const newTotal = newLaborCost + (order.parts_cost || 0);
+    const currentParts = order.parts_used || [];
     base44.entities.RepairOrder.update(orderId, {
       labor_items: updatedItems,
       labor_hours: updatedItems.reduce((sum, i) => sum + i.hours, 0),
@@ -701,5 +728,6 @@ export default function RepairOrderDetail() {
       total_cost: newTotal,
     });
     queryClient.invalidateQueries({ queryKey: ["repairOrder", orderId] });
+    syncLinkedInvoices(currentParts, updatedItems);
   }
 }
