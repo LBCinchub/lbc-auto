@@ -221,36 +221,40 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
     if (estimate && estimate.id) {
       await base44.entities.Estimate.update(estimate.id, payload);
 
-      // Sync to linked Invoice(s) via the estimate's repair_order_id
-      if (payload.repair_order_id) {
-        try {
-          const linkedInvoices = await base44.entities.Invoice.filter({ repair_order_id: payload.repair_order_id });
-          for (const inv of linkedInvoices) {
-            const newPartsTotal = payload.parts_total;
-            const newLaborTotal = payload.labor_total;
-            const newTaxRate = taxRate;
-            const newTaxAmount = taxAmount;
-            const newTotal = grandTotal;
-            const newBalanceDue = newTotal - (inv.amount_paid || 0);
-            await base44.entities.Invoice.update(inv.id, {
-              customer_id: payload.customer_id,
-              customer_name: payload.customer_name,
-              vehicle_info: payload.vehicle_info,
-              parts_total: newPartsTotal,
-              labor_total: newLaborTotal,
-              tax_rate: newTaxRate,
-              tax_amount: newTaxAmount,
-              total: newTotal,
-              balance_due: newBalanceDue > 0 ? newBalanceDue : 0,
-              line_items: [
-                ...payload.parts_items.filter(p => p.name).map(p => ({ description: p.name, type: "part", quantity: p.quantity, unit_price: p.unit_price, total: p.total })),
-                ...payload.labor_items.filter(l => l.description).map(l => ({ description: l.description, type: "labor", quantity: l.hours, unit_price: l.rate, total: l.total })),
-              ],
-              customer_note: inv.customer_note,
-            });
-          }
-        } catch (e) { console.warn("Sync to invoice failed:", e); }
-      }
+      // Sync to linked Invoice(s) — by estimate_id (direct) OR by repair_order_id
+      try {
+        const byEstimate = await base44.entities.Invoice.filter({ estimate_id: estimate.id });
+        const byRepairOrder = payload.repair_order_id
+          ? await base44.entities.Invoice.filter({ repair_order_id: payload.repair_order_id })
+          : [];
+        // Merge and deduplicate
+        const seen = new Set();
+        const linkedInvoices = [...byEstimate, ...byRepairOrder].filter(inv => {
+          if (seen.has(inv.id)) return false;
+          seen.add(inv.id);
+          return true;
+        });
+        for (const inv of linkedInvoices) {
+          const newTotal = grandTotal;
+          const newBalanceDue = newTotal - (inv.amount_paid || 0);
+          await base44.entities.Invoice.update(inv.id, {
+            customer_id: payload.customer_id,
+            customer_name: payload.customer_name,
+            vehicle_info: payload.vehicle_info,
+            parts_total: payload.parts_total,
+            labor_total: payload.labor_total,
+            tax_rate: taxRate,
+            tax_amount: taxAmount,
+            total: newTotal,
+            balance_due: newBalanceDue > 0 ? newBalanceDue : 0,
+            line_items: [
+              ...payload.parts_items.filter(p => p.name).map(p => ({ description: p.name, type: "part", quantity: p.quantity, unit_price: p.unit_price, total: p.total })),
+              ...payload.labor_items.filter(l => l.description).map(l => ({ description: l.description, type: "labor", quantity: l.hours, unit_price: l.rate, total: l.total })),
+            ],
+            customer_note: inv.customer_note,
+          });
+        }
+      } catch (e) { console.warn("Sync to invoice failed:", e); }
 
       // Sync to linked Repair Order (if estimate has repair_order_id, preserve original description and notes)
       if (payload.repair_order_id) {
