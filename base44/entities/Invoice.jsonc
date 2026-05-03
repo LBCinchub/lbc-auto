@@ -10,6 +10,10 @@
       "type": "string",
       "description": "Linked repair order ID"
     },
+    "estimate_id": {
+      "type": "string",
+      "description": "Linked estimate ID"
+    },
     "customer_id": {
       "type": "string",
       "description": "Customer ID"
@@ -137,6 +141,27 @@
         }
       }
     },
+    "parts_used": {
+      "type": "array",
+      "description": "Parts used, synced from estimate/repair order",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "unit_price": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          }
+        }
+      }
+    },
     "auth_status": {
       "type": "string",
       "enum": [
@@ -162,7 +187,6 @@
   },
   "required": [
     "customer_id",
-    "repair_order_id",
     "total"
   ],
   "rls": {
