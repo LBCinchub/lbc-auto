@@ -12,7 +12,7 @@ import { ChevronDown, Store, Search, X } from "lucide-react";
 import { fuzzyMatch } from "@/utils/fuzzySearch";
 export default function InvoiceFormDialog({ open, onClose, invoice, orders, customers, onSaved, initialOrderId, sourceEstimate }) {
   const [form, setForm] = useState({
-    repair_order_id: "", customer_id: "", customer_name: "", customer_phone: "", vehicle_info: "",
+    repair_order_id: "", estimate_id: "", customer_id: "", customer_name: "", customer_phone: "", vehicle_info: "",
     parts_total: 0, labor_total: 0, tax_rate: 0, apply_tax_parts: true, apply_tax_labor: true, status: "unpaid",
     due_date: "", payment_method: "", amount_paid: 0, payment_history: [],
     receipt_number: "", card_last4: "", cashier_name: "", parts_used: [], customer_note: "",
@@ -34,6 +34,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
       // Editing existing invoice
       setForm({
         repair_order_id: invoice.repair_order_id || "",
+        estimate_id: invoice.estimate_id || "",
         customer_id: invoice.customer_id || "",
         customer_name: invoice.customer_name || "",
         customer_phone: invoice.customer_phone || "",
@@ -99,7 +100,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
     } else {
       // New blank invoice
       setForm({
-        repair_order_id: "", customer_id: "", customer_name: "", customer_phone: "", vehicle_info: "",
+        repair_order_id: "", estimate_id: "", customer_id: "", customer_name: "", customer_phone: "", vehicle_info: "",
         parts_total: 0, labor_total: 0, tax_rate: 0, apply_tax_parts: true, apply_tax_labor: true, status: "unpaid",
         due_date: "", payment_method: "", amount_paid: 0, payment_history: [],
         receipt_number: "", card_last4: "", cashier_name: "", parts_used: [], customer_note: "",
