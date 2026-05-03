@@ -285,35 +285,53 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         data.history = [...(order.history || []), historyEntry];
         await base44.entities.RepairOrder.update(order.id, data);
 
-        // Sync to linked Invoice(s) (preserve original invoice notes)
+        // Sync to linked Invoice(s) — update all financials
         try {
           const linkedInvoices = await base44.entities.Invoice.filter({ repair_order_id: order.id });
           for (const inv of linkedInvoices) {
+            const newTotal = finalTotal;
+            const newBalanceDue = newTotal - (inv.amount_paid || 0);
             await base44.entities.Invoice.update(inv.id, {
               customer_id: data.customer_id,
               customer_name: data.customer_name,
               vehicle_info: data.vehicle_info,
               parts_total: data.parts_cost,
               labor_total: data.labor_cost,
-              parts_used: data.parts_used || [],
+              tax_rate: form.apply_tax ? userTaxRate : 0,
+              tax_amount: taxAmt,
+              total: newTotal,
+              balance_due: newBalanceDue > 0 ? newBalanceDue : 0,
+              line_items: [
+                ...data.parts_used.filter(p => p.name).map(p => ({ description: p.name, type: "part", quantity: p.quantity, unit_price: p.unit_price, total: p.total })),
+                ...data.labor_items.filter(l => l.description).map(l => ({ description: l.description, type: "labor", quantity: l.hours, unit_price: l.rate, total: l.total })),
+              ],
               customer_note: inv.customer_note,
             });
           }
         } catch (e) { console.warn("Sync to invoice failed:", e); }
 
-        // Sync to linked Estimate(s) via estimate_id stored on invoice (preserve original estimate notes)
+        // Sync to linked Estimate(s) — update all financials
         try {
           const linkedInvoices2 = await base44.entities.Invoice.filter({ repair_order_id: order.id });
           const estimateIds = [...new Set(linkedInvoices2.map(i => i.estimate_id).filter(Boolean))];
-          for (const estId of estimateIds) {
+          // Also find estimates directly linked via repair_order_id
+          const linkedEstimates = await base44.entities.Estimate.filter({ repair_order_id: order.id });
+          const allEstimateIds = [...new Set([...estimateIds, ...linkedEstimates.map(e => e.id)])];
+          for (const estId of allEstimateIds) {
             const est = await base44.entities.Estimate.get(estId);
             if (est) {
+              const estLaborTotal = data.labor_cost;
+              const estPartsTotal = data.parts_cost;
+              const estTaxAmount = form.apply_tax ? (estLaborTotal + estPartsTotal) * (userTaxRate / 100) : 0;
               await base44.entities.Estimate.update(estId, {
                 customer_id: data.customer_id,
                 customer_name: data.customer_name,
                 vehicle_info: data.vehicle_info,
-                labor_total: data.labor_cost,
-                parts_total: data.parts_cost,
+                labor_total: estLaborTotal,
+                parts_total: estPartsTotal,
+                tax_rate: form.apply_tax ? userTaxRate : 0,
+                tax_amount: estTaxAmount,
+                grand_total: estLaborTotal + estPartsTotal + estTaxAmount,
                 notes: est.notes,
                 labor_items: data.labor_items || est.labor_items,
                 parts_items: data.parts_used?.map(p => ({ name: p.name, part_number: p.part_number || "", quantity: p.quantity, unit_price: p.unit_price, total: p.total })) || est.parts_items,
