@@ -56,7 +56,8 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
       setForm({
         customer_id: appointment._prefillCustomerId,
         customer_name: appointment._prefillCustomerName || "",
-        vehicle_id: "", vehicle_info: "",
+        vehicle_id: appointment._prefillVehicleId || "",
+        vehicle_info: appointment._prefillVehicleInfo || "",
         mechanic_id: "", mechanic_name: "", service_type: "", date: "",
         time_slot: "", notes: "", status: "scheduled"
       });

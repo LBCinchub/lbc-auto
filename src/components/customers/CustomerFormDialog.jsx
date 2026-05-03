@@ -24,6 +24,7 @@ export default function CustomerFormDialog({ open, onClose, customer, onSaved, o
   const [decodingVin, setDecodingVin] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedCustomer, setSavedCustomer] = useState(null);
+  const [savedVehicle, setSavedVehicle] = useState(null);
 
   useEffect(() => {
     if (customer) {
@@ -40,6 +41,7 @@ export default function CustomerFormDialog({ open, onClose, customer, onSaved, o
       setVehicleForm({ vin: "", make: "", model: "", year: "", license_plate: "" });
     }
     setSavedCustomer(null);
+    setSavedVehicle(null);
   }, [customer, open]);
 
   const handleSave = async () => {
@@ -87,12 +89,13 @@ export default function CustomerFormDialog({ open, onClose, customer, onSaved, o
       newCustomer = await base44.entities.Customer.create(form);
     }
     if (!customer && addVehicle && vehicleForm.make && vehicleForm.model && vehicleForm.year) {
-      await base44.entities.Vehicle.create({
+      const createdVehicle = await base44.entities.Vehicle.create({
         ...vehicleForm,
         year: Number(vehicleForm.year),
         customer_id: newCustomer.id,
         customer_name: form.full_name,
       });
+      setSavedVehicle(createdVehicle);
     }
     setSaving(false);
     onSaved();
@@ -110,8 +113,12 @@ export default function CustomerFormDialog({ open, onClose, customer, onSaved, o
       onQuickAction(page, { 
         _prefillCustomerId: savedCustomer.id, 
         _prefillCustomerName: savedCustomer.full_name,
+        _prefillVehicleId: savedVehicle?.id || null,
+        _prefillVehicleInfo: savedVehicle ? `${savedVehicle.year} ${savedVehicle.make} ${savedVehicle.model}` : null,
         customer_id: savedCustomer.id,
-        customer_name: savedCustomer.full_name
+        customer_name: savedCustomer.full_name,
+        vehicle_id: savedVehicle?.id || "",
+        vehicle_info: savedVehicle ? `${savedVehicle.year} ${savedVehicle.make} ${savedVehicle.model}` : "",
       });
     } else {
       onClose();

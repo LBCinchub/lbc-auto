@@ -94,7 +94,8 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
       setForm({
         customer_id: order?.customer_id || "",
         customer_name: order?.customer_name || "",
-        vehicle_id: "", vehicle_info: "",
+        vehicle_id: order?._prefillVehicleId || "",
+        vehicle_info: order?._prefillVehicleInfo || "",
         mechanic_id: "", mechanic_name: "", description: "", status: "waiting",
         labor_hours: "", labor_items: [{ description: "", hours: "", rate: "120", total: 0 }],
         notes: "", parts_used: [], estimated_completion: "",

@@ -51,11 +51,15 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
       });
     } else {
       // New estimate (possibly pre-filled with customer info from customer profile)
+      const prefillVehicleId = estimate?._prefillVehicleId || "";
+      const prefillVehicleInfo = estimate?._prefillVehicleInfo || "";
       setForm({
         ...emptyForm,
         repair_order_id: repairOrderId || "",
         customer_id: estimate?.customer_id || "",
         customer_name: estimate?.customer_name || "",
+        vehicle_id: prefillVehicleId,
+        vehicle_info: prefillVehicleInfo,
       });
     }
   }, [estimate, open, repairOrderId]);
