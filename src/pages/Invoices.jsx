@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { jsPDF } from "jspdf";
 import { TAX_RATE } from "@/lib/constants";
 import { fuzzyMatch } from "@/utils/fuzzySearch";
+import { formatPhone } from "@/utils/formatPhone";
 import PageHeader from "../components/shared/PageHeader";
 import SearchBar from "../components/shared/SearchBar";
 import EmptyState from "../components/shared/EmptyState";
@@ -303,7 +304,7 @@ export default function Invoices() {
                       <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1">
                         {customer?.phone && (
                           <a href={`tel:${customer.phone}`} onClick={e => e.stopPropagation()} className="inline-flex items-center gap-1 text-xs text-sky-400 hover:text-sky-300 font-medium">
-                            <Phone className="w-3 h-3" />{customer.phone}
+                            <Phone className="w-3 h-3" />{formatPhone(customer.phone)}
                           </a>
                         )}
                         {customer?.email && (

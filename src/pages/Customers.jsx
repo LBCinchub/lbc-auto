@@ -6,6 +6,7 @@ import CustomerProfileDialog from "../components/customers/CustomerProfileDialog
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { fuzzyMatch } from "@/utils/fuzzySearch";
+import { formatPhone } from "@/utils/formatPhone";
 import PageHeader from "../components/shared/PageHeader";
 import SearchBar from "../components/shared/SearchBar";
 import EmptyState from "../components/shared/EmptyState";
@@ -158,7 +159,7 @@ export default function Customers() {
                 {customer.phone && (
                   <a href={`tel:${customer.phone}`} onClick={e => e.stopPropagation()}
                     className="flex items-center gap-2 text-sm text-gray-400 hover:text-sky-400 transition-colors">
-                    <Phone className="w-3.5 h-3.5" /> {customer.phone}
+                    <Phone className="w-3.5 h-3.5" /> {formatPhone(customer.phone)}
                   </a>
                 )}
                 {customer.email && (

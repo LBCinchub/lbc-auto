@@ -8,6 +8,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { fuzzyMatch } from "@/utils/fuzzySearch";
+import { formatPhone } from "@/utils/formatPhone";
 import PageHeader from "../components/shared/PageHeader";
 import SearchBar from "../components/shared/SearchBar";
 import EmptyState from "../components/shared/EmptyState";
@@ -169,7 +170,7 @@ export default function RepairOrders() {
                   const customer = customers.find(c => c.id === order.customer_id);
                   return customer?.phone ? (
                     <a href={`tel:${customer.phone}`} onClick={e => e.stopPropagation()} className="inline-flex items-center gap-1.5 text-xs text-sky-400 hover:text-sky-300 font-medium mt-0.5">
-                      <Phone className="w-3 h-3" />{customer.phone}
+                      <Phone className="w-3 h-3" />{formatPhone(customer.phone)}
                     </a>
                   ) : null;
                 })()}
