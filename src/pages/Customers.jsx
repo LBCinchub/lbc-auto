@@ -34,37 +34,37 @@ export default function Customers() {
 
   const { data: customers = [], isLoading } = useQuery({
     queryKey: ["customers", user?.email],
-    queryFn: () => user ? base44.entities.Customer.filter({created_by: user.email}, "-created_date", 10000) : Promise.resolve([]),
+    queryFn: () => user ? base44.entities.Customer.filter({created_by: user.email}, "-created_date", 30000) : Promise.resolve([]),
     enabled: !!user,
   });
 
   const { data: vehicles = [] } = useQuery({
     queryKey: ["vehicles", user?.email],
-    queryFn: () => user ? base44.entities.Vehicle.filter({created_by: user.email}, "-created_date", 10000) : Promise.resolve([]),
+    queryFn: () => user ? base44.entities.Vehicle.filter({created_by: user.email}, "-created_date", 30000) : Promise.resolve([]),
     enabled: !!user,
   });
 
   const { data: mechanics = [] } = useQuery({
     queryKey: ["mechanics", user?.email],
-    queryFn: () => user ? base44.entities.Mechanic.filter({created_by: user.email}, "-created_date", 10000) : Promise.resolve([]),
+    queryFn: () => user ? base44.entities.Mechanic.filter({created_by: user.email}, "-created_date", 30000) : Promise.resolve([]),
     enabled: !!user,
   });
 
   const { data: estimates = [] } = useQuery({
     queryKey: ["estimates", user?.email],
-    queryFn: () => user ? base44.entities.Estimate.filter({created_by: user.email}, "-created_date", 10000) : Promise.resolve([]),
+    queryFn: () => user ? base44.entities.Estimate.filter({created_by: user.email}, "-created_date", 30000) : Promise.resolve([]),
     enabled: !!user,
   });
 
   const { data: orders = [] } = useQuery({
     queryKey: ["orders", user?.email],
-    queryFn: () => user ? base44.entities.RepairOrder.filter({created_by: user.email}, "-created_date", 10000) : Promise.resolve([]),
+    queryFn: () => user ? base44.entities.RepairOrder.filter({created_by: user.email}, "-created_date", 30000) : Promise.resolve([]),
     enabled: !!user,
   });
 
   const { data: invoices = [] } = useQuery({
     queryKey: ["invoices", user?.email],
-    queryFn: () => user ? base44.entities.Invoice.filter({created_by: user.email}, "-created_date", 10000) : Promise.resolve([]),
+    queryFn: () => user ? base44.entities.Invoice.filter({created_by: user.email}, "-created_date", 30000) : Promise.resolve([]),
     enabled: !!user,
   });
 
