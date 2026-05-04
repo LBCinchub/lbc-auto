@@ -25,7 +25,8 @@ import {
   HelpCircle,
   CreditCard,
   Sun,
-  Moon
+  Moon,
+  FileUp
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/lib/ThemeContext";
@@ -45,6 +46,7 @@ const navItems = [
   { name: "Time Tracking", icon: Clock, page: "TimeTracking" },
   { name: "Payroll", icon: Banknote, page: "Payroll" },
   { name: "Analytics", icon: BarChart3, page: "Analytics" },
+  { name: "Import", icon: FileUp, page: "ImportCustomers", path: "/ImportCustomers" },
   { name: "Billing", icon: CreditCard, page: "Billing" },
 ];
 
@@ -125,7 +127,7 @@ export default function Sidebar({ currentPage }) {
             return (
               <Link
                 key={item.page}
-                to={createPageUrl(item.page)}
+                to={item.path || createPageUrl(item.page)}
                 onClick={() => setMobileOpen(false)}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
