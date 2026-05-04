@@ -1,0 +1,29 @@
+{
+  "name": "Note",
+  "type": "object",
+  "properties": {
+    "content": {
+      "type": "string",
+      "description": "Note content"
+    },
+    "timestamp": {
+      "type": "string",
+      "description": "ISO timestamp when note was created"
+    }
+  },
+  "required": [
+    "content"
+  ],
+  "rls": {
+    "create": true,
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

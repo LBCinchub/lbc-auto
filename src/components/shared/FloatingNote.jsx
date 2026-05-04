@@ -1,34 +1,41 @@
 import React, { useState, useEffect } from "react";
-import { StickyNote, ChevronDown, Trash2 } from "lucide-react";
+import { StickyNote, ChevronDown, Trash2, Loader2 } from "lucide-react";
+import { base44 } from "@/api/base44Client";
 
 export default function FloatingNote() {
   const [open, setOpen] = useState(false);
   const [currentNote, setCurrentNote] = useState("");
-  const [notes, setNotes] = useState(() => {
-    try {
-      const stored = localStorage.getItem("all_notes_v2");
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [notes, setNotes] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem("all_notes_v2", JSON.stringify(notes));
-  }, [notes]);
+    if (open && notes.length === 0) {
+      loadNotes();
+    }
+  }, [open]);
 
-  const handleSave = () => {
-    if (!currentNote.trim()) return;
-    const newNote = {
-      id: Date.now(),
-      text: currentNote.trim(),
-      timestamp: new Date().toISOString(),
-    };
-    setNotes(prev => [newNote, ...prev]);
-    setCurrentNote("");
+  const loadNotes = async () => {
+    setLoading(true);
+    const data = await base44.entities.Note.list("-created_date", 100);
+    setNotes(data);
+    setLoading(false);
   };
 
-  const handleDelete = (id) => {
+  const handleSave = async () => {
+    if (!currentNote.trim()) return;
+    setSaving(true);
+    const created = await base44.entities.Note.create({
+      content: currentNote.trim(),
+      timestamp: new Date().toISOString(),
+    });
+    setNotes(prev => [created, ...prev]);
+    setCurrentNote("");
+    setSaving(false);
+  };
+
+  const handleDelete = async (id) => {
+    await base44.entities.Note.delete(id);
     setNotes(prev => prev.filter(n => n.id !== id));
   };
 
@@ -45,7 +52,6 @@ export default function FloatingNote() {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const isYesterday = d.toDateString() === yesterday.toDateString();
-
     const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
     if (isToday) return `Today ${time}`;
     if (isYesterday) return `Yesterday ${time}`;
@@ -71,16 +77,18 @@ export default function FloatingNote() {
             />
             <button
               onClick={handleSave}
-              disabled={!currentNote.trim()}
-              className="mt-2 w-full px-3 py-1.5 text-xs font-semibold text-white bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-300 disabled:cursor-not-allowed rounded transition-colors"
+              disabled={!currentNote.trim() || saving}
+              className="mt-2 w-full px-3 py-1.5 text-xs font-semibold text-white bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-300 disabled:cursor-not-allowed rounded transition-colors flex items-center justify-center gap-1"
             >
-              Save Note
+              {saving ? <><Loader2 className="w-3 h-3 animate-spin" /> Saving...</> : "Save Note"}
             </button>
           </div>
 
           {/* Notes List */}
           <div className="flex-1 overflow-y-auto min-h-0">
-            {notes.length === 0 ? (
+            {loading ? (
+              <div className="p-4 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-yellow-600" /></div>
+            ) : notes.length === 0 ? (
               <div className="p-4 text-center text-xs text-yellow-600 opacity-70">No notes yet. Write one above!</div>
             ) : (
               <div className="space-y-2 p-3">
@@ -88,7 +96,7 @@ export default function FloatingNote() {
                   <div key={note.id} className="bg-white rounded-lg p-3 border-l-4 border-yellow-400 shadow-sm">
                     <div className="flex items-start justify-between gap-2 mb-1">
                       <p className="text-xs font-semibold text-yellow-700">
-                        {formatTimestamp(note.timestamp)}
+                        {formatTimestamp(note.timestamp || note.created_date)}
                       </p>
                       <button
                         onClick={() => handleDelete(note.id)}
@@ -98,7 +106,7 @@ export default function FloatingNote() {
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                    <p className="text-xs text-gray-700 whitespace-pre-wrap">{note.text}</p>
+                    <p className="text-xs text-gray-700 whitespace-pre-wrap">{note.content}</p>
                   </div>
                 ))}
               </div>
