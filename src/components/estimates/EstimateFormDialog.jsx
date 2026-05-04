@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,6 +30,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
   const [vehicleSearch, setVehicleSearch] = useState("");
   const [partSearch, setPartSearch] = useState("");
   const [showPartSearch, setShowPartSearch] = useState(null); // idx of parts row being searched
+  const [localVehicles, setLocalVehicles] = useState([]);
 
   useEffect(() => {
     // Load user's saved tax rate
@@ -50,9 +51,9 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
         parts_items: estimate.parts_items?.length ? estimate.parts_items.map(i => ({ ...i, quantity: String(i.quantity), unit_price: String(i.unit_price) })) : [emptyPartRow()],
       });
     } else {
-      // New estimate (possibly pre-filled with customer info from customer profile)
-      const prefillVehicleId = estimate?._prefillVehicleId || "";
-      const prefillVehicleInfo = estimate?._prefillVehicleInfo || "";
+      // New estimate (possibly pre-filled with customer info from customer profile or appointment)
+      const prefillVehicleId = estimate?._prefillVehicleId || estimate?.vehicle_id || "";
+      const prefillVehicleInfo = estimate?._prefillVehicleInfo || estimate?.vehicle_info || "";
       setForm({
         ...emptyForm,
         repair_order_id: repairOrderId || "",
@@ -64,14 +65,22 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
     }
   }, [estimate, open, repairOrderId]);
 
+  // Merge parent vehicles with any locally created ones (so newly added vehicles appear immediately)
+  const allVehicles = useMemo(() => {
+    const ids = new Set(vehicles.map(v => v.id));
+    return [...vehicles, ...localVehicles.filter(v => !ids.has(v.id))];
+  }, [vehicles, localVehicles]);
+
   const filteredCustomers = customers.filter(c =>
     !customerSearch || c.full_name.toLowerCase().includes(customerSearch.toLowerCase()) || (c.phone || "").includes(customerSearch)
   );
 
-  const customerVehicles = vehicles.filter(v => v.customer_id === form.customer_id);
+  const customerVehicles = allVehicles.filter(v => v.customer_id === form.customer_id);
   const filteredVehicles = customerVehicles.filter(v =>
     !vehicleSearch || `${v.year} ${v.make} ${v.model} ${v.license_plate || ""}`.toLowerCase().includes(vehicleSearch.toLowerCase())
   );
+
+
 
   const filteredParts = parts.filter(p =>
     !partSearch || p.name.toLowerCase().includes(partSearch.toLowerCase()) || (p.part_number || "").toLowerCase().includes(partSearch.toLowerCase())
@@ -135,7 +144,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
   };
 
   const handleVehicleChange = (vid) => {
-    const v = vehicles.find(v => v.id === vid);
+    const v = allVehicles.find(v => v.id === vid);
     setForm(f => ({ ...f, vehicle_id: vid, vehicle_info: v ? `${v.year} ${v.make} ${v.model}` : "" }));
   };
 
@@ -202,6 +211,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
       color: newVehicleForm.color || "",
       engine_type: newVehicleForm.engine_type || "",
     });
+    setLocalVehicles(prev => [...prev, created]);
     setForm(f => ({ ...f, vehicle_id: created.id, vehicle_info: `${created.year} ${created.make} ${created.model}` }));
     setNewVehicleForm(null);
     queryClient.invalidateQueries({ queryKey: ["vehicles"] });

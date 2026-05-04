@@ -58,11 +58,12 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         apply_tax_labor: invoice.apply_tax_labor !== false,
       });
     } else if (invoice && !invoice.id) {
-      // New invoice pre-filled from customer profile (has customer_id but no id)
+      // New invoice pre-filled from customer profile or appointment (has customer_id but no id)
       setForm(f => ({
         ...f,
         customer_id: invoice.customer_id || "",
         customer_name: invoice.customer_name || "",
+        vehicle_info: invoice.vehicle_info || f.vehicle_info || "",
       }));
     } else if (sourceEstimate) {
       // Creating from estimate

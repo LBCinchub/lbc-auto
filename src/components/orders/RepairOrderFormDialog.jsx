@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { fuzzyMatch } from "@/utils/fuzzySearch";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -37,6 +37,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
   const [newVehicleForm, setNewVehicleForm] = useState(null);
   const [decodingVin, setDecodingVin] = useState(false);
   const [userTaxRate, setUserTaxRate] = useState(0);
+  const [localVehicles, setLocalVehicles] = useState([]);
 
   useEffect(() => {
     base44.auth.me().then(u => {
@@ -90,12 +91,12 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         tax_applies_to: "both",
       });
     } else {
-      // New repair order (possibly pre-filled with customer info from customer profile)
+      // New repair order (possibly pre-filled with customer info from customer profile or appointment)
       setForm({
         customer_id: order?.customer_id || "",
         customer_name: order?.customer_name || "",
-        vehicle_id: order?._prefillVehicleId || "",
-        vehicle_info: order?._prefillVehicleInfo || "",
+        vehicle_id: order?._prefillVehicleId || order?.vehicle_id || "",
+        vehicle_info: order?._prefillVehicleInfo || order?.vehicle_info || "",
         mechanic_id: "", mechanic_name: "", description: "", status: "waiting",
         labor_hours: "", labor_items: [{ description: "", hours: "", rate: "120", total: 0 }],
         notes: "", parts_used: [], estimated_completion: "",
@@ -105,14 +106,19 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
     }
   }, [order, open]);
 
-  const customerVehicles = vehicles.filter(v => v.customer_id === form.customer_id);
+  const allVehicles = React.useMemo(() => {
+    const ids = new Set(vehicles.map(v => v.id));
+    return [...vehicles, ...localVehicles.filter(v => !ids.has(v.id))];
+  }, [vehicles, localVehicles]);
+
+  const customerVehicles = allVehicles.filter(v => v.customer_id === form.customer_id);
 
   const handleCustomerChange = (id, name) => {
     setForm({ ...form, customer_id: id, customer_name: name || "", vehicle_id: "", vehicle_info: "" });
   };
 
   const handleVehicleChange = (id) => {
-    const v = vehicles.find(v => v.id === id);
+    const v = allVehicles.find(v => v.id === id);
     setForm({ ...form, vehicle_id: id, vehicle_info: v ? `${v.year} ${v.make} ${v.model}` : "" });
   };
 
@@ -184,6 +190,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
       color: newVehicleForm.color || "",
       engine_type: newVehicleForm.engine_type || "",
     });
+    setLocalVehicles(prev => [...prev, created]);
     setForm({ ...form, vehicle_id: created.id, vehicle_info: `${created.year} ${created.make} ${created.model}` });
     setNewVehicleForm(null);
     queryClient.invalidateQueries({ queryKey: ["vehicles"] });
