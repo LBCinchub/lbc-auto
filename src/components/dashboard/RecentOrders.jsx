@@ -41,9 +41,12 @@ export default function RecentOrders({ orders, customers = [] }) {
               className="w-full flex items-center justify-between p-3 rounded-lg bg-gray-800/30 hover:bg-gray-700/50 transition-colors text-left"
             >
               <div className="min-w-0 flex-1">
-                <p className="text-sm text-white font-medium truncate">{order.vehicle_info || "Unknown Vehicle"}</p>
-                <p className="text-xs text-gray-500 truncate">{order.customer_name} · {order.order_number}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm text-white font-medium truncate">{order.customer_name}</p>
+                  {order.order_number && <span className="text-xs text-gray-500 flex-shrink-0">#{order.order_number}</span>}
+                </div>
                 {(() => { const c = customers.find(c => c.id === order.customer_id); return c?.phone ? <p className="text-xs text-sky-400">{c.phone}</p> : null; })()}
+                <p className="text-xs text-gray-500 truncate">{order.vehicle_info || "Unknown Vehicle"}</p>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0 ml-3">
                 <Badge variant="outline" className={cn("text-xs", config.class)}>
