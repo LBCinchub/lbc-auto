@@ -31,7 +31,7 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
   const [decodingVin, setDecodingVin] = useState(false);
   const [localCustomers, setLocalCustomers] = useState([]);
   const [form, setForm] = useState({
-    customer_id: "", customer_name: "", vehicle_id: "", vehicle_info: "",
+    customer_id: "", customer_name: "", customer_phone: "", vehicle_id: "", vehicle_info: "",
     mechanic_id: "", mechanic_name: "", service_type: "", date: "",
     time_slot: "", notes: "", status: "scheduled"
   });
@@ -45,9 +45,11 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
 
   useEffect(() => {
     if (appointment && !appointment._prefillCustomerId) {
+      const phone = customers.find(c => c.id === appointment.customer_id)?.phone || "";
       setForm({
         customer_id: appointment.customer_id || "",
         customer_name: appointment.customer_name || "",
+        customer_phone: phone,
         vehicle_id: appointment.vehicle_id || "",
         vehicle_info: appointment.vehicle_info || "",
         mechanic_id: appointment.mechanic_id || "",
@@ -59,10 +61,11 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
         status: appointment.status || "scheduled",
       });
     } else if (appointment?._prefillCustomerId) {
-      // Pre-fill from customer profile
+      const phone = customers.find(c => c.id === appointment._prefillCustomerId)?.phone || "";
       setForm({
         customer_id: appointment._prefillCustomerId,
         customer_name: appointment._prefillCustomerName || "",
+        customer_phone: phone,
         vehicle_id: appointment._prefillVehicleId || "",
         vehicle_info: appointment._prefillVehicleInfo || "",
         mechanic_id: "", mechanic_name: "", service_type: "", date: "",
@@ -70,12 +73,12 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
       });
     } else {
       setForm({
-        customer_id: "", customer_name: "", vehicle_id: "", vehicle_info: "",
+        customer_id: "", customer_name: "", customer_phone: "", vehicle_id: "", vehicle_info: "",
         mechanic_id: "", mechanic_name: "", service_type: "", date: "",
         time_slot: "", notes: "", status: "scheduled"
       });
     }
-  }, [appointment, open]);
+  }, [appointment, open, customers]);
 
   // Merge fetched customers with any locally-created ones so new customers show immediately
   const allCustomers = [...customers, ...localCustomers.filter(lc => !customers.find(c => c.id === lc.id))];
@@ -84,7 +87,7 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
 
   const handleCustomerChange = (id) => {
     const c = allCustomers.find(c => c.id === id);
-    setForm({ ...form, customer_id: id, customer_name: c?.full_name || "", vehicle_id: "", vehicle_info: "" });
+    setForm({ ...form, customer_id: id, customer_name: c?.full_name || "", customer_phone: c?.phone || "", vehicle_id: "", vehicle_info: "" });
     setCustomerSearch("");
   };
 
@@ -113,7 +116,7 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
     });
     // Add to local cache so phone shows immediately without waiting for refetch
     setLocalCustomers(prev => [...prev, created]);
-    setForm(prev => ({ ...prev, customer_id: created.id, customer_name: created.full_name, vehicle_id: "", vehicle_info: "" }));
+    setForm(prev => ({ ...prev, customer_id: created.id, customer_name: created.full_name, customer_phone: created.phone || "", vehicle_id: "", vehicle_info: "" }));
     setNewCustomerForm(null);
     setCustomerSearch("");
     // Invalidate all customer query variants so Customers page also refreshes
@@ -230,7 +233,7 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
                 <div className="flex items-center justify-between bg-sky-500/10 border border-sky-500/40 rounded-lg px-3 py-2">
                   <div>
                     <p className="text-white font-medium text-sm">{form.customer_name}</p>
-                    <p className="text-gray-400 text-xs">{allCustomers.find(c => c.id === form.customer_id)?.phone || ""}</p>
+                    <p className="text-gray-400 text-xs">{form.customer_phone || ""}</p>
                   </div>
                   <button onClick={() => setForm({ ...form, customer_id: "", customer_name: "", vehicle_id: "", vehicle_info: "" })}
                     className="text-xs text-gray-500 hover:text-rose-400">Change</button>

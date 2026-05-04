@@ -35,7 +35,7 @@ export default function Appointments() {
   });
   const { data: customers = [] } = useQuery({
     queryKey: ["customers"],
-    queryFn: () => base44.entities.Customer.list("-created_date", 200),
+    queryFn: () => base44.entities.Customer.list("-created_date", 30000),
   });
   const { data: vehicles = [] } = useQuery({
     queryKey: ["vehicles"],
