@@ -52,19 +52,19 @@ export default function Estimates() {
 
   const { data: estimates = [], isLoading } = useQuery({
     queryKey: ["estimates", user?.email],
-    queryFn: () => user ? base44.entities.Estimate.filter({created_by: user.email}, "-created_date", 200) : Promise.resolve([]),
+    queryFn: () => user ? base44.entities.Estimate.filter({created_by: user.email}, "-created_date", 10000) : Promise.resolve([]),
     enabled: !!user,
   });
 
   const { data: customers = [] } = useQuery({
     queryKey: ["customers", user?.email],
-    queryFn: () => user ? base44.entities.Customer.filter({created_by: user.email}, "-created_date", 200) : Promise.resolve([]),
+    queryFn: () => user ? base44.entities.Customer.filter({created_by: user.email}, "-created_date", 10000) : Promise.resolve([]),
     enabled: !!user,
   });
 
   const { data: vehicles = [] } = useQuery({
     queryKey: ["vehicles", user?.email],
-    queryFn: () => user ? base44.entities.Vehicle.filter({created_by: user.email}, "-created_date", 200) : Promise.resolve([]),
+    queryFn: () => user ? base44.entities.Vehicle.filter({created_by: user.email}, "-created_date", 10000) : Promise.resolve([]),
     enabled: !!user,
   });
 
