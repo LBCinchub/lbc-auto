@@ -67,7 +67,11 @@ export default function Appointments() {
     }
   };
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ["appointments"] });
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["appointments"] });
+    queryClient.invalidateQueries({ queryKey: ["customers"] });
+    queryClient.invalidateQueries({ queryKey: ["vehicles"] });
+  };
 
   // Group appointments by date
   const grouped = filtered.reduce((acc, a) => {

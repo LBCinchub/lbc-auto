@@ -29,6 +29,7 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
   const [newCustomerForm, setNewCustomerForm] = useState(null);
   const [newVehicleForm, setNewVehicleForm] = useState(null);
   const [decodingVin, setDecodingVin] = useState(false);
+  const [localCustomers, setLocalCustomers] = useState([]);
   const [form, setForm] = useState({
     customer_id: "", customer_name: "", vehicle_id: "", vehicle_info: "",
     mechanic_id: "", mechanic_name: "", service_type: "", date: "",
@@ -37,6 +38,10 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
   const [saving, setSaving] = useState(false);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!open) setLocalCustomers([]);
+  }, [open]);
 
   useEffect(() => {
     if (appointment && !appointment._prefillCustomerId) {
@@ -72,15 +77,18 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
     }
   }, [appointment, open]);
 
+  // Merge fetched customers with any locally-created ones so new customers show immediately
+  const allCustomers = [...customers, ...localCustomers.filter(lc => !customers.find(c => c.id === lc.id))];
+
   const customerVehicles = vehicles.filter(v => v.customer_id === form.customer_id);
 
   const handleCustomerChange = (id) => {
-    const c = customers.find(c => c.id === id);
+    const c = allCustomers.find(c => c.id === id);
     setForm({ ...form, customer_id: id, customer_name: c?.full_name || "", vehicle_id: "", vehicle_info: "" });
     setCustomerSearch("");
   };
 
-  const filteredCustomers = customers.filter(c =>
+  const filteredCustomers = allCustomers.filter(c =>
     !customerSearch ||
     c.full_name?.toLowerCase().includes(customerSearch.toLowerCase()) ||
     c.phone?.includes(customerSearch)
@@ -103,8 +111,12 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
       phone: newCustomerForm.phone,
       email: newCustomerForm.email || "",
     });
-    handleCustomerChange(created.id);
+    // Add to local cache so phone shows immediately without waiting for refetch
+    setLocalCustomers(prev => [...prev, created]);
+    setForm(prev => ({ ...prev, customer_id: created.id, customer_name: created.full_name, vehicle_id: "", vehicle_info: "" }));
     setNewCustomerForm(null);
+    setCustomerSearch("");
+    // Invalidate all customer query variants so Customers page also refreshes
     queryClient.invalidateQueries({ queryKey: ["customers"] });
   };
 
@@ -218,7 +230,7 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
                 <div className="flex items-center justify-between bg-sky-500/10 border border-sky-500/40 rounded-lg px-3 py-2">
                   <div>
                     <p className="text-white font-medium text-sm">{form.customer_name}</p>
-                    <p className="text-gray-400 text-xs">{customers.find(c => c.id === form.customer_id)?.phone || ""}</p>
+                    <p className="text-gray-400 text-xs">{allCustomers.find(c => c.id === form.customer_id)?.phone || ""}</p>
                   </div>
                   <button onClick={() => setForm({ ...form, customer_id: "", customer_name: "", vehicle_id: "", vehicle_info: "" })}
                     className="text-xs text-gray-500 hover:text-rose-400">Change</button>
