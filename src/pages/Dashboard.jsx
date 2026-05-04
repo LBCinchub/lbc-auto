@@ -21,19 +21,19 @@ export default function Dashboard() {
 
   const { data: orders = [] } = useQuery({
     queryKey: ["repairOrders", user?.email],
-    queryFn: () => user ? base44.entities.RepairOrder.filter({created_by: user.email}, "-created_date", 100) : Promise.resolve([]),
+    queryFn: () => user ? base44.entities.RepairOrder.filter({created_by: user.email}, "-created_date", 30000) : Promise.resolve([]),
     enabled: !!user,
   });
 
   const { data: appointments = [] } = useQuery({
     queryKey: ["appointments", user?.email],
-    queryFn: () => user ? base44.entities.Appointment.filter({created_by: user.email}, "-date", 50) : Promise.resolve([]),
+    queryFn: () => user ? base44.entities.Appointment.filter({created_by: user.email}, "-date", 30000) : Promise.resolve([]),
     enabled: !!user,
   });
 
   const { data: customers = [] } = useQuery({
     queryKey: ["customers", user?.email],
-    queryFn: () => user ? base44.entities.Customer.filter({created_by: user.email}, "-created_date", 5000) : Promise.resolve([]),
+    queryFn: () => user ? base44.entities.Customer.filter({created_by: user.email}, "-created_date", 30000) : Promise.resolve([]),
     enabled: !!user,
   });
 
