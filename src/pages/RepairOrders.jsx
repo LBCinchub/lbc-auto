@@ -47,8 +47,10 @@ export default function RepairOrders() {
     const urlParams = new URLSearchParams(window.location.search);
     const customerId = urlParams.get("customerId");
     const customerName = urlParams.get("customerName");
+    const vehicleId = urlParams.get("vehicleId");
+    const vehicleInfo = urlParams.get("vehicleInfo");
     if (customerId) {
-      setEditingOrder({ customer_id: customerId, customer_name: customerName });
+      setEditingOrder({ customer_id: customerId, customer_name: customerName, vehicle_id: vehicleId || "", vehicle_info: vehicleInfo || "" });
       setDialogOpen(true);
     }
   }, []);

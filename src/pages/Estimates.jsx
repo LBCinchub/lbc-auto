@@ -43,7 +43,9 @@ export default function Estimates() {
 
   React.useEffect(() => {
     if (prefilledCustomerId) {
-      setEditing({ customer_id: prefilledCustomerId, customer_name: prefilledCustomerName });
+      const prefilledVehicleId = urlParams.get("vehicleId");
+      const prefilledVehicleInfo = urlParams.get("vehicleInfo");
+      setEditing({ customer_id: prefilledCustomerId, customer_name: prefilledCustomerName, vehicle_id: prefilledVehicleId || "", vehicle_info: prefilledVehicleInfo || "" });
       setDialogOpen(true);
     }
   }, []);

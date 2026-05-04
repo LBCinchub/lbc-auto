@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient } from "@tanstack/react-query";
-import { Search, User, Plus, Loader2, X } from "lucide-react";
+import { Search, User, Plus, Loader2, X, ClipboardList, Wrench, FileText } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const timeSlots = [
   "8:00 AM", "8:30 AM", "9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM",
@@ -35,6 +36,7 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
   });
   const [saving, setSaving] = useState(false);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (appointment && !appointment._prefillCustomerId) {
@@ -212,13 +214,35 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
               </button>
             )}
             {form.customer_id ? (
-              <div className="mt-1 flex items-center justify-between bg-sky-500/10 border border-sky-500/40 rounded-lg px-3 py-2">
-                <div>
-                  <p className="text-white font-medium text-sm">{form.customer_name}</p>
-                  <p className="text-gray-400 text-xs">{customers.find(c => c.id === form.customer_id)?.phone || ""}</p>
+              <div className="mt-1 space-y-2">
+                <div className="flex items-center justify-between bg-sky-500/10 border border-sky-500/40 rounded-lg px-3 py-2">
+                  <div>
+                    <p className="text-white font-medium text-sm">{form.customer_name}</p>
+                    <p className="text-gray-400 text-xs">{customers.find(c => c.id === form.customer_id)?.phone || ""}</p>
+                  </div>
+                  <button onClick={() => setForm({ ...form, customer_id: "", customer_name: "", vehicle_id: "", vehicle_info: "" })}
+                    className="text-xs text-gray-500 hover:text-rose-400">Change</button>
                 </div>
-                <button onClick={() => setForm({ ...form, customer_id: "", customer_name: "", vehicle_id: "", vehicle_info: "" })}
-                  className="text-xs text-gray-500 hover:text-rose-400">Change</button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { onClose(); navigate(`/Estimates?customerId=${form.customer_id}&customerName=${encodeURIComponent(form.customer_name)}&vehicleId=${form.vehicle_id}&vehicleInfo=${encodeURIComponent(form.vehicle_info)}`); }}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/40 text-purple-400 text-xs font-medium transition-colors"
+                  >
+                    <ClipboardList className="w-3.5 h-3.5" /> Estimate
+                  </button>
+                  <button
+                    onClick={() => { onClose(); navigate(`/RepairOrders?customerId=${form.customer_id}&customerName=${encodeURIComponent(form.customer_name)}&vehicleId=${form.vehicle_id}&vehicleInfo=${encodeURIComponent(form.vehicle_info)}`); }}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/40 text-amber-400 text-xs font-medium transition-colors"
+                  >
+                    <Wrench className="w-3.5 h-3.5" /> Repair Order
+                  </button>
+                  <button
+                    onClick={() => { onClose(); navigate(`/Invoices?customerId=${form.customer_id}&customerName=${encodeURIComponent(form.customer_name)}&vehicleId=${form.vehicle_id}&vehicleInfo=${encodeURIComponent(form.vehicle_info)}`); }}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg bg-green-500/10 hover:bg-green-500/20 border border-green-500/40 text-green-400 text-xs font-medium transition-colors"
+                  >
+                    <FileText className="w-3.5 h-3.5" /> Invoice
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="mt-1">
