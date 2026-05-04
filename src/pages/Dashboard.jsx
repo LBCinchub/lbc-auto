@@ -33,7 +33,7 @@ export default function Dashboard() {
 
   const { data: customers = [] } = useQuery({
     queryKey: ["customers", user?.email],
-    queryFn: () => user ? base44.entities.Customer.filter({created_by: user.email}, "-created_date", 200) : Promise.resolve([]),
+    queryFn: () => user ? base44.entities.Customer.filter({created_by: user.email}, "-created_date", 5000) : Promise.resolve([]),
     enabled: !!user,
   });
 
