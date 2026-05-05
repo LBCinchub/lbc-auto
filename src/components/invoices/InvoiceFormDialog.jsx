@@ -12,11 +12,11 @@ import { ChevronDown, Store, Search, X } from "lucide-react";
 import { fuzzyMatch } from "@/utils/fuzzySearch";
 export default function InvoiceFormDialog({ open, onClose, invoice, orders, customers, onSaved, initialOrderId, sourceEstimate }) {
   const [form, setForm] = useState({
-    repair_order_id: "", estimate_id: "", customer_id: "", customer_name: "", customer_phone: "", vehicle_info: "",
-    parts_total: 0, labor_total: 0, tax_rate: 0, apply_tax_parts: true, apply_tax_labor: true, status: "unpaid",
-    due_date: "", payment_method: "", amount_paid: 0, payment_history: [],
-    receipt_number: "", card_last4: "", cashier_name: "", parts_used: [], customer_note: "",
-    discount_type: "none", discount_value: 0
+  repair_order_id: "", estimate_id: "", customer_id: "", customer_name: "", customer_phone: "", vehicle_info: "",
+  parts_total: 0, labor_total: 0, tax_rate: 0, apply_tax_parts: true, apply_tax_labor: true, status: "unpaid",
+  due_date: "", payment_method: "", amount_paid: 0, payment_history: [],
+  receipt_number: "", card_last4: "", cashier_name: "", parts_used: [], labor_items: [], customer_note: "",
+  discount_type: "none", discount_value: 0
   });
   const [saving, setSaving] = useState(false);
   const [orderSearch, setOrderSearch] = useState("");
@@ -51,6 +51,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         card_last4: invoice.card_last4 || "",
         cashier_name: invoice.cashier_name || "",
         parts_used: invoice.parts_used || [],
+        labor_items: invoice.labor_items || [],
         customer_note: invoice.customer_note || "",
         discount_type: invoice.discount_type || "none",
         discount_value: invoice.discount_value || 0,
@@ -81,6 +82,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
           unit_price: p.unit_price,
           total: p.total,
         })) || [],
+        labor_items: sourceEstimate.labor_items || [],
         customer_note: sourceEstimate.notes || "",
       }));
     } else if (initialOrderId) {
@@ -96,6 +98,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
           parts_total: order.parts_cost || 0,
           labor_total: order.labor_cost || 0,
           parts_used: order.parts_used || [],
+          labor_items: order.labor_items || [],
         }));
       }
     } else {
@@ -113,30 +116,33 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
   const handleOrderSelect = useCallback(async (orderId) => {
     const order = orders.find(o => o.id === orderId);
     if (order) {
-      let customerPhone = "";
-      let description = "";
-      let notes = "";
-      try {
-        const customer = await base44.entities.Customer.get(order.customer_id);
-        customerPhone = customer.phone || "";
-        const fullOrder = await base44.entities.RepairOrder.get(orderId);
-        description = fullOrder.description || "";
-        notes = fullOrder.notes || "";
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      }
-      setForm(prev => ({
-        ...prev,
-        repair_order_id: orderId,
-        customer_id: order.customer_id,
-        customer_name: order.customer_name,
-        customer_phone: customerPhone,
-        vehicle_info: order.vehicle_info,
-        parts_total: order.parts_cost || 0,
-        labor_total: order.labor_cost || 0,
-        parts_used: order.parts_used || [],
-        customer_note: notes || description || "",
-      }));
+    let customerPhone = "";
+    let description = "";
+    let notes = "";
+    let laborItems = order.labor_items || [];
+    try {
+      const customer = await base44.entities.Customer.get(order.customer_id);
+      customerPhone = customer.phone || "";
+      const fullOrder = await base44.entities.RepairOrder.get(orderId);
+      description = fullOrder.description || "";
+      notes = fullOrder.notes || "";
+      laborItems = fullOrder.labor_items || laborItems;
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+    setForm(prev => ({
+      ...prev,
+      repair_order_id: orderId,
+      customer_id: order.customer_id,
+      customer_name: order.customer_name,
+      customer_phone: customerPhone,
+      vehicle_info: order.vehicle_info,
+      parts_total: order.parts_cost || 0,
+      labor_total: order.labor_cost || 0,
+      parts_used: order.parts_used || [],
+      labor_items: laborItems,
+      customer_note: notes || description || "",
+    }));
       setOrderSearch("");
     }
   }, [orders]);
@@ -194,7 +200,13 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
   }
 
   const lineItems = [];
-   if (form.labor_total > 0) lineItems.push({ description: "Labor", type: "labor", quantity: 1, unit_price: form.labor_total, total: form.labor_total });
+   if (form.labor_items && form.labor_items.length > 0) {
+     form.labor_items.forEach(l => {
+       lineItems.push({ description: l.description || "Labor", type: "labor", quantity: l.hours || 1, unit_price: l.rate || 0, total: l.total || 0 });
+     });
+   } else if (form.labor_total > 0) {
+     lineItems.push({ description: "Labor", type: "labor", quantity: 1, unit_price: form.labor_total, total: form.labor_total });
+   }
    if (form.parts_used && form.parts_used.length > 0) {
      form.parts_used.forEach(p => {
        lineItems.push({ description: p.name, type: "part", quantity: p.quantity || 1, unit_price: p.unit_price || 0, total: p.total || 0 });
@@ -245,6 +257,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
      ...form,
      customer_id: resolvedCustomerId,
      invoice_number: invoiceNum,
+     labor_items: form.labor_items || [],
      customer_phone: form.customer_phone || "",
      parts_used: form.parts_used || [],
      tax_amount: taxAmount,
@@ -395,6 +408,20 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
                   onChange={e => setForm({...form, vehicle_info: e.target.value})}
                   className="bg-gray-800 border-gray-700 text-white mt-1.5"
                   placeholder="e.g. 2020 Honda Civic" />
+              </div>
+            </div>
+          )}
+
+          {form.labor_items && form.labor_items.length > 0 && (
+            <div className="rounded-lg border border-gray-700/50 p-3 space-y-2">
+              <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Labor Items</p>
+              <div className="space-y-1.5">
+                {form.labor_items.map((l, i) => (
+                  <div key={i} className="flex justify-between text-sm bg-gray-800/40 rounded-lg px-3 py-2">
+                    <span className="text-gray-300">{l.description} <span className="text-gray-500 text-xs">({l.hours}h @ ${l.rate}/h)</span></span>
+                    <span className="text-white font-medium">${(l.total || 0).toFixed(2)}</span>
+                  </div>
+                ))}
               </div>
             </div>
           )}
