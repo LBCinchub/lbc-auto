@@ -60,8 +60,8 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
           {user?.business_logo && (
-            <div style={{ width: 100, height: 60, flexShrink: 0, background: "white", borderRadius: 6, border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", padding: 4 }}>
-              <img src={user.business_logo} alt="Logo" style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", display: "block" }} />
+            <div style={{ width: 100, height: 60, flexShrink: 0, background: "white", borderRadius: 6, border: "1px solid #e2e8f0", overflow: "hidden" }}>
+              <img src={user.business_logo} alt="Logo" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             </div>
           )}
           <div>
