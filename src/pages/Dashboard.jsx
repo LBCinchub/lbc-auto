@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Wrench, CheckCircle2, Clock, Calendar, X, Car, ChevronRight, User, MapPin, Phone, Mail, ArrowLeft } from "lucide-react";
+import { formatPhone } from "@/utils/formatPhone";
 import { useNavigate } from "react-router-dom";
 import StatCard from "../components/dashboard/StatCard";
 import RecentOrders from "../components/dashboard/RecentOrders";
@@ -129,7 +130,7 @@ export default function Dashboard() {
                   <div className="flex items-center justify-between">
                      <div>
                        <p className="text-white font-semibold text-base">{selectedAppt.customer_name}</p>
-                       {(() => { const c = customers.find(c => c.id === selectedAppt.customer_id); return c?.phone ? <p className="text-sky-400 text-sm">{c.phone}</p> : null; })()}
+                       {(() => { const c = customers.find(c => c.id === selectedAppt.customer_id); return c?.phone ? <p className="text-sky-400 text-sm">{formatPhone(c.phone)}</p> : null; })()}
                      </div>
                      <StatusBadge status={selectedAppt.status} />
                    </div>
