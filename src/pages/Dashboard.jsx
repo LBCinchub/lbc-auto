@@ -93,8 +93,8 @@ export default function Dashboard() {
                     <Car className="w-4 h-4 text-gray-400" />
                   </div>
                   <div>
-                    <p className="text-white font-medium text-sm">{o.vehicle_info || "Unknown Vehicle"}</p>
-                    <p className="text-gray-400 text-xs">{o.customer_name} · #{o.order_number || o.id?.slice(0,6)}</p>
+                    <p className="text-green-400 font-medium text-sm">{o.vehicle_info || "Unknown Vehicle"}</p>
+                    <p className="text-gray-400 text-xs"><span className="text-blue-400">{o.customer_name}</span> · #{o.order_number || o.id?.slice(0,6)}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -111,8 +111,8 @@ export default function Dashboard() {
                     <Car className="w-4 h-4 text-gray-400" />
                   </div>
                   <div>
-                    <p className="text-white font-medium text-sm">{a.vehicle_info || "Unknown Vehicle"}</p>
-                    <p className="text-gray-400 text-xs">{a.customer_name} · {a.time_slot} · {a.service_type}</p>
+                    <p className="text-green-400 font-medium text-sm">{a.vehicle_info || "Unknown Vehicle"}</p>
+                    <p className="text-gray-400 text-xs"><span className="text-blue-400">{a.customer_name}</span> · {a.time_slot} · {a.service_type}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -129,7 +129,7 @@ export default function Dashboard() {
                 <div className="bg-gray-800 rounded-xl p-4 space-y-3">
                   <div className="flex items-center justify-between">
                      <div>
-                       <p className="text-white font-semibold text-base">{selectedAppt.customer_name}</p>
+                       <p className="text-blue-400 font-semibold text-base">{selectedAppt.customer_name}</p>
                        {(() => { const c = customers.find(c => c.id === selectedAppt.customer_id); return c?.phone ? <p className="text-sky-400 text-sm">{formatPhone(c.phone)}</p> : null; })()}
                      </div>
                      <StatusBadge status={selectedAppt.status} />
@@ -154,7 +154,7 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <p className="text-gray-500 text-xs uppercase mb-1">Vehicle</p>
-                    <p className="text-white flex items-center gap-1"><Car className="w-3.5 h-3.5 text-sky-400" />{selectedAppt.vehicle_info || "—"}</p>
+                    <p className="text-green-400 flex items-center gap-1"><Car className="w-3.5 h-3.5 text-sky-400" />{selectedAppt.vehicle_info || "—"}</p>
                   </div>
                   {selectedAppt.notes && (
                     <div>

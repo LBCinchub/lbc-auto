@@ -42,11 +42,11 @@ export default function RecentOrders({ orders, customers = [] }) {
             >
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <p className="text-sm text-white font-medium truncate">{order.customer_name}</p>
+                  <p className="text-sm text-blue-400 font-medium truncate">{order.customer_name}</p>
                   {order.order_number && <span className="text-xs text-gray-500 flex-shrink-0">#{order.order_number}</span>}
                 </div>
                 {(() => { const phone = order.customer_phone || customers.find(c => c.id === order.customer_id)?.phone; return phone ? <p className="text-xs text-sky-400">{phone}</p> : null; })()}
-                <p className="text-xs text-gray-500 truncate">{order.vehicle_info || "Unknown Vehicle"}</p>
+                <p className="text-xs text-green-400 truncate">{order.vehicle_info || "Unknown Vehicle"}</p>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0 ml-3">
                 <Badge variant="outline" className={cn("text-xs", config.class)}>
