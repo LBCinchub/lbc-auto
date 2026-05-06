@@ -10,6 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import EstimateFormDialog from "@/components/estimates/EstimateFormDialog";
+import InvoiceFormDialog from "@/components/invoices/InvoiceFormDialog";
 import SignaturePad from "@/components/orders/SignaturePad";
 
 export default function RepairOrderDetail() {
@@ -17,6 +18,7 @@ export default function RepairOrderDetail() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showEstimateDialog, setShowEstimateDialog] = useState(false);
+  const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
   const [showPartDialog, setShowPartDialog] = useState(false);
   const [newPart, setNewPart] = useState({ name: "", quantity: "", unit_price: "" });
   const [showLaborDialog, setShowLaborDialog] = useState(false);
@@ -122,6 +124,19 @@ export default function RepairOrderDetail() {
     enabled: !!order?.customer_id,
   });
 
+  // Fetch linked estimates and invoices
+  const { data: linkedEstimates = [] } = useQuery({
+    queryKey: ["estimates", "byRO", orderId],
+    queryFn: () => base44.entities.Estimate.filter({ repair_order_id: orderId }),
+    enabled: !!orderId,
+  });
+
+  const { data: linkedInvoicesList = [] } = useQuery({
+    queryKey: ["invoices", "byRO", orderId],
+    queryFn: () => base44.entities.Invoice.filter({ repair_order_id: orderId }),
+    enabled: !!orderId,
+  });
+
   // Fetch all repair orders for the same vehicle to show history
   const { data: allOrders = [] } = useQuery({
     queryKey: ["repairOrders", order?.vehicle_id],
@@ -163,6 +178,9 @@ export default function RepairOrderDetail() {
           <Button onClick={() => setShowEstimateDialog(true)} className="bg-green-600 hover:bg-green-700 gap-2">
             <Plus className="w-4 h-4" /> Create Estimate
           </Button>
+          <Button onClick={() => setShowInvoiceDialog(true)} className="bg-purple-600 hover:bg-purple-700 gap-2">
+            <Plus className="w-4 h-4" /> Create Invoice
+          </Button>
           <Button onClick={() => navigate("/Estimates")} className="bg-sky-500 hover:bg-sky-600 gap-2">
             <FileText className="w-4 h-4" /> View Estimates
           </Button>
@@ -198,7 +216,10 @@ export default function RepairOrderDetail() {
         <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mb-8">
           <div>
             <p className="text-gray-500 text-xs uppercase mb-1">Vehicle</p>
-            <p className="text-white font-semibold">{order.vehicle_info}</p>
+            <p
+              className="text-sky-400 font-semibold cursor-pointer hover:text-sky-300 hover:underline"
+              onClick={() => order.vehicle_id && navigate(`/VehicleTimeline/${order.vehicle_id}`)}
+            >{order.vehicle_info}</p>
           </div>
           <div>
             <p className="text-gray-500 text-xs uppercase mb-1">Mechanic</p>
@@ -214,6 +235,61 @@ export default function RepairOrderDetail() {
           <h2 className="text-lg font-bold text-white mb-4">Description</h2>
           <p className="text-gray-300">{order.description}</p>
         </div>
+
+        {/* Linked Estimates & Invoices */}
+        {(linkedEstimates.length > 0 || linkedInvoicesList.length > 0) && (
+          <div className="mt-6 pt-6 border-t border-gray-800 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {linkedEstimates.length > 0 && (
+              <div>
+                <p className="text-gray-500 text-xs uppercase mb-2">Linked Estimates</p>
+                <div className="space-y-2">
+                  {linkedEstimates.map(est => (
+                    <div
+                      key={est.id}
+                      className="flex items-center justify-between bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-2 cursor-pointer hover:bg-green-500/20 transition-colors"
+                      onClick={() => navigate(`/EstimateDetail/${est.id}`)}
+                    >
+                      <div>
+                        <p className="text-green-400 font-medium text-sm">#{est.estimate_number}</p>
+                        <p className="text-gray-400 text-xs">{est.vehicle_info}</p>
+                      </div>
+                      <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${
+                        est.status === "approved" ? "bg-green-500/20 text-green-400" :
+                        est.status === "declined" ? "bg-rose-500/20 text-rose-400" :
+                        "bg-gray-500/20 text-gray-400"
+                      }`}>{est.status}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {linkedInvoicesList.length > 0 && (
+              <div>
+                <p className="text-gray-500 text-xs uppercase mb-2">Linked Invoices</p>
+                <div className="space-y-2">
+                  {linkedInvoicesList.map(inv => (
+                    <div
+                      key={inv.id}
+                      className="flex items-center justify-between bg-purple-500/10 border border-purple-500/20 rounded-lg px-3 py-2 cursor-pointer hover:bg-purple-500/20 transition-colors"
+                      onClick={() => navigate(`/InvoiceDetail/${inv.id}`)}
+                    >
+                      <div>
+                        <p className="text-purple-400 font-medium text-sm">#{inv.invoice_number}</p>
+                        <p className="text-gray-400 text-xs">{inv.vehicle_info}</p>
+                      </div>
+                      <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${
+                        inv.status === "paid" ? "bg-green-500/20 text-green-400" :
+                        inv.status === "partial" ? "bg-yellow-500/20 text-yellow-400" :
+                        inv.status === "overdue" ? "bg-rose-500/20 text-rose-400" :
+                        "bg-gray-500/20 text-gray-400"
+                      }`}>{inv.status}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="grid grid-cols-3 gap-4 mt-8 pt-6 border-t border-gray-800">
           <div>
@@ -479,7 +555,21 @@ export default function RepairOrderDetail() {
         repairOrderId={orderId}
         onSaved={() => {
           setShowEstimateDialog(false);
+          queryClient.invalidateQueries({ queryKey: ["estimates", "byRO", orderId] });
           navigate("/Estimates");
+        }}
+      />
+
+      <InvoiceFormDialog
+        open={showInvoiceDialog}
+        onClose={() => setShowInvoiceDialog(false)}
+        invoice={null}
+        orders={order ? [order] : []}
+        customers={customers}
+        initialOrderId={orderId}
+        onSaved={() => {
+          setShowInvoiceDialog(false);
+          queryClient.invalidateQueries({ queryKey: ["invoices", "byRO", orderId] });
         }}
       />
 
