@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Copy, ExternalLink, Zap } from "lucide-react";
+import { Copy, ExternalLink, Zap, HeadphonesIcon } from "lucide-react";
 
 export default function PaymentWall() {
   const [copying, setCopying] = useState(false);
@@ -120,9 +120,15 @@ export default function PaymentWall() {
             </div>
           )}
 
-          <p className="text-xs text-gray-500 text-center">
-            Questions? Contact support at your shop email.
-          </p>
+          <div className="text-center">
+            <a
+              href="mailto:lbchub.support"
+              className="inline-flex items-center gap-2 text-xs text-sky-400 hover:text-sky-300 transition-colors"
+            >
+              <HeadphonesIcon className="w-3.5 h-3.5" />
+              Questions? Contact lbchub.support
+            </a>
+          </div>
         </div>
       </div>
     </div>
