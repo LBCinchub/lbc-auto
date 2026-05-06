@@ -197,7 +197,7 @@ export default function GlobalSearch() {
       </div>
 
       {open && query.trim().length >= 1 && (
-        <div className="absolute top-full left-0 right-0 mt-1.5 bg-gray-900 border border-gray-700/80 rounded-xl shadow-2xl shadow-black/50 z-50 overflow-hidden">
+        <div className="absolute top-full left-0 mt-1.5 bg-gray-900 border border-gray-700/80 rounded-xl shadow-2xl shadow-black/50 z-[200] overflow-hidden w-[380px]">
           {results.length === 0 ? (
             <div className="px-4 py-6 text-center text-sm text-gray-500">
               No results for <span className="text-gray-300">"{query}"</span>
