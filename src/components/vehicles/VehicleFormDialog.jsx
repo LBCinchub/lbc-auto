@@ -56,20 +56,8 @@ export default function VehicleFormDialog({ open, onClose, vehicle, onSaved, cus
     }
     setDecoding(true);
     try {
-      const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `Decode this VIN number: ${form.vin}. Return the vehicle make, model, year, engine type, and color if determinable.`,
-        add_context_from_internet: true,
-        response_json_schema: {
-          type: "object",
-          properties: {
-            make: { type: "string" },
-            model: { type: "string" },
-            year: { type: "number" },
-            engine_type: { type: "string" },
-            color: { type: "string" }
-          }
-        }
-      });
+      const response = await base44.functions.invoke('decodeVin', { vin: form.vin });
+      const result = response.data;
       if (result && result.make) {
         setForm(prev => ({
           ...prev,
@@ -77,10 +65,9 @@ export default function VehicleFormDialog({ open, onClose, vehicle, onSaved, cus
           model: result.model || prev.model,
           year: result.year || prev.year,
           engine_type: result.engine_type || prev.engine_type,
-          color: result.color || prev.color,
         }));
       } else {
-        alert("Could not decode VIN. Please enter manually.");
+        alert(result?.error || "Could not decode VIN. Please enter manually.");
       }
     } catch (err) {
       alert("Error decoding VIN: " + (err?.message || "Please try again."));
