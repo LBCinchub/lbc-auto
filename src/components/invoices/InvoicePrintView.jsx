@@ -45,7 +45,21 @@ export default function InvoicePrintView({ invoice, onClose }) {
     });
   });
 
-  if (invoice.labor_total > 0) {
+  const laborRows = (invoice.labor_items && invoice.labor_items.length > 0)
+    ? invoice.labor_items
+    : (invoice.line_items || []).filter(li => li.type === "labor");
+
+  if (laborRows.length > 0) {
+    laborRows.forEach(l => {
+      lineItems.push({
+        name: l.description || "Labor",
+        description: l.hours ? `${l.hours}h @ $${l.rate}/h` : "",
+        unit_price: l.rate || l.unit_price || 0,
+        qty: l.hours || l.quantity || 1,
+        amount: l.total || 0,
+      });
+    });
+  } else if (invoice.labor_total > 0) {
     lineItems.push({
       name: "Labor cost",
       description: "",
