@@ -90,12 +90,6 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Neon green glow on all white text */
-  .text-white {
-    color: #ffffff !important;
-    text-shadow: 0 0 6px #39FF14, 0 0 12px #39FF14, 0 0 20px #39FF14 !important;
-  }
-
   /* Boost base text sizes globally */
   p, span, div, li, td, th, label {
     letter-spacing: 0.01em;
