@@ -9,15 +9,20 @@ function buildPrintHTML(contentHTML, title, isWorker) {
       <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Inter', Arial, sans-serif; font-size: 9px; color: #1a1a2e; background: white; }
-        .page { max-width: 780px; margin: 0 auto; padding: 18px; }
+        body { font-family: 'Inter', Arial, sans-serif; font-size: 8px; color: #1a1a2e; background: white; }
+        .page { max-width: 760px; margin: 0 auto; padding: 12px; }
         table { width: 100%; border-collapse: collapse; }
         thead tr { background: #0f172a; }
-        thead th { padding: 6px 8px; text-align: left; font-size: 7px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; }
+        thead th { padding: 4px 6px; text-align: left; font-size: 6.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; }
         tbody tr { border-bottom: 1px solid #f1f5f9; }
         tbody tr:nth-child(even) { background: #fafbff; }
-        tbody td { padding: 6px 8px; font-size: 8.5px; color: #334155; vertical-align: top; }
-        @media print { body { padding: 0; } .page { padding: 12px; } }
+        tbody td { padding: 4px 6px; font-size: 7.5px; color: #334155; vertical-align: top; }
+        @media print {
+          html { zoom: 0.82; }
+          body { padding: 0; }
+          .page { padding: 8px; }
+          @page { margin: 8mm; size: letter; }
+        }
       </style>
     </head>
     <body>
@@ -57,7 +62,7 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
   const headerBlock = (
     <>
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
           {user?.business_logo && (
             <div style={{ width: 100, height: 60, flexShrink: 0, background: "white", borderRadius: 6, border: "1px solid #e2e8f0", overflow: "hidden" }}>
@@ -83,22 +88,22 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
       </div>
 
       {/* Gradient Divider */}
-      <div style={{ height: 2, background: "linear-gradient(to right, #0ea5e9, #6366f1, #ec4899)", borderRadius: 2, marginBottom: 10 }} />
+      <div style={{ height: 2, background: "linear-gradient(to right, #0ea5e9, #6366f1, #ec4899)", borderRadius: 2, marginBottom: 6 }} />
 
       {/* Bill To + Vehicle */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
-        <div style={{ flex: 1, background: "#f8fafc", borderRadius: 8, padding: "8px 10px", borderLeft: "3px solid #0ea5e9" }}>
-          <div style={{ fontSize: 7, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 4 }}>Bill To</div>
-          <div style={{ fontSize: 10, fontWeight: 700, color: "#0f172a", marginBottom: 2 }}>{customer?.name || customer?.full_name}</div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
+        <div style={{ flex: 1, background: "#f8fafc", borderRadius: 6, padding: "5px 8px", borderLeft: "3px solid #0ea5e9" }}>
+          <div style={{ fontSize: 6.5, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 2 }}>Bill To</div>
+          <div style={{ fontSize: 9, fontWeight: 700, color: "#0f172a", marginBottom: 1 }}>{customer?.name || customer?.full_name}</div>
           <div style={{ fontSize: 8, color: "#475569", lineHeight: 1.6 }}>
             {customer?.phone && <div>{formatPhone(customer.phone)}</div>}
             {customer?.email && <div>{customer.email}</div>}
           </div>
         </div>
         {vehicle?.info && (
-          <div style={{ flex: 1, background: "#f8fafc", borderRadius: 8, padding: "8px 10px", borderLeft: "3px solid #6366f1" }}>
-            <div style={{ fontSize: 7, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 4 }}>Vehicle</div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: "#0f172a", marginBottom: 2 }}>{vehicle.info}</div>
+          <div style={{ flex: 1, background: "#f8fafc", borderRadius: 6, padding: "5px 8px", borderLeft: "3px solid #6366f1" }}>
+            <div style={{ fontSize: 6.5, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 2 }}>Vehicle</div>
+            <div style={{ fontSize: 9, fontWeight: 700, color: "#0f172a", marginBottom: 1 }}>{vehicle.info}</div>
             <div style={{ fontSize: 8, color: "#475569", lineHeight: 1.6 }}>
               {vehicle?.vin && <div>VIN: {vehicle.vin}</div>}
               {vehicle?.mileage && <div>Mileage: {vehicle.mileage.toLocaleString()} km</div>}
@@ -111,35 +116,35 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
   );
 
   const notesBlock = notes && (
-    <div style={{ marginTop: 10, background: "#fffbeb", borderRadius: 6, borderLeft: "3px solid #f59e0b", padding: "6px 10px" }}>
+    <div style={{ marginTop: 5, background: "#fffbeb", borderRadius: 6, borderLeft: "3px solid #f59e0b", padding: "4px 8px" }}>
       <div style={{ fontSize: 7, fontWeight: 700, color: "#92400e", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 2 }}>Note</div>
       <div style={{ fontSize: 8, color: "#78350f", lineHeight: 1.5 }}>{notes}</div>
     </div>
   );
 
   const signatureBlock = (
-    <div style={{ marginTop: 16, display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+    <div style={{ marginTop: 8, display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
       <div>
-        <div style={{ height: 28, borderBottom: "1.5px solid #cbd5e1", width: 200, marginBottom: 4 }}></div>
-        <div style={{ fontSize: 7, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1 }}>Customer Signature</div>
-        <div style={{ fontSize: 7, color: "#cbd5e1", marginTop: 2 }}>By signing, you agree to the terms below.</div>
+        <div style={{ height: 20, borderBottom: "1.5px solid #cbd5e1", width: 180, marginBottom: 3 }}></div>
+        <div style={{ fontSize: 6.5, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1 }}>Customer Signature</div>
+        <div style={{ fontSize: 6.5, color: "#cbd5e1", marginTop: 1 }}>By signing, you agree to the terms below.</div>
       </div>
-      <div style={{ width: 60, height: 60, borderRadius: "50%", border: "2px dashed #e2e8f0", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <span style={{ fontSize: 7, color: "#e2e8f0", textAlign: "center", textTransform: "uppercase", letterSpacing: 1 }}>Stamp</span>
+      <div style={{ width: 44, height: 44, borderRadius: "50%", border: "2px dashed #e2e8f0", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <span style={{ fontSize: 6, color: "#e2e8f0", textAlign: "center", textTransform: "uppercase", letterSpacing: 1 }}>Stamp</span>
       </div>
     </div>
   );
 
   const disclaimerBlock = (
-    <div style={{ marginTop: 12, paddingTop: 8, borderTop: "1px solid #f1f5f9" }}>
+    <div style={{ marginTop: 6, paddingTop: 5, borderTop: "1px solid #f1f5f9" }}>
       <div style={{ fontSize: 7, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 3 }}>Disclaimer</div>
       <div style={{ fontSize: 7, color: "#94a3b8", lineHeight: 1.6 }}>
         I hereby authorize the above repair work to be done along with procurement of all necessary materials. {bizName} may operate the above vehicle for purposes of testing, inspection or delivery at my risk. {bizName} will not be held responsible for any loss or damage to the vehicle or articles left in the vehicle in case of fire, theft, accident or any other cause beyond its control. In the event legal action is necessary to enforce this contract, I understand I am solely responsible for all costs.
       </div>
-      <div style={{ textAlign: "center", marginTop: 10, fontSize: 8, color: "#cbd5e1", fontStyle: "italic" }}>
+      <div style={{ textAlign: "center", marginTop: 5, fontSize: 7, color: "#cbd5e1", fontStyle: "italic" }}>
         Thank you for choosing {bizName} — we appreciate your trust and business.
       </div>
-      <div style={{ textAlign: "center", marginTop: 12, paddingTop: 8, borderTop: "1px solid #f1f5f9", fontSize: 7, color: "#94a3b8", letterSpacing: 1.5, textTransform: "uppercase" }}>
+      <div style={{ textAlign: "center", marginTop: 5, paddingTop: 5, borderTop: "1px solid #f1f5f9", fontSize: 6.5, color: "#94a3b8", letterSpacing: 1.5, textTransform: "uppercase" }}>
         Powered by <span style={{ fontWeight: 700, color: "#0ea5e9" }}>LBC.NETWORK</span>
       </div>
     </div>
@@ -162,33 +167,33 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
         {headerBlock}
 
         {/* Line Items Table — full */}
-        <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 10 }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 6 }}>
           <thead>
             <tr style={{ background: "#0f172a" }}>
-              <th style={{ padding: "6px 8px", textAlign: "left", fontSize: 7, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, color: "#94a3b8", width: "4%" }}>#</th>
-              <th style={{ padding: "6px 8px", textAlign: "left", fontSize: 7, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, color: "#94a3b8" }}>Item</th>
-              <th style={{ padding: "6px 8px", textAlign: "left", fontSize: 7, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, color: "#94a3b8" }}>Description</th>
-              <th style={{ padding: "6px 8px", textAlign: "right", fontSize: 7, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, color: "#94a3b8", width: "11%" }}>Unit Price</th>
-              <th style={{ padding: "6px 8px", textAlign: "center", fontSize: 7, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, color: "#94a3b8", width: "9%" }}>Qty</th>
-              <th style={{ padding: "6px 8px", textAlign: "right", fontSize: 7, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, color: "#94a3b8", width: "12%" }}>Total</th>
+              <th style={{ padding: "4px 6px", textAlign: "left", fontSize: 6.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, color: "#94a3b8", width: "4%" }}>#</th>
+              <th style={{ padding: "4px 6px", textAlign: "left", fontSize: 6.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, color: "#94a3b8" }}>Item</th>
+              <th style={{ padding: "4px 6px", textAlign: "left", fontSize: 6.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, color: "#94a3b8" }}>Description</th>
+              <th style={{ padding: "4px 6px", textAlign: "right", fontSize: 6.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, color: "#94a3b8", width: "11%" }}>Unit Price</th>
+              <th style={{ padding: "4px 6px", textAlign: "center", fontSize: 6.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, color: "#94a3b8", width: "9%" }}>Qty</th>
+              <th style={{ padding: "4px 6px", textAlign: "right", fontSize: 6.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, color: "#94a3b8", width: "12%" }}>Total</th>
             </tr>
           </thead>
           <tbody>
             {lineItems.map((item, i) => (
               <tr key={i} style={{ background: i % 2 === 1 ? "#fafbff" : "white", borderBottom: "1px solid #f1f5f9" }}>
-                <td style={{ padding: "6px 8px", fontSize: 7, fontWeight: 600, color: "#94a3b8" }}>{i + 1}</td>
-                <td style={{ padding: "6px 8px", fontSize: 8.5, fontWeight: 700, color: "#0f172a" }}>{item.name}</td>
-                <td style={{ padding: "6px 8px", fontSize: 8, color: "#64748b" }}>{item.description}</td>
-                <td style={{ padding: "6px 8px", fontSize: 8, color: "#334155", textAlign: "right" }}>${(item.unit_price || 0).toFixed(2)}</td>
-                <td style={{ padding: "6px 8px", fontSize: 8, color: "#334155", textAlign: "center" }}>{item.qty}</td>
-                <td style={{ padding: "6px 8px", fontSize: 8.5, fontWeight: 700, color: "#0f172a", textAlign: "right" }}>${(item.amount || 0).toFixed(2)}</td>
+                <td style={{ padding: "3px 6px", fontSize: 6.5, fontWeight: 600, color: "#94a3b8" }}>{i + 1}</td>
+                <td style={{ padding: "3px 6px", fontSize: 8, fontWeight: 700, color: "#0f172a" }}>{item.name}</td>
+                <td style={{ padding: "3px 6px", fontSize: 7.5, color: "#64748b" }}>{item.description}</td>
+                <td style={{ padding: "3px 6px", fontSize: 7.5, color: "#334155", textAlign: "right" }}>${(item.unit_price || 0).toFixed(2)}</td>
+                <td style={{ padding: "3px 6px", fontSize: 7.5, color: "#334155", textAlign: "center" }}>{item.qty}</td>
+                <td style={{ padding: "3px 6px", fontSize: 8, fontWeight: 700, color: "#0f172a", textAlign: "right" }}>${(item.amount || 0).toFixed(2)}</td>
               </tr>
             ))}
           </tbody>
         </table>
 
         {/* Bottom: Payment History + Summary */}
-        <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginTop: 6 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginTop: 4 }}>
           <div style={{ flex: 1.3 }}>
             {paymentHistory && paymentHistory.length > 0 && (
               <>
