@@ -84,5 +84,27 @@
 
   body {
     @apply bg-background text-foreground;
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Boost base text sizes globally */
+  p, span, div, li, td, th, label {
+    letter-spacing: 0.01em;
+  }
+
+  /* Make small/muted text more readable */
+  .text-xs {
+    font-size: 0.8rem !important;
+  }
+
+  .text-sm {
+    font-size: 0.9rem !important;
+  }
+
+  input, select, textarea, button {
+    font-size: 0.9rem;
   }
 }
