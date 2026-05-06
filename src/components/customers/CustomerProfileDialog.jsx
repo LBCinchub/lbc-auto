@@ -9,6 +9,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Phone, Mail, MapPin, Car, Wrench, FileText, Lightbulb, Clock, Plus, Pencil, ChevronRight, Calendar, MessageSquare
 } from "lucide-react";
+import { formatPhone } from "@/utils/formatPhone";
 import { Button } from "@/components/ui/button";
 import StatusBadge from "../shared/StatusBadge";
 import VehicleFormDialog from "@/components/vehicles/VehicleFormDialog";
@@ -170,7 +171,7 @@ export default function CustomerProfileDialog({ customer, open, onClose, custome
           <div className="bg-gray-800/50 rounded-lg p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
             {customer.phone && (
               <div className="flex items-center gap-2 text-sm text-gray-300">
-                <Phone className="w-4 h-4 text-sky-400 flex-shrink-0" /> {customer.phone}
+                <Phone className="w-4 h-4 text-sky-400 flex-shrink-0" /> {formatPhone(customer.phone)}
                 <button onClick={() => setShowSMSDialog(true)} title="Send SMS" className="ml-1 text-gray-500 hover:text-sky-400 transition-colors">
                   <MessageSquare className="w-3.5 h-3.5" />
                 </button>

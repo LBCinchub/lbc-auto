@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { HardHat, Phone, Mail, Pencil, Trash2, Wrench, DollarSign, LogIn, LogOut } from "lucide-react";
+import { formatPhone } from "@/utils/formatPhone";
 import { format, differenceInMinutes } from "date-fns";
 import { Button } from "@/components/ui/button";
 import {
@@ -201,7 +202,7 @@ export default function Mechanics() {
                 <div className="mt-2 space-y-1">
                   {m.phone && (
                     <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <Phone className="w-3 h-3" /> {m.phone}
+                     <Phone className="w-3 h-3" /> {formatPhone(m.phone)}
                     </div>
                   )}
                   {m.email && (
