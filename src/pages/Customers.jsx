@@ -142,7 +142,7 @@ export default function Customers() {
                        {customer.full_name?.charAt(0)?.toUpperCase()}
                      </span>
                    </div>
-                   <h3 className="text-blue-400 font-semibold truncate">{customer.full_name}</h3>
+                   <h3 className="text-blue-400 font-semibold truncate capitalize">{customer.full_name}</h3>
                  </div>
                  <div className="flex gap-1 ml-2 flex-shrink-0" onClick={e => e.stopPropagation()}>
                   <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-white"
@@ -184,7 +184,7 @@ export default function Customers() {
                         <div key={v.id} className="flex items-center gap-2">
                           <Car className="w-3.5 h-3.5 text-sky-500 flex-shrink-0" />
                           <div className="text-xs text-gray-400 min-w-0">
-                            <span className="text-green-400">{v.year} {v.make} {v.model}</span>
+                            <span className="text-green-400 capitalize">{v.year} {v.make} {v.model}</span>
                             {v.license_plate && <span className="ml-2 text-gray-500 font-mono">{v.license_plate}</span>}
                             {v.vin && <span className="ml-2 text-gray-600 font-mono truncate">VIN: {v.vin}</span>}
                           </div>

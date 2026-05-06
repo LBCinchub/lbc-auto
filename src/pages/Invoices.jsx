@@ -297,7 +297,7 @@ export default function Invoices() {
                     <StatusBadge status={inv.status} />
                   </div>
                   <p className="text-sm mt-0.5">
-                   <span className="text-blue-400">{inv.customer_name}</span> · <span className="text-green-400">{inv.vehicle_info}</span>
+                   <span className="text-blue-400 capitalize">{inv.customer_name}</span> · <span className="text-green-400 capitalize">{inv.vehicle_info}</span>
                   </p>
                   {(() => {
                     const customer = customers.find(c => c.id === inv.customer_id);

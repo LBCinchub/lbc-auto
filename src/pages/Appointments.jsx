@@ -126,12 +126,12 @@ export default function Appointments() {
                        </div>
                        <div className="min-w-0">
                          <div className="flex items-center gap-2 flex-wrap">
-                           <span className="text-blue-400 font-medium text-sm">{a.customer_name}</span>
+                           <span className="text-blue-400 font-medium text-sm capitalize">{a.customer_name}</span>
                            <StatusBadge status={a.status} />
                          </div>
                          {(() => { const c = customers.find(c => c.id === a.customer_id); return c?.phone ? <p className="text-xs text-amber-400">{formatPhone(c.phone)}{c.email ? ` · ${c.email}` : ""}</p> : null; })()}
                          <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
-                           <span className="flex items-center gap-1 text-green-400"><Car className="w-3 h-3" />{a.vehicle_info}</span>
+                           <span className="flex items-center gap-1 text-green-400 capitalize"><Car className="w-3 h-3" />{a.vehicle_info}</span>
                            <span>{a.service_type}</span>
                            {a.mechanic_name && (
                              <span className="flex items-center gap-1"><User className="w-3 h-3" />{a.mechanic_name}</span>
