@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { Search, X, Wrench, Users, Car, FileText, Package, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
@@ -176,9 +176,25 @@ export default function GlobalSearch() {
     return "";
   };
 
+  const inputContainerRef = useRef(null);
+  const [dropdownStyle, setDropdownStyle] = useState({});
+
+  useEffect(() => {
+    if (open && inputContainerRef.current) {
+      const rect = inputContainerRef.current.getBoundingClientRect();
+      setDropdownStyle({
+        position: 'fixed',
+        top: rect.bottom + 6,
+        left: rect.left,
+        width: Math.max(rect.width, 380),
+        zIndex: 9999,
+      });
+    }
+  }, [open, query]);
+
   return (
     <div ref={ref} className="relative w-full">
-      <div className="relative">
+      <div className="relative" ref={inputContainerRef}>
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
         <input
           ref={inputRef}
@@ -197,7 +213,7 @@ export default function GlobalSearch() {
       </div>
 
       {open && query.trim().length >= 1 && (
-        <div className="absolute top-full left-0 mt-1.5 bg-gray-900 border border-gray-700/80 rounded-xl shadow-2xl shadow-black/50 z-[200] overflow-hidden w-[380px]">
+        <div style={dropdownStyle} className="bg-gray-900 border border-gray-700/80 rounded-xl shadow-2xl shadow-black/50 overflow-hidden">
           {results.length === 0 ? (
             <div className="px-4 py-6 text-center text-sm text-gray-500">
               No results for <span className="text-gray-300">"{query}"</span>
