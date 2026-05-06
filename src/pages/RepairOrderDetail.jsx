@@ -181,9 +181,11 @@ export default function RepairOrderDetail() {
           <Button onClick={() => setShowInvoiceDialog(true)} className="bg-purple-600 hover:bg-purple-700 gap-2">
             <Plus className="w-4 h-4" /> Create Invoice
           </Button>
-          <Button onClick={() => navigate("/Estimates")} className="bg-sky-500 hover:bg-sky-600 gap-2">
-            <FileText className="w-4 h-4" /> View Estimates
-          </Button>
+          {linkedEstimates.length > 0 && (
+            <Button onClick={() => navigate(`/EstimateDetail/${linkedEstimates[0].id}`)} className="bg-sky-500 hover:bg-sky-600 gap-2">
+              <FileText className="w-4 h-4" /> View Estimate
+            </Button>
+          )}
         </div>
       </div>
 
