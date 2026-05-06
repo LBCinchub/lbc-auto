@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Store, Plus, Trash2, Save, Loader2 } from "lucide-react";
+import { formatPhone } from "@/utils/formatPhone";
 import { TAX_RATE } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -163,7 +164,7 @@ export default function InvoiceDetail() {
             {(invoice.customer_phone || customer?.phone) && (
               <a href={`tel:${invoice.customer_phone || customer?.phone}`}
                 className="text-sky-400 hover:text-sky-300 text-sm font-medium mt-1 inline-block">
-                📞 {invoice.customer_phone || customer?.phone}
+                📞 {formatPhone(invoice.customer_phone || customer?.phone)}
               </a>
             )}
           </div>
@@ -186,7 +187,7 @@ export default function InvoiceDetail() {
           <div>
             <p className="text-gray-500 text-xs uppercase mb-1">Customer</p>
             <p className="text-white font-semibold text-sm">{customer?.full_name || invoice.customer_name || "—"}</p>
-            {customer?.phone && <p className="text-sky-400 text-xs">{customer.phone}</p>}
+            {customer?.phone && <p className="text-sky-400 text-xs">{formatPhone(customer.phone)}</p>}
           </div>
           <div>
             <p className="text-gray-500 text-xs uppercase mb-1">Due Date</p>
