@@ -29,7 +29,7 @@ export default function TodayAppointments({ appointments, customers = [], onAppt
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm text-blue-400 font-medium truncate">{appt.customer_name}</p>
-              {(() => { const c = customers.find(c => c.id === appt.customer_id); return c?.phone ? <p className="text-xs text-sky-400">{c.phone}</p> : null; })()}
+              {(() => { const c = customers.find(c => c.id === appt.customer_id); return c?.phone ? <p className="text-xs text-amber-400">{c.phone}</p> : null; })()}
               <p className="text-xs text-gray-500">{appt.time_slot} · {appt.service_type}</p>
               {appt.vehicle_info && <p className="text-xs text-green-400 truncate">{appt.vehicle_info}</p>}
             </div>

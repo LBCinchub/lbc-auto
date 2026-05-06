@@ -158,7 +158,7 @@ export default function Customers() {
               <div className="space-y-1.5">
                 {customer.phone && (
                   <a href={`tel:${customer.phone}`} onClick={e => e.stopPropagation()}
-                    className="flex items-center gap-2 text-sm text-gray-400 hover:text-sky-400 transition-colors">
+                    className="flex items-center gap-2 text-sm text-amber-400 hover:text-amber-300 transition-colors">
                     <Phone className="w-3.5 h-3.5" /> {formatPhone(customer.phone)}
                   </a>
                 )}

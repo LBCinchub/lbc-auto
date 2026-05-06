@@ -171,7 +171,7 @@ export default function RepairOrders() {
                 {(() => {
                   const customer = customers.find(c => c.id === order.customer_id);
                   return customer?.phone ? (
-                    <a href={`tel:${customer.phone}`} onClick={e => e.stopPropagation()} className="inline-flex items-center gap-1.5 text-xs text-sky-400 hover:text-sky-300 font-medium mt-0.5">
+                    <a href={`tel:${customer.phone}`} onClick={e => e.stopPropagation()} className="inline-flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 font-medium mt-0.5">
                       <Phone className="w-3 h-3" />{formatPhone(customer.phone)}
                     </a>
                   ) : null;

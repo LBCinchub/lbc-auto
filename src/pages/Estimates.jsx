@@ -219,7 +219,7 @@ export default function Estimates() {
                   return (
                     <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1">
                       {customer?.phone && (
-                        <a href={`tel:${customer.phone}`} onClick={e => e.stopPropagation()} className="inline-flex items-center gap-1 text-xs text-sky-400 hover:text-sky-300 font-medium">
+                        <a href={`tel:${customer.phone}`} onClick={e => e.stopPropagation()} className="inline-flex items-center gap-1 text-xs text-amber-400 hover:text-amber-300 font-medium">
                           <Phone className="w-3 h-3" />{formatPhone(customer.phone)}
                         </a>
                       )}

@@ -106,7 +106,7 @@ export default function Vehicles() {
                       const displayName = v.customer_name || c?.full_name;
                       return displayName ? <p className="text-xs text-blue-400 font-medium">👤 {displayName}</p> : null;
                     })()}
-                    {(() => { const c = customers.find(c => c.id === v.customer_id); return c?.phone ? <p className="text-xs text-gray-400">{formatPhone(c.phone)}</p> : null; })()}
+                    {(() => { const c = customers.find(c => c.id === v.customer_id); return c?.phone ? <p className="text-xs text-amber-400">{formatPhone(c.phone)}</p> : null; })()}
                   </div>
                 </div>
                 <div className="flex gap-1">
