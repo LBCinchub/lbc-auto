@@ -204,7 +204,7 @@ export default function Estimates() {
             <div key={est.id} onClick={() => navigate(`/EstimateDetail/${est.id}`)} className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5 flex flex-col sm:flex-row sm:items-center gap-4 hover:border-sky-500/30 transition-colors cursor-pointer">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-3 flex-wrap">
-                  <h3 className="text-white font-semibold">{est.customer_name}</h3>
+                  <h3 className="text-blue-400 font-semibold">{est.customer_name}</h3>
                   {est.estimate_number && (
                     <span className="text-xs text-gray-500 font-mono">#{est.estimate_number}</span>
                   )}
@@ -212,7 +212,7 @@ export default function Estimates() {
                     {est.status}
                   </span>
                 </div>
-                <p className="text-sm text-gray-400 mt-0.5">{est.vehicle_info}</p>
+                <p className="text-sm text-green-400 mt-0.5">{est.vehicle_info}</p>
                 {(() => {
                   const customer = customers.find(c => c.id === est.customer_id);
                   const vehicle = vehicles.find(v => v.id === est.vehicle_id);

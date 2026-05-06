@@ -296,8 +296,8 @@ export default function Invoices() {
                     <h3 className="text-white font-semibold">{inv.invoice_number}</h3>
                     <StatusBadge status={inv.status} />
                   </div>
-                  <p className="text-sm text-gray-400 mt-0.5">
-                    {inv.customer_name} · {inv.vehicle_info}
+                  <p className="text-sm mt-0.5">
+                   <span className="text-blue-400">{inv.customer_name}</span> · <span className="text-green-400">{inv.vehicle_info}</span>
                   </p>
                   {(() => {
                     const customer = customers.find(c => c.id === inv.customer_id);

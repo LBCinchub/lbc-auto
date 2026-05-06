@@ -164,10 +164,10 @@ export default function RepairOrders() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-3 flex-wrap">
                   <h3 className="text-white font-semibold">{order.order_number}</h3>
-                  <span className="text-xs text-gray-500 font-mono">{order.customer_name}</span>
+                  <span className="text-xs text-blue-400 font-mono">{order.customer_name}</span>
                   <StatusBadge status={order.status} />
                 </div>
-                <p className="text-sm text-gray-400 mt-0.5">{order.vehicle_info}</p>
+                <p className="text-sm text-green-400 mt-0.5">{order.vehicle_info}</p>
                 {(() => {
                   const customer = customers.find(c => c.id === order.customer_id);
                   return customer?.phone ? (

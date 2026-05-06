@@ -100,11 +100,11 @@ export default function Vehicles() {
                     <Car className="w-5 h-5 text-sky-400" />
                   </div>
                   <div>
-                    <h3 className="text-white font-semibold">{v.year} {v.make} {v.model}</h3>
+                    <h3 className="text-green-400 font-semibold">{v.year} {v.make} {v.model}</h3>
                     {(() => {
                       const c = customers.find(c => c.id === v.customer_id);
                       const displayName = v.customer_name || c?.full_name;
-                      return displayName ? <p className="text-xs text-sky-400 font-medium">👤 {displayName}</p> : null;
+                      return displayName ? <p className="text-xs text-blue-400 font-medium">👤 {displayName}</p> : null;
                     })()}
                     {(() => { const c = customers.find(c => c.id === v.customer_id); return c?.phone ? <p className="text-xs text-gray-400">{formatPhone(c.phone)}</p> : null; })()}
                   </div>
