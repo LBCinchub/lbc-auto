@@ -186,7 +186,7 @@ export default function GlobalSearch() {
         position: 'fixed',
         top: rect.bottom + 6,
         left: rect.left,
-        width: Math.max(rect.width, 380),
+        width: Math.max(rect.width * 2, 500),
         zIndex: 9999,
       });
     }
