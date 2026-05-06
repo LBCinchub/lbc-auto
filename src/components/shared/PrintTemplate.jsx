@@ -139,6 +139,9 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
       <div style={{ textAlign: "center", marginTop: 10, fontSize: 8, color: "#cbd5e1", fontStyle: "italic" }}>
         Thank you for choosing {bizName} — we appreciate your trust and business.
       </div>
+      <div style={{ textAlign: "center", marginTop: 12, paddingTop: 8, borderTop: "1px solid #f1f5f9", fontSize: 7, color: "#94a3b8", letterSpacing: 1.5, textTransform: "uppercase" }}>
+        Powered by <span style={{ fontWeight: 700, color: "#0ea5e9" }}>LBC.NETWORK</span>
+      </div>
     </div>
   );
 
