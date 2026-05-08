@@ -71,8 +71,15 @@ export default function Customers() {
     queryFn: () => base44.entities.Invoice.list("-created_date", 30000),
   });
 
+  // Build a lookup map: customerId -> vehicles[]
+  const vehiclesByCustomer = vehicles.reduce((map, v) => {
+    if (!map[v.customer_id]) map[v.customer_id] = [];
+    map[v.customer_id].push(v);
+    return map;
+  }, {});
+
   const filtered = customers.filter(c => {
-    const customerVehicles = vehicles.filter(v => v.customer_id === c.id);
+    const customerVehicles = vehiclesByCustomer[c.id] || [];
     const vins = customerVehicles.map(v => v.vin).join(" ");
     const plates = customerVehicles.map(v => v.license_plate).join(" ");
     const carInfo = customerVehicles.map(v => `${v.year} ${v.make} ${v.model}`).join(" ");
@@ -85,7 +92,6 @@ export default function Customers() {
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  // Reset to page 1 when search changes
   useEffect(() => { setPage(1); }, [search, searchField]);
 
   const handleDelete = async (id) => {
@@ -123,7 +129,7 @@ export default function Customers() {
             searchField === "name" ? "Search by name..." :
             searchField === "phone" ? "Search by phone..." :
             searchField === "email" ? "Search by email..." :
-            "Search by name, phone, or email..."
+            "Search by name, phone, email, or vehicle..."
           } />
         </div>
       </div>
@@ -148,66 +154,65 @@ export default function Customers() {
       ) : (
         <>
           <div className="space-y-2">
-            {paginated.map(customer => (
-              <div key={customer.id}
-                onClick={() => navigate(`/CustomerDetails?id=${customer.id}`)}
-                className="flex items-center gap-4 rounded-xl border border-gray-800/60 bg-gray-900/50 px-4 py-3.5 hover:border-sky-500/30 hover:bg-gray-800/50 transition-all cursor-pointer group">
-                {/* Avatar */}
-                <div className={`w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 ${getAvatarColor(customer.full_name)}`}>
-                  <span className="text-white font-bold text-sm">{getInitials(customer.full_name)}</span>
-                </div>
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-white capitalize truncate">{customer.full_name}</div>
-                  <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-0.5">
-                    {customer.phone && (
-                      <a
-                        href={`tel:${customer.phone}`}
-                        onClick={e => e.stopPropagation()}
-                        className="flex items-center gap-1 text-xs text-amber-400 hover:text-amber-300"
-                      >
-                        <Phone className="w-3 h-3" /> {formatPhone(customer.phone)}
-                      </a>
-                    )}
-                    {customer.email && (
-                      <span className="flex items-center gap-1 text-xs text-gray-400">
-                        <Mail className="w-3 h-3" /> {customer.email}
-                      </span>
-                    )}
+            {paginated.map(customer => {
+              const cv = vehiclesByCustomer[customer.id] || [];
+              return (
+                <div key={customer.id}
+                  onClick={() => navigate(`/CustomerDetails?id=${customer.id}`)}
+                  className="flex items-center gap-4 rounded-xl border border-gray-800/60 bg-gray-900/50 px-4 py-3.5 hover:border-sky-500/30 hover:bg-gray-800/50 transition-all cursor-pointer group">
+                  {/* Avatar */}
+                  <div className={`w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 ${getAvatarColor(customer.full_name)}`}>
+                    <span className="text-white font-bold text-sm">{getInitials(customer.full_name)}</span>
                   </div>
-                  {/* Vehicle badges */}
-                  <div className="flex flex-wrap gap-1 mt-1.5" onClick={e => e.stopPropagation()}>
-                    {(() => {
-                      const customerVehicles = vehicles.filter(v => v.customer_id === customer.id);
-                      if (customerVehicles.length === 0) {
-                        return <span className="text-xs text-gray-600">No vehicles</span>;
-                      }
-                      return customerVehicles.map(v => (
-                        <span
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-white capitalize truncate">{customer.full_name}</div>
+                    <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-0.5">
+                      {customer.phone && (
+                        <a
+                          href={`tel:${customer.phone}`}
+                          onClick={e => e.stopPropagation()}
+                          className="flex items-center gap-1 text-xs text-amber-400 hover:text-amber-300"
+                        >
+                          <Phone className="w-3 h-3" /> {formatPhone(customer.phone)}
+                        </a>
+                      )}
+                      {customer.email && (
+                        <span className="flex items-center gap-1 text-xs text-gray-400">
+                          <Mail className="w-3 h-3" /> {customer.email}
+                        </span>
+                      )}
+                    </div>
+                    {/* Vehicle badges */}
+                    <div className="flex flex-wrap gap-1.5 mt-1.5" onClick={e => e.stopPropagation()}>
+                      {cv.length === 0 ? (
+                        <span className="text-xs text-gray-600">No vehicles</span>
+                      ) : cv.map(v => (
+                        <button
                           key={v.id}
-                          onClick={() => navigate(`/Vehicles?vehicleId=${v.id}`)}
-                          className="text-xs bg-gray-800 border border-gray-700 text-gray-300 hover:border-sky-500/50 hover:text-sky-300 px-2 py-0.5 rounded-full cursor-pointer transition-colors"
+                          onClick={() => navigate(`/Vehicles?search=${encodeURIComponent([v.year, v.make, v.model].filter(Boolean).join(" "))}`)}
+                          className="text-xs bg-gray-800 hover:bg-sky-500/20 border border-gray-700 hover:border-sky-500/40 text-gray-300 hover:text-sky-300 px-2 py-0.5 rounded-full transition-colors"
                         >
                           {[v.year, v.make, v.model].filter(Boolean).join(" ")}
-                        </span>
-                      ));
-                    })()}
+                        </button>
+                      ))}
+                    </div>
                   </div>
+                  {/* Actions */}
+                  <div className="flex items-center gap-1 flex-shrink-0" onClick={e => e.stopPropagation()}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-600 hover:text-white"
+                      onClick={() => { setEditingCustomer(customer); setDialogOpen(true); }}>
+                      <Pencil className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-600 hover:text-rose-400"
+                      onClick={() => handleDelete(customer.id)}>
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-sky-400 transition-colors flex-shrink-0" />
                 </div>
-                {/* Actions */}
-                <div className="flex items-center gap-1 flex-shrink-0" onClick={e => e.stopPropagation()}>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-600 hover:text-white"
-                    onClick={() => { setEditingCustomer(customer); setDialogOpen(true); }}>
-                    <Pencil className="w-3.5 h-3.5" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-600 hover:text-rose-400"
-                    onClick={() => handleDelete(customer.id)}>
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
-                <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-sky-400 transition-colors flex-shrink-0" />
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Pagination */}
