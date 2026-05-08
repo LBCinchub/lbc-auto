@@ -127,7 +127,13 @@ export default function Vehicles() {
                     {(() => {
                       const c = customers.find(c => c.id === v.customer_id);
                       const displayName = v.customer_name || c?.full_name;
-                      return displayName ? <p className="text-xs text-blue-400 font-medium capitalize">👤 {displayName}</p> : null;
+                      const customerId = v.customer_id;
+                      return displayName ? (
+                        <p
+                          className="text-xs text-blue-400 font-medium capitalize cursor-pointer hover:text-sky-300 hover:underline"
+                          onClick={(e) => { e.stopPropagation(); navigate(`/CustomerDetails?id=${customerId}`); }}
+                        >👤 {displayName}</p>
+                      ) : null;
                     })()}
                     {(() => { const c = customers.find(c => c.id === v.customer_id); return c?.phone ? <p className="text-xs text-amber-400">{formatPhone(c.phone)}</p> : null; })()}
                   </div>
