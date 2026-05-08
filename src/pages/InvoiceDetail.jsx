@@ -127,7 +127,7 @@ export default function InvoiceDetail() {
     setSaving(false);
   };
 
-  const getInvoiceHTML = () => generateInvoiceHTML({ invoice, laborItems, partsItems, laborTotal, partsTotal, taxRate, taxAmount, grandTotal });
+  const getInvoiceHTML = () => generateInvoiceHTML({ invoice, laborItems, partsItems, laborTotal, partsTotal, taxRate, taxAmount, grandTotal, shopInfo: user || {} });
 
   const handlePrint = () => {
     const html = getInvoiceHTML();
@@ -135,7 +135,7 @@ export default function InvoiceDetail() {
     win.document.write(html);
     win.document.close();
     win.focus();
-    setTimeout(() => { win.print(); }, 300);
+    setTimeout(() => { win.print(); }, 400);
   };
 
   if (isLoading) {
