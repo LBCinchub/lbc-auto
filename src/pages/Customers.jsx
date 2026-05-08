@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Users, Phone, Mail, MapPin, Pencil, Trash2, Car } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Users, Phone, Mail, ChevronRight, Pencil, Trash2 } from "lucide-react";
 import CustomerProfileDialog from "../components/customers/CustomerProfileDialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -16,9 +17,23 @@ import EstimateFormDialog from "../components/estimates/EstimateFormDialog";
 import RepairOrderFormDialog from "../components/orders/RepairOrderFormDialog";
 import InvoiceFormDialog from "../components/invoices/InvoiceFormDialog";
 
+const PAGE_SIZE = 20;
+const AVATAR_COLORS = [
+  "bg-sky-500","bg-violet-500","bg-emerald-500","bg-amber-500","bg-rose-500","bg-indigo-500"
+];
+function getAvatarColor(name = "") {
+  const idx = (name.charCodeAt(0) || 0) % AVATAR_COLORS.length;
+  return AVATAR_COLORS[idx];
+}
+function getInitials(name = "") {
+  return name.split(" ").map(w => w[0]).slice(0,2).join("").toUpperCase();
+}
+
 export default function Customers() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [searchField, setSearchField] = useState("all");
+  const [page, setPage] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [profileCustomer, setProfileCustomer] = useState(null);
@@ -89,6 +104,12 @@ export default function Customers() {
     return fuzzyMatch(search, [c.full_name, c.phone, c.email, c.address, vins, plates, carInfo]);
   });
 
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // Reset to page 1 when search changes
+  useEffect(() => { setPage(1); }, [search, searchField]);
+
   const handleDelete = async (id) => {
     if (window.confirm("Delete this customer?")) {
       await base44.entities.Customer.delete(id);
@@ -130,9 +151,15 @@ export default function Customers() {
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1,2,3].map(i => (
-            <div key={i} className="h-40 rounded-xl bg-gray-800/30 animate-pulse" />
+        <div className="space-y-3">
+          {[1,2,3,4,5].map(i => (
+            <div key={i} className="flex items-center gap-4 rounded-xl border border-gray-800 bg-gray-900/40 p-4 animate-pulse">
+              <div className="w-11 h-11 rounded-full bg-gray-800 flex-shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 bg-gray-800 rounded w-1/3" />
+                <div className="h-3 bg-gray-800/60 rounded w-1/2" />
+              </div>
+            </div>
           ))}
         </div>
       ) : filtered.length === 0 ? (
@@ -141,71 +168,63 @@ export default function Customers() {
           onAction={() => { setEditingCustomer(null); setDialogOpen(true); }}
           actionLabel="Add Customer" />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-           {filtered.map(customer => (
-             <button key={customer.id} onClick={() => setProfileCustomer(customer)}
-               className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5 hover:border-sky-500/30 hover:bg-gray-800/50 transition-all text-left">
-               <div className="flex items-start justify-between mb-3">
-                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                   <div className="w-10 h-10 rounded-full bg-sky-500/20 flex items-center justify-center flex-shrink-0">
-                     <span className="text-sky-400 font-semibold text-sm">
-                       {customer.full_name?.charAt(0)?.toUpperCase()}
-                     </span>
-                   </div>
-                   <h3 className="text-blue-400 font-semibold truncate capitalize">{customer.full_name}</h3>
-                 </div>
-                 <div className="flex gap-1 ml-2 flex-shrink-0" onClick={e => e.stopPropagation()}>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-white"
+        <>
+          <div className="space-y-2">
+            {paginated.map(customer => (
+              <div key={customer.id}
+                onClick={() => navigate(`/CustomerDetails?id=${customer.id}`)}
+                className="flex items-center gap-4 rounded-xl border border-gray-800/60 bg-gray-900/50 px-4 py-3.5 hover:border-sky-500/30 hover:bg-gray-800/50 transition-all cursor-pointer group">
+                {/* Avatar */}
+                <div className={`w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 ${getAvatarColor(customer.full_name)}`}>
+                  <span className="text-white font-bold text-sm">{getInitials(customer.full_name)}</span>
+                </div>
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-white capitalize truncate">{customer.full_name}</div>
+                  <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-0.5">
+                    {customer.phone && (
+                      <span className="flex items-center gap-1 text-xs text-amber-400">
+                        <Phone className="w-3 h-3" /> {formatPhone(customer.phone)}
+                      </span>
+                    )}
+                    {customer.email && (
+                      <span className="flex items-center gap-1 text-xs text-gray-400">
+                        <Mail className="w-3 h-3" /> {customer.email}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {/* Actions */}
+                <div className="flex items-center gap-1 flex-shrink-0" onClick={e => e.stopPropagation()}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-600 hover:text-white"
                     onClick={() => { setEditingCustomer(customer); setDialogOpen(true); }}>
                     <Pencil className="w-3.5 h-3.5" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-rose-400"
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-600 hover:text-rose-400"
                     onClick={() => handleDelete(customer.id)}>
                     <Trash2 className="w-3.5 h-3.5" />
                   </Button>
-                 </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-sky-400 transition-colors flex-shrink-0" />
               </div>
-              <div className="space-y-1.5">
-                {customer.phone && (
-                  <a href={`tel:${customer.phone}`} onClick={e => e.stopPropagation()}
-                    className="flex items-center gap-2 text-sm text-amber-400 hover:text-amber-300 transition-colors">
-                    <Phone className="w-3.5 h-3.5" /> {formatPhone(customer.phone)}
-                  </a>
-                )}
-                {customer.email && (
-                  <a href={`mailto:${customer.email}`} onClick={e => e.stopPropagation()}
-                    className="flex items-center gap-2 text-sm text-gray-400 hover:text-sky-400 transition-colors">
-                    <Mail className="w-3.5 h-3.5" /> {customer.email}
-                  </a>
-                )}
-                {customer.address && (
-                  <div className="flex items-center gap-2 text-sm text-gray-400">
-                    <MapPin className="w-3.5 h-3.5" /> {customer.address}
-                  </div>
-                )}
-                </div>
-                {/* Vehicles */}
-                {(() => {
-                  const cVehicles = vehicles.filter(v => v.customer_id === customer.id);
-                  if (cVehicles.length === 0) return null;
-                  return (
-                    <div className="mt-3 pt-3 border-t border-gray-800/60 space-y-1.5">
-                      {cVehicles.map(v => (
-                        <div key={v.id} className="flex items-center gap-2">
-                          <Car className="w-3.5 h-3.5 text-sky-500 flex-shrink-0" />
-                          <div className="text-xs text-gray-400 min-w-0">
-                            <span className="text-green-400 capitalize">{v.year} {v.make} {v.model}</span>
-                            {v.license_plate && <span className="ml-2 text-gray-500 font-mono">{v.license_plate}</span>}
-                            {v.vin && <span className="ml-2 text-gray-600 font-mono truncate">VIN: {v.vin}</span>}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()}
-                </button>
-                ))}
-                </div>
+            ))}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-2">
+              <span className="text-sm text-gray-500">
+                Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
+              </span>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage(p => p - 1)}
+                  className="border-gray-700 text-gray-300">Previous</Button>
+                <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}
+                  className="border-gray-700 text-gray-300">Next</Button>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       <CustomerFormDialog
