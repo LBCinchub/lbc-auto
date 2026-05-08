@@ -55,6 +55,47 @@ export default function EstimateDetail() {
     // handled inside PrintTemplate
   };
 
+  const handleConvertToInvoice = async () => {
+    if (!window.confirm("Convert this estimate to an invoice?")) return;
+    try {
+      const lineItems = [
+        ...(estimate.parts_items || []).map(p => ({
+          description: p.name,
+          type: "part",
+          quantity: p.quantity || 1,
+          unit_price: p.unit_price || 0,
+          total: p.total || 0,
+        })),
+        ...(estimate.labor_items || []).map(l => ({
+          description: l.description || "Labor",
+          type: "labor",
+          quantity: l.hours || 1,
+          unit_price: l.rate || 0,
+          total: l.total || 0,
+        })),
+      ];
+      const inv = await base44.entities.Invoice.create({
+        estimate_id: estimate.id,
+        customer_id: estimate.customer_id,
+        customer_name: estimate.customer_name,
+        vehicle_info: estimate.vehicle_info,
+        line_items: lineItems,
+        parts_total: estimate.parts_total || 0,
+        labor_total: estimate.labor_total || 0,
+        tax_rate: estimate.tax_rate || 0,
+        tax_amount: estimate.tax_amount || 0,
+        total: estimate.grand_total || 0,
+        balance_due: estimate.grand_total || 0,
+        amount_paid: 0,
+        status: "unpaid",
+      });
+      await base44.entities.Estimate.update(estimate.id, { status: "approved" });
+      navigate(`/InvoiceDetail/${inv.id}`);
+    } catch (error) {
+      console.error("Error converting estimate to invoice:", error);
+    }
+  };
+
   const handleConvertToRepairOrder = async () => {
     if (!window.confirm("Convert this estimate to a repair order?")) return;
     try {
@@ -123,11 +164,18 @@ export default function EstimateDetail() {
         <Button variant="ghost" onClick={() => navigate(-1)} className="text-gray-400 hover:text-white gap-2">
           <ArrowLeft className="w-4 h-4" /> Back
         </Button>
-        {estimate.status === "approved" && (
-          <Button onClick={handleConvertToRepairOrder} className="bg-green-500/20 text-green-400 hover:bg-green-500/30 gap-2">
-            <CheckCircle2 className="w-4 h-4" /> Convert to Repair Order
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {estimate.status === "approved" && (
+            <Button onClick={handleConvertToInvoice} className="bg-emerald-500 hover:bg-emerald-600 text-white gap-2">
+              <CheckCircle2 className="w-4 h-4" /> Convert to Invoice
+            </Button>
+          )}
+          {estimate.status !== "approved" && (
+            <Button onClick={handleConvertToRepairOrder} className="bg-green-500/20 text-green-400 hover:bg-green-500/30 gap-2">
+              <CheckCircle2 className="w-4 h-4" /> Convert to Repair Order
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="rounded-xl border border-gray-800/50 bg-white p-8">

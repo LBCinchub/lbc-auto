@@ -295,6 +295,9 @@ export default function Invoices() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="text-white font-semibold">{inv.invoice_number}</h3>
                     <StatusBadge status={inv.status} />
+                    {inv.status === "unpaid" && new Date(inv.created_date) < new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) && (
+                      <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30">OVERDUE</span>
+                    )}
                   </div>
                   <p className="text-sm mt-0.5">
                    <span className="text-blue-400 capitalize">{inv.customer_name}</span> · <span className="text-green-400 capitalize">{inv.vehicle_info}</span>

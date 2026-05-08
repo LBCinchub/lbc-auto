@@ -8,6 +8,8 @@ import { useNavigate } from "react-router-dom";
 import StatCard from "../components/dashboard/StatCard";
 import RecentOrders from "../components/dashboard/RecentOrders";
 import TodayAppointments from "../components/dashboard/TodayAppointments";
+import KpiCards from "../components/dashboard/KpiCards";
+import RecentActivity from "../components/dashboard/RecentActivity";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import StatusBadge from "../components/shared/StatusBadge";
 
@@ -42,6 +44,12 @@ export default function Dashboard() {
   const { data: parts = [] } = useQuery({
     queryKey: ["parts", user?.email],
     queryFn: () => user ? base44.entities.Part.filter({created_by: user.email}, "-created_date", 500) : Promise.resolve([]),
+    enabled: !!user,
+  });
+
+  const { data: invoices = [] } = useQuery({
+    queryKey: ["invoices", user?.email],
+    queryFn: () => user ? base44.entities.Invoice.filter({created_by: user.email}, "-created_date", 500) : Promise.resolve([]),
     enabled: !!user,
   });
 
@@ -107,6 +115,10 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      <KpiCards orders={orders} appointments={appointments} invoices={invoices} />
+
+      <RecentActivity orders={orders} invoices={invoices} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <TodayAppointments appointments={appointments} customers={customers} onApptClick={(appt) => { setModal({ title: "Today's Appointments", items: todayAppts, type: "appt" }); setSelectedAppt(appt); }} />
