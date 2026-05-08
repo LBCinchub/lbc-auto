@@ -54,55 +54,82 @@ export function generateInvoiceHTML({ invoice, laborItems, partsItems, laborTota
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Invoice #${invoice.invoice_number} – Belal Auto Services</title>
   <style>
-    @page { size: letter portrait; margin: 14mm 14mm 12mm 14mm; }
+    @page {
+      size: letter portrait;
+      margin: 12mm 13mm 10mm 13mm;
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, Helvetica, sans-serif; font-size: 10.5px; color: #1a1a1a; background: #fff; }
-    .page { max-width: 680px; margin: 0 auto; padding: 18px 20px 14px; }
+
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 9.5px;
+      color: #1a1a1a;
+      background: #fff;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* On screen: constrain width and add some padding for readability */
+    .page {
+      width: 100%;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 12px 16px 10px;
+    }
+
+    /* When printing: strip all extra spacing so content uses the @page margins only */
+    @media print {
+      html, body { width: 100%; height: 100%; }
+      .page { max-width: 100%; padding: 0; margin: 0; }
+      .print-btn { display: none !important; }
+    }
 
     /* Header */
-    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 2px solid #1e40af; }
-    .shop-name { font-size: 18px; font-weight: 800; color: #1e40af; letter-spacing: -0.3px; }
-    .shop-info { font-size: 9.5px; color: #555; margin-top: 3px; line-height: 1.5; }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 2px solid #1e40af; }
+    .shop-name { font-size: 16px; font-weight: 800; color: #1e40af; }
+    .shop-info { font-size: 8.5px; color: #555; margin-top: 2px; line-height: 1.5; }
     .invoice-meta { text-align: right; }
-    .invoice-meta h2 { font-size: 15px; font-weight: 700; color: #1e40af; }
-    .invoice-meta p { font-size: 9.5px; color: #555; margin-top: 2px; }
+    .invoice-meta h2 { font-size: 13px; font-weight: 700; color: #1e40af; }
+    .invoice-meta p { font-size: 8.5px; color: #555; margin-top: 1px; }
 
     /* Status badge */
-    .status-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; background: ${statusColor.bg}; color: ${statusColor.text}; border: 1px solid ${statusColor.border}; }
+    .status-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 8.5px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; background: ${statusColor.bg}; color: ${statusColor.text}; border: 1px solid ${statusColor.border}; }
 
     /* Info row */
-    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
-    .info-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 5px; padding: 7px 10px; }
-    .info-box label { font-size: 8.5px; font-weight: 700; text-transform: uppercase; color: #94a3b8; display: block; margin-bottom: 2px; }
-    .info-box span { font-size: 10.5px; font-weight: 600; color: #1a1a1a; }
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+    .info-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 5px 8px; }
+    .info-box label { font-size: 7.5px; font-weight: 700; text-transform: uppercase; color: #94a3b8; display: block; margin-bottom: 1px; }
+    .info-box span { font-size: 9.5px; font-weight: 600; color: #1a1a1a; }
+
+    /* Section headings */
+    h3 { font-size: 9px; font-weight: 700; text-transform: uppercase; color: #1e40af; margin: 8px 0 4px; letter-spacing: 0.3px; }
 
     /* Tables */
-    h3 { font-size: 10.5px; font-weight: 700; text-transform: uppercase; color: #1e40af; margin: 10px 0 5px; letter-spacing: 0.3px; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
     thead tr { background: #1e40af; color: #fff; }
-    th { padding: 5px 7px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
-    td { padding: 5px 7px; font-size: 10px; border-bottom: 1px solid #f1f5f9; }
+    th { padding: 4px 6px; font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; }
+    td { padding: 4px 6px; font-size: 9px; border-bottom: 1px solid #f1f5f9; }
     tr:last-child td { border-bottom: none; }
     tbody tr:nth-child(even) { background: #f8fafc; }
     .center { text-align: center; }
     .right { text-align: right; }
 
     /* Totals box */
-    .totals-box { border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; margin-top: 10px; }
+    .totals-wrap { display: flex; justify-content: flex-end; margin-top: 6px; }
+    .totals-box { width: 260px; border: 1px solid #e2e8f0; border-radius: 5px; overflow: hidden; }
     .totals-box table { margin-bottom: 0; }
-    .totals-box td { padding: 4px 10px; font-size: 10px; border-bottom: 1px solid #f1f5f9; }
+    .totals-box td { padding: 3px 8px; font-size: 9px; border-bottom: 1px solid #f1f5f9; }
     .totals-box tr:last-child td { border-bottom: none; }
-    .total-row td { font-weight: 700; font-size: 11.5px; background: #1e40af; color: #fff; padding: 6px 10px; }
+    .total-row td { font-weight: 700; font-size: 10px; background: #1e40af; color: #fff; padding: 5px 8px; }
     .paid-row td { color: #065f46; background: #f0fdf4; font-weight: 600; }
     .balance-row td { color: #92400e; background: #fff7ed; font-weight: 700; }
     .totals-box .right { text-align: right; }
 
     /* Footer */
-    .footer { margin-top: 12px; padding-top: 8px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 8.5px; color: #94a3b8; }
+    .footer { margin-top: 10px; padding-top: 6px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 7.5px; color: #94a3b8; }
 
-    /* Print button */
-    .print-btn { display: block; width: 160px; margin: 16px auto 0; padding: 9px 0; background: #1e40af; color: #fff; font-size: 11px; font-weight: 700; text-align: center; border: none; border-radius: 6px; cursor: pointer; letter-spacing: 0.3px; }
-    @media print { .print-btn { display: none !important; } }
+    /* Print button (screen only) */
+    .print-btn { display: block; width: 150px; margin: 14px auto 0; padding: 8px 0; background: #1e40af; color: #fff; font-size: 10px; font-weight: 700; text-align: center; border: none; border-radius: 5px; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -153,18 +180,20 @@ export function generateInvoiceHTML({ invoice, laborItems, partsItems, laborTota
   </table>
 
   <!-- Totals -->
-  <div class="totals-box">
-    <table>
-      <tbody>
-        <tr><td>Labor Subtotal</td><td class="right">${fmt(laborTotal)}</td></tr>
-        <tr><td>Parts Subtotal</td><td class="right">${fmt(partsTotal)}</td></tr>
-        <tr><td>Subtotal</td><td class="right">${fmt(laborTotal + partsTotal)}</td></tr>
-        <tr><td>Tax (${taxRate}% — QST + GST)</td><td class="right">${fmt(taxAmount)}</td></tr>
-        <tr class="total-row"><td>TOTAL</td><td class="right">${fmt(grandTotal)}</td></tr>
-        ${invoice.amount_paid > 0 ? `<tr class="paid-row"><td>Amount Paid</td><td class="right">${fmt(invoice.amount_paid)}</td></tr>` : ""}
-        ${invoice.balance_due > 0 ? `<tr class="balance-row"><td>Balance Due</td><td class="right">${fmt(invoice.balance_due)}</td></tr>` : ""}
-      </tbody>
-    </table>
+  <div class="totals-wrap">
+    <div class="totals-box">
+      <table>
+        <tbody>
+          <tr><td>Labor Subtotal</td><td class="right">${fmt(laborTotal)}</td></tr>
+          <tr><td>Parts Subtotal</td><td class="right">${fmt(partsTotal)}</td></tr>
+          <tr><td>Subtotal</td><td class="right">${fmt(laborTotal + partsTotal)}</td></tr>
+          <tr><td>Tax (${taxRate}% — QST+GST)</td><td class="right">${fmt(taxAmount)}</td></tr>
+          <tr class="total-row"><td>TOTAL</td><td class="right">${fmt(grandTotal)}</td></tr>
+          ${invoice.amount_paid > 0 ? `<tr class="paid-row"><td>Amount Paid</td><td class="right">${fmt(invoice.amount_paid)}</td></tr>` : ""}
+          ${invoice.balance_due > 0 ? `<tr class="balance-row"><td>Balance Due</td><td class="right">${fmt(invoice.balance_due)}</td></tr>` : ""}
+        </tbody>
+      </table>
+    </div>
   </div>
 
   <!-- Payment History -->
