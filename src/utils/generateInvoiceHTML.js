@@ -67,7 +67,7 @@ export function generateInvoiceHTML({ invoice, laborItems, partsItems, laborTota
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Invoice ${invoice.invoice_number} – Belal Auto Services</title>
   <style>
-    @page { size: letter portrait; margin: 12mm 13mm 10mm 13mm; }
+    @page { size: letter portrait; margin: 0.5in; }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #1a1a1a; background: #f9fafb; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 

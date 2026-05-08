@@ -2,13 +2,15 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Store, Plus, Trash2, Save, Loader2, Share2 } from "lucide-react";
+import { ArrowLeft, Store, Plus, Trash2, Save, Loader2, Share2, Printer } from "lucide-react";
 import { formatPhone } from "@/utils/formatPhone";
 import { TAX_RATE } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import { generateInvoiceHTML } from "@/utils/generateInvoiceHTML";
+
+
 
 export default function InvoiceDetail() {
   const { invoiceId } = useParams();
@@ -84,7 +86,7 @@ export default function InvoiceDetail() {
   };
 
   const handleShare = async () => {
-    const html = generateInvoiceHTML({ invoice, laborItems, partsItems, laborTotal, partsTotal, taxRate, taxAmount, grandTotal });
+    const html = getInvoiceHTML();
     const blob = new Blob([html], { type: "text/html" });
     const { file_url } = await base44.integrations.Core.UploadFile({ file: blob });
     await navigator.clipboard.writeText(file_url);
@@ -125,6 +127,17 @@ export default function InvoiceDetail() {
     setSaving(false);
   };
 
+  const getInvoiceHTML = () => generateInvoiceHTML({ invoice, laborItems, partsItems, laborTotal, partsTotal, taxRate, taxAmount, grandTotal });
+
+  const handlePrint = () => {
+    const html = getInvoiceHTML();
+    const win = window.open("", "_blank");
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    setTimeout(() => { win.print(); }, 300);
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -146,6 +159,8 @@ export default function InvoiceDetail() {
 
   return (
     <div className="space-y-6">
+
+
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <Button variant="ghost" onClick={() => navigate(-1)} className="text-gray-400 hover:text-white gap-2">
@@ -158,6 +173,9 @@ export default function InvoiceDetail() {
               View Repair Order
             </Button>
           )}
+          <Button variant="outline" onClick={handlePrint} className="border-gray-700 text-gray-300 hover:text-white gap-2">
+            <Printer className="w-4 h-4" /> Print
+          </Button>
           <Button variant="outline" onClick={handleShare} className="border-gray-700 text-gray-300 hover:text-white gap-2">
             <Share2 className="w-4 h-4" /> Share Invoice
           </Button>
