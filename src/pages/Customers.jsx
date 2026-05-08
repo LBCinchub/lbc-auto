@@ -161,15 +161,37 @@ export default function Customers() {
                   <div className="font-semibold text-white capitalize truncate">{customer.full_name}</div>
                   <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-0.5">
                     {customer.phone && (
-                      <span className="flex items-center gap-1 text-xs text-amber-400">
+                      <a
+                        href={`tel:${customer.phone}`}
+                        onClick={e => e.stopPropagation()}
+                        className="flex items-center gap-1 text-xs text-amber-400 hover:text-amber-300"
+                      >
                         <Phone className="w-3 h-3" /> {formatPhone(customer.phone)}
-                      </span>
+                      </a>
                     )}
                     {customer.email && (
                       <span className="flex items-center gap-1 text-xs text-gray-400">
                         <Mail className="w-3 h-3" /> {customer.email}
                       </span>
                     )}
+                  </div>
+                  {/* Vehicle badges */}
+                  <div className="flex flex-wrap gap-1 mt-1.5" onClick={e => e.stopPropagation()}>
+                    {(() => {
+                      const customerVehicles = vehicles.filter(v => v.customer_id === customer.id);
+                      if (customerVehicles.length === 0) {
+                        return <span className="text-xs text-gray-600">No vehicles</span>;
+                      }
+                      return customerVehicles.map(v => (
+                        <span
+                          key={v.id}
+                          onClick={() => navigate(`/Vehicles?vehicleId=${v.id}`)}
+                          className="text-xs bg-gray-800 border border-gray-700 text-gray-300 hover:border-sky-500/50 hover:text-sky-300 px-2 py-0.5 rounded-full cursor-pointer transition-colors"
+                        >
+                          {[v.year, v.make, v.model].filter(Boolean).join(" ")}
+                        </span>
+                      ));
+                    })()}
                   </div>
                 </div>
                 {/* Actions */}
