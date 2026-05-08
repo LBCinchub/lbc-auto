@@ -37,6 +37,24 @@ export default function Vehicles() {
     enabled: !!user,
   });
 
+  const { data: repairOrders = [] } = useQuery({
+    queryKey: ["repairOrders", user?.email],
+    queryFn: () => user ? base44.entities.RepairOrder.filter({created_by: user.email}, "-created_date", 30000) : Promise.resolve([]),
+    enabled: !!user,
+  });
+
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+  function isDueForService(vehicleId) {
+    const vehicleOrders = repairOrders.filter(ro => ro.vehicle_id === vehicleId);
+    if (vehicleOrders.length === 0) return false;
+    const latest = vehicleOrders.reduce((max, ro) =>
+      new Date(ro.created_date) > new Date(max.created_date) ? ro : max
+    );
+    return new Date(latest.created_date) < sixMonthsAgo;
+  }
+
   const filtered = vehicles.filter(v => {
     if (searchField === "make_model") return fuzzyMatch(search, [v.make, v.model, String(v.year || "")]);
     if (searchField === "customer") return fuzzyMatch(search, [v.customer_name]);
@@ -100,7 +118,12 @@ export default function Vehicles() {
                     <Car className="w-5 h-5 text-sky-400" />
                   </div>
                   <div>
-                    <h3 className="text-green-400 font-semibold capitalize">{v.year} {v.make} {v.model}</h3>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-green-400 font-semibold capitalize">{v.year} {v.make} {v.model}</h3>
+                      {isDueForService(v.id) && (
+                        <span className="text-xs bg-orange-500/20 text-orange-400 border border-orange-500/30 px-1.5 py-0.5 rounded-full font-medium">Due for Service</span>
+                      )}
+                    </div>
                     {(() => {
                       const c = customers.find(c => c.id === v.customer_id);
                       const displayName = v.customer_name || c?.full_name;

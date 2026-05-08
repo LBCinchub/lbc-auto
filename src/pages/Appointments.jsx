@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Calendar, Pencil, Trash2, User, Car } from "lucide-react";
+import { Calendar, Pencil, Trash2, User, Car, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { fuzzyMatch } from "@/utils/fuzzySearch";
@@ -11,12 +11,15 @@ import SearchBar from "../components/shared/SearchBar";
 import EmptyState from "../components/shared/EmptyState";
 import StatusBadge from "../components/shared/StatusBadge";
 import AppointmentFormDialog from "../components/appointments/AppointmentFormDialog";
+import RepairOrderFormDialog from "../components/orders/RepairOrderFormDialog";
 
 export default function Appointments() {
   const [search, setSearch] = useState("");
   const [view, setView] = useState("upcoming");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [roPrompt, setRoPrompt] = useState(null); // appointment to create RO from
+  const [roDialogOpen, setRoDialogOpen] = useState(false);
   const queryClient = useQueryClient();
 
   // Auto-open dialog if coming from customer profile
@@ -67,6 +70,14 @@ export default function Appointments() {
     }
   };
 
+  const handleStatusChange = async (appt, newStatus) => {
+    await base44.entities.Appointment.update(appt.id, { status: newStatus });
+    queryClient.invalidateQueries({ queryKey: ["appointments"] });
+    if (newStatus === "in_progress" || newStatus === "completed") {
+      setRoPrompt(appt);
+    }
+  };
+
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["appointments"] });
     queryClient.invalidateQueries({ queryKey: ["customers"] });
@@ -108,6 +119,29 @@ export default function Appointments() {
         <EmptyState icon={Calendar} title="No appointments found" description="Book your first appointment."
           onAction={() => { setEditing(null); setDialogOpen(true); }} actionLabel="Book Appointment" />
       ) : (
+        <>
+        {/* RO Prompt Banner */}
+        {roPrompt && (
+          <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Wrench className="w-5 h-5 text-amber-400 flex-shrink-0" />
+              <div>
+                <p className="text-amber-300 font-medium text-sm">Create a Repair Order for this appointment?</p>
+                <p className="text-gray-400 text-xs mt-0.5">{roPrompt.customer_name} · {roPrompt.vehicle_info} · {roPrompt.service_type}</p>
+              </div>
+            </div>
+            <div className="flex gap-2 flex-shrink-0">
+              <Button size="sm" onClick={() => { setRoDialogOpen(true); }}
+                className="bg-amber-500 hover:bg-amber-600 text-white gap-1.5">
+                <Wrench className="w-3.5 h-3.5" /> Create RO
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setRoPrompt(null)} className="text-gray-400 hover:text-white">
+                Dismiss
+              </Button>
+            </div>
+          </div>
+        )}
+
         <div className="space-y-6">
           {Object.entries(grouped).map(([date, appts]) => (
             <div key={date}>
@@ -117,10 +151,9 @@ export default function Appointments() {
               </h3>
               <div className="space-y-2">
                 {appts.map(a => (
-                   <button key={a.id}
-                     onClick={() => { setEditing(a); setDialogOpen(true); }}
-                     className="w-full rounded-xl border border-gray-800/50 bg-gray-900/50 p-4 hover:border-sky-500/30 hover:bg-gray-800/50 transition-all flex items-center justify-between gap-4 text-left">
-                     <div className="flex items-center gap-4 min-w-0">
+                   <div key={a.id} className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-4 hover:border-sky-500/30 hover:bg-gray-800/50 transition-all flex items-center justify-between gap-4">
+                     <button className="flex items-center gap-4 min-w-0 flex-1 text-left"
+                       onClick={() => { setEditing(a); setDialogOpen(true); }}>
                        <div className="w-16 text-center flex-shrink-0">
                          <p className="text-sky-400 font-semibold text-sm">{a.time_slot}</p>
                        </div>
@@ -138,23 +171,36 @@ export default function Appointments() {
                            )}
                          </div>
                        </div>
-                     </div>
-                     <div className="flex gap-1 flex-shrink-0" onClick={e => e.stopPropagation()}>
+                     </button>
+                     <div className="flex gap-1 flex-shrink-0 items-center">
+                       <select
+                         value={a.status}
+                         onChange={e => handleStatusChange(a, e.target.value)}
+                         onClick={e => e.stopPropagation()}
+                         className="text-xs bg-gray-800 border border-gray-700 text-white rounded px-2 py-1 mr-1"
+                       >
+                         <option value="scheduled">Scheduled</option>
+                         <option value="confirmed">Confirmed</option>
+                         <option value="in_progress">In Progress</option>
+                         <option value="completed">Completed</option>
+                         <option value="cancelled">Cancelled</option>
+                       </select>
                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-white"
-                         onClick={(e) => { e.stopPropagation(); setEditing(a); setDialogOpen(true); }}>
+                         onClick={() => { setEditing(a); setDialogOpen(true); }}>
                          <Pencil className="w-3.5 h-3.5" />
                        </Button>
                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-rose-400"
-                         onClick={(e) => { e.stopPropagation(); handleDelete(a.id); }}>
+                         onClick={() => handleDelete(a.id)}>
                          <Trash2 className="w-3.5 h-3.5" />
                        </Button>
                      </div>
-                   </button>
+                   </div>
                  ))}
               </div>
             </div>
           ))}
         </div>
+        </>
       )}
 
       <AppointmentFormDialog
@@ -166,6 +212,27 @@ export default function Appointments() {
         vehicles={vehicles}
         mechanics={mechanics}
       />
+
+      {roPrompt && (
+        <RepairOrderFormDialog
+          open={roDialogOpen}
+          onClose={() => { setRoDialogOpen(false); setRoPrompt(null); }}
+          order={{
+            customer_id: roPrompt.customer_id,
+            customer_name: roPrompt.customer_name,
+            vehicle_id: roPrompt.vehicle_id,
+            vehicle_info: roPrompt.vehicle_info,
+            mechanic_id: roPrompt.mechanic_id,
+            mechanic_name: roPrompt.mechanic_name,
+            description: roPrompt.service_type,
+          }}
+          onSaved={() => { setRoDialogOpen(false); setRoPrompt(null); queryClient.invalidateQueries({ queryKey: ["orders"] }); }}
+          customers={customers}
+          vehicles={vehicles}
+          mechanics={mechanics}
+          parts={[]}
+        />
+      )}
     </div>
   );
 }

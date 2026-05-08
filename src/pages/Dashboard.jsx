@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
-import { Wrench, CheckCircle2, Clock, Calendar, X, Car, ChevronRight, User, MapPin, Phone, Mail, ArrowLeft } from "lucide-react";
+import { Wrench, CheckCircle2, Clock, Calendar, X, Car, ChevronRight, User, MapPin, Phone, Mail, ArrowLeft, AlertTriangle, Package } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { formatPhone } from "@/utils/formatPhone";
 import { useNavigate } from "react-router-dom";
 import StatCard from "../components/dashboard/StatCard";
@@ -38,6 +39,14 @@ export default function Dashboard() {
     enabled: !!user,
   });
 
+  const { data: parts = [] } = useQuery({
+    queryKey: ["parts", user?.email],
+    queryFn: () => user ? base44.entities.Part.filter({created_by: user.email}, "-created_date", 500) : Promise.resolve([]),
+    enabled: !!user,
+  });
+
+  const lowStockParts = parts.filter(p => (p.quantity ?? 0) < 5);
+
   const today = new Date().toISOString().split("T")[0];
 
   const waiting = orders.filter(o => o.status === "waiting");
@@ -65,6 +74,39 @@ export default function Dashboard() {
         <StatCard title="Today's Appts" value={todayAppts.length} icon={Calendar} color="purple"
           onClick={() => openModal("Today's Appointments", todayAppts, "appt")} />
       </div>
+
+      {/* Low Stock Alert */}
+      {lowStockParts.length > 0 && (
+        <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <AlertTriangle className="w-5 h-5 text-rose-400" />
+            <h3 className="text-rose-300 font-semibold text-sm">Low Stock Alert — {lowStockParts.length} part{lowStockParts.length > 1 ? "s" : ""} need reordering</h3>
+          </div>
+          <div className="space-y-2">
+            {lowStockParts.map(p => (
+              <div key={p.id} className="flex items-center justify-between rounded-lg bg-gray-900/60 px-3 py-2">
+                <div className="flex items-center gap-2">
+                  <Package className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                  <div>
+                    <span className="text-white text-sm font-medium">{p.name}</span>
+                    {p.part_number && <span className="text-gray-500 text-xs ml-2">#{p.part_number}</span>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${p.quantity === 0 ? "bg-rose-500/30 text-rose-300" : "bg-amber-500/30 text-amber-300"}`}>
+                    {p.quantity} left
+                  </span>
+                  <Button size="sm" variant="outline"
+                    onClick={() => navigate("/Parts")}
+                    className="border-rose-500/40 text-rose-400 hover:bg-rose-500/20 h-7 text-xs px-2">
+                    Reorder
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <TodayAppointments appointments={appointments} customers={customers} onApptClick={(appt) => { setModal({ title: "Today's Appointments", items: todayAppts, type: "appt" }); setSelectedAppt(appt); }} />

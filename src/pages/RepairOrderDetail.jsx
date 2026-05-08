@@ -171,16 +171,26 @@ export default function RepairOrderDetail() {
         <Button variant="ghost" onClick={() => navigate(-1)} className="text-gray-400 hover:text-white gap-2">
           <ArrowLeft className="w-4 h-4" /> Back
         </Button>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button onClick={handlePrintWorkerCopy} variant="outline" className="border-gray-700 text-gray-300 hover:text-white gap-2">
             <Printer className="w-4 h-4" /> Print Worker Copy
           </Button>
           <Button onClick={() => setShowEstimateDialog(true)} className="bg-green-600 hover:bg-green-700 gap-2">
             <Plus className="w-4 h-4" /> Create Estimate
           </Button>
-          <Button onClick={() => setShowInvoiceDialog(true)} className="bg-purple-600 hover:bg-purple-700 gap-2">
-            <Plus className="w-4 h-4" /> Create Invoice
-          </Button>
+          {linkedInvoicesList.length === 0 ? (
+            <Button onClick={() => setShowInvoiceDialog(true)}
+              className={`gap-2 ${order.status === "completed" || order.status === "delivered"
+                ? "bg-emerald-500 hover:bg-emerald-600 text-white ring-2 ring-emerald-400/40"
+                : "bg-purple-600 hover:bg-purple-700"}`}>
+              <FileText className="w-4 h-4" />
+              {order.status === "completed" || order.status === "delivered" ? "Create Invoice ✓" : "Create Invoice"}
+            </Button>
+          ) : (
+            <Button onClick={() => navigate(`/InvoiceDetail/${linkedInvoicesList[0].id}`)} className="bg-purple-600 hover:bg-purple-700 gap-2">
+              <FileText className="w-4 h-4" /> View Invoice
+            </Button>
+          )}
           {linkedEstimates.length > 0 && (
             <Button onClick={() => navigate(`/EstimateDetail/${linkedEstimates[0].id}`)} className="bg-sky-500 hover:bg-sky-600 gap-2">
               <FileText className="w-4 h-4" /> View Estimate
@@ -188,6 +198,23 @@ export default function RepairOrderDetail() {
           )}
         </div>
       </div>
+
+      {/* Completed but no invoice — prominent prompt */}
+      {(order.status === "completed" || order.status === "delivered") && linkedInvoicesList.length === 0 && (
+        <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+            <div>
+              <p className="text-emerald-300 font-semibold text-sm">This repair order is {order.status}!</p>
+              <p className="text-gray-400 text-xs mt-0.5">Ready to invoice — all labor and parts will be pre-filled.</p>
+            </div>
+          </div>
+          <Button onClick={() => setShowInvoiceDialog(true)}
+            className="bg-emerald-500 hover:bg-emerald-600 text-white gap-2 flex-shrink-0">
+            <FileText className="w-4 h-4" /> Create Invoice
+          </Button>
+        </div>
+      )}
 
       <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-6">
         <div className="flex items-start justify-between mb-6">
