@@ -39,11 +39,11 @@ export function generateInvoiceHTML({ invoice, laborItems, partsItems, laborTota
   const itemRows = allItems.length > 0
     ? allItems.map(r => `
       <tr>
-        <td style="padding:4px 6px;border-bottom:1px solid #f1f5f9;">${r.description}</td>
-        <td style="padding:4px 6px;border-bottom:1px solid #f1f5f9;text-align:center;color:#64748b;">${r.type}</td>
-        <td style="padding:4px 6px;border-bottom:1px solid #f1f5f9;text-align:center;">${r.qty}</td>
-        <td style="padding:4px 6px;border-bottom:1px solid #f1f5f9;text-align:right;">${fmt(r.unit)}</td>
-        <td style="padding:4px 6px;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:600;">${fmt(r.total)}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #f1f5f9;">${r.description}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #f1f5f9;text-align:center;color:#64748b;">${r.type}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #f1f5f9;text-align:center;">${r.qty}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #f1f5f9;text-align:right;">${fmt(r.unit)}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:600;">${fmt(r.total)}</td>
       </tr>`).join("")
     : `<tr><td colspan="5" style="padding:8px;text-align:center;color:#94a3b8;">No items</td></tr>`;
 
@@ -91,14 +91,14 @@ export function generateInvoiceHTML({ invoice, laborItems, partsItems, laborTota
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: Arial, Helvetica, sans-serif;
-      font-size: 10px;
+      font-size: 13px;
       color: #1a1a1a;
       background: #f1f5f9;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
     @media print {
-      body { background: #fff; font-size: 11px; }
+      body { background: #fff; font-size: 13px; }
       .no-print { display: none !important; }
       .page { max-width: 100% !important; padding: 0 !important; box-shadow: none !important; }
     }
@@ -123,21 +123,21 @@ export function generateInvoiceHTML({ invoice, laborItems, partsItems, laborTota
     <a style="background:#25D366;color:#fff;" href="https://wa.me/?text=${whatsappMsg}" target="_blank">💬 WhatsApp</a>
   </div>
 
-  <div class="page">
+  <div class="page" style="max-width:780px;margin:16px auto;padding:24px 28px;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
 
     <!-- TOP: Shop info + Invoice meta -->
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
       <div>
-        <div style="font-size:16px;font-weight:800;color:#1e40af;">${shopName}</div>
-        ${shopAddress ? `<div style="font-size:9px;color:#64748b;margin-top:2px;">${shopAddress}</div>` : ""}
-        ${shopPhone ? `<div style="font-size:9px;color:#64748b;margin-top:1px;">📞 ${shopPhone}</div>` : ""}
-        <div style="font-size:9px;color:#64748b;margin-top:1px;">✉️ ${shopEmail}</div>
+        <div style="font-size:20px;font-weight:800;color:#1e40af;">${shopName}</div>
+        ${shopAddress ? `<div style="font-size:12px;color:#64748b;margin-top:3px;">${shopAddress}</div>` : ""}
+        ${shopPhone ? `<div style="font-size:12px;color:#64748b;margin-top:2px;">📞 ${shopPhone}</div>` : ""}
+        <div style="font-size:12px;color:#64748b;margin-top:2px;">✉️ ${shopEmail}</div>
       </div>
       <div style="text-align:right;">
-        <div style="font-size:15px;font-weight:800;color:#1e40af;">Invoice #${invoice.invoice_number || "—"}</div>
-        <div style="font-size:9px;color:#64748b;margin-top:3px;">Date: ${invoiceDate}</div>
-        ${invoice.due_date ? `<div style="font-size:9px;color:#64748b;margin-top:2px;">Due: ${dueDate}</div>` : ""}
-        <div style="margin-top:5px;display:inline-block;padding:2px 10px;border-radius:20px;font-size:9px;font-weight:700;background:${isPaid ? "#dcfce7" : isPartial ? "#fef3c7" : "#fee2e2"};color:${badgeColor};border:1px solid ${badgeColor}33;">
+        <div style="font-size:18px;font-weight:800;color:#1e40af;">Invoice #${invoice.invoice_number || "—"}</div>
+        <div style="font-size:12px;color:#64748b;margin-top:4px;">Date: ${invoiceDate}</div>
+        ${invoice.due_date ? `<div style="font-size:12px;color:#64748b;margin-top:3px;">Due: ${dueDate}</div>` : ""}
+        <div style="margin-top:6px;display:inline-block;padding:3px 12px;border-radius:20px;font-size:11px;font-weight:700;background:${isPaid ? "#dcfce7" : isPartial ? "#fef3c7" : "#fee2e2"};color:${badgeColor};border:1px solid ${badgeColor}33;">
           ${badgeText}
         </div>
       </div>
@@ -148,16 +148,16 @@ export function generateInvoiceHTML({ invoice, laborItems, partsItems, laborTota
     <!-- CUSTOMER INFO + VEHICLE -->
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
       <div>
-        <div style="font-size:8px;font-weight:700;text-transform:uppercase;color:#94a3b8;letter-spacing:0.5px;margin-bottom:3px;">Bill To</div>
-        <div style="font-size:12px;font-weight:700;color:#0f172a;">${invoice.customer_name || "—"}</div>
-        ${invoice.customer_phone ? `<div style="font-size:9px;color:#64748b;margin-top:2px;">📞 ${invoice.customer_phone}</div>` : ""}
-        ${invoice.customer_email ? `<div style="font-size:9px;color:#64748b;margin-top:1px;">✉️ ${invoice.customer_email}</div>` : ""}
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#94a3b8;letter-spacing:0.5px;margin-bottom:4px;">Bill To</div>
+        <div style="font-size:15px;font-weight:700;color:#0f172a;">${invoice.customer_name || "—"}</div>
+        ${invoice.customer_phone ? `<div style="font-size:12px;color:#64748b;margin-top:3px;">📞 ${invoice.customer_phone}</div>` : ""}
+        ${invoice.customer_email ? `<div style="font-size:12px;color:#64748b;margin-top:2px;">✉️ ${invoice.customer_email}</div>` : ""}
       </div>
       <div style="text-align:right;">
-        <div style="font-size:8px;font-weight:700;text-transform:uppercase;color:#94a3b8;letter-spacing:0.5px;margin-bottom:3px;">Vehicle</div>
-        <div style="font-size:11px;font-weight:700;color:#0f172a;">${invoice.vehicle_info || "—"}</div>
-        ${invoice.license_plate ? `<div style="font-size:9px;color:#64748b;margin-top:2px;">Plate: ${invoice.license_plate}</div>` : ""}
-        ${invoice.vin ? `<div style="font-size:9px;color:#64748b;margin-top:1px;">VIN: ${invoice.vin}</div>` : ""}
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#94a3b8;letter-spacing:0.5px;margin-bottom:4px;">Vehicle</div>
+        <div style="font-size:14px;font-weight:700;color:#0f172a;">${invoice.vehicle_info || "—"}</div>
+        ${invoice.license_plate ? `<div style="font-size:12px;color:#64748b;margin-top:3px;">Plate: ${invoice.license_plate}</div>` : ""}
+        ${invoice.vin ? `<div style="font-size:12px;color:#64748b;margin-top:2px;">VIN: ${invoice.vin}</div>` : ""}
       </div>
     </div>
 
@@ -165,15 +165,15 @@ export function generateInvoiceHTML({ invoice, laborItems, partsItems, laborTota
 
     <!-- LINE ITEMS TABLE -->
     <div style="margin-bottom:8px;">
-      <div style="font-size:8px;font-weight:700;text-transform:uppercase;color:#1e40af;letter-spacing:0.5px;margin-bottom:5px;">Services &amp; Parts</div>
-      <table style="width:100%;border-collapse:collapse;font-size:9.5px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#1e40af;letter-spacing:0.5px;margin-bottom:6px;">Services &amp; Parts</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
         <thead>
           <tr style="background:#1e40af;">
-            <th style="padding:4px 6px;text-align:left;color:#fff;font-size:8px;font-weight:700;text-transform:uppercase;">Description</th>
-            <th style="padding:4px 6px;text-align:center;color:#fff;font-size:8px;font-weight:700;text-transform:uppercase;">Type</th>
-            <th style="padding:4px 6px;text-align:center;color:#fff;font-size:8px;font-weight:700;text-transform:uppercase;">Qty</th>
-            <th style="padding:4px 6px;text-align:right;color:#fff;font-size:8px;font-weight:700;text-transform:uppercase;">Unit Price</th>
-            <th style="padding:4px 6px;text-align:right;color:#fff;font-size:8px;font-weight:700;text-transform:uppercase;">Total</th>
+            <th style="padding:7px 8px;text-align:left;color:#fff;font-size:11px;font-weight:700;text-transform:uppercase;">Description</th>
+            <th style="padding:7px 8px;text-align:center;color:#fff;font-size:11px;font-weight:700;text-transform:uppercase;">Type</th>
+            <th style="padding:7px 8px;text-align:center;color:#fff;font-size:11px;font-weight:700;text-transform:uppercase;">Qty</th>
+            <th style="padding:7px 8px;text-align:right;color:#fff;font-size:11px;font-weight:700;text-transform:uppercase;">Unit Price</th>
+            <th style="padding:7px 8px;text-align:right;color:#fff;font-size:11px;font-weight:700;text-transform:uppercase;">Total</th>
           </tr>
         </thead>
         <tbody>
@@ -184,16 +184,16 @@ export function generateInvoiceHTML({ invoice, laborItems, partsItems, laborTota
 
     <!-- TOTALS (right-aligned) -->
     <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
-      <div style="width:240px;border:1px solid #e2e8f0;border-radius:5px;overflow:hidden;font-size:9.5px;">
-        <div style="display:flex;justify-content:space-between;padding:4px 10px;border-bottom:1px solid #f1f5f9;"><span>Labor</span><span>${fmt(laborTotal)}</span></div>
-        <div style="display:flex;justify-content:space-between;padding:4px 10px;border-bottom:1px solid #f1f5f9;"><span>Parts</span><span>${fmt(partsTotal)}</span></div>
-        <div style="display:flex;justify-content:space-between;padding:4px 10px;border-bottom:1px solid #e2e8f0;"><span>Subtotal</span><span>${fmt(laborTotal + partsTotal)}</span></div>
-        <div style="display:flex;justify-content:space-between;padding:4px 10px;border-bottom:1px solid #f1f5f9;"><span>Tax (${taxRate}%)</span><span>${fmt(taxAmount)}</span></div>
-        <div style="display:flex;justify-content:space-between;padding:5px 10px;background:#1e40af;color:#fff;font-weight:700;font-size:11px;"><span>TOTAL</span><span>${fmt(grandTotal)}</span></div>
-        ${(invoice.amount_paid > 0) ? `<div style="display:flex;justify-content:space-between;padding:4px 10px;background:#f0fdf4;color:#16a34a;font-weight:600;border-bottom:1px solid #dcfce7;"><span>Amount Paid</span><span>– ${fmt(invoice.amount_paid)}</span></div>` : ""}
+      <div style="width:280px;border:1px solid #e2e8f0;border-radius:5px;overflow:hidden;font-size:12px;">
+        <div style="display:flex;justify-content:space-between;padding:6px 12px;border-bottom:1px solid #f1f5f9;"><span>Labor</span><span>${fmt(laborTotal)}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:6px 12px;border-bottom:1px solid #f1f5f9;"><span>Parts</span><span>${fmt(partsTotal)}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:6px 12px;border-bottom:1px solid #e2e8f0;"><span>Subtotal</span><span>${fmt(laborTotal + partsTotal)}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:6px 12px;border-bottom:1px solid #f1f5f9;"><span>Tax (${taxRate}%)</span><span>${fmt(taxAmount)}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:7px 12px;background:#1e40af;color:#fff;font-weight:700;font-size:14px;"><span>TOTAL</span><span>${fmt(grandTotal)}</span></div>
+        ${(invoice.amount_paid > 0) ? `<div style="display:flex;justify-content:space-between;padding:6px 12px;background:#f0fdf4;color:#16a34a;font-weight:600;border-bottom:1px solid #dcfce7;"><span>Amount Paid</span><span>– ${fmt(invoice.amount_paid)}</span></div>` : ""}
         ${(invoice.balance_due > 0)
-          ? `<div style="display:flex;justify-content:space-between;padding:4px 10px;background:#fff7ed;color:#92400e;font-weight:700;"><span>Balance Due</span><span>${fmt(invoice.balance_due)}</span></div>`
-          : `<div style="display:flex;justify-content:space-between;padding:4px 10px;background:#f0fdf4;color:#16a34a;font-weight:600;"><span>Balance Due</span><span>$0.00</span></div>`}
+          ? `<div style="display:flex;justify-content:space-between;padding:6px 12px;background:#fff7ed;color:#92400e;font-weight:700;"><span>Balance Due</span><span>${fmt(invoice.balance_due)}</span></div>`
+          : `<div style="display:flex;justify-content:space-between;padding:6px 12px;background:#f0fdf4;color:#16a34a;font-weight:600;"><span>Balance Due</span><span>$0.00</span></div>`}
       </div>
     </div>
 
@@ -202,7 +202,7 @@ export function generateInvoiceHTML({ invoice, laborItems, partsItems, laborTota
 
     <!-- FOOTER -->
     <hr class="light" style="margin-top:12px;"/>
-    <div style="text-align:center;font-size:8px;color:#94a3b8;padding-top:5px;">
+    <div style="text-align:center;font-size:11px;color:#94a3b8;padding-top:5px;">
       Thank you for your business! &nbsp;·&nbsp; ${shopName} &nbsp;·&nbsp; ${shopEmail}${shopPhone ? ` &nbsp;·&nbsp; ${shopPhone}` : ""}
     </div>
 
