@@ -22,7 +22,7 @@ const REVENUE_PERIODS = ["Day", "Week", "Month", "Year"];
 
 export default function Analytics() {
   const [revPeriod, setRevPeriod] = useState("Month");
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("insights");
   const [filterMechanic, setFilterMechanic] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterPaymentMethod, setFilterPaymentMethod] = useState("");
@@ -81,6 +81,12 @@ export default function Analytics() {
   const { data: expenses = [] } = useQuery({
     queryKey: ["expenses", user?.email],
     queryFn: () => base44.entities.Expense.filter({ created_by: user.email }, "-expense_date", 500),
+    enabled: !!user,
+  });
+
+  const { data: customers = [] } = useQuery({
+    queryKey: ["customers", user?.email],
+    queryFn: () => base44.entities.Customer.filter({ created_by: user.email }, "-created_date", 1000),
     enabled: !!user,
   });
 
@@ -607,6 +613,7 @@ export default function Analytics() {
       {/* Tab Navigation */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-gray-800/50 border border-gray-700">
+          <TabsTrigger value="insights" className="text-sm data-[state=active]:bg-sky-500/20 data-[state=active]:text-sky-400">Insights</TabsTrigger>
           <TabsTrigger value="overview" className="text-sm data-[state=active]:bg-sky-500/20 data-[state=active]:text-sky-400">Overview</TabsTrigger>
           <TabsTrigger value="profitloss" className="text-sm data-[state=active]:bg-sky-500/20 data-[state=active]:text-sky-400">Profit & Loss</TabsTrigger>
           <TabsTrigger value="reports" className="text-sm data-[state=active]:bg-sky-500/20 data-[state=active]:text-sky-400 flex items-center gap-2">
@@ -615,6 +622,193 @@ export default function Analytics() {
           </TabsTrigger>
         </TabsList>
       </Tabs>
+
+      {activeTab === "insights" && (() => {
+        // --- 1. Monthly Revenue (last 6 months, paid invoices only) ---
+        const now = new Date();
+        const last6Months = Array.from({ length: 6 }, (_, i) => {
+          const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+          return { key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, label: d.toLocaleString("default", { month: "short", year: "2-digit" }) };
+        });
+        const revenueByMonth = {};
+        last6Months.forEach(m => { revenueByMonth[m.key] = 0; });
+        paidInvoices.forEach(inv => {
+          const d = inv.paid_date || inv.created_date?.substring(0, 10);
+          if (!d) return;
+          const key = d.substring(0, 7);
+          if (revenueByMonth[key] !== undefined) revenueByMonth[key] += inv.total || 0;
+        });
+        const revenueChartData = last6Months.map(m => ({ month: m.label, revenue: revenueByMonth[m.key] }));
+
+        // --- 2. Top Services (from repair order descriptions/service types) ---
+        const serviceMap = {};
+        orders.forEach(o => {
+          // Try to extract a clean service keyword from description
+          const raw = (o.description || "Other").trim();
+          const key = raw.length > 40 ? raw.substring(0, 40) + "…" : raw;
+          serviceMap[key] = (serviceMap[key] || 0) + 1;
+        });
+        const topServices = Object.entries(serviceMap)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 6)
+          .map(([name, value]) => ({ name, value }));
+
+        // --- 3. Customer Stats ---
+        const thisMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+        const newCustomersThisMonth = customers.filter(c => c.created_date?.substring(0, 7) === thisMonthKey).length;
+        const roCountByCustomer = {};
+        orders.forEach(o => { if (o.customer_id) roCountByCustomer[o.customer_id] = (roCountByCustomer[o.customer_id] || 0) + 1; });
+        const returningCustomers = Object.values(roCountByCustomer).filter(v => v > 1).length;
+
+        // --- 4. Mechanic Performance ---
+        const mechPerf = mechanics.map(m => {
+          const mechOrders = orders.filter(o => o.mechanic_id === m.id);
+          const totalJobs = mechOrders.length;
+          const totalHours = mechOrders.reduce((s, o) => s + (o.labor_hours || 0), 0);
+          const totalRevenue = mechOrders.reduce((s, o) => s + (o.labor_cost || 0), 0);
+          return { name: m.name, totalJobs, totalHours, totalRevenue };
+        }).sort((a, b) => b.totalRevenue - a.totalRevenue);
+
+        const CHART_COLORS = ["#0ea5e9", "#8b5cf6", "#10b981", "#f59e0b", "#ef4444", "#ec4899"];
+
+        return (
+          <div className="space-y-6">
+            {/* 1. Revenue Bar Chart */}
+            <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5">
+              <h3 className="text-white font-semibold mb-1">Monthly Revenue</h3>
+              <p className="text-gray-400 text-xs mb-4">Last 6 months — paid invoices only</p>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={revenueChartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                    <XAxis dataKey="month" stroke="#64748b" fontSize={12} />
+                    <YAxis stroke="#64748b" fontSize={12} tickFormatter={v => `$${v >= 1000 ? (v/1000).toFixed(1)+"k" : v}`} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: "#0f172a", border: "1px solid #1e293b", borderRadius: "8px", color: "#e2e8f0" }}
+                      formatter={v => [`$${v.toFixed(2)}`, "Revenue"]}
+                    />
+                    <Bar dataKey="revenue" name="Revenue" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* 2 + 3: Top Services + Customer Stats side by side */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* 2. Top Services Donut */}
+              <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5">
+                <h3 className="text-white font-semibold mb-1">Top Services</h3>
+                <p className="text-gray-400 text-xs mb-4">Most common repair types from all orders</p>
+                {topServices.length === 0 ? (
+                  <p className="text-gray-500 text-sm py-8 text-center">No repair orders yet</p>
+                ) : (
+                  <div className="flex flex-col sm:flex-row items-center gap-4">
+                    <div className="h-48 w-48 flex-shrink-0">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie data={topServices} cx="50%" cy="50%" innerRadius={50} outerRadius={75} dataKey="value" paddingAngle={3}>
+                            {topServices.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                          </Pie>
+                          <Tooltip contentStyle={{ backgroundColor: "#0f172a", border: "1px solid #1e293b", borderRadius: "8px", color: "#e2e8f0" }}
+                            formatter={(v, n) => [v + " orders", n]} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="flex-1 space-y-2 w-full">
+                      {topServices.map((s, i) => (
+                        <div key={i} className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
+                            <span className="text-gray-300 text-xs truncate">{s.name}</span>
+                          </div>
+                          <span className="text-gray-400 text-xs font-medium flex-shrink-0">{s.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 3. Customer Stats */}
+              <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5">
+                <h3 className="text-white font-semibold mb-1">Customer Stats</h3>
+                <p className="text-gray-400 text-xs mb-4">Overview of your customer base</p>
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="flex items-center justify-between rounded-lg bg-sky-500/10 border border-sky-500/20 px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <Users className="w-5 h-5 text-sky-400" />
+                      <span className="text-gray-300 text-sm">Total Customers</span>
+                    </div>
+                    <span className="text-2xl font-bold text-sky-400">{customers.length}</span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <TrendingUp className="w-5 h-5 text-emerald-400" />
+                      <span className="text-gray-300 text-sm">New This Month</span>
+                    </div>
+                    <span className="text-2xl font-bold text-emerald-400">{newCustomersThisMonth}</span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg bg-purple-500/10 border border-purple-500/20 px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <Wrench className="w-5 h-5 text-purple-400" />
+                      <span className="text-gray-300 text-sm">Returning Customers <span className="text-gray-500 text-xs">(2+ ROs)</span></span>
+                    </div>
+                    <span className="text-2xl font-bold text-purple-400">{returningCustomers}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 4. Mechanic Performance Table */}
+            <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5">
+              <h3 className="text-white font-semibold mb-1">Mechanic Performance</h3>
+              <p className="text-gray-400 text-xs mb-4">All-time jobs, hours, and labor revenue per mechanic</p>
+              {mechPerf.length === 0 ? (
+                <p className="text-gray-500 text-sm py-4 text-center">No mechanics added yet</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-800/50">
+                        <th className="text-left text-xs text-gray-500 font-medium px-4 py-3">Mechanic</th>
+                        <th className="text-right text-xs text-gray-500 font-medium px-4 py-3">Total Jobs</th>
+                        <th className="text-right text-xs text-gray-500 font-medium px-4 py-3">Total Hours</th>
+                        <th className="text-right text-xs text-gray-500 font-medium px-4 py-3">Labor Revenue</th>
+                        <th className="text-right text-xs text-gray-500 font-medium px-4 py-3">Avg / Job</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {mechPerf.map((m, i) => (
+                        <tr key={m.name} className="border-b border-gray-800/30 hover:bg-gray-800/20 transition-colors">
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
+                              <span className="text-white font-medium">{m.name}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-right text-gray-300">{m.totalJobs}</td>
+                          <td className="px-4 py-3 text-right text-gray-300">{m.totalHours.toFixed(1)}h</td>
+                          <td className="px-4 py-3 text-right text-emerald-400 font-semibold">${m.totalRevenue.toFixed(2)}</td>
+                          <td className="px-4 py-3 text-right text-sky-400">${m.totalJobs > 0 ? (m.totalRevenue / m.totalJobs).toFixed(2) : "0.00"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="border-t-2 border-gray-700">
+                      <tr>
+                        <td className="px-4 py-3 text-gray-400 font-bold text-xs uppercase">Total</td>
+                        <td className="px-4 py-3 text-right text-gray-300 font-bold">{mechPerf.reduce((s, m) => s + m.totalJobs, 0)}</td>
+                        <td className="px-4 py-3 text-right text-gray-300 font-bold">{mechPerf.reduce((s, m) => s + m.totalHours, 0).toFixed(1)}h</td>
+                        <td className="px-4 py-3 text-right text-emerald-400 font-bold">${mechPerf.reduce((s, m) => s + m.totalRevenue, 0).toFixed(2)}</td>
+                        <td className="px-4 py-3 text-right text-gray-500">—</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {activeTab === "profitloss" && (
         <div className="space-y-6">
