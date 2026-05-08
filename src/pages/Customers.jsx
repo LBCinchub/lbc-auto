@@ -26,6 +26,16 @@ export default function Customers() {
   const [quickActionData, setQuickActionData] = useState(null);
   const queryClient = useQueryClient();
 
+  // Auto-open customer from URL param (e.g. /Customers?customerId=xxx)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const customerId = params.get("customerId");
+    if (customerId && customers.length > 0) {
+      const found = customers.find(c => c.id === customerId);
+      if (found) setProfileCustomer(found);
+    }
+  }, [customers]);
+
   const [user, setUser] = useState(null);
 
   useEffect(() => {
