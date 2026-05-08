@@ -2,16 +2,19 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Store, Plus, Trash2, Save, Loader2 } from "lucide-react";
+import { ArrowLeft, Store, Plus, Trash2, Save, Loader2, Share2 } from "lucide-react";
 import { formatPhone } from "@/utils/formatPhone";
 import { TAX_RATE } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/components/ui/use-toast";
+import { generateInvoiceHTML } from "@/utils/generateInvoiceHTML";
 
 export default function InvoiceDetail() {
   const { invoiceId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [user, setUser] = useState(null);
   const [saving, setSaving] = useState(false);
 
@@ -78,6 +81,14 @@ export default function InvoiceDetail() {
       updated.total = (parseFloat(updated.quantity) || 0) * (parseFloat(updated.unit_price) || 0);
       return updated;
     }));
+  };
+
+  const handleShare = async () => {
+    const html = generateInvoiceHTML({ invoice, laborItems, partsItems, laborTotal, partsTotal, taxRate, taxAmount, grandTotal });
+    const blob = new Blob([html], { type: "text/html" });
+    const { file_url } = await base44.integrations.Core.UploadFile({ file: blob });
+    await navigator.clipboard.writeText(file_url);
+    toast({ title: "Link copied!", description: "Shareable invoice link copied to clipboard." });
   };
 
   const handleSave = async () => {
@@ -147,6 +158,9 @@ export default function InvoiceDetail() {
               View Repair Order
             </Button>
           )}
+          <Button variant="outline" onClick={handleShare} className="border-gray-700 text-gray-300 hover:text-white gap-2">
+            <Share2 className="w-4 h-4" /> Share Invoice
+          </Button>
           <Button onClick={handleSave} disabled={saving} className="bg-sky-500 hover:bg-sky-600 gap-2">
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             {saving ? "Saving..." : "Save Changes"}
