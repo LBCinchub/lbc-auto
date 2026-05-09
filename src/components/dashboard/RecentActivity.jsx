@@ -2,6 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Wrench, FileText, ChevronRight } from "lucide-react";
 import StatusBadge from "@/components/shared/StatusBadge";
+import { formatPhone } from "@/utils/formatPhone";
 
 export default function RecentActivity({ orders, invoices, customers = [] }) {
   const navigate = useNavigate();
@@ -28,7 +29,7 @@ export default function RecentActivity({ orders, invoices, customers = [] }) {
                 <p className="text-xs truncate">
                   <span className="text-blue-400">{o.customer_name}</span>
                 </p>
-                {(() => { const phone = o.customer_phone || customers.find(c => c.id === o.customer_id)?.phone; return phone ? <p className="text-xs text-amber-400">{phone}</p> : null; })()}
+                {(() => { const phone = o.customer_phone || customers.find(c => c.id === o.customer_id)?.phone; return phone ? <p className="text-xs text-amber-400">{formatPhone(phone)}</p> : null; })()}
                 {o.vehicle_info && <p className="text-xs text-green-400 truncate">{o.vehicle_info}</p>}
                 <p className="text-xs text-gray-600">{new Date(o.created_date).toLocaleDateString()}</p>
               </div>
@@ -56,7 +57,7 @@ export default function RecentActivity({ orders, invoices, customers = [] }) {
                 <p className="text-xs truncate">
                   <span className="text-blue-400">{inv.customer_name}</span>
                 </p>
-                {(() => { const phone = customers.find(c => c.id === inv.customer_id)?.phone; return phone ? <p className="text-xs text-amber-400">{phone}</p> : null; })()}
+                {(() => { const phone = customers.find(c => c.id === inv.customer_id)?.phone; return phone ? <p className="text-xs text-amber-400">{formatPhone(phone)}</p> : null; })()}
                 {inv.vehicle_info && <p className="text-xs text-green-400 truncate">{inv.vehicle_info}</p>}
                 <p className="text-xs text-gray-600">{new Date(inv.created_date).toLocaleDateString()}</p>
               </div>

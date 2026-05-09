@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatPhone } from "@/utils/formatPhone";
 
 const statusConfig = {
   draft: { label: "Draft", class: "bg-gray-500/20 text-gray-400 border-gray-500/30" },
@@ -42,7 +43,7 @@ export default function RecentEstimates({ estimates = [], customers = [] }) {
                 <p className="text-sm text-blue-400 font-medium truncate capitalize">{est.customer_name}</p>
                 {est.estimate_number && <span className="text-xs text-gray-500 flex-shrink-0">#{est.estimate_number}</span>}
               </div>
-              {(() => { const phone = customers.find(c => c.id === est.customer_id)?.phone; return phone ? <p className="text-xs text-amber-400">{phone}</p> : null; })()}
+              {(() => { const phone = customers.find(c => c.id === est.customer_id)?.phone; return phone ? <p className="text-xs text-amber-400">{formatPhone(phone)}</p> : null; })()}
               <p className="text-xs text-green-400 truncate capitalize">{est.vehicle_info || "Unknown Vehicle"}</p>
               {total > 0 && <p className="text-xs text-gray-400">${total.toFixed(2)}</p>}
               </div>
