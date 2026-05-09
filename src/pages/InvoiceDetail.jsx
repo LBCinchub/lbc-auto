@@ -88,7 +88,10 @@ export default function InvoiceDetail() {
   const handleShare = async () => {
     const html = getInvoiceHTML();
     const blob = new Blob([html], { type: "text/html" });
-    const { file_url } = await base44.integrations.Core.UploadFile({ file: blob });
+    const file = new File([blob], `invoice-${invoice.invoice_number || invoiceId}.html`, { type: "text/html" });
+    const formData = new FormData();
+    formData.append("file", file);
+    const { file_url } = await base44.integrations.Core.UploadFile({ file: formData.get("file") });
     await navigator.clipboard.writeText(file_url);
     toast({ title: "Link copied!", description: "Shareable invoice link copied to clipboard." });
   };
