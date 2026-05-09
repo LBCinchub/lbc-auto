@@ -189,55 +189,12 @@ export default function InvoiceDetail() {
               View Repair Order
             </Button>
           )}
-          {invoice.status !== "paid" && (
-            <Button onClick={() => setShowPayment(v => !v)} variant="outline" className="border-emerald-600 text-emerald-400 hover:bg-emerald-500/10 gap-2">
-              <CreditCard className="w-4 h-4" /> Record Payment
-            </Button>
-          )}
           <Button onClick={handleSave} disabled={saving} className="bg-sky-500 hover:bg-sky-600 gap-2">
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             {saving ? "Saving..." : "Save Changes"}
           </Button>
         </div>
       </div>
-
-      {/* Payment Panel */}
-      {showPayment && (
-        <div className="rounded-xl border border-emerald-700/40 bg-gray-900/80 p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-white font-semibold flex items-center gap-2"><CreditCard className="w-4 h-4 text-emerald-400" /> Record Payment</h3>
-            <button onClick={() => setShowPayment(false)} className="text-gray-500 hover:text-gray-300"><X className="w-4 h-4" /></button>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <p className="text-gray-500 text-xs uppercase mb-1">Amount</p>
-              <Input type="number" step="0.01" value={payAmount} onChange={e => setPayAmount(e.target.value)}
-                placeholder={`Balance: $${(invoice.balance_due || 0).toFixed(2)}`}
-                className="bg-gray-800 border-gray-700 text-white" />
-            </div>
-            <div>
-              <p className="text-gray-500 text-xs uppercase mb-1">Method</p>
-              <Select value={payMethod} onValueChange={setPayMethod}>
-                <SelectTrigger className="bg-gray-800 border-gray-700 text-white"><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-gray-800 border-gray-700">
-                  {["cash", "card", "e-transfer"].map(m => <SelectItem key={m} value={m} className="capitalize">{m}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <p className="text-gray-500 text-xs uppercase mb-1">Note</p>
-              <Input value={payNote} onChange={e => setPayNote(e.target.value)} placeholder="Optional note" className="bg-gray-800 border-gray-700 text-white" />
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setShowPayment(false)} className="border-gray-700 text-gray-300">Cancel</Button>
-            <Button onClick={handleRecordPayment} disabled={payingSaving || !payAmount} className="bg-emerald-600 hover:bg-emerald-700 gap-2">
-              {payingSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              Save Payment
-            </Button>
-          </div>
-        </div>
-      )}
 
       {/* Print Preview — same style as Estimates */}
       <div className="rounded-xl border border-gray-800/50 bg-white p-8">
@@ -467,7 +424,50 @@ export default function InvoiceDetail() {
           )}
           {invoice.balance_due > 0 && (
             <div className="flex justify-between text-yellow-400 font-semibold">
-              <span>Balance Due</span><span>${invoice.balance_due.toFixed(2)}</span>
+              <span>Balance Due</span>
+              <div className="flex items-center gap-3">
+                <span>${invoice.balance_due.toFixed(2)}</span>
+                {invoice.status !== "paid" && (
+                  <button onClick={() => setShowPayment(v => !v)}
+                    className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-md flex items-center gap-1 transition-colors">
+                    <CreditCard className="w-3 h-3" /> Record Payment
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Inline Payment Panel */}
+          {showPayment && (
+            <div className="mt-2 pt-3 border-t border-emerald-700/40 space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div>
+                  <p className="text-gray-500 text-xs uppercase mb-1">Amount</p>
+                  <Input type="number" step="0.01" value={payAmount} onChange={e => setPayAmount(e.target.value)}
+                    placeholder={`${(invoice.balance_due || 0).toFixed(2)}`}
+                    className="bg-gray-700 border-gray-600 text-white h-8 text-sm" />
+                </div>
+                <div>
+                  <p className="text-gray-500 text-xs uppercase mb-1">Method</p>
+                  <Select value={payMethod} onValueChange={setPayMethod}>
+                    <SelectTrigger className="bg-gray-700 border-gray-600 text-white h-8 text-sm"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-gray-800 border-gray-700">
+                      {["cash", "card", "e-transfer"].map(m => <SelectItem key={m} value={m} className="capitalize">{m}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <p className="text-gray-500 text-xs uppercase mb-1">Note</p>
+                  <Input value={payNote} onChange={e => setPayNote(e.target.value)} placeholder="Optional" className="bg-gray-700 border-gray-600 text-white h-8 text-sm" />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <button onClick={() => setShowPayment(false)} className="text-xs text-gray-400 hover:text-gray-200 px-2">Cancel</button>
+                <Button size="sm" onClick={handleRecordPayment} disabled={payingSaving || !payAmount} className="bg-emerald-600 hover:bg-emerald-700 h-7 text-xs gap-1">
+                  {payingSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                  Save Payment
+                </Button>
+              </div>
             </div>
           )}
         </div>
