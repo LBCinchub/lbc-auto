@@ -7,6 +7,7 @@ import { formatPhone } from "@/utils/formatPhone";
 import { useNavigate } from "react-router-dom";
 import StatCard from "../components/dashboard/StatCard";
 import RecentOrders from "../components/dashboard/RecentOrders";
+import RecentEstimates from "../components/dashboard/RecentEstimates";
 import TodayAppointments from "../components/dashboard/TodayAppointments";
 import KpiCards from "../components/dashboard/KpiCards";
 import RecentActivity from "../components/dashboard/RecentActivity";
@@ -50,6 +51,12 @@ export default function Dashboard() {
   const { data: invoices = [] } = useQuery({
     queryKey: ["invoices", user?.email],
     queryFn: () => user ? base44.entities.Invoice.filter({created_by: user.email}, "-created_date", 500) : Promise.resolve([]),
+    enabled: !!user,
+  });
+
+  const { data: estimates = [] } = useQuery({
+    queryKey: ["estimates", user?.email],
+    queryFn: () => user ? base44.entities.Estimate.filter({created_by: user.email}, "-created_date", 500) : Promise.resolve([]),
     enabled: !!user,
   });
 
@@ -122,7 +129,7 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <TodayAppointments appointments={appointments} customers={customers} onApptClick={(appt) => { setModal({ title: "Today's Appointments", items: todayAppts, type: "appt" }); setSelectedAppt(appt); }} />
-        <RecentOrders orders={orders} customers={customers} />
+        <RecentEstimates estimates={estimates} />
       </div>
 
       {/* Modal */}
