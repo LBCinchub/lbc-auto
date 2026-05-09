@@ -127,6 +127,8 @@ export default function Dashboard() {
 
       <RecentActivity orders={orders} invoices={invoices} customers={customers} />
 
+      <RecentOrders orders={orders} customers={customers} />
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <TodayAppointments appointments={appointments} customers={customers} onApptClick={(appt) => { setModal({ title: "Today's Appointments", items: todayAppts, type: "appt" }); setSelectedAppt(appt); }} />
         <RecentEstimates estimates={estimates} customers={customers} />
