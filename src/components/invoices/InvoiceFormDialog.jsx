@@ -260,113 +260,107 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
 
         <div className="px-6 py-5 space-y-6">
 
-          {/* Repair Order Search */}
-          {!sourceEstimate && (
-            <div className="space-y-2">
-              <Label className="text-gray-400 text-xs uppercase tracking-wider">Link Repair Order (optional)</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                <input type="text" value={orderSearch} onChange={e => setOrderSearch(e.target.value)}
-                  placeholder="Search by #, customer, or vehicle..."
-                  className="w-full pl-10 pr-9 py-2 bg-gray-800 border border-gray-700 rounded-md text-white text-sm placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-sky-500" />
-                {orderSearch && <button onClick={() => setOrderSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"><X className="w-4 h-4" /></button>}
+          {/* Customer + Vehicle + Repair Order Link — unified layout */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Customer */}
+            <div>
+              <Label className="text-gray-400 text-xs uppercase tracking-wider">Customer *</Label>
+              <div className="relative mt-1">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                <Input
+                  value={form.customer_id ? (customers.find(c => c.id === form.customer_id)?.full_name || form.customer_name || "") : customerSearch}
+                  onChange={e => { setCustomerSearch(e.target.value); setForm(f => ({ ...f, customer_id: "", customer_name: e.target.value, vehicle_id: "", vehicle_info: "", repair_order_id: "" })); }}
+                  placeholder="Search by name or phone..."
+                  className="bg-gray-800 border-gray-700 text-white pl-8"
+                  readOnly={!!form.repair_order_id || !!sourceEstimate}
+                />
+                {customerSearch && !form.customer_id && (
+                  <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg overflow-hidden shadow-xl max-h-48 overflow-y-auto">
+                    {customers.filter(c => !customerSearch || c.full_name.toLowerCase().includes(customerSearch.toLowerCase()) || (c.phone || "").includes(customerSearch)).slice(0, 8).map(c => (
+                      <button key={c.id} onClick={() => {
+                        setForm(f => ({ ...f, customer_id: c.id, customer_name: c.full_name, customer_phone: c.phone || "", vehicle_id: "", vehicle_info: "" }));
+                        setCustomerSearch("");
+                      }} className="w-full px-3 py-2 text-left hover:bg-sky-500/20 text-sm text-white flex justify-between gap-2">
+                        <span>{c.full_name}</span>
+                        <span className="text-gray-400 text-xs">{c.phone}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {form.customer_id && !form.repair_order_id && !sourceEstimate && (
+                  <button onClick={() => { setForm(f => ({ ...f, customer_id: "", customer_name: "", customer_phone: "", vehicle_id: "", vehicle_info: "" })); setCustomerSearch(""); }}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
-              {orderSearch && (
-                <div className="rounded-md border border-gray-700 bg-gray-800 overflow-hidden">
-                  {filteredOrders.length === 0 && <div className="px-3 py-2 text-xs text-gray-500">No orders found</div>}
-                  {filteredOrders.map(o => (
-                    <button key={o.id} onClick={() => handleOrderSelect(o.id)} className="w-full text-left px-3 py-2 hover:bg-gray-700 text-sm border-b border-gray-700 last:border-0">
-                      <span className="text-white font-medium">#{o.order_number}</span>
-                      <span className="text-gray-400 text-xs ml-2">{o.customer_name} · {o.vehicle_info}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
-          )}
 
-          {/* Customer Search + Vehicle */}
-          {!form.repair_order_id && !sourceEstimate && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <Label className="text-gray-400 text-xs uppercase tracking-wider">Customer *</Label>
-                <div className="relative mt-1">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                  <Input
-                    value={form.customer_id ? (customers.find(c => c.id === form.customer_id)?.full_name || "") : customerSearch}
-                    onChange={e => { setCustomerSearch(e.target.value); setForm(f => ({ ...f, customer_id: "", customer_name: e.target.value, vehicle_id: "", vehicle_info: "" })); }}
-                    placeholder="Search by name or phone..."
-                    className="bg-gray-800 border-gray-700 text-white pl-8"
-                  />
-                  {customerSearch && !form.customer_id && (
-                    <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg overflow-hidden shadow-xl max-h-48 overflow-y-auto">
-                      {customers.filter(c => !customerSearch || c.full_name.toLowerCase().includes(customerSearch.toLowerCase()) || (c.phone || "").includes(customerSearch)).slice(0, 8).map(c => (
-                        <button key={c.id} onClick={() => {
-                          setForm(f => ({ ...f, customer_id: c.id, customer_name: c.full_name, customer_phone: c.phone || "", vehicle_id: "", vehicle_info: "" }));
-                          setCustomerSearch("");
-                        }} className="w-full px-3 py-2 text-left hover:bg-sky-500/20 text-sm text-white flex justify-between gap-2">
-                          <span>{c.full_name}</span>
-                          <span className="text-gray-400 text-xs">{c.phone}</span>
-                        </button>
+            {/* Vehicle */}
+            <div>
+              <Label className="text-gray-400 text-xs uppercase tracking-wider">Vehicle</Label>
+              <div className="mt-1">
+                {form.customer_id && !form.repair_order_id && !sourceEstimate ? (
+                  <Select value={form.vehicle_id || ""} onValueChange={vid => {
+                    const v = vehicles.find(v => v.id === vid);
+                    setForm(f => ({ ...f, vehicle_id: vid, vehicle_info: v ? `${v.year} ${v.make} ${v.model}` : "" }));
+                  }}>
+                    <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                      <SelectValue placeholder="Select vehicle..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                      {vehicles.filter(v => v.customer_id === form.customer_id).map(v => (
+                        <SelectItem key={v.id} value={v.id}>{v.year} {v.make} {v.model}{v.license_plate ? ` (${v.license_plate})` : ""}</SelectItem>
                       ))}
-                    </div>
-                  )}
-                  {form.customer_id && (
-                    <button onClick={() => { setForm(f => ({ ...f, customer_id: "", customer_name: "", customer_phone: "", vehicle_id: "", vehicle_info: "" })); setCustomerSearch(""); }}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-              </div>
-              <div>
-                <Label className="text-gray-400 text-xs uppercase tracking-wider">Vehicle *</Label>
-                <div className="mt-1">
-                  {form.customer_id ? (
-                    <Select value={form.vehicle_id || ""} onValueChange={vid => {
-                      const v = vehicles.find(v => v.id === vid);
-                      setForm(f => ({ ...f, vehicle_id: vid, vehicle_info: v ? `${v.year} ${v.make} ${v.model}` : "" }));
-                    }}>
-                      <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
-                        <SelectValue placeholder="Select vehicle..." />
-                      </SelectTrigger>
-                      <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                        {vehicles.filter(v => v.customer_id === form.customer_id).map(v => (
-                          <SelectItem key={v.id} value={v.id}>{v.year} {v.make} {v.model}{v.license_plate ? ` (${v.license_plate})` : ""}</SelectItem>
-                        ))}
-                        {vehicles.filter(v => v.customer_id === form.customer_id).length === 0 && (
-                          <div className="px-3 py-2 text-xs text-gray-500">No vehicles found for this customer</div>
-                        )}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <Input value={form.vehicle_info} onChange={e => setForm({ ...form, vehicle_info: e.target.value })} className="bg-gray-800 border-gray-700 text-white" placeholder="Select customer first..." disabled={!form.customer_name} />
-                  )}
-                </div>
+                      {vehicles.filter(v => v.customer_id === form.customer_id).length === 0 && (
+                        <div className="px-3 py-2 text-xs text-gray-500">No vehicles found for this customer</div>
+                      )}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input value={form.vehicle_info} onChange={e => !form.repair_order_id && !sourceEstimate && setForm({ ...form, vehicle_info: e.target.value })} className="bg-gray-800 border-gray-700 text-white" placeholder={form.customer_name ? "e.g. 2020 Honda Civic" : "Select customer first..."} readOnly={!!form.repair_order_id || !!sourceEstimate} />
+                )}
               </div>
             </div>
-          )}
 
-          {/* Show linked customer info when coming from repair order / estimate */}
-          {(form.repair_order_id || sourceEstimate) && form.customer_name && (
-            <div className="space-y-0.5">
-              <p className="text-sky-400 text-sm font-semibold">{form.customer_name}</p>
-              <h2 className="text-2xl font-bold text-white">Invoice {invoice?.invoice_number ? `#${invoice.invoice_number}` : "#"}</h2>
-              {form.customer_phone && <p className="text-sky-400 text-sm">📞 {form.customer_phone}</p>}
-            </div>
-          )}
+            {/* Link Repair Order */}
+            {!sourceEstimate && (
+              <div className="sm:col-span-2">
+                <Label className="text-gray-400 text-xs uppercase tracking-wider">Link Repair Order (optional)</Label>
+                {form.repair_order_id ? (
+                  <div className="mt-1 flex items-center gap-2 px-3 py-2 bg-gray-800 border border-sky-500/40 rounded-md">
+                    <span className="text-sky-400 text-sm font-medium flex-1">
+                      #{orders.find(o => o.id === form.repair_order_id)?.order_number} — {form.customer_name} · {form.vehicle_info}
+                    </span>
+                    <button onClick={() => { setForm(f => ({ ...f, repair_order_id: "", customer_id: "", customer_name: "", customer_phone: "", vehicle_info: "" })); setOrderSearch(""); }}
+                      className="text-gray-500 hover:text-rose-400"><X className="w-4 h-4" /></button>
+                  </div>
+                ) : (
+                  <div className="relative mt-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                    <input type="text" value={orderSearch} onChange={e => setOrderSearch(e.target.value)}
+                      placeholder="Search by #, customer, or vehicle..."
+                      className="w-full pl-10 pr-9 py-2 bg-gray-800 border border-gray-700 rounded-md text-white text-sm placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-sky-500" />
+                    {orderSearch && <button onClick={() => setOrderSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"><X className="w-4 h-4" /></button>}
+                    {orderSearch && (
+                      <div className="absolute z-50 top-full left-0 right-0 mt-1 rounded-md border border-gray-700 bg-gray-800 overflow-hidden shadow-xl max-h-48 overflow-y-auto">
+                        {filteredOrders.length === 0 && <div className="px-3 py-2 text-xs text-gray-500">No orders found</div>}
+                        {filteredOrders.map(o => (
+                          <button key={o.id} onClick={() => handleOrderSelect(o.id)} className="w-full text-left px-3 py-2 hover:bg-gray-700 text-sm border-b border-gray-700 last:border-0">
+                            <span className="text-white font-medium">#{o.order_number}</span>
+                            <span className="text-gray-400 text-xs ml-2">{o.customer_name} · {o.vehicle_info}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Info Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-4 border-y border-gray-800">
-            <div>
-              <p className="text-gray-500 text-xs uppercase mb-1">Vehicle</p>
-              <p className="text-white font-bold text-sm">{form.vehicle_info || "—"}</p>
-            </div>
-            <div>
-              <p className="text-gray-500 text-xs uppercase mb-1">Customer</p>
-              <p className="text-white font-bold text-sm">{form.customer_name || "—"}</p>
-              {form.customer_phone && <p className="text-sky-400 text-xs">{form.customer_phone}</p>}
-            </div>
             <div>
               <p className="text-gray-500 text-xs uppercase mb-1">Due Date</p>
               <Input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} className="bg-gray-800 border-gray-700 text-white h-7 text-xs" />
