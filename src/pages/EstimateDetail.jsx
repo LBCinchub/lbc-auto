@@ -258,9 +258,12 @@ export default function EstimateDetail() {
           user={user}
           customer={{ name: estimate.customer_name, phone: customer?.phone, email: customer?.email }}
           vehicle={{ info: estimate.vehicle_info }}
-          lineItems={lineItems}
+          lineItems={[
+            ...laborItems.map(l => ({ description: l.description, type: 'labor', quantity: l.hours, unit_price: l.rate, total: l.total })),
+            ...partsItems.map(p => ({ description: p.name, type: 'part', quantity: p.quantity, unit_price: p.unit_price, total: p.total }))
+          ]}
           paymentHistory={[]}
-          financials={financials}
+          financials={{ laborTotal, partsTotal, taxRate, taxAmount, grandTotal }}
           notes={estimate.notes}
         />
       </div>
