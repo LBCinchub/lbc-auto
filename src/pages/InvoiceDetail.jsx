@@ -2,10 +2,11 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Store, Plus, Trash2, Save, Loader2 } from "lucide-react";
+import { ArrowLeft, Store, Plus, Trash2, Save, Loader2, CreditCard, X } from "lucide-react";
 import { formatPhone } from "@/utils/formatPhone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import PrintTemplate from "@/components/shared/PrintTemplate";
 
@@ -22,6 +23,11 @@ export default function InvoiceDetail() {
   const [laborItems, setLaborItems] = useState([]);
   const [partsItems, setPartsItems] = useState([]);
   const [initialized, setInitialized] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
+  const [payAmount, setPayAmount] = useState("");
+  const [payMethod, setPayMethod] = useState("cash");
+  const [payNote, setPayNote] = useState("");
+  const [payingSaving, setPayingSaving] = useState(false);
 
   useEffect(() => {
     base44.auth.me().then(setUser);
@@ -81,6 +87,35 @@ export default function InvoiceDetail() {
       updated.total = (parseFloat(updated.quantity) || 0) * (parseFloat(updated.unit_price) || 0);
       return updated;
     }));
+  };
+
+  const handleRecordPayment = async () => {
+    const amount = parseFloat(payAmount);
+    if (!amount || amount <= 0) return;
+    setPayingSaving(true);
+    const newAmountPaid = (invoice.amount_paid || 0) + amount;
+    const newBalance = Math.max(0, (invoice.total || grandTotal) - newAmountPaid);
+    const newStatus = newBalance <= 0 ? "paid" : newAmountPaid > 0 ? "partial" : "unpaid";
+    const history = [...(invoice.payment_history || []), {
+      date: new Date().toISOString().substring(0, 10),
+      amount,
+      method: payMethod,
+      note: payNote || "Payment received",
+    }];
+    await base44.entities.Invoice.update(invoiceId, {
+      amount_paid: newAmountPaid,
+      balance_due: newBalance,
+      status: newStatus,
+      payment_method: payMethod,
+      payment_history: history,
+      ...(newStatus === "paid" ? { paid_date: new Date().toISOString().substring(0, 10) } : {}),
+    });
+    queryClient.invalidateQueries({ queryKey: ["invoice", invoiceId] });
+    queryClient.invalidateQueries({ queryKey: ["invoices"] });
+    setPayAmount("");
+    setPayNote("");
+    setShowPayment(false);
+    setPayingSaving(false);
   };
 
   const handleSave = async () => {
@@ -154,12 +189,55 @@ export default function InvoiceDetail() {
               View Repair Order
             </Button>
           )}
+          {invoice.status !== "paid" && (
+            <Button onClick={() => setShowPayment(v => !v)} variant="outline" className="border-emerald-600 text-emerald-400 hover:bg-emerald-500/10 gap-2">
+              <CreditCard className="w-4 h-4" /> Record Payment
+            </Button>
+          )}
           <Button onClick={handleSave} disabled={saving} className="bg-sky-500 hover:bg-sky-600 gap-2">
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             {saving ? "Saving..." : "Save Changes"}
           </Button>
         </div>
       </div>
+
+      {/* Payment Panel */}
+      {showPayment && (
+        <div className="rounded-xl border border-emerald-700/40 bg-gray-900/80 p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-white font-semibold flex items-center gap-2"><CreditCard className="w-4 h-4 text-emerald-400" /> Record Payment</h3>
+            <button onClick={() => setShowPayment(false)} className="text-gray-500 hover:text-gray-300"><X className="w-4 h-4" /></button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <p className="text-gray-500 text-xs uppercase mb-1">Amount</p>
+              <Input type="number" step="0.01" value={payAmount} onChange={e => setPayAmount(e.target.value)}
+                placeholder={`Balance: $${(invoice.balance_due || 0).toFixed(2)}`}
+                className="bg-gray-800 border-gray-700 text-white" />
+            </div>
+            <div>
+              <p className="text-gray-500 text-xs uppercase mb-1">Method</p>
+              <Select value={payMethod} onValueChange={setPayMethod}>
+                <SelectTrigger className="bg-gray-800 border-gray-700 text-white"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-700">
+                  {["cash", "card", "e-transfer"].map(m => <SelectItem key={m} value={m} className="capitalize">{m}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <p className="text-gray-500 text-xs uppercase mb-1">Note</p>
+              <Input value={payNote} onChange={e => setPayNote(e.target.value)} placeholder="Optional note" className="bg-gray-800 border-gray-700 text-white" />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowPayment(false)} className="border-gray-700 text-gray-300">Cancel</Button>
+            <Button onClick={handleRecordPayment} disabled={payingSaving || !payAmount} className="bg-emerald-600 hover:bg-emerald-700 gap-2">
+              {payingSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+              Save Payment
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Print Preview — same style as Estimates */}
       <div className="rounded-xl border border-gray-800/50 bg-white p-8">
