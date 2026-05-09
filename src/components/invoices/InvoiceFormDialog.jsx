@@ -20,12 +20,13 @@ const emptyForm = {
 const emptyLaborRow = () => ({ description: "", hours: 1, rate: 0, total: 0 });
 const emptyPartRow = () => ({ name: "", quantity: 1, unit_price: 0, total: 0 });
 
-export default function InvoiceFormDialog({ open, onClose, invoice, orders, customers, vehicles = [], invoices = [], onSaved, initialOrderId, sourceEstimate }) {
+export default function InvoiceFormDialog({ open, onClose, invoice, orders, customers, vehicles = [], invoices = [], estimates = [], onSaved, initialOrderId, sourceEstimate }) {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [orderSearch, setOrderSearch] = useState("");
   const [invoiceSearch, setInvoiceSearch] = useState("");
-  const [linkMode, setLinkMode] = useState("order"); // "order" | "invoice"
+  const [estimateSearch, setEstimateSearch] = useState("");
+  const [linkMode, setLinkMode] = useState("order"); // "order" | "invoice" | "estimate"
   const [customerSearch, setCustomerSearch] = useState("");
   const [laborItems, setLaborItems] = useState([emptyLaborRow()]);
   const [partsItems, setPartsItems] = useState([emptyPartRow()]);
@@ -34,6 +35,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
     if (!open) return;
     setLinkMode("order");
     setInvoiceSearch("");
+    setEstimateSearch("");
 
     base44.auth.me().then(u => {
       const userTaxRate = u?.tax_rate != null ? u.tax_rate : 0;
@@ -136,6 +138,30 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
 
   const filteredOrders = orders.filter(o => !orderSearch || fuzzyMatch(orderSearch, [o.order_number, o.customer_name, o.vehicle_info]));
   const filteredInvoices = invoices.filter(i => i.id !== invoice?.id && (!invoiceSearch || fuzzyMatch(invoiceSearch, [i.invoice_number, i.customer_name, i.vehicle_info])));
+  const filteredEstimates = estimates.filter(e => !estimateSearch || fuzzyMatch(estimateSearch, [e.estimate_number, e.customer_name, e.vehicle_info]));
+
+  const handleEstimateLink = async (estId) => {
+    const est = estimates.find(e => e.id === estId);
+    if (!est) return;
+    let customerPhone = "";
+    try { const c = await base44.entities.Customer.get(est.customer_id); customerPhone = c.phone || ""; } catch (e) {}
+    setForm(prev => ({
+      ...prev,
+      repair_order_id: "",
+      estimate_id: estId,
+      customer_id: est.customer_id,
+      customer_name: est.customer_name,
+      customer_phone: customerPhone,
+      vehicle_info: est.vehicle_info || "",
+      parts_total: est.parts_total || 0,
+      labor_total: est.labor_total || 0,
+      customer_note: est.notes || "",
+    }));
+    setLaborItems(est.labor_items?.length ? est.labor_items.map(i => ({ description: i.description, hours: i.hours || 1, rate: i.rate || 0, total: i.total || 0 })) : [emptyLaborRow()]);
+    setPartsItems(est.parts_items?.length ? est.parts_items.map(p => ({ name: p.name, quantity: p.quantity || 1, unit_price: p.unit_price || 0, total: p.total || 0 })) : [emptyPartRow()]);
+    setEstimateSearch("");
+    setLinkMode("estimate-linked");
+  };
 
   const handleInvoiceLink = async (linkedInvId) => {
     const linked = invoices.find(i => i.id === linkedInvId);
@@ -350,10 +376,11 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
               <div className="sm:col-span-2">
                 <div className="flex items-center justify-between mb-1">
                   <Label className="text-gray-400 text-xs uppercase tracking-wider">Link Estimate / Repair / Invoice</Label>
-                  {!form.repair_order_id && linkMode !== "invoice-linked" && (
+                  {!form.repair_order_id && !["invoice-linked", "estimate-linked"].includes(linkMode) && (
                     <div className="flex gap-1">
-                      <button onClick={() => { setLinkMode("order"); setInvoiceSearch(""); }} className={`text-xs px-2 py-0.5 rounded ${linkMode === "order" ? "bg-sky-500/20 text-sky-400" : "text-gray-500 hover:text-gray-300"}`}>Repair Order</button>
-                      <button onClick={() => { setLinkMode("invoice"); setOrderSearch(""); }} className={`text-xs px-2 py-0.5 rounded ${linkMode === "invoice" ? "bg-sky-500/20 text-sky-400" : "text-gray-500 hover:text-gray-300"}`}>Invoice</button>
+                      <button onClick={() => { setLinkMode("order"); setInvoiceSearch(""); setEstimateSearch(""); }} className={`text-xs px-2 py-0.5 rounded ${linkMode === "order" ? "bg-sky-500/20 text-sky-400" : "text-gray-500 hover:text-gray-300"}`}>Repair Order</button>
+                      <button onClick={() => { setLinkMode("estimate"); setOrderSearch(""); setInvoiceSearch(""); }} className={`text-xs px-2 py-0.5 rounded ${linkMode === "estimate" ? "bg-emerald-500/20 text-emerald-400" : "text-gray-500 hover:text-gray-300"}`}>Estimate</button>
+                      <button onClick={() => { setLinkMode("invoice"); setOrderSearch(""); setEstimateSearch(""); }} className={`text-xs px-2 py-0.5 rounded ${linkMode === "invoice" ? "bg-purple-500/20 text-purple-400" : "text-gray-500 hover:text-gray-300"}`}>Invoice</button>
                     </div>
                   )}
                 </div>
@@ -366,6 +393,17 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
                       {(() => { const o = orders.find(o => o.id === form.repair_order_id); return o?.created_date ? <span className="text-gray-500 text-xs ml-2">{new Date(o.created_date).toLocaleDateString()}</span> : null; })()}
                     </span>
                     <button onClick={() => { setForm(f => ({ ...f, repair_order_id: "", customer_id: "", customer_name: "", customer_phone: "", vehicle_info: "" })); setOrderSearch(""); setLinkMode("order"); }}
+                      className="text-gray-500 hover:text-rose-400"><X className="w-4 h-4" /></button>
+                  </div>
+                )}
+
+                {/* Linked estimate pill */}
+                {!form.repair_order_id && linkMode === "estimate-linked" && (
+                  <div className="flex items-center gap-2 px-3 py-2 bg-gray-800 border border-emerald-500/40 rounded-md">
+                    <span className="text-emerald-400 text-sm font-medium flex-1">
+                      EST #{estimates.find(e => e.id === form.estimate_id)?.estimate_number} — {form.customer_name} · {form.vehicle_info}
+                    </span>
+                    <button onClick={() => { setForm(f => ({ ...f, estimate_id: "", customer_id: "", customer_name: "", customer_phone: "", vehicle_info: "" })); setLaborItems([emptyLaborRow()]); setPartsItems([emptyPartRow()]); setLinkMode("estimate"); }}
                       className="text-gray-500 hover:text-rose-400"><X className="w-4 h-4" /></button>
                   </div>
                 )}
@@ -397,6 +435,32 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
                               <span className="text-gray-400 text-xs ml-2">{o.customer_name} · {o.vehicle_info}</span>
                             </span>
                             {o.created_date && <span className="text-gray-500 text-xs flex-shrink-0">{new Date(o.created_date).toLocaleDateString()}</span>}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Estimate search */}
+                {!form.repair_order_id && linkMode === "estimate" && (
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                    <input type="text" value={estimateSearch} onChange={e => setEstimateSearch(e.target.value)}
+                      placeholder="Search by estimate #, customer, or vehicle..."
+                      className="w-full pl-10 pr-9 py-2 bg-gray-800 border border-gray-700 rounded-md text-white text-sm placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+                    {estimateSearch && <button onClick={() => setEstimateSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"><X className="w-4 h-4" /></button>}
+                    {estimateSearch && (
+                      <div className="absolute z-50 top-full left-0 right-0 mt-1 rounded-md border border-gray-700 bg-gray-800 overflow-hidden shadow-xl max-h-48 overflow-y-auto">
+                        {filteredEstimates.length === 0 && <div className="px-3 py-2 text-xs text-gray-500">No estimates found</div>}
+                        {filteredEstimates.map(e => (
+                          <button key={e.id} onClick={() => handleEstimateLink(e.id)} className="w-full text-left px-3 py-2 hover:bg-gray-700 text-sm border-b border-gray-700 last:border-0 flex items-center justify-between gap-2">
+                            <span>
+                              <span className="text-white font-medium">#{e.estimate_number}</span>
+                              <span className="text-gray-400 text-xs ml-2">{e.customer_name} · {e.vehicle_info}</span>
+                              {e.status && <span className="text-gray-500 text-xs ml-1">({e.status})</span>}
+                            </span>
+                            {e.created_date && <span className="text-gray-500 text-xs flex-shrink-0">{new Date(e.created_date).toLocaleDateString()}</span>}
                           </button>
                         ))}
                       </div>

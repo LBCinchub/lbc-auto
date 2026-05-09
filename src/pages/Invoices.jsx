@@ -90,6 +90,12 @@ export default function Invoices() {
     enabled: !!user,
   });
 
+  const { data: estimates = [] } = useQuery({
+    queryKey: ["estimates", user?.email],
+    queryFn: () => user ? base44.entities.Estimate.filter({created_by: user.email}, "-created_date", 30000) : Promise.resolve([]),
+    enabled: !!user,
+  });
+
   const filtered = invoices
     .filter(i => statusFilter === "all" || i.status === statusFilter || (statusFilter === "unpaid" && i.status === "partial"))
     .filter(i => {
@@ -440,6 +446,7 @@ export default function Invoices() {
         customers={customers}
         vehicles={vehicles}
         invoices={invoices}
+        estimates={estimates}
         onSaved={() => queryClient.invalidateQueries({ queryKey: ["invoices"] })}
       />
 
