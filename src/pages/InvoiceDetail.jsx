@@ -22,6 +22,7 @@ export default function InvoiceDetail() {
   // Editable line item state
   const [laborItems, setLaborItems] = useState([]);
   const [partsItems, setPartsItems] = useState([]);
+  const [partsUsed, setPartsUsed] = useState([]);
   const [initialized, setInitialized] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [payAmount, setPayAmount] = useState("");
@@ -59,6 +60,7 @@ export default function InvoiceDetail() {
           .filter(i => i.type !== "labor")
           .map(i => ({ name: i.description || "", quantity: i.quantity || 1, unit_price: i.unit_price || 0, total: i.total || 0 }))
       );
+      setPartsUsed(invoice.parts_used || []);
       setInitialized(true);
     }
   }, [invoice, initialized]);
@@ -86,6 +88,13 @@ export default function InvoiceDetail() {
       const updated = { ...r, [field]: value };
       updated.total = (parseFloat(updated.quantity) || 0) * (parseFloat(updated.unit_price) || 0);
       return updated;
+    }));
+  };
+
+  const updatePartUsed = (idx, field, value) => {
+    setPartsUsed(prev => prev.map((r, i) => {
+      if (i !== idx) return r;
+      return { ...r, [field]: value };
     }));
   };
 
@@ -146,6 +155,7 @@ export default function InvoiceDetail() {
       tax_amount: newTax,
       total: newTotal,
       balance_due: Math.max(0, newTotal - amountPaid),
+      parts_used: partsUsed,
     });
     queryClient.invalidateQueries({ queryKey: ["invoice", invoiceId] });
     queryClient.invalidateQueries({ queryKey: ["invoices"] });
@@ -472,30 +482,65 @@ export default function InvoiceDetail() {
           )}
         </div>
 
-        {/* Parts & Suppliers (read-only, for warranty) */}
-        {invoice.parts_used && invoice.parts_used.length > 0 && (
-          <div className="pt-4 border-t border-gray-800">
-            <div className="flex items-center gap-2 mb-3">
+        {/* Parts & Suppliers (editable, for warranty) */}
+        <div className="pt-4 border-t border-gray-800">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
               <Store className="w-4 h-4 text-sky-400" />
               <h3 className="text-white font-semibold">Parts & Suppliers</h3>
               <span className="text-xs text-gray-500">(warranty tracking)</span>
             </div>
-            <div className="space-y-2">
-              {invoice.parts_used.map((p, i) => (
-                <div key={i} className="flex items-center justify-between bg-gray-800/40 rounded-lg px-3 py-2.5">
-                  <div>
-                    <p className="text-white text-sm font-medium">{p.name} <span className="text-gray-500">x{p.quantity}</span></p>
-                    {p.supplier
-                      ? <p className="text-sky-400 text-xs mt-0.5 flex items-center gap-1"><Store className="w-3 h-3" /> {p.supplier}</p>
-                      : <p className="text-gray-600 text-xs mt-0.5 italic">No supplier recorded</p>
-                    }
-                  </div>
-                  <span className="text-gray-300 text-sm">${(p.total || 0).toFixed(2)}</span>
-                </div>
-              ))}
-            </div>
+            <Button size="sm" variant="ghost" onClick={() => setPartsUsed(p => [...p, { name: "", supplier: "", quantity: 1, total: 0 }])}
+              className="text-sky-400 hover:text-sky-300 h-7 px-2">
+              <Plus className="w-4 h-4 mr-1" /> Add Part
+            </Button>
           </div>
-        )}
+          {partsUsed.length === 0 ? (
+            <p className="text-gray-600 text-xs text-center py-4">No parts tracked — click Add Part</p>
+          ) : (
+            <div className="rounded-lg border border-gray-800 overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-800/60 text-gray-500 text-xs">
+                  <tr>
+                    <th className="px-3 py-2 text-left">Part Name</th>
+                    <th className="px-3 py-2 text-right w-20">Qty</th>
+                    <th className="px-3 py-2 text-left flex-1">Supplier</th>
+                    <th className="px-3 py-2 text-right w-24">Total</th>
+                    <th className="w-8" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-800">
+                  {partsUsed.map((row, idx) => (
+                    <tr key={idx} className="bg-gray-900">
+                      <td className="px-2 py-1.5">
+                        <Input value={row.name} onChange={e => updatePartUsed(idx, "name", e.target.value)}
+                          className="bg-gray-800 border-0 text-white h-8 text-sm" placeholder="e.g. Oil Filter" />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <Input type="number" value={row.quantity} onChange={e => updatePartUsed(idx, "quantity", e.target.value)}
+                          className="bg-gray-800 border-0 text-white h-8 text-sm text-right" placeholder="1" />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <Input value={row.supplier} onChange={e => updatePartUsed(idx, "supplier", e.target.value)}
+                          className="bg-gray-800 border-0 text-white h-8 text-sm" placeholder="e.g. AutoZone" />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <Input type="number" value={row.total} onChange={e => updatePartUsed(idx, "total", e.target.value)}
+                          className="bg-gray-800 border-0 text-white h-8 text-sm text-right" placeholder="0.00" />
+                      </td>
+                      <td className="pr-2 py-1.5 text-center">
+                        <button onClick={() => setPartsUsed(p => p.filter((_, i) => i !== idx))}
+                          className="text-gray-600 hover:text-rose-400 transition-colors">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
 
         {invoice.customer_note && (
           <div className="pt-4 border-t border-gray-800">
