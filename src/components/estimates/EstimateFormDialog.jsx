@@ -300,13 +300,32 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
              <div>
                <Label className="text-gray-400">Customer *</Label>
-               {newCustomerForm !== null && (
-                 <div className="bg-gray-800 border border-sky-500/30 rounded-lg p-3 space-y-2 mt-1 mb-1">
+               <div className="relative mt-1">
+                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                 <Input
+                   value={form.customer_id ? (customers.find(c => c.id === form.customer_id)?.full_name || customerSearch) : customerSearch}
+                   onChange={e => { setCustomerSearch(e.target.value); setForm(f => ({ ...f, customer_id: "", customer_name: "", vehicle_id: "", vehicle_info: "" })); }}
+                   placeholder="Search customer by name or phone..."
+                   className="bg-gray-800 border-gray-700 text-white pl-8"
+                 />
+                 {customerSearch && !form.customer_id && (
+                   <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg overflow-hidden shadow-xl">
+                     {filteredCustomers.slice(0, 6).map(c => (
+                       <button key={c.id} onClick={() => { handleCustomerChange(c.id); setCustomerSearch(""); }}
+                         className="w-full px-3 py-2 text-left hover:bg-sky-500/20 text-sm text-white flex justify-between">
+                         <span>{c.full_name}</span>
+                         <span className="text-gray-400 text-xs">{c.phone}</span>
+                       </button>
+                     ))}
+                     {filteredCustomers.length === 0 && <div className="px-3 py-2 text-xs text-gray-500">No customers found</div>}
+                   </div>
+                 )}
+               </div>
+               {newCustomerForm !== null ? (
+                 <div className="bg-gray-800 border border-sky-500/30 rounded-lg p-3 space-y-2 mt-2">
                    <div className="flex items-center justify-between">
                      <p className="text-xs text-sky-400 font-medium">New Customer</p>
-                     <button onClick={() => setNewCustomerForm(null)} className="text-gray-500 hover:text-gray-300">
-                       <X className="w-3.5 h-3.5" />
-                     </button>
+                     <button onClick={() => setNewCustomerForm(null)} className="text-gray-500 hover:text-gray-300"><X className="w-3.5 h-3.5" /></button>
                    </div>
                    <Input value={newCustomerForm.full_name} onChange={e => setNewCustomerForm({...newCustomerForm, full_name: e.target.value})}
                      className="bg-gray-700 border-gray-600 text-white" placeholder="Full name *" />
@@ -314,39 +333,14 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
                      className="bg-gray-700 border-gray-600 text-white" placeholder="Phone number *" />
                    <Input value={newCustomerForm.email} onChange={e => setNewCustomerForm({...newCustomerForm, email: e.target.value})}
                      className="bg-gray-700 border-gray-600 text-white" placeholder="Email" />
-                   <div className="flex gap-2">
-                     <Button size="sm" onClick={saveNewCustomer} disabled={!newCustomerForm.full_name || !newCustomerForm.phone} className="bg-sky-500 hover:bg-sky-600 text-white flex-1">Save</Button>
-                   </div>
+                   <Button size="sm" onClick={saveNewCustomer} disabled={!newCustomerForm.full_name || !newCustomerForm.phone} className="bg-sky-500 hover:bg-sky-600 text-white w-full">Save Customer</Button>
                  </div>
+               ) : (
+                 <button onClick={() => setNewCustomerForm({ full_name: "", phone: "", email: "" })}
+                   className="mt-2 w-full px-3 py-1 rounded text-xs bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/40 text-sky-400 flex items-center justify-center gap-2">
+                   <Plus className="w-3 h-3" /> New customer
+                 </button>
                )}
-               <Select value={form.customer_id} onValueChange={(v) => { handleCustomerChange(v); setCustomerSearch(""); }}>
-                 <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
-                   <SelectValue placeholder="Select customer..." />
-                 </SelectTrigger>
-                 <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                   <div className="px-2 pb-1 pt-1">
-                     <div className="relative">
-                       <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
-                       <input
-                         value={customerSearch}
-                         onChange={e => setCustomerSearch(e.target.value)}
-                         placeholder="Search by name or phone..."
-                         className="w-full pl-7 pr-2 py-1.5 bg-gray-700 border border-gray-600 rounded text-xs text-white placeholder-gray-500 focus:outline-none"
-                         onKeyDown={e => e.stopPropagation()}
-                         onClick={e => e.stopPropagation()}
-                       />
-                     </div>
-                   </div>
-                   {filteredCustomers.map(c => (
-                     <SelectItem key={c.id} value={c.id}>{c.full_name} {c.phone ? `— ${c.phone}` : ""}</SelectItem>
-                   ))}
-                   {filteredCustomers.length === 0 && <div className="px-3 py-2 text-xs text-gray-500">No customers found</div>}
-                   <button onClick={() => setNewCustomerForm({ full_name: "", phone: "", email: "" })}
-                     className="w-full px-3 py-2 text-left text-sky-400 hover:bg-sky-500/20 flex items-center gap-2 text-sm">
-                     <Plus className="w-3.5 h-3.5" /> New customer
-                   </button>
-                 </SelectContent>
-               </Select>
              </div>
              <div>
                <Label className="text-gray-400">Vehicle *</Label>
