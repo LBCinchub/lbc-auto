@@ -4,7 +4,6 @@ import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Store, Plus, Trash2, Save, Loader2, Share2, Printer } from "lucide-react";
 import { formatPhone } from "@/utils/formatPhone";
-import { TAX_RATE } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
@@ -63,7 +62,7 @@ export default function InvoiceDetail() {
   const laborTotal = laborItems.reduce((s, r) => s + (parseFloat(r.hours) || 0) * (parseFloat(r.rate) || 0), 0);
   const partsTotal = partsItems.reduce((s, r) => s + (parseFloat(r.quantity) || 0) * (parseFloat(r.unit_price) || 0), 0);
   const subtotal = laborTotal + partsTotal;
-  const taxRate = TAX_RATE;
+  const taxRate = invoice?.tax_rate ?? (user?.tax_rate ?? 0);
   const taxAmount = subtotal * (taxRate / 100);
   const grandTotal = subtotal + taxAmount;
 
