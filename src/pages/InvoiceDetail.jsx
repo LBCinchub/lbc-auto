@@ -2,12 +2,12 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Store, Plus, Trash2, Save, Loader2, Share2, Printer } from "lucide-react";
+import { ArrowLeft, Store, Plus, Trash2, Save, Loader2 } from "lucide-react";
 import { formatPhone } from "@/utils/formatPhone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/components/ui/use-toast";
-import { generateInvoiceHTML } from "@/utils/generateInvoiceHTML";
+
+import PrintTemplate from "@/components/shared/PrintTemplate";
 
 
 
@@ -15,7 +15,6 @@ export default function InvoiceDetail() {
   const { invoiceId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   const [user, setUser] = useState(null);
   const [saving, setSaving] = useState(false);
 
@@ -84,17 +83,6 @@ export default function InvoiceDetail() {
     }));
   };
 
-  const handleShare = async () => {
-    const html = getInvoiceHTML();
-    const blob = new Blob([html], { type: "text/html" });
-    const file = new File([blob], `invoice-${invoice.invoice_number || invoiceId}.html`, { type: "text/html" });
-    const formData = new FormData();
-    formData.append("file", file);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file: formData.get("file") });
-    await navigator.clipboard.writeText(file_url);
-    toast({ title: "Link copied!", description: "Shareable invoice link copied to clipboard." });
-  };
-
   const handleSave = async () => {
     setSaving(true);
     const line_items = [
@@ -129,16 +117,7 @@ export default function InvoiceDetail() {
     setSaving(false);
   };
 
-  const getInvoiceHTML = () => generateInvoiceHTML({ invoice, laborItems, partsItems, laborTotal, partsTotal, taxRate, taxAmount, grandTotal, shopInfo: user || {} });
 
-  const handlePrint = () => {
-    const html = getInvoiceHTML();
-    const win = window.open("", "_blank");
-    win.document.write(html);
-    win.document.close();
-    win.focus();
-    setTimeout(() => { win.print(); }, 400);
-  };
 
   if (isLoading) {
     return (
@@ -175,12 +154,6 @@ export default function InvoiceDetail() {
               View Repair Order
             </Button>
           )}
-          <Button variant="outline" onClick={handlePrint} className="border-gray-700 text-gray-300 hover:text-white gap-2">
-            <Printer className="w-4 h-4" /> Print
-          </Button>
-          <Button variant="outline" onClick={handleShare} className="border-gray-700 text-gray-300 hover:text-white gap-2">
-            <Share2 className="w-4 h-4" /> Share Invoice
-          </Button>
           <Button onClick={handleSave} disabled={saving} className="bg-sky-500 hover:bg-sky-600 gap-2">
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             {saving ? "Saving..." : "Save Changes"}
@@ -188,6 +161,47 @@ export default function InvoiceDetail() {
         </div>
       </div>
 
+      {/* Print Preview — same style as Estimates */}
+      <div className="rounded-xl border border-gray-800/50 bg-white p-8">
+        <PrintTemplate
+          type="Invoice"
+          docNumber={invoice.invoice_number}
+          createdDate={new Date(invoice.created_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+          user={user}
+          customer={{ name: invoice.customer_name, phone: customer?.phone, email: customer?.email }}
+          vehicle={{ info: invoice.vehicle_info }}
+          lineItems={[
+            ...(laborItems.map(r => ({
+              name: r.description || "Labor",
+              description: `${r.hours}h @ $${parseFloat(r.rate || 0).toFixed(2)}/hr`,
+              unit_price: parseFloat(r.rate) || 0,
+              qty: parseFloat(r.hours) || 0,
+              amount: (parseFloat(r.hours) || 0) * (parseFloat(r.rate) || 0),
+            }))),
+            ...(partsItems.map(r => ({
+              name: r.name || "Part",
+              description: "",
+              unit_price: parseFloat(r.unit_price) || 0,
+              qty: parseFloat(r.quantity) || 1,
+              amount: (parseFloat(r.quantity) || 1) * (parseFloat(r.unit_price) || 0),
+            }))),
+          ]}
+          paymentHistory={invoice.payment_history || []}
+          financials={{
+            partsTotal,
+            laborTotal,
+            subtotal: laborTotal + partsTotal,
+            taxRate,
+            taxAmount,
+            grandTotal,
+            amountPaid: invoice.amount_paid || 0,
+            balanceDue: invoice.balance_due || 0,
+          }}
+          notes={invoice.customer_note}
+        />
+      </div>
+
+      {/* Editable Line Items */}
       <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-6 space-y-6">
         {/* Invoice Header — matches screenshot layout */}
         <div className="flex items-start justify-between flex-wrap gap-4">
@@ -411,7 +425,7 @@ export default function InvoiceDetail() {
             <p className="text-gray-300 text-sm">{invoice.customer_note}</p>
           </div>
         )}
-      </div>
+      </div>{/* end editable section */}
     </div>
   );
 }
