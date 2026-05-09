@@ -190,17 +190,16 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
       ? subtotal * ((form.discount_value || 0) / 100)
       : form.discount_type === "fixed" ? (form.discount_value || 0) : 0;
     const subtotalAfterDiscount = subtotal - discountAmount;
-    const isCash = form.payment_method === "cash";
     let taxableAmount = 0;
     if (form.apply_tax_labor) taxableAmount += laborTotal;
     if (form.apply_tax_parts) taxableAmount += partsTotal;
-    const taxAmount = isCash ? 0 : taxableAmount * ((form.tax_rate || 0) / 100);
+    const taxAmount = taxableAmount * ((form.tax_rate || 0) / 100);
     const total = subtotalAfterDiscount + taxAmount;
     const balanceDue = total - (form.amount_paid || 0);
-    return { subtotal, discountAmount, subtotalAfterDiscount, isCash, taxAmount, total, balanceDue };
+    return { subtotal, discountAmount, subtotalAfterDiscount, taxAmount, total, balanceDue };
   }, [laborTotal, partsTotal, form.discount_type, form.discount_value, form.payment_method, form.tax_rate, form.amount_paid, form.apply_tax_labor, form.apply_tax_parts]);
 
-  const { subtotal, discountAmount, isCash, taxAmount, calculations: _c, ..._ } = calculations;
+  const { subtotal, discountAmount, taxAmount, calculations: _c, ..._ } = calculations;
   const { total, balanceDue } = calculations;
 
   const updateLabor = (idx, field, value) => {
@@ -610,7 +609,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
             {discountAmount > 0 && <div className="flex justify-between text-emerald-400"><span>Discount</span><span>-${discountAmount.toFixed(2)}</span></div>}
             {calculations.taxAmount > 0 && (
               <div className="flex justify-between text-gray-400 border-t border-gray-700/50 pt-2">
-                <span>Tax ({form.tax_rate}%){isCash ? " (No Tax - Cash)" : ""}</span>
+                <span>Tax ({form.tax_rate}%)</span>
                 <span>${calculations.taxAmount.toFixed(2)}</span>
               </div>
             )}
