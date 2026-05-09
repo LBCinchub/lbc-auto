@@ -644,9 +644,10 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
             </div>
             <div className="space-y-3">
               <Label className="text-gray-400 text-xs uppercase tracking-wider">Tax & Discount</Label>
-              <div>
-                <Label className="text-gray-400 text-xs">Tax Rate (%)</Label>
-                <Input type="number" step="0.1" value={form.tax_rate} onChange={e => setForm({ ...form, tax_rate: Number(e.target.value) })} className="bg-gray-800 border-gray-700 text-white mt-1" />
+              <div className="rounded-md bg-gray-800/50 border border-gray-700 p-3">
+                <Label className="text-gray-400 text-xs">Tax Rate (%) *</Label>
+                <Input type="number" step="0.1" value={form.tax_rate} onChange={e => setForm({ ...form, tax_rate: Number(e.target.value) })} className="bg-gray-800 border-gray-700 text-white mt-1 font-semibold" placeholder="0" />
+                <p className="text-gray-500 text-xs mt-1">Your saved tax rate: {form.tax_rate}%</p>
               </div>
               <div className="flex gap-3">
                 <label className="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" checked={form.apply_tax_labor} onChange={e => setForm({ ...form, apply_tax_labor: e.target.checked })} className="w-4 h-4 rounded" /><span className="text-xs text-gray-300">Tax on Labor</span></label>
