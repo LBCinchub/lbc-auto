@@ -326,7 +326,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
             {/* Link Repair Order */}
             {!sourceEstimate && (
               <div className="sm:col-span-2">
-                <Label className="text-gray-400 text-xs uppercase tracking-wider">Link Repair Order (optional)</Label>
+                <Label className="text-gray-400 text-xs uppercase tracking-wider">Link Estimate / Repair / Invoice</Label>
                 {form.repair_order_id ? (
                   <div className="mt-1 flex items-center gap-2 px-3 py-2 bg-gray-800 border border-sky-500/40 rounded-md">
                     <span className="text-sky-400 text-sm font-medium flex-1">
