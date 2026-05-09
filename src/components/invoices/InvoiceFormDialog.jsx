@@ -39,78 +39,79 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
 
     base44.auth.me().then(u => {
       const userTaxRate = u?.tax_rate != null ? u.tax_rate : 0;
-      setForm(f => ({ ...f, tax_rate: invoice?.tax_rate ?? userTaxRate }));
-    });
-
-    if (invoice && invoice.id) {
-      setForm({
-        ...emptyForm,
-        repair_order_id: invoice.repair_order_id || "",
-        estimate_id: invoice.estimate_id || "",
-        customer_id: invoice.customer_id || "",
-        customer_name: invoice.customer_name || "",
-        customer_phone: invoice.customer_phone || "",
-        vehicle_info: invoice.vehicle_info || "",
-        parts_total: invoice.parts_total || 0,
-        labor_total: invoice.labor_total || 0,
-        tax_rate: invoice.tax_rate || 0,
-        status: invoice.status || "unpaid",
-        due_date: invoice.due_date || "",
-        payment_method: invoice.payment_method || "",
-        amount_paid: invoice.amount_paid || 0,
-        payment_history: invoice.payment_history || [],
-        receipt_number: invoice.receipt_number || "",
-        card_last4: invoice.card_last4 || "",
-        cashier_name: invoice.cashier_name || "",
-        parts_used: invoice.parts_used || [],
-        labor_items: invoice.labor_items || [],
-        customer_note: invoice.customer_note || "",
-        discount_type: invoice.discount_type || "none",
-        discount_value: invoice.discount_value || 0,
-        apply_tax_parts: invoice.apply_tax_parts !== false,
-        apply_tax_labor: invoice.apply_tax_labor !== false,
-      });
-      const li = invoice.line_items || [];
-      setLaborItems(li.filter(i => i.type === "labor").map(i => ({ description: i.description || "", hours: i.quantity || 1, rate: i.unit_price || 0, total: i.total || 0 })));
-      setPartsItems(invoice.parts_used?.length ? invoice.parts_used.map(p => ({ name: p.name, quantity: p.quantity || 1, unit_price: p.unit_price || 0, total: p.total || 0, supplier: p.supplier || "" })) : [emptyPartRow()]);
-    } else if (sourceEstimate) {
-      setForm(f => ({
-        ...f,
-        estimate_id: sourceEstimate.id,
-        customer_id: sourceEstimate.customer_id,
-        customer_name: sourceEstimate.customer_name,
-        vehicle_info: sourceEstimate.vehicle_info,
-        parts_total: sourceEstimate.parts_total || 0,
-        labor_total: sourceEstimate.labor_total || 0,
-        customer_note: sourceEstimate.notes || "",
-      }));
-      setLaborItems(sourceEstimate.labor_items?.length ? sourceEstimate.labor_items.map(i => ({ description: i.description, hours: i.hours || 1, rate: i.rate || 0, total: i.total || 0 })) : [emptyLaborRow()]);
-      setPartsItems(sourceEstimate.parts_items?.length ? sourceEstimate.parts_items.map(p => ({ name: p.name, quantity: p.quantity || 1, unit_price: p.unit_price || 0, total: p.total || 0 })) : [emptyPartRow()]);
-    } else if (initialOrderId) {
-      const order = orders.find(o => o.id === initialOrderId);
-      if (order) {
+      
+      if (invoice && invoice.id) {
+        setForm({
+          ...emptyForm,
+          repair_order_id: invoice.repair_order_id || "",
+          estimate_id: invoice.estimate_id || "",
+          customer_id: invoice.customer_id || "",
+          customer_name: invoice.customer_name || "",
+          customer_phone: invoice.customer_phone || "",
+          vehicle_info: invoice.vehicle_info || "",
+          parts_total: invoice.parts_total || 0,
+          labor_total: invoice.labor_total || 0,
+          tax_rate: userTaxRate,
+          status: invoice.status || "unpaid",
+          due_date: invoice.due_date || "",
+          payment_method: invoice.payment_method || "",
+          amount_paid: invoice.amount_paid || 0,
+          payment_history: invoice.payment_history || [],
+          receipt_number: invoice.receipt_number || "",
+          card_last4: invoice.card_last4 || "",
+          cashier_name: invoice.cashier_name || "",
+          parts_used: invoice.parts_used || [],
+          labor_items: invoice.labor_items || [],
+          customer_note: invoice.customer_note || "",
+          discount_type: invoice.discount_type || "none",
+          discount_value: invoice.discount_value || 0,
+          apply_tax_parts: invoice.apply_tax_parts !== false,
+          apply_tax_labor: invoice.apply_tax_labor !== false,
+        });
+        const li = invoice.line_items || [];
+        setLaborItems(li.filter(i => i.type === "labor").map(i => ({ description: i.description || "", hours: i.quantity || 1, rate: i.unit_price || 0, total: i.total || 0 })));
+        setPartsItems(invoice.parts_used?.length ? invoice.parts_used.map(p => ({ name: p.name, quantity: p.quantity || 1, unit_price: p.unit_price || 0, total: p.total || 0, supplier: p.supplier || "" })) : [emptyPartRow()]);
+      } else if (sourceEstimate) {
         setForm(f => ({
           ...f,
-          repair_order_id: order.id,
-          customer_id: order.customer_id,
-          customer_name: order.customer_name,
-          vehicle_info: order.vehicle_info,
-          parts_total: order.parts_cost || 0,
-          labor_total: order.labor_cost || 0,
+          estimate_id: sourceEstimate.id,
+          customer_id: sourceEstimate.customer_id,
+          customer_name: sourceEstimate.customer_name,
+          vehicle_info: sourceEstimate.vehicle_info,
+          parts_total: sourceEstimate.parts_total || 0,
+          labor_total: sourceEstimate.labor_total || 0,
+          customer_note: sourceEstimate.notes || "",
+          tax_rate: userTaxRate,
         }));
-        setLaborItems(order.labor_items?.length ? order.labor_items.map(i => ({ description: i.description, hours: i.hours || 1, rate: i.rate || 0, total: i.total || 0 })) : [emptyLaborRow()]);
-        setPartsItems(order.parts_used?.length ? order.parts_used.map(p => ({ name: p.name, quantity: p.quantity || 1, unit_price: p.unit_price || 0, total: p.total || 0 })) : [emptyPartRow()]);
+        setLaborItems(sourceEstimate.labor_items?.length ? sourceEstimate.labor_items.map(i => ({ description: i.description, hours: i.hours || 1, rate: i.rate || 0, total: i.total || 0 })) : [emptyLaborRow()]);
+        setPartsItems(sourceEstimate.parts_items?.length ? sourceEstimate.parts_items.map(p => ({ name: p.name, quantity: p.quantity || 1, unit_price: p.unit_price || 0, total: p.total || 0 })) : [emptyPartRow()]);
+      } else if (initialOrderId) {
+        const order = orders.find(o => o.id === initialOrderId);
+        if (order) {
+          setForm(f => ({
+            ...f,
+            repair_order_id: order.id,
+            customer_id: order.customer_id,
+            customer_name: order.customer_name,
+            vehicle_info: order.vehicle_info,
+            parts_total: order.parts_cost || 0,
+            labor_total: order.labor_cost || 0,
+            tax_rate: userTaxRate,
+          }));
+          setLaborItems(order.labor_items?.length ? order.labor_items.map(i => ({ description: i.description, hours: i.hours || 1, rate: i.rate || 0, total: i.total || 0 })) : [emptyLaborRow()]);
+          setPartsItems(order.parts_used?.length ? order.parts_used.map(p => ({ name: p.name, quantity: p.quantity || 1, unit_price: p.unit_price || 0, total: p.total || 0 })) : [emptyPartRow()]);
+        }
+      } else if (invoice && !invoice.id) {
+        setForm(f => ({ ...f, customer_id: invoice.customer_id || "", customer_name: invoice.customer_name || "", vehicle_info: invoice.vehicle_info || "", tax_rate: userTaxRate }));
+        setLaborItems([emptyLaborRow()]);
+        setPartsItems([emptyPartRow()]);
+      } else {
+        setForm({ ...emptyForm, tax_rate: userTaxRate });
+        setLaborItems([emptyLaborRow()]);
+        setPartsItems([emptyPartRow()]);
       }
-    } else if (invoice && !invoice.id) {
-      setForm(f => ({ ...f, customer_id: invoice.customer_id || "", customer_name: invoice.customer_name || "", vehicle_info: invoice.vehicle_info || "" }));
-      setLaborItems([emptyLaborRow()]);
-      setPartsItems([emptyPartRow()]);
-    } else {
-      setForm(emptyForm);
-      setLaborItems([emptyLaborRow()]);
-      setPartsItems([emptyPartRow()]);
-    }
-  }, [open, invoice, initialOrderId, sourceEstimate, orders]);
+      });
+      }, [open, invoice, initialOrderId, sourceEstimate, orders]);
 
   const handleOrderSelect = useCallback(async (orderId) => {
     const order = orders.find(o => o.id === orderId);

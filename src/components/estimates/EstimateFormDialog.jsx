@@ -36,33 +36,33 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
     // Load user's saved tax rate
     base44.auth.me().then(u => {
       const userTaxRate = u?.tax_rate != null ? u.tax_rate : 0;
-      setForm(f => ({ ...f, tax_rate: f.tax_rate === "0" || !f.tax_rate ? String(userTaxRate) : f.tax_rate }));
+      
+      if (estimate && estimate.id) {
+        // Editing an existing estimate — use user's tax rate
+        setForm({
+          ...emptyForm,
+          ...estimate,
+          apply_tax: estimate.apply_tax !== false,
+          tax_rate: String(userTaxRate),
+          tax_applies_to: "both",
+          labor_items: estimate.labor_items?.length ? estimate.labor_items.map(i => ({ ...i, hours: String(i.hours), rate: String(i.rate ?? 120) })) : [emptyLaborRow()],
+          parts_items: estimate.parts_items?.length ? estimate.parts_items.map(i => ({ ...i, quantity: String(i.quantity), unit_price: String(i.unit_price) })) : [emptyPartRow()],
+        });
+      } else {
+        // New estimate — use user's tax rate
+        const prefillVehicleId = estimate?._prefillVehicleId || estimate?.vehicle_id || "";
+        const prefillVehicleInfo = estimate?._prefillVehicleInfo || estimate?.vehicle_info || "";
+        setForm({
+          ...emptyForm,
+          repair_order_id: repairOrderId || "",
+          customer_id: estimate?.customer_id || "",
+          customer_name: estimate?.customer_name || "",
+          vehicle_id: prefillVehicleId,
+          vehicle_info: prefillVehicleInfo,
+          tax_rate: String(userTaxRate),
+        });
+      }
     });
-
-    if (estimate && estimate.id) {
-      // Editing an existing estimate
-      setForm({
-        ...emptyForm,
-        ...estimate,
-        apply_tax: estimate.apply_tax !== false,
-        tax_rate: String(estimate.tax_rate ?? 0),
-        tax_applies_to: "both",
-        labor_items: estimate.labor_items?.length ? estimate.labor_items.map(i => ({ ...i, hours: String(i.hours), rate: String(i.rate ?? 120) })) : [emptyLaborRow()],
-        parts_items: estimate.parts_items?.length ? estimate.parts_items.map(i => ({ ...i, quantity: String(i.quantity), unit_price: String(i.unit_price) })) : [emptyPartRow()],
-      });
-    } else {
-      // New estimate (possibly pre-filled with customer info from customer profile or appointment)
-      const prefillVehicleId = estimate?._prefillVehicleId || estimate?.vehicle_id || "";
-      const prefillVehicleInfo = estimate?._prefillVehicleInfo || estimate?.vehicle_info || "";
-      setForm({
-        ...emptyForm,
-        repair_order_id: repairOrderId || "",
-        customer_id: estimate?.customer_id || "",
-        customer_name: estimate?.customer_name || "",
-        vehicle_id: prefillVehicleId,
-        vehicle_info: prefillVehicleInfo,
-      });
-    }
   }, [estimate, open, repairOrderId]);
 
   // Merge parent vehicles with any locally created ones (so newly added vehicles appear immediately)
