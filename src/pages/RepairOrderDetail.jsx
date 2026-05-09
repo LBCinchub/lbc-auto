@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, FileText, Plus, Trash2, MoreVertical, Clock, History, Wrench, PenLine, CheckCircle2, XCircle, Printer, ShoppingCart } from "lucide-react";
+import { formatPhone } from "@/utils/formatPhone";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -221,7 +222,7 @@ export default function RepairOrderDetail() {
            <div>
              <h1 className="text-3xl font-bold text-white">Repair Order #{order.order_number}</h1>
              <p className="text-gray-400 mt-1">{order.customer_name}</p>
-             {customer?.phone && <p className="text-gray-500 text-sm mt-1">{customer.phone}</p>}
+             {customer?.phone && <p className="text-gray-500 text-sm mt-1">{formatPhone(customer.phone)}</p>}
            </div>
            <Select value={order.status} onValueChange={(newStatus) => {
              setUpdatingStatus(true);
