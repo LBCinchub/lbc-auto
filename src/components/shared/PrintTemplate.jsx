@@ -10,18 +10,18 @@ function buildPrintHTML(contentHTML, title, isWorker) {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Inter', Arial, sans-serif; font-size: 8px; color: #1a1a2e; background: white; }
-        .page { max-width: 760px; margin: 0 auto; padding: 12px; }
+        .page { max-width: 900px; margin: 0 auto; padding: 16px; }
         table { width: 100%; border-collapse: collapse; }
         thead tr { background: #0f172a; }
-        thead th { padding: 4px 6px; text-align: left; font-size: 6.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; }
+        thead th { padding: 5px 7px; text-align: left; font-size: 7px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; }
         tbody tr { border-bottom: 1px solid #f1f5f9; }
         tbody tr:nth-child(even) { background: #fafbff; }
-        tbody td { padding: 4px 6px; font-size: 7.5px; color: #334155; vertical-align: top; }
+        tbody td { padding: 5px 7px; font-size: 8px; color: #334155; vertical-align: top; }
         @media print {
-          html { zoom: 0.82; }
+          html { zoom: 1; }
           body { padding: 0; }
-          .page { padding: 8px; }
-          @page { margin: 8mm; size: letter; }
+          .page { padding: 10px; }
+          @page { margin: 10mm; size: letter; }
         }
       </style>
     </head>
@@ -163,7 +163,7 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
       </div>
 
       {/* Full copy (with prices) — shown on screen */}
-      <div id="print-full-body" style={{ fontFamily: "'Inter', Arial, sans-serif", fontSize: 11, color: "#1a1a2e", background: "white" }}>
+      <div id="print-full-body" style={{ fontFamily: "'Inter', Arial, sans-serif", fontSize: 12, color: "#1a1a2e", background: "white", maxWidth: "900px", margin: "0 auto", padding: "16px" }}>
         {headerBlock}
 
         {/* Line Items Table — full */}
@@ -259,7 +259,7 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
       </div>
 
       {/* Worker copy (no prices) — hidden off-screen, used only for printing */}
-      <div id="print-worker-body" style={{ position: "absolute", left: -9999, top: 0, fontFamily: "'Inter', Arial, sans-serif", fontSize: 11, color: "#1a1a2e", background: "white", width: 780 }}>
+      <div id="print-worker-body" style={{ position: "absolute", left: -9999, top: 0, fontFamily: "'Inter', Arial, sans-serif", fontSize: 12, color: "#1a1a2e", background: "white", width: 900 }}>
         {headerBlock}
 
         {/* Line Items Table — NO prices */}
