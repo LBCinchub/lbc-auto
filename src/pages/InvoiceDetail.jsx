@@ -144,8 +144,8 @@ export default function InvoiceDetail() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <Button variant="ghost" onClick={() => navigate(-1)} className="text-gray-400 hover:text-white gap-2">
-          <ArrowLeft className="w-4 h-4" /> Back
+        <Button variant="ghost" onClick={() => navigate("/Invoices")} className="text-gray-400 hover:text-white gap-2">
+          <ArrowLeft className="w-4 h-4" /> Back to Invoices
         </Button>
         <div className="h-40 rounded-xl bg-gray-800/30 animate-pulse" />
       </div>
@@ -166,8 +166,8 @@ export default function InvoiceDetail() {
 
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <Button variant="ghost" onClick={() => navigate(-1)} className="text-gray-400 hover:text-white gap-2">
-          <ArrowLeft className="w-4 h-4" /> Back
+        <Button variant="ghost" onClick={() => navigate("/Invoices")} className="text-gray-400 hover:text-white gap-2">
+          <ArrowLeft className="w-4 h-4" /> Back to Invoices
         </Button>
         <div className="flex gap-2">
           {invoice?.repair_order_id && (
