@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Package, Pencil, Trash2, AlertTriangle, Download, Barcode, FileSpreadsheet } from "lucide-react";
@@ -26,11 +26,17 @@ export default function Parts() {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [stockUpdateOpen, setStockUpdateOpen] = useState(false);
   const [scannedPart, setScannedPart] = useState(null);
+  const [user, setUser] = useState(null);
   const queryClient = useQueryClient();
 
+  useEffect(() => {
+    base44.auth.me().then(setUser);
+  }, []);
+
   const { data: parts = [], isLoading } = useQuery({
-    queryKey: ["parts"],
-    queryFn: () => base44.entities.Part.list("-created_date", 200),
+    queryKey: ["parts", user?.email],
+    queryFn: () => user ? base44.entities.Part.filter({ created_by: user.email }, "-created_date", 200) : Promise.resolve([]),
+    enabled: !!user,
   });
 
   const lowStockParts = parts.filter(p => p.min_stock > 0 && p.quantity <= p.min_stock);

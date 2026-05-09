@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { HardHat, Phone, Mail, Pencil, Trash2, Wrench, DollarSign, LogIn, LogOut } from "lucide-react";
@@ -20,16 +20,23 @@ export default function Mechanics() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: "", phone: "", email: "", specialty: "", pay_type: "hourly", hourly_rate: "", daily_rate: "", status: "available" });
   const [saving, setSaving] = useState(false);
+  const [user, setUser] = useState(null);
   const queryClient = useQueryClient();
 
+  useEffect(() => {
+    base44.auth.me().then(setUser);
+  }, []);
+
   const { data: mechanics = [] } = useQuery({
-    queryKey: ["mechanics"],
-    queryFn: () => base44.entities.Mechanic.list("-created_date", 50),
+    queryKey: ["mechanics", user?.email],
+    queryFn: () => user ? base44.entities.Mechanic.filter({ created_by: user.email }, "-created_date", 50) : Promise.resolve([]),
+    enabled: !!user,
   });
 
   const { data: orders = [] } = useQuery({
-    queryKey: ["repairOrders"],
-    queryFn: () => base44.entities.RepairOrder.list("-created_date", 200),
+    queryKey: ["repairOrders", user?.email],
+    queryFn: () => user ? base44.entities.RepairOrder.filter({ created_by: user.email }, "-created_date", 200) : Promise.resolve([]),
+    enabled: !!user,
   });
 
   const openDialog = (mech) => {
@@ -68,8 +75,9 @@ export default function Mechanics() {
   const today = format(new Date(), "yyyy-MM-dd");
 
   const { data: todayEntries = [] } = useQuery({
-    queryKey: ["timeEntries", today],
-    queryFn: () => base44.entities.TimeEntry.filter({ date: today }),
+    queryKey: ["timeEntries", today, user?.email],
+    queryFn: () => user ? base44.entities.TimeEntry.filter({ date: today, created_by: user.email }) : Promise.resolve([]),
+    enabled: !!user,
     refetchInterval: 30000,
   });
 

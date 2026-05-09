@@ -20,7 +20,12 @@ export default function Appointments() {
   const [editing, setEditing] = useState(null);
   const [roPrompt, setRoPrompt] = useState(null); // appointment to create RO from
   const [roDialogOpen, setRoDialogOpen] = useState(false);
+  const [user, setUser] = useState(null);
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    base44.auth.me().then(setUser);
+  }, []);
 
   // Auto-open dialog if coming from customer profile
   useEffect(() => {
@@ -33,20 +38,24 @@ export default function Appointments() {
   }, []);
 
   const { data: appointments = [], isLoading } = useQuery({
-    queryKey: ["appointments"],
-    queryFn: () => base44.entities.Appointment.list("-date", 200),
+    queryKey: ["appointments", user?.email],
+    queryFn: () => user ? base44.entities.Appointment.filter({ created_by: user.email }, "-date", 200) : Promise.resolve([]),
+    enabled: !!user,
   });
   const { data: customers = [] } = useQuery({
-    queryKey: ["customers"],
-    queryFn: () => base44.entities.Customer.list("-created_date", 30000),
+    queryKey: ["customers", user?.email],
+    queryFn: () => user ? base44.entities.Customer.filter({ created_by: user.email }, "-created_date", 30000) : Promise.resolve([]),
+    enabled: !!user,
   });
   const { data: vehicles = [] } = useQuery({
-    queryKey: ["vehicles"],
-    queryFn: () => base44.entities.Vehicle.list("-created_date", 200),
+    queryKey: ["vehicles", user?.email],
+    queryFn: () => user ? base44.entities.Vehicle.filter({ created_by: user.email }, "-created_date", 200) : Promise.resolve([]),
+    enabled: !!user,
   });
   const { data: mechanics = [] } = useQuery({
-    queryKey: ["mechanics"],
-    queryFn: () => base44.entities.Mechanic.list("-created_date", 50),
+    queryKey: ["mechanics", user?.email],
+    queryFn: () => user ? base44.entities.Mechanic.filter({ created_by: user.email }, "-created_date", 50) : Promise.resolve([]),
+    enabled: !!user,
   });
 
   const today = new Date().toISOString().split("T")[0];
