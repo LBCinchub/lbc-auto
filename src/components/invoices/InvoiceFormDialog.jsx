@@ -248,7 +248,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         {/* Header */}
         <div className="sticky top-0 z-10 bg-gray-900 border-b border-gray-800 px-6 py-4 flex items-center justify-between">
           <DialogTitle className="text-lg font-semibold text-white">
-            {invoice?.id ? "Edit Invoice" : sourceEstimate ? `Invoice from Estimate #${sourceEstimate.estimate_number}` : "Create Invoice"}
+            {invoice?.id ? "Edit Invoice" : sourceEstimate ? `Invoice from Estimate #${sourceEstimate.estimate_number}${sourceEstimate.created_date ? ` · ${new Date(sourceEstimate.created_date).toLocaleDateString()}` : ""}` : "Create Invoice"}
           </DialogTitle>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={onClose} className="border-gray-700 text-gray-300">Cancel</Button>
@@ -331,6 +331,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
                   <div className="mt-1 flex items-center gap-2 px-3 py-2 bg-gray-800 border border-sky-500/40 rounded-md">
                     <span className="text-sky-400 text-sm font-medium flex-1">
                       #{orders.find(o => o.id === form.repair_order_id)?.order_number} — {form.customer_name} · {form.vehicle_info}
+                      {(() => { const o = orders.find(o => o.id === form.repair_order_id); return o?.created_date ? <span className="text-gray-500 text-xs ml-2">{new Date(o.created_date).toLocaleDateString()}</span> : null; })()}
                     </span>
                     <button onClick={() => { setForm(f => ({ ...f, repair_order_id: "", customer_id: "", customer_name: "", customer_phone: "", vehicle_info: "" })); setOrderSearch(""); }}
                       className="text-gray-500 hover:text-rose-400"><X className="w-4 h-4" /></button>
@@ -346,9 +347,12 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
                       <div className="absolute z-50 top-full left-0 right-0 mt-1 rounded-md border border-gray-700 bg-gray-800 overflow-hidden shadow-xl max-h-48 overflow-y-auto">
                         {filteredOrders.length === 0 && <div className="px-3 py-2 text-xs text-gray-500">No orders found</div>}
                         {filteredOrders.map(o => (
-                          <button key={o.id} onClick={() => handleOrderSelect(o.id)} className="w-full text-left px-3 py-2 hover:bg-gray-700 text-sm border-b border-gray-700 last:border-0">
-                            <span className="text-white font-medium">#{o.order_number}</span>
-                            <span className="text-gray-400 text-xs ml-2">{o.customer_name} · {o.vehicle_info}</span>
+                          <button key={o.id} onClick={() => handleOrderSelect(o.id)} className="w-full text-left px-3 py-2 hover:bg-gray-700 text-sm border-b border-gray-700 last:border-0 flex items-center justify-between gap-2">
+                            <span>
+                              <span className="text-white font-medium">#{o.order_number}</span>
+                              <span className="text-gray-400 text-xs ml-2">{o.customer_name} · {o.vehicle_info}</span>
+                            </span>
+                            {o.created_date && <span className="text-gray-500 text-xs flex-shrink-0">{new Date(o.created_date).toLocaleDateString()}</span>}
                           </button>
                         ))}
                       </div>
