@@ -190,15 +190,15 @@ export default function InvoiceDetail() {
       </div>
 
       <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-6 space-y-6">
-        {/* Invoice Header */}
+        {/* Invoice Header — matches screenshot layout */}
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
-            {user?.business_name && <p className="text-xs font-semibold text-sky-400 mb-1">{user.business_name}</p>}
-            <h1 className="text-2xl font-bold text-white">Invoice #{invoice.invoice_number}</h1>
-            <p className="text-gray-400 mt-0.5">{invoice.customer_name}</p>
+            <p className="text-sky-400 text-sm font-semibold mb-0.5">{customer?.full_name || invoice.customer_name}</p>
+            <h1 className="text-3xl font-bold text-white">Invoice #{invoice.invoice_number}</h1>
+            <p className="text-gray-400 mt-1">{invoice.customer_name}</p>
             {(invoice.customer_phone || customer?.phone) && (
               <a href={`tel:${invoice.customer_phone || customer?.phone}`}
-                className="text-sky-400 hover:text-sky-300 text-sm font-medium mt-1 inline-block">
+                className="text-sky-400 hover:text-sky-300 text-sm font-semibold mt-1 inline-flex items-center gap-1">
                 📞 {formatPhone(invoice.customer_phone || customer?.phone)}
               </a>
             )}
@@ -217,11 +217,11 @@ export default function InvoiceDetail() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pb-4 border-b border-gray-800">
           <div>
             <p className="text-gray-500 text-xs uppercase mb-1">Vehicle</p>
-            <p className="text-white font-semibold text-sm">{invoice.vehicle_info || "—"}</p>
+            <p className="text-white font-bold text-sm">{invoice.vehicle_info || "—"}</p>
           </div>
           <div>
             <p className="text-gray-500 text-xs uppercase mb-1">Customer</p>
-            <p className="text-white font-semibold text-sm">{customer?.full_name || invoice.customer_name || "—"}</p>
+            <p className="text-white font-bold text-sm">{customer?.full_name || invoice.customer_name || "—"}</p>
             {customer?.phone && <p className="text-sky-400 text-xs">{formatPhone(customer.phone)}</p>}
           </div>
           <div>
@@ -234,7 +234,7 @@ export default function InvoiceDetail() {
           </div>
           <div>
             <p className="text-gray-500 text-xs uppercase mb-1">Balance Due</p>
-            <p className={`font-semibold text-sm ${invoice.balance_due > 0 ? "text-yellow-400" : "text-emerald-400"}`}>
+            <p className={`font-bold text-sm ${invoice.balance_due > 0 ? "text-yellow-400" : "text-emerald-400"}`}>
               ${(invoice.balance_due || 0).toFixed(2)}
             </p>
           </div>
