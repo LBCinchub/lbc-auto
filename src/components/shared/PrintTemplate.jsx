@@ -183,7 +183,7 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
                 <td style={{ padding: "4px 7px", fontSize: 9, fontWeight: 600, color: "#94a3b8" }}>{i + 1}</td>
                 <td style={{ padding: "4px 7px", fontSize: 10, fontWeight: 700, color: "#0f172a" }}>{item.name}</td>
                 <td style={{ padding: "4px 7px", fontSize: 9, color: "#64748b" }}>{item.description}</td>
-                <td style={{ padding: "4px 7px", fontSize: 9, color: "#334155", textAlign: "right" }}>${(item.unit_price || 0).toFixed(2)}</td>
+                <td style={{ padding: "4px 7px", fontSize: 9, color: "#334155", textAlign: "right" }}>${(parseFloat(item.unit_price) || 0).toFixed(2)}</td>
                 <td style={{ padding: "4px 7px", fontSize: 9, color: "#334155", textAlign: "center" }}>{item.qty}</td>
                 <td style={{ padding: "4px 7px", fontSize: 10, fontWeight: 700, color: "#0f172a", textAlign: "right" }}>${(item.amount || 0).toFixed(2)}</td>
               </tr>
