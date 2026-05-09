@@ -20,10 +20,11 @@ const emptyForm = {
 const emptyLaborRow = () => ({ description: "", hours: 1, rate: 0, total: 0 });
 const emptyPartRow = () => ({ name: "", quantity: 1, unit_price: 0, total: 0 });
 
-export default function InvoiceFormDialog({ open, onClose, invoice, orders, customers, onSaved, initialOrderId, sourceEstimate }) {
+export default function InvoiceFormDialog({ open, onClose, invoice, orders, customers, vehicles = [], onSaved, initialOrderId, sourceEstimate }) {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [orderSearch, setOrderSearch] = useState("");
+  const [customerSearch, setCustomerSearch] = useState("");
   const [laborItems, setLaborItems] = useState([emptyLaborRow()]);
   const [partsItems, setPartsItems] = useState([emptyPartRow()]);
 
@@ -284,45 +285,82 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
             </div>
           )}
 
-          {/* Customer Header Card */}
-          <div className="space-y-1">
-            {form.customer_name ? (
-              <>
-                <p className="text-sky-400 text-sm font-semibold">{form.customer_name}</p>
-                <h2 className="text-2xl font-bold text-white">Invoice {invoice?.invoice_number ? `#${invoice.invoice_number}` : "#"}</h2>
-                {form.customer_name && <p className="text-gray-400 text-sm">{form.customer_name}</p>}
-                {form.customer_phone && <p className="text-sky-400 text-sm">📞 {form.customer_phone}</p>}
-              </>
-            ) : (
-              <div className="space-y-3">
-                <h2 className="text-xl font-bold text-white">New Invoice</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-gray-400 text-xs">Customer Name *</Label>
-                    <Input value={form.customer_name} onChange={e => setForm({ ...form, customer_name: e.target.value })} className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="e.g. John Smith" />
-                  </div>
-                  <div>
-                    <Label className="text-gray-400 text-xs">Phone</Label>
-                    <Input value={form.customer_phone} onChange={e => setForm({ ...form, customer_phone: e.target.value })} className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="e.g. 555-123-4567" />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <Label className="text-gray-400 text-xs">Vehicle Info</Label>
-                    <Input value={form.vehicle_info} onChange={e => setForm({ ...form, vehicle_info: e.target.value })} className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="e.g. 2020 Honda Civic" />
-                  </div>
+          {/* Customer Search + Vehicle */}
+          {!form.repair_order_id && !sourceEstimate && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label className="text-gray-400 text-xs uppercase tracking-wider">Customer *</Label>
+                <div className="relative mt-1">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                  <Input
+                    value={form.customer_id ? (customers.find(c => c.id === form.customer_id)?.full_name || "") : customerSearch}
+                    onChange={e => { setCustomerSearch(e.target.value); setForm(f => ({ ...f, customer_id: "", customer_name: e.target.value, vehicle_id: "", vehicle_info: "" })); }}
+                    placeholder="Search by name or phone..."
+                    className="bg-gray-800 border-gray-700 text-white pl-8"
+                  />
+                  {customerSearch && !form.customer_id && (
+                    <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg overflow-hidden shadow-xl max-h-48 overflow-y-auto">
+                      {customers.filter(c => !customerSearch || c.full_name.toLowerCase().includes(customerSearch.toLowerCase()) || (c.phone || "").includes(customerSearch)).slice(0, 8).map(c => (
+                        <button key={c.id} onClick={() => {
+                          setForm(f => ({ ...f, customer_id: c.id, customer_name: c.full_name, customer_phone: c.phone || "", vehicle_id: "", vehicle_info: "" }));
+                          setCustomerSearch("");
+                        }} className="w-full px-3 py-2 text-left hover:bg-sky-500/20 text-sm text-white flex justify-between gap-2">
+                          <span>{c.full_name}</span>
+                          <span className="text-gray-400 text-xs">{c.phone}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {form.customer_id && (
+                    <button onClick={() => { setForm(f => ({ ...f, customer_id: "", customer_name: "", customer_phone: "", vehicle_id: "", vehicle_info: "" })); setCustomerSearch(""); }}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
-            )}
-          </div>
+              <div>
+                <Label className="text-gray-400 text-xs uppercase tracking-wider">Vehicle *</Label>
+                <div className="mt-1">
+                  {form.customer_id ? (
+                    <Select value={form.vehicle_id || ""} onValueChange={vid => {
+                      const v = vehicles.find(v => v.id === vid);
+                      setForm(f => ({ ...f, vehicle_id: vid, vehicle_info: v ? `${v.year} ${v.make} ${v.model}` : "" }));
+                    }}>
+                      <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                        <SelectValue placeholder="Select vehicle..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                        {vehicles.filter(v => v.customer_id === form.customer_id).map(v => (
+                          <SelectItem key={v.id} value={v.id}>{v.year} {v.make} {v.model}{v.license_plate ? ` (${v.license_plate})` : ""}</SelectItem>
+                        ))}
+                        {vehicles.filter(v => v.customer_id === form.customer_id).length === 0 && (
+                          <div className="px-3 py-2 text-xs text-gray-500">No vehicles found for this customer</div>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input value={form.vehicle_info} onChange={e => setForm({ ...form, vehicle_info: e.target.value })} className="bg-gray-800 border-gray-700 text-white" placeholder="Select customer first..." disabled={!form.customer_name} />
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Show linked customer info when coming from repair order / estimate */}
+          {(form.repair_order_id || sourceEstimate) && form.customer_name && (
+            <div className="space-y-0.5">
+              <p className="text-sky-400 text-sm font-semibold">{form.customer_name}</p>
+              <h2 className="text-2xl font-bold text-white">Invoice {invoice?.invoice_number ? `#${invoice.invoice_number}` : "#"}</h2>
+              {form.customer_phone && <p className="text-sky-400 text-sm">📞 {form.customer_phone}</p>}
+            </div>
+          )}
 
           {/* Info Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-4 border-y border-gray-800">
             <div>
               <p className="text-gray-500 text-xs uppercase mb-1">Vehicle</p>
-              {form.repair_order_id || sourceEstimate ? (
-                <p className="text-white font-bold text-sm">{form.vehicle_info || "—"}</p>
-              ) : (
-                <Input value={form.vehicle_info} onChange={e => setForm({ ...form, vehicle_info: e.target.value })} className="bg-gray-800 border-gray-700 text-white h-7 text-xs" placeholder="Year Make Model" />
-              )}
+              <p className="text-white font-bold text-sm">{form.vehicle_info || "—"}</p>
             </div>
             <div>
               <p className="text-gray-500 text-xs uppercase mb-1">Customer</p>

@@ -438,6 +438,7 @@ export default function Invoices() {
         invoice={editingInvoice}
         orders={orders}
         customers={customers}
+        vehicles={vehicles}
         onSaved={() => queryClient.invalidateQueries({ queryKey: ["invoices"] })}
       />
 
