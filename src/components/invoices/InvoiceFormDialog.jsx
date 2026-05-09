@@ -1,38 +1,43 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronDown, Store, Search, X } from "lucide-react";
+import { Search, X, Plus, Trash2, Store, Loader2 } from "lucide-react";
 import { fuzzyMatch } from "@/utils/fuzzySearch";
-export default function InvoiceFormDialog({ open, onClose, invoice, orders, customers, onSaved, initialOrderId, sourceEstimate }) {
-  const [form, setForm] = useState({
+
+const emptyForm = {
   repair_order_id: "", estimate_id: "", customer_id: "", customer_name: "", customer_phone: "", vehicle_info: "",
   parts_total: 0, labor_total: 0, tax_rate: 0, apply_tax_parts: true, apply_tax_labor: true, status: "unpaid",
   due_date: "", payment_method: "", amount_paid: 0, payment_history: [],
   receipt_number: "", card_last4: "", cashier_name: "", parts_used: [], labor_items: [], customer_note: "",
-  discount_type: "none", discount_value: 0
-  });
+  discount_type: "none", discount_value: 0,
+};
+
+const emptyLaborRow = () => ({ description: "", hours: 1, rate: 0, total: 0 });
+const emptyPartRow = () => ({ name: "", quantity: 1, unit_price: 0, total: 0 });
+
+export default function InvoiceFormDialog({ open, onClose, invoice, orders, customers, onSaved, initialOrderId, sourceEstimate }) {
+  const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [orderSearch, setOrderSearch] = useState("");
+  const [laborItems, setLaborItems] = useState([emptyLaborRow()]);
+  const [partsItems, setPartsItems] = useState([emptyPartRow()]);
 
   useEffect(() => {
-    if (!open) return; // Only populate when dialog opens
+    if (!open) return;
 
-    // Load user's tax rate first
     base44.auth.me().then(u => {
       const userTaxRate = u?.tax_rate != null ? u.tax_rate : 0;
       setForm(f => ({ ...f, tax_rate: invoice?.tax_rate ?? userTaxRate }));
     });
 
     if (invoice && invoice.id) {
-      // Editing existing invoice
       setForm({
+        ...emptyForm,
         repair_order_id: invoice.repair_order_id || "",
         estimate_id: invoice.estimate_id || "",
         customer_id: invoice.customer_id || "",
@@ -58,16 +63,10 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         apply_tax_parts: invoice.apply_tax_parts !== false,
         apply_tax_labor: invoice.apply_tax_labor !== false,
       });
-    } else if (invoice && !invoice.id) {
-      // New invoice pre-filled from customer profile or appointment (has customer_id but no id)
-      setForm(f => ({
-        ...f,
-        customer_id: invoice.customer_id || "",
-        customer_name: invoice.customer_name || "",
-        vehicle_info: invoice.vehicle_info || f.vehicle_info || "",
-      }));
+      const li = invoice.line_items || [];
+      setLaborItems(li.filter(i => i.type === "labor").map(i => ({ description: i.description || "", hours: i.quantity || 1, rate: i.unit_price || 0, total: i.total || 0 })));
+      setPartsItems(invoice.parts_used?.length ? invoice.parts_used.map(p => ({ name: p.name, quantity: p.quantity || 1, unit_price: p.unit_price || 0, total: p.total || 0, supplier: p.supplier || "" })) : [emptyPartRow()]);
     } else if (sourceEstimate) {
-      // Creating from estimate
       setForm(f => ({
         ...f,
         estimate_id: sourceEstimate.id,
@@ -76,17 +75,11 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         vehicle_info: sourceEstimate.vehicle_info,
         parts_total: sourceEstimate.parts_total || 0,
         labor_total: sourceEstimate.labor_total || 0,
-        parts_used: sourceEstimate.parts_items?.map(p => ({
-          name: p.name,
-          quantity: p.quantity,
-          unit_price: p.unit_price,
-          total: p.total,
-        })) || [],
-        labor_items: sourceEstimate.labor_items || [],
         customer_note: sourceEstimate.notes || "",
       }));
+      setLaborItems(sourceEstimate.labor_items?.length ? sourceEstimate.labor_items.map(i => ({ description: i.description, hours: i.hours || 1, rate: i.rate || 0, total: i.total || 0 })) : [emptyLaborRow()]);
+      setPartsItems(sourceEstimate.parts_items?.length ? sourceEstimate.parts_items.map(p => ({ name: p.name, quantity: p.quantity || 1, unit_price: p.unit_price || 0, total: p.total || 0 })) : [emptyPartRow()]);
     } else if (initialOrderId) {
-      // Creating from repair order
       const order = orders.find(o => o.id === initialOrderId);
       if (order) {
         setForm(f => ({
@@ -97,39 +90,32 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
           vehicle_info: order.vehicle_info,
           parts_total: order.parts_cost || 0,
           labor_total: order.labor_cost || 0,
-          parts_used: order.parts_used || [],
-          labor_items: order.labor_items || [],
         }));
+        setLaborItems(order.labor_items?.length ? order.labor_items.map(i => ({ description: i.description, hours: i.hours || 1, rate: i.rate || 0, total: i.total || 0 })) : [emptyLaborRow()]);
+        setPartsItems(order.parts_used?.length ? order.parts_used.map(p => ({ name: p.name, quantity: p.quantity || 1, unit_price: p.unit_price || 0, total: p.total || 0 })) : [emptyPartRow()]);
       }
+    } else if (invoice && !invoice.id) {
+      setForm(f => ({ ...f, customer_id: invoice.customer_id || "", customer_name: invoice.customer_name || "", vehicle_info: invoice.vehicle_info || "" }));
+      setLaborItems([emptyLaborRow()]);
+      setPartsItems([emptyPartRow()]);
     } else {
-      // New blank invoice
-      setForm({
-        repair_order_id: "", estimate_id: "", customer_id: "", customer_name: "", customer_phone: "", vehicle_info: "",
-        parts_total: 0, labor_total: 0, tax_rate: 0, apply_tax_parts: true, apply_tax_labor: true, status: "unpaid",
-        due_date: "", payment_method: "", amount_paid: 0, payment_history: [],
-        receipt_number: "", card_last4: "", cashier_name: "", parts_used: [], customer_note: "",
-        discount_type: "none", discount_value: 0
-      });
+      setForm(emptyForm);
+      setLaborItems([emptyLaborRow()]);
+      setPartsItems([emptyPartRow()]);
     }
   }, [open, invoice, initialOrderId, sourceEstimate, orders]);
 
   const handleOrderSelect = useCallback(async (orderId) => {
     const order = orders.find(o => o.id === orderId);
-    if (order) {
+    if (!order) return;
     let customerPhone = "";
-    let description = "";
-    let notes = "";
-    let laborItems = order.labor_items || [];
     try {
       const customer = await base44.entities.Customer.get(order.customer_id);
       customerPhone = customer.phone || "";
       const fullOrder = await base44.entities.RepairOrder.get(orderId);
-      description = fullOrder.description || "";
-      notes = fullOrder.notes || "";
-      laborItems = fullOrder.labor_items || laborItems;
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    }
+      setLaborItems(fullOrder.labor_items?.length ? fullOrder.labor_items.map(i => ({ description: i.description, hours: i.hours || 1, rate: i.rate || 0, total: i.total || 0 })) : [emptyLaborRow()]);
+      setPartsItems(fullOrder.parts_used?.length ? fullOrder.parts_used.map(p => ({ name: p.name, quantity: p.quantity || 1, unit_price: p.unit_price || 0, total: p.total || 0 })) : [emptyPartRow()]);
+    } catch (e) {}
     setForm(prev => ({
       ...prev,
       repair_order_id: orderId,
@@ -139,497 +125,386 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
       vehicle_info: order.vehicle_info,
       parts_total: order.parts_cost || 0,
       labor_total: order.labor_cost || 0,
-      parts_used: order.parts_used || [],
-      labor_items: laborItems,
-      customer_note: notes || description || "",
     }));
-      setOrderSearch("");
-    }
+    setOrderSearch("");
   }, [orders]);
 
-  const filteredOrders = orders.filter(o =>
-    !orderSearch || fuzzyMatch(orderSearch, [o.order_number, o.customer_name, o.vehicle_info])
-  );
+  const filteredOrders = orders.filter(o => !orderSearch || fuzzyMatch(orderSearch, [o.order_number, o.customer_name, o.vehicle_info]));
+
+  // Live-calculated totals from editable rows
+  const laborTotal = laborItems.reduce((s, r) => s + (parseFloat(r.hours) || 0) * (parseFloat(r.rate) || 0), 0);
+  const partsTotal = partsItems.reduce((s, r) => s + (parseFloat(r.quantity) || 0) * (parseFloat(r.unit_price) || 0), 0);
 
   const calculations = useMemo(() => {
-    const subtotal = (form.parts_total || 0) + (form.labor_total || 0);
-    const discountAmount = form.discount_type === "percentage" 
+    const subtotal = laborTotal + partsTotal;
+    const discountAmount = form.discount_type === "percentage"
       ? subtotal * ((form.discount_value || 0) / 100)
       : form.discount_type === "fixed" ? (form.discount_value || 0) : 0;
     const subtotalAfterDiscount = subtotal - discountAmount;
     const isCash = form.payment_method === "cash";
-
     let taxableAmount = 0;
-    if (form.apply_tax_labor) taxableAmount += form.labor_total || 0;
-    if (form.apply_tax_parts) taxableAmount += form.parts_total || 0;
-
+    if (form.apply_tax_labor) taxableAmount += laborTotal;
+    if (form.apply_tax_parts) taxableAmount += partsTotal;
     const taxAmount = isCash ? 0 : taxableAmount * ((form.tax_rate || 0) / 100);
     const total = subtotalAfterDiscount + taxAmount;
     const balanceDue = total - (form.amount_paid || 0);
     return { subtotal, discountAmount, subtotalAfterDiscount, isCash, taxAmount, total, balanceDue };
-  }, [form.parts_total, form.labor_total, form.discount_type, form.discount_value, form.payment_method, form.tax_rate, form.amount_paid, form.apply_tax_labor, form.apply_tax_parts]);
+  }, [laborTotal, partsTotal, form.discount_type, form.discount_value, form.payment_method, form.tax_rate, form.amount_paid, form.apply_tax_labor, form.apply_tax_parts]);
 
-  const { subtotal, discountAmount, isCash, taxAmount, total, balanceDue } = calculations;
+  const { subtotal, discountAmount, isCash, taxAmount, calculations: _c, ..._ } = calculations;
+  const { total, balanceDue } = calculations;
+
+  const updateLabor = (idx, field, value) => {
+    setLaborItems(prev => prev.map((r, i) => {
+      if (i !== idx) return r;
+      const u = { ...r, [field]: value };
+      u.total = (parseFloat(u.hours) || 0) * (parseFloat(u.rate) || 0);
+      return u;
+    }));
+  };
+
+  const updatePart = (idx, field, value) => {
+    setPartsItems(prev => prev.map((r, i) => {
+      if (i !== idx) return r;
+      const u = { ...r, [field]: value };
+      u.total = (parseFloat(u.quantity) || 0) * (parseFloat(u.unit_price) || 0);
+      return u;
+    }));
+  };
 
   const handleSave = async () => {
-  setSaving(true);
-
-  // If manual entry (no repair order, no existing customer_id), create Customer + Vehicle
-  let resolvedCustomerId = form.customer_id;
-  if (!form.repair_order_id && !form.customer_id && form.customer_name) {
-    const newCustomer = await base44.entities.Customer.create({
-      full_name: form.customer_name,
-      phone: form.customer_phone || "",
-    });
-    resolvedCustomerId = newCustomer.id;
-
-    // Parse vehicle info (e.g. "2020 Honda Civic") into year/make/model
-    if (form.vehicle_info) {
-      const parts = form.vehicle_info.trim().split(" ");
-      const year = parseInt(parts[0]) || new Date().getFullYear();
-      const make = parts[1] || "Unknown";
-      const model = parts.slice(2).join(" ") || "Unknown";
-      await base44.entities.Vehicle.create({
-        customer_id: newCustomer.id,
-        customer_name: form.customer_name,
-        year,
-        make,
-        model,
-      });
+    setSaving(true);
+    let resolvedCustomerId = form.customer_id;
+    if (!form.repair_order_id && !form.customer_id && form.customer_name) {
+      const newCustomer = await base44.entities.Customer.create({ full_name: form.customer_name, phone: form.customer_phone || "" });
+      resolvedCustomerId = newCustomer.id;
+      if (form.vehicle_info) {
+        const parts = form.vehicle_info.trim().split(" ");
+        await base44.entities.Vehicle.create({ customer_id: newCustomer.id, customer_name: form.customer_name, year: parseInt(parts[0]) || new Date().getFullYear(), make: parts[1] || "Unknown", model: parts.slice(2).join(" ") || "Unknown" });
+      }
     }
-  }
 
-  const lineItems = [];
-   if (form.labor_items && form.labor_items.length > 0) {
-     form.labor_items.forEach(l => {
-       lineItems.push({ description: l.description || "Labor", type: "labor", quantity: l.hours || 1, unit_price: l.rate || 0, total: l.total || 0 });
-     });
-   } else if (form.labor_total > 0) {
-     lineItems.push({ description: "Labor", type: "labor", quantity: 1, unit_price: form.labor_total, total: form.labor_total });
-   }
-   if (form.parts_used && form.parts_used.length > 0) {
-     form.parts_used.forEach(p => {
-       lineItems.push({ description: p.name, type: "part", quantity: p.quantity || 1, unit_price: p.unit_price || 0, total: p.total || 0 });
-     });
-   } else if (form.parts_total > 0) {
-     lineItems.push({ description: "Parts", type: "parts", quantity: 1, unit_price: form.parts_total, total: form.parts_total });
-   }
+    const line_items = [
+      ...laborItems.filter(r => r.description).map(r => ({ description: r.description, type: "labor", quantity: parseFloat(r.hours) || 1, unit_price: parseFloat(r.rate) || 0, total: (parseFloat(r.hours) || 0) * (parseFloat(r.rate) || 0) })),
+      ...partsItems.filter(r => r.name).map(r => ({ description: r.name, type: "part", quantity: parseFloat(r.quantity) || 1, unit_price: parseFloat(r.unit_price) || 0, total: (parseFloat(r.quantity) || 0) * (parseFloat(r.unit_price) || 0) })),
+    ];
+    const parts_used = partsItems.filter(r => r.name).map(r => ({ name: r.name, quantity: parseFloat(r.quantity) || 1, unit_price: parseFloat(r.unit_price) || 0, total: r.total, supplier: r.supplier || "" }));
 
-   let finalStatus = form.status;
-   let paidDate = invoice?.paid_date;
-   let paymentHistory = form.payment_history || [];
+    let finalStatus = form.status;
+    let paidDate = invoice?.paid_date;
+    let paymentHistory = form.payment_history || [];
+    const invoiceNum = invoice?.invoice_number || `INV-${Date.now().toString(36).toUpperCase()}`;
+    const { total: finalTotal, balanceDue: finalBalance, taxAmount: finalTax } = calculations;
 
-   const invoiceNum = invoice?.invoice_number || `INV-${Date.now().toString(36).toUpperCase()}`;
+    if (finalBalance <= 0) {
+      finalStatus = "paid";
+      if (invoice?.status !== "paid") paidDate = new Date().toISOString().substring(0, 10);
+      if (form.amount_paid > 0 && form.payment_method) {
+        paymentHistory = [...paymentHistory, { date: new Date().toISOString().substring(0, 10), amount: form.amount_paid, method: form.payment_method, note: "Payment received" }];
+      }
+    } else if (form.amount_paid > 0) {
+      finalStatus = "partial";
+      if (form.payment_method) {
+        paymentHistory = [...paymentHistory, { date: new Date().toISOString().substring(0, 10), amount: form.amount_paid, method: form.payment_method, note: "Partial payment received" }];
+      }
+    }
+    if (finalStatus !== "paid" && form.due_date) {
+      if (form.due_date < new Date().toISOString().split("T")[0]) finalStatus = "overdue";
+    }
 
-   if (balanceDue <= 0) {
-     finalStatus = "paid";
-     if (invoice?.status !== "paid") {
-       paidDate = new Date().toISOString().substring(0, 10);
-     }
-     // Record full payment in history for cash, card, or e-transfer
-     if (form.amount_paid > 0 && form.payment_method) {
-       paymentHistory = [...paymentHistory, {
-         date: new Date().toISOString().substring(0, 10),
-         amount: form.amount_paid,
-         method: form.payment_method,
-         note: "Payment received"
-       }];
-     }
-   } else if (form.amount_paid > 0) {
-     finalStatus = "partial";
-     // Record partial payment in history for cash, card, or e-transfer
-     if (form.payment_method) {
-       paymentHistory = [...paymentHistory, {
-         date: new Date().toISOString().substring(0, 10),
-         amount: form.amount_paid,
-         method: form.payment_method,
-         note: "Partial payment received"
-       }];
-     }
-   }
+    const data = { ...form, customer_id: resolvedCustomerId, invoice_number: invoiceNum, labor_items: laborItems, parts_used, labor_total: laborTotal, parts_total: partsTotal, tax_amount: finalTax, total: finalTotal, balance_due: finalBalance, status: finalStatus, paid_date: paidDate, payment_history: paymentHistory, line_items, estimate_id: form.estimate_id || sourceEstimate?.id || "" };
 
-   if (finalStatus !== "paid" && form.due_date) {
-     const today = new Date().toISOString().split("T")[0];
-     if (form.due_date < today) finalStatus = "overdue";
-   }
-
-   const data = {
-     ...form,
-     customer_id: resolvedCustomerId,
-     invoice_number: invoiceNum,
-     labor_items: form.labor_items || [],
-     customer_phone: form.customer_phone || "",
-     parts_used: form.parts_used || [],
-     tax_amount: taxAmount,
-     total,
-     balance_due: balanceDue,
-     status: finalStatus,
-     paid_date: paidDate,
-     payment_history: paymentHistory,
-     line_items: lineItems,
-     estimate_id: form.estimate_id || sourceEstimate?.id || "",
-   };
-
-   if (invoice && invoice.id) {
-     await base44.entities.Invoice.update(invoice.id, data);
-
-      // Sync to linked Repair Order (preserve original description and notes)
+    if (invoice && invoice.id) {
+      await base44.entities.Invoice.update(invoice.id, data);
       if (data.repair_order_id) {
         try {
           const ro = await base44.entities.RepairOrder.get(data.repair_order_id);
-          if (ro) {
-            const roLaborCost = data.labor_total;
-            const roPartsCost = data.parts_total;
-            const roTotal = roLaborCost + roPartsCost;
-            await base44.entities.RepairOrder.update(data.repair_order_id, {
-              customer_id: data.customer_id,
-              customer_name: data.customer_name,
-              vehicle_info: data.vehicle_info,
-              labor_cost: roLaborCost,
-              parts_cost: roPartsCost,
-              total_cost: roTotal,
-              parts_used: data.parts_used?.length ? data.parts_used : ro.parts_used,
-              description: ro.description,
-              notes: ro.notes,
-            });
-          }
-        } catch (e) { console.warn("Sync to repair order failed:", e); }
+          if (ro) await base44.entities.RepairOrder.update(data.repair_order_id, { customer_id: data.customer_id, customer_name: data.customer_name, vehicle_info: data.vehicle_info, labor_cost: laborTotal, parts_cost: partsTotal, total_cost: finalTotal, parts_used: data.parts_used?.length ? data.parts_used : ro.parts_used, description: ro.description, notes: ro.notes });
+        } catch (e) {}
       }
-
-      // Sync to linked Estimate
       if (data.estimate_id) {
         try {
           const est = await base44.entities.Estimate.get(data.estimate_id);
           if (est) {
-            const estTaxAmount = est.apply_tax ? (data.labor_total + data.parts_total) * ((est.tax_rate || 0) / 100) : 0;
-            await base44.entities.Estimate.update(data.estimate_id, {
-              customer_id: data.customer_id,
-              customer_name: data.customer_name,
-              vehicle_info: data.vehicle_info,
-              labor_total: data.labor_total,
-              parts_total: data.parts_total,
-              tax_amount: estTaxAmount,
-              grand_total: data.labor_total + data.parts_total + estTaxAmount,
-              notes: est.notes,
-              parts_items: data.parts_used?.length
-                ? data.parts_used.map(p => ({ name: p.name, part_number: p.part_number || "", quantity: p.quantity, unit_price: p.unit_price, total: p.total }))
-                : est.parts_items,
-            });
+            const estTax = est.apply_tax ? (laborTotal + partsTotal) * ((est.tax_rate || 0) / 100) : 0;
+            await base44.entities.Estimate.update(data.estimate_id, { customer_id: data.customer_id, customer_name: data.customer_name, vehicle_info: data.vehicle_info, labor_total: laborTotal, parts_total: partsTotal, tax_amount: estTax, grand_total: laborTotal + partsTotal + estTax, notes: est.notes });
           }
-        } catch (e) { console.warn("Sync to estimate failed:", e); }
+        } catch (e) {}
       }
     } else {
       await base44.entities.Invoice.create(data);
     }
-   setSaving(false);
-   onSaved();
-   onClose();
+    setSaving(false);
+    onSaved();
+    onClose();
   };
+
+  const statusColor = { unpaid: "bg-gray-500/20 text-gray-300", paid: "bg-green-500/20 text-green-400", partial: "bg-yellow-500/20 text-yellow-400", overdue: "bg-red-500/20 text-red-400" };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-md max-h-[90vh] flex flex-col">
-        <DialogHeader>
-            <DialogTitle className="text-lg font-semibold">
-              {invoice ? "Edit Invoice" : sourceEstimate ? `Invoice from Estimate #${sourceEstimate.estimate_number}` : "Create Invoice"}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-5 mt-4 overflow-y-auto flex-1">
+      <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-3xl max-h-[92vh] overflow-y-auto p-0">
+        {/* Header */}
+        <div className="sticky top-0 z-10 bg-gray-900 border-b border-gray-800 px-6 py-4 flex items-center justify-between">
+          <DialogTitle className="text-lg font-semibold text-white">
+            {invoice?.id ? "Edit Invoice" : sourceEstimate ? `Invoice from Estimate #${sourceEstimate.estimate_number}` : "Create Invoice"}
+          </DialogTitle>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={onClose} className="border-gray-700 text-gray-300">Cancel</Button>
+            <Button size="sm" onClick={handleSave} disabled={saving || (!form.customer_id && !form.customer_name)} className="bg-sky-500 hover:bg-sky-600 text-white gap-2">
+              {saving ? <><Loader2 className="w-4 h-4 animate-spin" />Saving...</> : "Save Invoice"}
+            </Button>
+          </div>
+        </div>
+
+        <div className="px-6 py-5 space-y-6">
+
+          {/* Repair Order Search */}
           {!sourceEstimate && (
-            <div className="bg-gray-800/30 rounded-lg p-4 border border-gray-700/50 space-y-3">
-              <Label className="text-gray-300 font-semibold text-sm">Repair Order</Label>
+            <div className="space-y-2">
+              <Label className="text-gray-400 text-xs uppercase tracking-wider">Link Repair Order (optional)</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                <input
-                  type="text"
-                  value={orderSearch}
-                  onChange={e => setOrderSearch(e.target.value)}
+                <input type="text" value={orderSearch} onChange={e => setOrderSearch(e.target.value)}
                   placeholder="Search by #, customer, or vehicle..."
-                  className="w-full pl-10 pr-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white text-sm placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-                />
-                {orderSearch && (
-                  <button onClick={() => setOrderSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
+                  className="w-full pl-10 pr-9 py-2 bg-gray-800 border border-gray-700 rounded-md text-white text-sm placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-sky-500" />
+                {orderSearch && <button onClick={() => setOrderSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"><X className="w-4 h-4" /></button>}
               </div>
-              {filteredOrders.length > 0 && (
-                <div className="max-h-48 overflow-y-auto rounded-md border border-gray-700 bg-gray-800 space-y-1">
+              {orderSearch && (
+                <div className="rounded-md border border-gray-700 bg-gray-800 overflow-hidden">
+                  {filteredOrders.length === 0 && <div className="px-3 py-2 text-xs text-gray-500">No orders found</div>}
                   {filteredOrders.map(o => (
-                    <button
-                      key={o.id}
-                      onClick={() => handleOrderSelect(o.id)}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-700 transition-colors text-sm"
-                    >
-                      <div className="text-white font-medium">#{o.order_number}</div>
-                      <div className="text-gray-400 text-xs">{o.customer_name} · {o.vehicle_info}</div>
+                    <button key={o.id} onClick={() => handleOrderSelect(o.id)} className="w-full text-left px-3 py-2 hover:bg-gray-700 text-sm border-b border-gray-700 last:border-0">
+                      <span className="text-white font-medium">#{o.order_number}</span>
+                      <span className="text-gray-400 text-xs ml-2">{o.customer_name} · {o.vehicle_info}</span>
                     </button>
                   ))}
                 </div>
               )}
-              {orderSearch && filteredOrders.length === 0 && (
-                <div className="text-xs text-gray-500 text-center py-2">No repair orders found</div>
+            </div>
+          )}
+
+          {/* Customer Header Card */}
+          <div className="space-y-1">
+            {form.customer_name ? (
+              <>
+                <p className="text-sky-400 text-sm font-semibold">{form.customer_name}</p>
+                <h2 className="text-2xl font-bold text-white">Invoice {invoice?.invoice_number ? `#${invoice.invoice_number}` : "#"}</h2>
+                {form.customer_name && <p className="text-gray-400 text-sm">{form.customer_name}</p>}
+                {form.customer_phone && <p className="text-sky-400 text-sm">📞 {form.customer_phone}</p>}
+              </>
+            ) : (
+              <div className="space-y-3">
+                <h2 className="text-xl font-bold text-white">New Invoice</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-gray-400 text-xs">Customer Name *</Label>
+                    <Input value={form.customer_name} onChange={e => setForm({ ...form, customer_name: e.target.value })} className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="e.g. John Smith" />
+                  </div>
+                  <div>
+                    <Label className="text-gray-400 text-xs">Phone</Label>
+                    <Input value={form.customer_phone} onChange={e => setForm({ ...form, customer_phone: e.target.value })} className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="e.g. 555-123-4567" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Label className="text-gray-400 text-xs">Vehicle Info</Label>
+                    <Input value={form.vehicle_info} onChange={e => setForm({ ...form, vehicle_info: e.target.value })} className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="e.g. 2020 Honda Civic" />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Info Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-4 border-y border-gray-800">
+            <div>
+              <p className="text-gray-500 text-xs uppercase mb-1">Vehicle</p>
+              {form.repair_order_id || sourceEstimate ? (
+                <p className="text-white font-bold text-sm">{form.vehicle_info || "—"}</p>
+              ) : (
+                <Input value={form.vehicle_info} onChange={e => setForm({ ...form, vehicle_info: e.target.value })} className="bg-gray-800 border-gray-700 text-white h-7 text-xs" placeholder="Year Make Model" />
               )}
             </div>
-          )}
-          {sourceEstimate && (
-            <div className="rounded-lg bg-sky-500/10 border border-sky-500/20 p-3 text-sm">
-              <p className="text-sky-400 font-medium text-xs uppercase tracking-wider mb-1">Source: Estimate</p>
-              <p className="text-white">{sourceEstimate.estimate_number} — {sourceEstimate.customer_name}</p>
-              <p className="text-gray-400 text-xs">{sourceEstimate.vehicle_info}</p>
-            </div>
-          )}
-
-          {form.repair_order_id ? (
-            <div className="rounded-lg bg-sky-500/10 border border-sky-500/20 p-4">
-              <p className="text-white font-medium">{form.customer_name}</p>
-              <p className="text-gray-400 text-sm mt-1">{form.vehicle_info}</p>
-            </div>
-          ) : !sourceEstimate && (
-            <div className="bg-gray-800/20 rounded-lg p-4 border border-gray-700/50 space-y-3">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Customer Info (Manual)</p>
-              <div>
-                <Label className="text-gray-300 text-sm">Customer Name</Label>
-                <Input value={form.customer_name || ""}
-                  onChange={e => setForm({...form, customer_name: e.target.value})}
-                  className="bg-gray-800 border-gray-700 text-white mt-1.5"
-                  placeholder="e.g. John Smith" />
-              </div>
-              <div>
-                <Label className="text-gray-300 text-sm">Phone</Label>
-                <Input value={form.customer_phone || ""}
-                  onChange={e => setForm({...form, customer_phone: e.target.value})}
-                  className="bg-gray-800 border-gray-700 text-white mt-1.5"
-                  placeholder="e.g. 555-123-4567" />
-              </div>
-              <div>
-                <Label className="text-gray-300 text-sm">Vehicle Info</Label>
-                <Input value={form.vehicle_info || ""}
-                  onChange={e => setForm({...form, vehicle_info: e.target.value})}
-                  className="bg-gray-800 border-gray-700 text-white mt-1.5"
-                  placeholder="e.g. 2020 Honda Civic" />
-              </div>
-            </div>
-          )}
-
-          {form.labor_items && form.labor_items.length > 0 && (
-            <div className="rounded-lg border border-gray-700/50 p-3 space-y-2">
-              <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Labor Items</p>
-              <div className="space-y-1.5">
-                {form.labor_items.map((l, i) => (
-                  <div key={i} className="flex justify-between text-sm bg-gray-800/40 rounded-lg px-3 py-2">
-                    <span className="text-gray-300">{l.description} <span className="text-gray-500 text-xs">({l.hours}h @ ${l.rate}/h)</span></span>
-                    <span className="text-white font-medium">${(l.total || 0).toFixed(2)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {form.parts_used && form.parts_used.length > 0 && (
-            <div className="rounded-lg border border-gray-700/50 p-3 space-y-3">
-              <div className="flex items-center gap-2">
-                <Store className="w-3.5 h-3.5 text-sky-400" />
-                <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Parts Used & Suppliers</p>
-              </div>
-              <div className="space-y-2">
-                {form.parts_used.map((p, i) => (
-                  <div key={i} className="space-y-1.5 bg-gray-800/40 rounded-lg p-2.5">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-300 font-medium">{p.name} <span className="text-gray-500">x{p.quantity}</span></span>
-                      <span className="text-white">${(p.total || 0).toFixed(2)}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Store className="w-3 h-3 text-gray-500 flex-shrink-0" />
-                      <Input
-                        value={p.supplier || ""}
-                        onChange={e => {
-                          const updated = form.parts_used.map((part, idx) =>
-                            idx === i ? { ...part, supplier: e.target.value } : part
-                          );
-                          setForm({ ...form, parts_used: updated });
-                        }}
-                        className="bg-gray-700/50 border-gray-600 text-white h-7 text-xs placeholder-gray-500"
-                        placeholder="Supplier / where bought (for warranty)"
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="bg-gray-800/20 rounded-lg p-4 border border-gray-700/50 space-y-3">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Costs & Totals</p>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-gray-300 text-sm">Parts Total</Label>
-                <Input type="number" step="0.01" value={form.parts_total}
-                  onChange={e => setForm({...form, parts_total: Number(e.target.value)})}
-                  className="bg-gray-800 border-gray-700 text-white mt-1.5" />
-              </div>
-              <div>
-                <Label className="text-gray-300 text-sm">Labor Total</Label>
-                <Input type="number" step="0.01" value={form.labor_total}
-                  onChange={e => setForm({...form, labor_total: Number(e.target.value)})}
-                  className="bg-gray-800 border-gray-700 text-white mt-1.5" />
-              </div>
+            <div>
+              <p className="text-gray-500 text-xs uppercase mb-1">Customer</p>
+              <p className="text-white font-bold text-sm">{form.customer_name || "—"}</p>
+              {form.customer_phone && <p className="text-sky-400 text-xs">{form.customer_phone}</p>}
             </div>
             <div>
-              <Label className="text-gray-300 text-sm">Tax Rate (%)</Label>
-              <Input type="number" step="0.1" value={form.tax_rate}
-                onChange={e => setForm({...form, tax_rate: Number(e.target.value)})}
-                className="bg-gray-800 border-gray-700 text-white mt-1.5" />
-            </div>
-            <div className="flex gap-4 pt-2">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={form.apply_tax_labor}
-                  onChange={e => setForm({...form, apply_tax_labor: e.target.checked})}
-                  className="w-4 h-4 rounded" />
-                <span className="text-sm text-gray-300">Tax on Labor</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={form.apply_tax_parts}
-                  onChange={e => setForm({...form, apply_tax_parts: e.target.checked})}
-                  className="w-4 h-4 rounded" />
-                <span className="text-sm text-gray-300">Tax on Parts</span>
-              </label>
+              <p className="text-gray-500 text-xs uppercase mb-1">Due Date</p>
+              <Input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} className="bg-gray-800 border-gray-700 text-white h-7 text-xs" />
             </div>
             <div>
-              <Label className="text-gray-300 text-sm">Due Date</Label>
-              <Input type="date" value={form.due_date}
-                onChange={e => setForm({...form, due_date: e.target.value})}
-                className="bg-gray-800 border-gray-700 text-white mt-1.5" />
+              <p className="text-gray-500 text-xs uppercase mb-1">Amount Paid</p>
+              <Input type="number" step="0.01" value={form.amount_paid} onChange={e => setForm({ ...form, amount_paid: Number(e.target.value) })} className="bg-gray-800 border-gray-700 text-white h-7 text-xs" />
+            </div>
+            <div>
+              <p className="text-gray-500 text-xs uppercase mb-1">Balance Due</p>
+              <p className={`font-bold text-sm ${balanceDue > 0 ? "text-yellow-400" : "text-emerald-400"}`}>${balanceDue.toFixed(2)}</p>
+            </div>
+            <div>
+              <p className="text-gray-500 text-xs uppercase mb-1">Status</p>
+              <Select value={form.status} onValueChange={v => setForm({ ...form, status: v })}>
+                <SelectTrigger className="bg-gray-800 border-gray-700 text-white h-7 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-700">
+                  {["unpaid", "partial", "paid", "overdue"].map(s => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
-          <div className="bg-gray-800/20 rounded-lg p-4 border border-gray-700/50">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Discount</p>
-            <div className="grid grid-cols-3 gap-2">
+          {/* Labor Table */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-white font-semibold">Labor</h3>
+              <Button size="sm" variant="ghost" onClick={() => setLaborItems(p => [...p, emptyLaborRow()])} className="text-sky-400 hover:text-sky-300 h-7 px-2 gap-1">
+                <Plus className="w-3.5 h-3.5" /> Add Labor
+              </Button>
+            </div>
+            <div className="rounded-lg border border-gray-800 overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-800/60 text-gray-500 text-xs">
+                  <tr>
+                    <th className="px-3 py-2 text-left">Description</th>
+                    <th className="px-3 py-2 text-right w-20">Hours</th>
+                    <th className="px-3 py-2 text-right w-24">Rate/hr</th>
+                    <th className="px-3 py-2 text-right w-24">Total</th>
+                    <th className="w-8" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-800">
+                  {laborItems.length === 0 && <tr><td colSpan={5} className="px-3 py-3 text-center text-gray-600 text-xs">No labor items</td></tr>}
+                  {laborItems.map((row, idx) => (
+                    <tr key={idx} className="bg-gray-900">
+                      <td className="px-2 py-1.5"><Input value={row.description} onChange={e => updateLabor(idx, "description", e.target.value)} className="bg-gray-800 border-0 text-white h-8 text-sm" placeholder="e.g. Oil Change" /></td>
+                      <td className="px-2 py-1.5"><Input type="number" value={row.hours} onChange={e => updateLabor(idx, "hours", e.target.value)} className="bg-gray-800 border-0 text-white h-8 text-sm text-right" placeholder="1" step="0.5" /></td>
+                      <td className="px-2 py-1.5"><Input type="number" value={row.rate} onChange={e => updateLabor(idx, "rate", e.target.value)} className="bg-gray-800 border-0 text-white h-8 text-sm text-right" placeholder="120" /></td>
+                      <td className="px-3 py-1.5 text-right text-gray-300 font-medium">${((parseFloat(row.hours) || 0) * (parseFloat(row.rate) || 0)).toFixed(2)}</td>
+                      <td className="pr-2 py-1.5 text-center"><button onClick={() => setLaborItems(p => p.filter((_, i) => i !== idx))} className="text-gray-600 hover:text-rose-400"><Trash2 className="w-3.5 h-3.5" /></button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Parts Table */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-white font-semibold">Parts</h3>
+              <Button size="sm" variant="ghost" onClick={() => setPartsItems(p => [...p, emptyPartRow()])} className="text-sky-400 hover:text-sky-300 h-7 px-2 gap-1">
+                <Plus className="w-3.5 h-3.5" /> Add Part
+              </Button>
+            </div>
+            <div className="rounded-lg border border-gray-800 overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-800/60 text-gray-500 text-xs">
+                  <tr>
+                    <th className="px-3 py-2 text-left">Part Name</th>
+                    <th className="px-3 py-2 text-right w-16">Qty</th>
+                    <th className="px-3 py-2 text-right w-24">Unit Price</th>
+                    <th className="px-3 py-2 text-right w-24">Total</th>
+                    <th className="w-8" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-800">
+                  {partsItems.length === 0 && <tr><td colSpan={5} className="px-3 py-3 text-center text-gray-600 text-xs">No parts</td></tr>}
+                  {partsItems.map((row, idx) => (
+                    <tr key={idx} className="bg-gray-900">
+                      <td className="px-2 py-1.5"><Input value={row.name} onChange={e => updatePart(idx, "name", e.target.value)} className="bg-gray-800 border-0 text-white h-8 text-sm" placeholder="e.g. Oil Filter" /></td>
+                      <td className="px-2 py-1.5"><Input type="number" value={row.quantity} onChange={e => updatePart(idx, "quantity", e.target.value)} className="bg-gray-800 border-0 text-white h-8 text-sm text-right" placeholder="1" /></td>
+                      <td className="px-2 py-1.5"><Input type="number" value={row.unit_price} onChange={e => updatePart(idx, "unit_price", e.target.value)} className="bg-gray-800 border-0 text-white h-8 text-sm text-right" placeholder="0.00" /></td>
+                      <td className="px-3 py-1.5 text-right text-gray-300 font-medium">${((parseFloat(row.quantity) || 0) * (parseFloat(row.unit_price) || 0)).toFixed(2)}</td>
+                      <td className="pr-2 py-1.5 text-center"><button onClick={() => setPartsItems(p => p.filter((_, i) => i !== idx))} className="text-gray-600 hover:text-rose-400"><Trash2 className="w-3.5 h-3.5" /></button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Totals summary */}
+          <div className="rounded-xl border border-gray-700 bg-gray-800/40 p-4 space-y-2 text-sm">
+            {laborItems.map((r, i) => r.description && (
+              <div key={i} className="flex justify-between text-gray-400">
+                <span>{r.description} <span className="text-gray-600 text-xs">({r.hours}h × ${parseFloat(r.rate || 0).toFixed(2)}/hr)</span></span>
+                <span>${((parseFloat(r.hours) || 0) * (parseFloat(r.rate) || 0)).toFixed(2)}</span>
+              </div>
+            ))}
+            {partsItems.map((r, i) => r.name && (
+              <div key={i} className="flex justify-between text-gray-400">
+                <span>{r.name} <span className="text-gray-600 text-xs">(x{r.quantity})</span></span>
+                <span>${((parseFloat(r.quantity) || 0) * (parseFloat(r.unit_price) || 0)).toFixed(2)}</span>
+              </div>
+            ))}
+            {discountAmount > 0 && <div className="flex justify-between text-emerald-400"><span>Discount</span><span>-${discountAmount.toFixed(2)}</span></div>}
+            {calculations.taxAmount > 0 && (
+              <div className="flex justify-between text-gray-400 border-t border-gray-700/50 pt-2">
+                <span>Tax ({form.tax_rate}%){isCash ? " (No Tax - Cash)" : ""}</span>
+                <span>${calculations.taxAmount.toFixed(2)}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-white font-bold text-base border-t border-gray-700 pt-2">
+              <span>Grand Total</span><span className="text-sky-400">${total.toFixed(2)}</span>
+            </div>
+            {form.amount_paid > 0 && <div className="flex justify-between text-emerald-400"><span>Amount Paid</span><span>${parseFloat(form.amount_paid).toFixed(2)}</span></div>}
+            <div className="flex justify-between font-semibold">
+              <span className="text-gray-300">Balance Due</span>
+              <span className={balanceDue <= 0 ? "text-emerald-400" : "text-yellow-400"}>${balanceDue.toFixed(2)}</span>
+            </div>
+          </div>
+
+          {/* Payment & Settings */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-3">
+              <Label className="text-gray-400 text-xs uppercase tracking-wider">Payment Method</Label>
+              <div className="flex gap-3">
+                {["cash", "card", "e-transfer"].map(m => (
+                  <label key={m} className="flex items-center gap-1.5 cursor-pointer">
+                    <input type="radio" name="payMethod" value={m} checked={form.payment_method === m} onChange={e => setForm({ ...form, payment_method: e.target.value, card_last4: "" })} className="w-3.5 h-3.5" />
+                    <span className="text-sm text-gray-300 capitalize">{m}</span>
+                  </label>
+                ))}
+              </div>
+              {form.payment_method === "card" && (
+                <Input value={form.card_last4} onChange={e => setForm({ ...form, card_last4: e.target.value.slice(0, 4) })} className="bg-gray-800 border-gray-700 text-white" placeholder="Card last 4 digits" maxLength={4} />
+              )}
+              <Input value={form.receipt_number} onChange={e => setForm({ ...form, receipt_number: e.target.value })} className="bg-gray-800 border-gray-700 text-white" placeholder="Receipt #" />
+              <Input value={form.cashier_name} onChange={e => setForm({ ...form, cashier_name: e.target.value })} className="bg-gray-800 border-gray-700 text-white" placeholder="Cashier name" />
+            </div>
+            <div className="space-y-3">
+              <Label className="text-gray-400 text-xs uppercase tracking-wider">Tax & Discount</Label>
               <div>
-                <Label className="text-gray-300 text-sm">Type</Label>
-                <Select value={form.discount_type} onValueChange={v => setForm({...form, discount_type: v, discount_value: 0})}>
-                  <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1.5">
-                    <SelectValue />
-                  </SelectTrigger>
+                <Label className="text-gray-400 text-xs">Tax Rate (%)</Label>
+                <Input type="number" step="0.1" value={form.tax_rate} onChange={e => setForm({ ...form, tax_rate: Number(e.target.value) })} className="bg-gray-800 border-gray-700 text-white mt-1" />
+              </div>
+              <div className="flex gap-3">
+                <label className="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" checked={form.apply_tax_labor} onChange={e => setForm({ ...form, apply_tax_labor: e.target.checked })} className="w-4 h-4 rounded" /><span className="text-xs text-gray-300">Tax on Labor</span></label>
+                <label className="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" checked={form.apply_tax_parts} onChange={e => setForm({ ...form, apply_tax_parts: e.target.checked })} className="w-4 h-4 rounded" /><span className="text-xs text-gray-300">Tax on Parts</span></label>
+              </div>
+              <div className="flex gap-2">
+                <Select value={form.discount_type} onValueChange={v => setForm({ ...form, discount_type: v, discount_value: 0 })}>
+                  <SelectTrigger className="bg-gray-800 border-gray-700 text-white w-24"><SelectValue /></SelectTrigger>
                   <SelectContent className="bg-gray-800 border-gray-700">
-                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="none">No Disc.</SelectItem>
                     <SelectItem value="percentage">%</SelectItem>
                     <SelectItem value="fixed">$</SelectItem>
                   </SelectContent>
                 </Select>
+                {form.discount_type !== "none" && (
+                  <Input type="number" step="0.01" value={form.discount_value} onChange={e => setForm({ ...form, discount_value: Number(e.target.value) })} className="bg-gray-800 border-gray-700 text-white flex-1" placeholder="0" />
+                )}
               </div>
-              {form.discount_type !== "none" && (
-                <div className="col-span-2">
-                  <Label className="text-gray-300 text-sm">Amount {form.discount_type === "percentage" ? "(%)" : "($)"}</Label>
-                  <Input type="number" step="0.01" value={form.discount_value}
-                    onChange={e => setForm({...form, discount_value: Number(e.target.value)})}
-                    className="bg-gray-800 border-gray-700 text-white mt-1.5" />
-                </div>
-              )}
             </div>
           </div>
 
-          <div className="bg-gray-800/20 rounded-lg p-4 border border-gray-700/50 space-y-4">
-            <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Payment Method</p>
-              <div className="flex gap-4">
-                {[
-                  { value: "cash", label: "Cash" },
-                  { value: "card", label: "Card" },
-                  { value: "e-transfer", label: "E-Transfer" }
-                ].map(method => (
-                  <label key={method.value} className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" name="paymentMethod" value={method.value} checked={form.payment_method === method.value}
-                      onChange={e => setForm({...form, payment_method: e.target.value, card_last4: ""})}
-                      className="w-4 h-4" />
-                    <span className="text-sm text-gray-300">{method.label}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Receipt Info</p>
-              {form.payment_method === "card" && (
-                <div>
-                  <Label className="text-gray-300 text-sm">Card Last 4</Label>
-                  <Input value={form.card_last4} onChange={e => setForm({...form, card_last4: e.target.value.slice(0,4)})}
-                    className="bg-gray-800 border-gray-700 text-white mt-1.5" placeholder="e.g. 4242" maxLength={4} />
-                </div>
-              )}
-              <div>
-                <Label className="text-gray-300 text-sm">Receipt #</Label>
-                <Input value={form.receipt_number} onChange={e => setForm({...form, receipt_number: e.target.value})}
-                  className="bg-gray-800 border-gray-700 text-white mt-1.5" placeholder="e.g. 001234" />
-              </div>
-              <div>
-                <Label className="text-gray-300 text-sm">Cashier Name</Label>
-                <Input value={form.cashier_name} onChange={e => setForm({...form, cashier_name: e.target.value})}
-                  className="bg-gray-800 border-gray-700 text-white mt-1.5" placeholder="Name or ID" />
-              </div>
-            </div>
-
-            <div>
-              <Label className="text-gray-300 text-sm">Upfront Payment (Cash)</Label>
-              <Input type="number" step="0.01" value={form.amount_paid}
-                onChange={e => setForm({...form, amount_paid: Number(e.target.value)})}
-                className="bg-gray-800 border-gray-700 text-white mt-1.5"
-                placeholder="0.00" />
-            </div>
+          {/* Note */}
+          <div>
+            <Label className="text-gray-400 text-xs uppercase tracking-wider">Note for Customer</Label>
+            <Textarea value={form.customer_note || ""} onChange={e => setForm({ ...form, customer_note: e.target.value })} className="bg-gray-800 border-gray-700 text-white mt-2" placeholder="e.g. Please come back for a follow-up..." rows={2} />
           </div>
 
-          <div className="rounded-lg bg-gradient-to-b from-sky-500/10 to-sky-500/5 p-4 border border-sky-500/20 space-y-2.5">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-400">Subtotal</span>
-              <span className="text-gray-200 font-medium">${subtotal.toFixed(2)}</span>
-            </div>
-            {discountAmount > 0 && (
-              <div className="flex justify-between text-sm text-emerald-400">
-                <span>Discount {form.discount_type === "percentage" ? `(${form.discount_value}%)` : ""}</span>
-                <span>-${discountAmount.toFixed(2)}</span>
-              </div>
-            )}
-            <div className="flex justify-between text-sm">
-               <span className="text-gray-400">Tax {isCash ? <span className="text-xs text-amber-400">(No Tax - Cash)</span> : <span>({form.tax_rate}%)</span>}</span>
-               <span className="text-gray-200 font-medium">${taxAmount.toFixed(2)}</span>
-             </div>
-            <div className="flex justify-between text-lg font-bold border-t border-sky-500/30 pt-2.5">
-              <span className="text-gray-200">Total</span>
-              <span className="text-sky-400">${total.toFixed(2)}</span>
-            </div>
-            {form.amount_paid > 0 && (
-              <>
-                <div className="flex justify-between text-sm text-emerald-400">
-                  <span>Paid Upfront</span>
-                  <span>-${form.amount_paid.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-base font-bold border-t border-sky-500/30 pt-2.5">
-                  <span className="text-gray-200">Balance Due</span>
-                  <span className={balanceDue <= 0 ? "text-emerald-400" : "text-amber-400"}>
-                    ${balanceDue.toFixed(2)}
-                  </span>
-                </div>
-              </>
-            )}
-          </div>
-
-          <div className="bg-gray-800/20 rounded-lg p-4 border border-gray-700/50">
-            <Label className="text-gray-300 font-semibold text-sm">Note for Customer</Label>
-            <Textarea value={form.customer_note || ""}
-              onChange={e => setForm({...form, customer_note: e.target.value})}
-              className="bg-gray-800 border-gray-700 text-white mt-2"
-              placeholder="e.g. Please come back for a follow-up check in 1 month..."
-              rows={3} />
-          </div>
-
-          <div className="flex gap-3 pt-4 border-t border-gray-700">
-            <Button variant="outline" onClick={onClose} className="flex-1 border-gray-700 text-gray-300 hover:bg-gray-800">Cancel</Button>
-            <Button onClick={handleSave} disabled={saving || (!form.customer_id && !form.customer_name)}
-              className="flex-1 bg-sky-500 hover:bg-sky-600 text-white font-semibold">
-              {saving ? "Saving..." : invoice ? "Update Invoice" : "Create Invoice"}
-            </Button>
-          </div>
         </div>
       </DialogContent>
     </Dialog>
