@@ -12,7 +12,7 @@ const statusConfig = {
   expired: { label: "Expired", class: "bg-amber-500/20 text-amber-400 border-amber-500/30" },
 };
 
-export default function RecentEstimates({ estimates = [] }) {
+export default function RecentEstimates({ estimates = [], customers = [] }) {
   const navigate = useNavigate();
   const sorted = [...estimates].sort((a, b) => new Date(b.created_date) - new Date(a.created_date)).slice(0, 10);
 
@@ -38,12 +38,13 @@ export default function RecentEstimates({ estimates = [] }) {
               className="w-full flex items-center justify-between p-3 rounded-lg bg-gray-800/30 hover:bg-gray-700/50 transition-colors text-left"
             >
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm text-blue-400 font-medium truncate capitalize">{est.customer_name}</p>
-                  {est.estimate_number && <span className="text-xs text-gray-500 flex-shrink-0">#{est.estimate_number}</span>}
-                </div>
-                <p className="text-xs text-green-400 truncate capitalize">{est.vehicle_info || "Unknown Vehicle"}</p>
-                {total > 0 && <p className="text-xs text-amber-400">${total.toFixed(2)}</p>}
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-blue-400 font-medium truncate capitalize">{est.customer_name}</p>
+                {est.estimate_number && <span className="text-xs text-gray-500 flex-shrink-0">#{est.estimate_number}</span>}
+              </div>
+              {(() => { const phone = customers.find(c => c.id === est.customer_id)?.phone; return phone ? <p className="text-xs text-amber-400">{phone}</p> : null; })()}
+              <p className="text-xs text-green-400 truncate capitalize">{est.vehicle_info || "Unknown Vehicle"}</p>
+              {total > 0 && <p className="text-xs text-gray-400">${total.toFixed(2)}</p>}
               </div>
               <div className="flex items-center gap-2 flex-shrink-0 ml-3">
                 <Badge variant="outline" className={cn("text-xs", config.class)}>

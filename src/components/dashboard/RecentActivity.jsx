@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Wrench, FileText, ChevronRight } from "lucide-react";
 import StatusBadge from "@/components/shared/StatusBadge";
 
-export default function RecentActivity({ orders, invoices }) {
+export default function RecentActivity({ orders, invoices, customers = [] }) {
   const navigate = useNavigate();
   const recentOrders = [...orders].sort((a, b) => new Date(b.created_date) - new Date(a.created_date)).slice(0, 5);
   const recentInvoices = [...invoices].sort((a, b) => new Date(b.created_date) - new Date(a.created_date)).slice(0, 5);
@@ -25,10 +25,11 @@ export default function RecentActivity({ orders, invoices }) {
                   <span className="text-white text-sm font-medium">#{o.order_number || o.id?.slice(0,6)}</span>
                   <StatusBadge status={o.status} />
                 </div>
-                <p className="text-xs text-gray-500 truncate">
+                <p className="text-xs truncate">
                   <span className="text-blue-400">{o.customer_name}</span>
-                  {o.vehicle_info && <> · <span className="text-green-400">{o.vehicle_info}</span></>}
                 </p>
+                {(() => { const phone = o.customer_phone || customers.find(c => c.id === o.customer_id)?.phone; return phone ? <p className="text-xs text-amber-400">{phone}</p> : null; })()}
+                {o.vehicle_info && <p className="text-xs text-green-400 truncate">{o.vehicle_info}</p>}
                 <p className="text-xs text-gray-600">{new Date(o.created_date).toLocaleDateString()}</p>
               </div>
               <ChevronRight className="w-4 h-4 text-gray-600 flex-shrink-0" />
@@ -52,9 +53,11 @@ export default function RecentActivity({ orders, invoices }) {
                   <span className="text-white text-sm font-medium">{inv.invoice_number}</span>
                   <StatusBadge status={inv.status} />
                 </div>
-                <p className="text-xs text-gray-500 truncate">
+                <p className="text-xs truncate">
                   <span className="text-blue-400">{inv.customer_name}</span>
                 </p>
+                {(() => { const phone = customers.find(c => c.id === inv.customer_id)?.phone; return phone ? <p className="text-xs text-amber-400">{phone}</p> : null; })()}
+                {inv.vehicle_info && <p className="text-xs text-green-400 truncate">{inv.vehicle_info}</p>}
                 <p className="text-xs text-gray-600">{new Date(inv.created_date).toLocaleDateString()}</p>
               </div>
               <div className="text-right flex-shrink-0">

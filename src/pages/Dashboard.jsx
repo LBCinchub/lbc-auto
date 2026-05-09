@@ -125,11 +125,11 @@ export default function Dashboard() {
 
       <KpiCards orders={orders} appointments={appointments} invoices={invoices} />
 
-      <RecentActivity orders={orders} invoices={invoices} />
+      <RecentActivity orders={orders} invoices={invoices} customers={customers} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <TodayAppointments appointments={appointments} customers={customers} onApptClick={(appt) => { setModal({ title: "Today's Appointments", items: todayAppts, type: "appt" }); setSelectedAppt(appt); }} />
-        <RecentEstimates estimates={estimates} />
+        <RecentEstimates estimates={estimates} customers={customers} />
       </div>
 
       {/* Modal */}
