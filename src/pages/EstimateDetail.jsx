@@ -2,15 +2,17 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PrintTemplate from "@/components/shared/PrintTemplate";
+import EstimateFormDialog from "@/components/estimates/EstimateFormDialog";
 
 export default function EstimateDetail() {
   const { estimateId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [user, setUser] = useState(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -51,8 +53,9 @@ export default function EstimateDetail() {
     );
   }
 
-  const handlePrint = () => {
-    // handled inside PrintTemplate
+  const handleEditSave = async () => {
+    queryClient.invalidateQueries({ queryKey: ["estimate", estimateId] });
+    setShowEditDialog(false);
   };
 
   const handleConvertToInvoice = async () => {
@@ -160,22 +163,32 @@ export default function EstimateDetail() {
 
   return (
     <div className="space-y-6">
+      {showEditDialog && (
+        <EstimateFormDialog
+          estimateId={estimateId}
+          onClose={() => setShowEditDialog(false)}
+          onSave={handleEditSave}
+        />
+      )}
       <div className="flex items-center justify-between">
         <Button variant="ghost" onClick={() => navigate(-1)} className="text-gray-400 hover:text-white gap-2">
           <ArrowLeft className="w-4 h-4" /> Back
         </Button>
         <div className="flex gap-2">
-          {estimate.status === "approved" && (
-            <Button onClick={handleConvertToInvoice} className="bg-emerald-500 hover:bg-emerald-600 text-white gap-2">
-              <CheckCircle2 className="w-4 h-4" /> Convert to Invoice
-            </Button>
-          )}
-          {estimate.status !== "approved" && (
-            <Button onClick={handleConvertToRepairOrder} className="bg-green-500/20 text-green-400 hover:bg-green-500/30 gap-2">
-              <CheckCircle2 className="w-4 h-4" /> Convert to Repair Order
-            </Button>
-          )}
-        </div>
+           <Button onClick={() => setShowEditDialog(true)} className="bg-blue-600 hover:bg-blue-700 text-white gap-2">
+             <Pencil className="w-4 h-4" /> Edit
+           </Button>
+           {estimate.status === "approved" && (
+             <Button onClick={handleConvertToInvoice} className="bg-emerald-500 hover:bg-emerald-600 text-white gap-2">
+               <CheckCircle2 className="w-4 h-4" /> Convert to Invoice
+             </Button>
+           )}
+           {estimate.status !== "approved" && (
+             <Button onClick={handleConvertToRepairOrder} className="bg-green-500/20 text-green-400 hover:bg-green-500/30 gap-2">
+               <CheckCircle2 className="w-4 h-4" /> Convert to Repair Order
+             </Button>
+           )}
+         </div>
       </div>
 
       <div className="rounded-xl border border-gray-800/50 bg-white p-8">
