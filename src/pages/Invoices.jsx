@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { FileText, Pencil, Trash2, Printer, Download, DollarSign, MessageSquare, ShieldCheck, Calendar, AlertCircle, Phone, Mail, Hash, Sheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -27,6 +28,7 @@ export default function Invoices() {
   const [paymentInvoice, setPaymentInvoice] = useState(null);
   const [sendingAuth, setSendingAuth] = useState(null);
   const [user, setUser] = useState(null);
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -289,7 +291,7 @@ export default function Invoices() {
           {filtered.map(inv => (
             <div key={inv.id}
               className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5 hover:border-sky-500/30 transition-colors cursor-pointer"
-              onClick={() => setPrintInvoice(inv)}>
+              onClick={() => navigate(`/InvoiceDetail/${inv.id}`)}>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -389,7 +391,7 @@ export default function Invoices() {
                       <p className="text-base font-bold text-emerald-400">$0.00</p>
                     </div>
                   )}
-                  <div className="flex gap-1">
+                  <div className="flex gap-1" onClick={e => e.stopPropagation()}>
                     {(inv.status === "unpaid" || inv.status === "partial") && (
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-emerald-500 hover:text-emerald-400"
                         onClick={() => setPaymentInvoice(inv)} title="Record Payment">
