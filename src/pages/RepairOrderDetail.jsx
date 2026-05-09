@@ -222,7 +222,7 @@ export default function RepairOrderDetail() {
            <div>
              <h1 className="text-3xl font-bold text-white">Repair Order #{order.order_number}</h1>
              <p className="text-gray-400 mt-1">{order.customer_name}</p>
-             {customer?.phone && <p className="text-gray-500 text-sm mt-1">{formatPhone(customer.phone)}</p>}
+             {customer?.phone && <p className="text-sky-400 text-sm mt-1">{formatPhone(customer.phone)}</p>}
            </div>
            <Select value={order.status} onValueChange={(newStatus) => {
              setUpdatingStatus(true);
