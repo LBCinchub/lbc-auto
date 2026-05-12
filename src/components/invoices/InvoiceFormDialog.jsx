@@ -96,6 +96,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
             vehicle_info: order.vehicle_info,
             parts_total: order.parts_cost || 0,
             labor_total: order.labor_cost || 0,
+            customer_note: order.notes || "",
             tax_rate: userTaxRate,
           }));
           setLaborItems(order.labor_items?.length ? order.labor_items.map(i => ({ description: i.description, hours: i.hours || 1, rate: i.rate || 0, total: i.total || 0 })) : [emptyLaborRow()]);
@@ -133,6 +134,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
       vehicle_info: order.vehicle_info,
       parts_total: order.parts_cost || 0,
       labor_total: order.labor_cost || 0,
+      customer_note: order.notes || prev.customer_note || "",
     }));
     setOrderSearch("");
   }, [orders]);
