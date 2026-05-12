@@ -18,10 +18,13 @@ import InvoiceFormDialog from "../components/invoices/InvoiceFormDialog";
 import InvoicePrintView from "../components/invoices/InvoicePrintView";
 import PaymentReceiptDialog from "../components/invoices/PaymentReceiptDialog";
 
+const PAGE_SIZE = 20;
+
 export default function Invoices() {
   const [search, setSearch] = useState("");
   const [searchField, setSearchField] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [page, setPage] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState(null);
   const [printInvoice, setPrintInvoice] = useState(null);
@@ -68,31 +71,31 @@ export default function Invoices() {
 
   const { data: invoices = [], isLoading } = useQuery({
     queryKey: ["invoices", user?.email],
-    queryFn: () => user ? base44.entities.Invoice.filter({created_by: user.email}, "-created_date", 30000) : Promise.resolve([]),
+    queryFn: () => user ? base44.entities.Invoice.filter({created_by: user.email}, "-created_date", 500) : Promise.resolve([]),
     enabled: !!user,
   });
 
   const { data: orders = [] } = useQuery({
     queryKey: ["repairOrders", user?.email],
-    queryFn: () => user ? base44.entities.RepairOrder.filter({created_by: user.email}, "-created_date", 30000) : Promise.resolve([]),
+    queryFn: () => user ? base44.entities.RepairOrder.filter({created_by: user.email}, "-created_date", 300) : Promise.resolve([]),
     enabled: !!user,
   });
 
   const { data: customers = [] } = useQuery({
     queryKey: ["customers", user?.email],
-    queryFn: () => user ? base44.entities.Customer.filter({created_by: user.email}, "-created_date", 30000) : Promise.resolve([]),
+    queryFn: () => user ? base44.entities.Customer.filter({created_by: user.email}, "-created_date", 500) : Promise.resolve([]),
     enabled: !!user,
   });
 
   const { data: vehicles = [] } = useQuery({
     queryKey: ["vehicles", user?.email],
-    queryFn: () => user ? base44.entities.Vehicle.filter({created_by: user.email}, "-created_date", 30000) : Promise.resolve([]),
+    queryFn: () => user ? base44.entities.Vehicle.filter({created_by: user.email}, "-created_date", 500) : Promise.resolve([]),
     enabled: !!user,
   });
 
   const { data: estimates = [] } = useQuery({
     queryKey: ["estimates", user?.email],
-    queryFn: () => user ? base44.entities.Estimate.filter({created_by: user.email}, "-created_date", 30000) : Promise.resolve([]),
+    queryFn: () => user ? base44.entities.Estimate.filter({created_by: user.email}, "-created_date", 300) : Promise.resolve([]),
     enabled: !!user,
   });
 
@@ -105,6 +108,12 @@ export default function Invoices() {
       const customer = customers.find(c => c.id === i.customer_id);
       return fuzzyMatch(search, [i.invoice_number, i.customer_name, i.vehicle_info, customer?.phone, customer?.email]);
     });
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // Reset to page 1 when filters change
+  useEffect(() => { setPage(1); }, [search, searchField, statusFilter]);
 
   const handleDelete = async (id) => {
     if (window.confirm("Delete this invoice?")) {
@@ -294,7 +303,7 @@ export default function Invoices() {
           onAction={() => { setEditingInvoice(null); setDialogOpen(true); }} actionLabel="Create Invoice" />
       ) : (
         <div className="space-y-3">
-          {filtered.map(inv => (
+          {paginated.map(inv => (
             <div key={inv.id}
               className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5 hover:border-sky-500/30 transition-colors cursor-pointer"
               onClick={() => navigate(`/InvoiceDetail/${inv.id}`)}>
@@ -435,6 +444,19 @@ export default function Invoices() {
               </div>
             </div>
           ))}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-2">
+              <span className="text-sm text-gray-500">
+                Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
+              </span>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage(p => p - 1)}
+                  className="border-gray-700 text-gray-300">Previous</Button>
+                <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}
+                  className="border-gray-700 text-gray-300">Next</Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

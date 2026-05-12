@@ -43,32 +43,32 @@ export default function Customers() {
 
   const { data: customers = [], isLoading } = useQuery({
     queryKey: ["customers"],
-    queryFn: () => base44.entities.Customer.list("-created_date", 30000),
+    queryFn: () => base44.entities.Customer.list("-created_date", 500),
   });
 
   const { data: vehicles = [] } = useQuery({
     queryKey: ["vehicles"],
-    queryFn: () => base44.entities.Vehicle.list("-created_date", 30000),
+    queryFn: () => base44.entities.Vehicle.list("-created_date", 500),
   });
 
   const { data: mechanics = [] } = useQuery({
     queryKey: ["mechanics"],
-    queryFn: () => base44.entities.Mechanic.list("-created_date", 30000),
+    queryFn: () => base44.entities.Mechanic.list("-created_date", 100),
   });
 
   const { data: estimates = [] } = useQuery({
     queryKey: ["estimates"],
-    queryFn: () => base44.entities.Estimate.list("-created_date", 30000),
+    queryFn: () => base44.entities.Estimate.list("-created_date", 200),
   });
 
   const { data: orders = [] } = useQuery({
     queryKey: ["orders"],
-    queryFn: () => base44.entities.RepairOrder.list("-created_date", 30000),
+    queryFn: () => base44.entities.RepairOrder.list("-created_date", 200),
   });
 
   const { data: invoices = [] } = useQuery({
     queryKey: ["invoices"],
-    queryFn: () => base44.entities.Invoice.list("-created_date", 30000),
+    queryFn: () => base44.entities.Invoice.list("-created_date", 200),
   });
 
   // Build a lookup map: customerId -> vehicles[]

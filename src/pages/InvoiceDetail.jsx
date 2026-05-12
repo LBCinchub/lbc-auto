@@ -18,6 +18,7 @@ export default function InvoiceDetail() {
   const queryClient = useQueryClient();
   const [user, setUser] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [savedOk, setSavedOk] = useState(false);
 
   // Editable line item state
   const [laborItems, setLaborItems] = useState([]);
@@ -128,7 +129,9 @@ export default function InvoiceDetail() {
   };
 
   const handleSave = async () => {
+    if (saving) return;
     setSaving(true);
+    setSavedOk(false);
     const line_items = [
       ...laborItems.map(r => ({
         type: "labor",
@@ -160,6 +163,8 @@ export default function InvoiceDetail() {
     queryClient.invalidateQueries({ queryKey: ["invoice", invoiceId] });
     queryClient.invalidateQueries({ queryKey: ["invoices"] });
     setSaving(false);
+    setSavedOk(true);
+    setTimeout(() => setSavedOk(false), 3000);
   };
 
 
@@ -199,9 +204,9 @@ export default function InvoiceDetail() {
               View Repair Order
             </Button>
           )}
-          <Button onClick={handleSave} disabled={saving} className="bg-sky-500 hover:bg-sky-600 gap-2">
+          <Button onClick={handleSave} disabled={saving} className={`gap-2 ${savedOk ? "bg-emerald-600 hover:bg-emerald-700" : "bg-sky-500 hover:bg-sky-600"}`}>
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            {saving ? "Saving..." : "Save Changes"}
+            {saving ? "Saving..." : savedOk ? "Saved ✓" : "Save Changes"}
           </Button>
         </div>
       </div>

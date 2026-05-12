@@ -25,10 +25,13 @@ const statusFilters = [
   { value: "delivered", label: "Delivered" },
 ];
 
+const PAGE_SIZE = 20;
+
 export default function RepairOrders() {
   const [search, setSearch] = useState("");
   const [searchField, setSearchField] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [page, setPage] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
   const [historyOrder, setHistoryOrder] = useState(null);
@@ -57,17 +60,17 @@ export default function RepairOrders() {
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["repairOrders", user?.email],
-    queryFn: () => user ? base44.entities.RepairOrder.filter({created_by: user.email}, "-created_date", 30000) : Promise.resolve([]),
+    queryFn: () => user ? base44.entities.RepairOrder.filter({created_by: user.email}, "-created_date", 300) : Promise.resolve([]),
     enabled: !!user,
   });
   const { data: customers = [] } = useQuery({
     queryKey: ["customers", user?.email],
-    queryFn: () => user ? base44.entities.Customer.filter({created_by: user.email}, "-created_date", 30000) : Promise.resolve([]),
+    queryFn: () => user ? base44.entities.Customer.filter({created_by: user.email}, "-created_date", 500) : Promise.resolve([]),
     enabled: !!user,
   });
   const { data: vehicles = [] } = useQuery({
     queryKey: ["vehicles", user?.email],
-    queryFn: () => user ? base44.entities.Vehicle.filter({created_by: user.email}, "-created_date", 30000) : Promise.resolve([]),
+    queryFn: () => user ? base44.entities.Vehicle.filter({created_by: user.email}, "-created_date", 500) : Promise.resolve([]),
     enabled: !!user,
   });
   const { data: mechanics = [] } = useQuery({
@@ -92,6 +95,11 @@ export default function RepairOrders() {
       const customer = customers.find(c => c.id === o.customer_id);
       return fuzzyMatch(search, [o.order_number, o.customer_name, o.vehicle_info, o.description, o.mechanic_name, customer?.phone, vehicle?.vin, vehicle?.license_plate]);
     });
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  useEffect(() => { setPage(1); }, [search, searchField, statusFilter]);
 
   const handleDelete = async (id) => {
     if (window.confirm("Delete this repair order?")) {
@@ -159,7 +167,7 @@ export default function RepairOrders() {
           actionLabel="New Order" />
       ) : (
         <div className="space-y-3">
-          {filtered.map(order => (
+          {paginated.map(order => (
             <div key={order.id} onClick={() => navigate(`/RepairOrderDetail/${order.id}`)} className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5 flex flex-col sm:flex-row sm:items-center gap-4 hover:border-sky-500/30 transition-colors cursor-pointer">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-3 flex-wrap">
@@ -230,6 +238,19 @@ export default function RepairOrders() {
               </div>
             </div>
           ))}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-2">
+              <span className="text-sm text-gray-500">
+                Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
+              </span>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage(p => p - 1)}
+                  className="border-gray-700 text-gray-300">Previous</Button>
+                <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}
+                  className="border-gray-700 text-gray-300">Next</Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
