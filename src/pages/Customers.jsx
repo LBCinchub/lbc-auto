@@ -39,36 +39,47 @@ export default function Customers() {
   const [profileCustomer, setProfileCustomer] = useState(null);
   const [activeQuickAction, setActiveQuickAction] = useState(null);
   const [quickActionData, setQuickActionData] = useState(null);
+  const [user, setUser] = useState(null);
   const queryClient = useQueryClient();
 
+  useEffect(() => {
+    base44.auth.me().then(setUser);
+  }, []);
+
   const { data: customers = [], isLoading } = useQuery({
-    queryKey: ["customers"],
-    queryFn: () => base44.entities.Customer.list("-created_date", 10000),
+    queryKey: ["customers", user?.email],
+    queryFn: () => user ? base44.entities.Customer.filter({ created_by: user.email }, "-created_date", 10000) : Promise.resolve([]),
+    enabled: !!user,
   });
 
   const { data: vehicles = [] } = useQuery({
-    queryKey: ["vehicles"],
-    queryFn: () => base44.entities.Vehicle.list("-created_date", 10000),
+    queryKey: ["vehicles", user?.email],
+    queryFn: () => user ? base44.entities.Vehicle.filter({ created_by: user.email }, "-created_date", 10000) : Promise.resolve([]),
+    enabled: !!user,
   });
 
   const { data: mechanics = [] } = useQuery({
-    queryKey: ["mechanics"],
-    queryFn: () => base44.entities.Mechanic.list("-created_date", 10000),
+    queryKey: ["mechanics", user?.email],
+    queryFn: () => user ? base44.entities.Mechanic.filter({ created_by: user.email }, "-created_date", 10000) : Promise.resolve([]),
+    enabled: !!user,
   });
 
   const { data: estimates = [] } = useQuery({
-    queryKey: ["estimates"],
-    queryFn: () => base44.entities.Estimate.list("-created_date", 10000),
+    queryKey: ["estimates", user?.email],
+    queryFn: () => user ? base44.entities.Estimate.filter({ created_by: user.email }, "-created_date", 10000) : Promise.resolve([]),
+    enabled: !!user,
   });
 
   const { data: orders = [] } = useQuery({
-    queryKey: ["orders"],
-    queryFn: () => base44.entities.RepairOrder.list("-created_date", 10000),
+    queryKey: ["orders", user?.email],
+    queryFn: () => user ? base44.entities.RepairOrder.filter({ created_by: user.email }, "-created_date", 10000) : Promise.resolve([]),
+    enabled: !!user,
   });
 
   const { data: invoices = [] } = useQuery({
-    queryKey: ["invoices"],
-    queryFn: () => base44.entities.Invoice.list("-created_date", 10000),
+    queryKey: ["invoices", user?.email],
+    queryFn: () => user ? base44.entities.Invoice.filter({ created_by: user.email }, "-created_date", 10000) : Promise.resolve([]),
+    enabled: !!user,
   });
 
   // Build a lookup map: customerId -> vehicles[]
