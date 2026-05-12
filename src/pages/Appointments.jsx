@@ -44,7 +44,7 @@ export default function Appointments() {
   });
   const { data: customers = [] } = useQuery({
     queryKey: ["customers", user?.email],
-    queryFn: () => user ? base44.entities.Customer.filter({ created_by: user.email }, "-created_date", 30000) : Promise.resolve([]),
+    queryFn: () => user ? base44.entities.Customer.filter({ created_by: user.email }, "-created_date", 10000) : Promise.resolve([]),
     enabled: !!user,
   });
   const { data: vehicles = [] } = useQuery({
