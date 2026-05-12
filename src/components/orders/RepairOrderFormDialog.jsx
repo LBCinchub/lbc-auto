@@ -40,6 +40,10 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
   const [localVehicles, setLocalVehicles] = useState([]);
 
   useEffect(() => {
+    if (!open) setLocalVehicles([]);
+  }, [open]);
+
+  useEffect(() => {
     base44.auth.me().then(u => {
       setUserTaxRate(u?.tax_rate != null ? u.tax_rate : 0);
     });
@@ -136,7 +140,9 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
     });
     handleCustomerChange(created.id, created.full_name);
     setNewCustomerForm(null);
+    // Immediately refetch so parent list stays in sync
     queryClient.invalidateQueries({ queryKey: ["customers"] });
+    queryClient.refetchQueries({ queryKey: ["customers"] });
   };
 
   const decodeVinForNewVehicle = async () => {
@@ -183,6 +189,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
     setForm({ ...form, vehicle_id: created.id, vehicle_info: `${created.year} ${created.make} ${created.model}` });
     setNewVehicleForm(null);
     queryClient.invalidateQueries({ queryKey: ["vehicles"] });
+    queryClient.refetchQueries({ queryKey: ["vehicles"] });
   };
 
   const [partSearches, setPartSearches] = useState({});

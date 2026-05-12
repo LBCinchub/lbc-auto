@@ -30,6 +30,7 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
   const [newVehicleForm, setNewVehicleForm] = useState(null);
   const [decodingVin, setDecodingVin] = useState(false);
   const [localCustomers, setLocalCustomers] = useState([]);
+  const [localVehicles, setLocalVehicles] = useState([]);
   const [form, setForm] = useState({
     customer_id: "", customer_name: "", customer_phone: "", vehicle_id: "", vehicle_info: "",
     mechanic_id: "", mechanic_name: "", service_type: "", date: "",
@@ -40,7 +41,7 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!open) setLocalCustomers([]);
+    if (!open) { setLocalCustomers([]); setLocalVehicles([]); }
   }, [open]);
 
   useEffect(() => {
@@ -80,10 +81,11 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
     }
   }, [appointment, open, customers]);
 
-  // Merge fetched customers with any locally-created ones so new customers show immediately
+  // Merge fetched lists with locally-created ones so new records show immediately
   const allCustomers = [...customers, ...localCustomers.filter(lc => !customers.find(c => c.id === lc.id))];
+  const allVehicles = [...vehicles, ...localVehicles.filter(lv => !vehicles.find(v => v.id === lv.id))];
 
-  const customerVehicles = vehicles.filter(v => v.customer_id === form.customer_id);
+  const customerVehicles = allVehicles.filter(v => v.customer_id === form.customer_id);
 
   const handleCustomerChange = (id) => {
     const c = allCustomers.find(c => c.id === id);
@@ -98,7 +100,7 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
   );
 
   const handleVehicleChange = (id) => {
-    const v = vehicles.find(v => v.id === id);
+    const v = allVehicles.find(v => v.id === id);
     setForm({ ...form, vehicle_id: id, vehicle_info: v ? `${v.year} ${v.make} ${v.model}` : "" });
   };
 
@@ -114,13 +116,13 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
       phone: newCustomerForm.phone,
       email: newCustomerForm.email || "",
     });
-    // Add to local cache so phone shows immediately without waiting for refetch
+    // Add to local cache so new customer shows immediately without waiting for refetch
     setLocalCustomers(prev => [...prev, created]);
     setForm(prev => ({ ...prev, customer_id: created.id, customer_name: created.full_name, customer_phone: created.phone || "", vehicle_id: "", vehicle_info: "" }));
     setNewCustomerForm(null);
     setCustomerSearch("");
-    // Invalidate all customer query variants so Customers page also refreshes
     queryClient.invalidateQueries({ queryKey: ["customers"] });
+    queryClient.refetchQueries({ queryKey: ["customers"] });
   };
 
   const decodeVinForNewVehicle = async () => {
@@ -163,9 +165,12 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
       color: newVehicleForm.color || "",
       engine_type: newVehicleForm.engine_type || "",
     });
-    setForm({ ...form, vehicle_id: created.id, vehicle_info: `${created.year} ${created.make} ${created.model}` });
+    // Add to local cache so vehicle appears in dropdown immediately
+    setLocalVehicles(prev => [...prev, created]);
+    setForm(prev => ({ ...prev, vehicle_id: created.id, vehicle_info: `${created.year} ${created.make} ${created.model}` }));
     setNewVehicleForm(null);
     queryClient.invalidateQueries({ queryKey: ["vehicles"] });
+    queryClient.refetchQueries({ queryKey: ["vehicles"] });
   };
 
   const handleSave = async () => {

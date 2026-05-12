@@ -31,6 +31,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
   const [partSearch, setPartSearch] = useState("");
   const [showPartSearch, setShowPartSearch] = useState(null); // idx of parts row being searched
   const [localVehicles, setLocalVehicles] = useState([]);
+  const [localCustomers, setLocalCustomers] = useState([]);
 
   useEffect(() => {
     // Load user's saved tax rate
@@ -65,13 +66,18 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
     });
   }, [estimate, open, repairOrderId]);
 
-  // Merge parent vehicles with any locally created ones (so newly added vehicles appear immediately)
+  // Merge parent lists with any locally created ones so new records appear immediately
   const allVehicles = useMemo(() => {
     const ids = new Set(vehicles.map(v => v.id));
     return [...vehicles, ...localVehicles.filter(v => !ids.has(v.id))];
   }, [vehicles, localVehicles]);
 
-  const filteredCustomers = customers.filter(c =>
+  const allCustomers = useMemo(() => {
+    const ids = new Set(customers.map(c => c.id));
+    return [...customers, ...localCustomers.filter(c => !ids.has(c.id))];
+  }, [customers, localCustomers]);
+
+  const filteredCustomers = allCustomers.filter(c =>
     !customerSearch || c.full_name.toLowerCase().includes(customerSearch.toLowerCase()) || (c.phone || "").includes(customerSearch)
   );
 
@@ -139,7 +145,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
   const grandTotal = subtotal + taxAmount;
 
   const handleCustomerChange = (cid) => {
-    const customer = customers.find(c => c.id === cid);
+    const customer = allCustomers.find(c => c.id === cid);
     setForm(f => ({ ...f, customer_id: cid, customer_name: customer?.full_name || "", vehicle_id: "", vehicle_info: "" }));
   };
 
@@ -155,9 +161,11 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
       phone: newCustomerForm.phone,
       email: newCustomerForm.email || "",
     });
+    setLocalCustomers(prev => [...prev, created]);
     handleCustomerChange(created.id);
     setNewCustomerForm(null);
     queryClient.invalidateQueries({ queryKey: ["customers"] });
+    queryClient.refetchQueries({ queryKey: ["customers"] });
   };
 
   const decodeVinForNewVehicle = async () => {
@@ -204,6 +212,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
     setForm(f => ({ ...f, vehicle_id: created.id, vehicle_info: `${created.year} ${created.make} ${created.model}` }));
     setNewVehicleForm(null);
     queryClient.invalidateQueries({ queryKey: ["vehicles"] });
+    queryClient.refetchQueries({ queryKey: ["vehicles"] });
   };
 
   const handleSave = async () => {
