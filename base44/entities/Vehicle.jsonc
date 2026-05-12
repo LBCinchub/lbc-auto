@@ -53,11 +53,11 @@
     },
     "service_interval_miles": {
       "type": "number",
-      "description": "Miles between services (e.g. 5000 for oil change every 5000 miles)"
+      "description": "Miles between services"
     },
     "service_interval_days": {
       "type": "number",
-      "description": "Days between services (e.g. 180 for service every 6 months)"
+      "description": "Days between services"
     },
     "phone": {
       "type": "string",
@@ -66,7 +66,7 @@
     "reminder_sent_date": {
       "type": "string",
       "format": "date",
-      "description": "Last reminder sent date (to avoid duplicate reminders)"
+      "description": "Last reminder sent date"
     }
   },
   "required": [

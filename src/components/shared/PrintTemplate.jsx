@@ -178,16 +178,23 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
             </tr>
           </thead>
           <tbody>
-            {lineItems.map((item, i) => (
-              <tr key={i} style={{ background: i % 2 === 1 ? "#fafbff" : "white", borderBottom: "1px solid #f1f5f9" }}>
-                <td style={{ padding: "4px 7px", fontSize: 9, fontWeight: 600, color: "#94a3b8" }}>{i + 1}</td>
-                <td style={{ padding: "4px 7px", fontSize: 10, fontWeight: 700, color: "#0f172a" }}>{item.name}</td>
-                <td style={{ padding: "4px 7px", fontSize: 9, color: "#64748b" }}>{item.description}</td>
-                <td style={{ padding: "4px 7px", fontSize: 9, color: "#334155", textAlign: "right" }}>${(parseFloat(item.unit_price) || 0).toFixed(2)}</td>
-                <td style={{ padding: "4px 7px", fontSize: 9, color: "#334155", textAlign: "center" }}>{item.qty}</td>
-                <td style={{ padding: "4px 7px", fontSize: 10, fontWeight: 700, color: "#0f172a", textAlign: "right" }}>${(item.amount || 0).toFixed(2)}</td>
-              </tr>
-            ))}
+            {lineItems.map((item, i) => {
+              const qty = parseFloat(item.qty ?? item.quantity) || 1;
+              const unitPrice = parseFloat(item.unit_price) || 0;
+              const total = unitPrice * qty;
+              const displayName = item.name || item.description || "—";
+              const displayDesc = item.name ? item.description : "";
+              return (
+                <tr key={i} style={{ background: i % 2 === 1 ? "#fafbff" : "white", borderBottom: "1px solid #f1f5f9" }}>
+                  <td style={{ padding: "4px 7px", fontSize: 9, fontWeight: 600, color: "#94a3b8" }}>{i + 1}</td>
+                  <td style={{ padding: "4px 7px", fontSize: 10, fontWeight: 700, color: "#0f172a" }}>{displayName}</td>
+                  <td style={{ padding: "4px 7px", fontSize: 9, color: "#64748b" }}>{displayDesc}</td>
+                  <td style={{ padding: "4px 7px", fontSize: 9, color: "#334155", textAlign: "right" }}>${unitPrice.toFixed(2)}</td>
+                  <td style={{ padding: "4px 7px", fontSize: 9, color: "#334155", textAlign: "center" }}>{qty}</td>
+                  <td style={{ padding: "4px 7px", fontSize: 10, fontWeight: 700, color: "#0f172a", textAlign: "right" }}>${total.toFixed(2)}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
 
@@ -272,14 +279,19 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
             </tr>
           </thead>
           <tbody>
-            {lineItems.map((item, i) => (
-              <tr key={i} style={{ background: i % 2 === 1 ? "#fafbff" : "white", borderBottom: "1px solid #f1f5f9" }}>
-                <td style={{ padding: "6px 8px", fontSize: 9, fontWeight: 600, color: "#94a3b8" }}>{i + 1}</td>
-                <td style={{ padding: "6px 8px", fontSize: 10, fontWeight: 700, color: "#0f172a" }}>{item.name}</td>
-                <td style={{ padding: "6px 8px", fontSize: 9, color: "#64748b" }}>{item.description}</td>
-                <td style={{ padding: "6px 8px", fontSize: 9, color: "#334155", textAlign: "center" }}>{item.qty}</td>
-              </tr>
-            ))}
+            {lineItems.map((item, i) => {
+              const qty = parseFloat(item.qty ?? item.quantity) || 1;
+              const displayName = item.name || item.description || "—";
+              const displayDesc = item.name ? item.description : "";
+              return (
+                <tr key={i} style={{ background: i % 2 === 1 ? "#fafbff" : "white", borderBottom: "1px solid #f1f5f9" }}>
+                  <td style={{ padding: "6px 8px", fontSize: 9, fontWeight: 600, color: "#94a3b8" }}>{i + 1}</td>
+                  <td style={{ padding: "6px 8px", fontSize: 10, fontWeight: 700, color: "#0f172a" }}>{displayName}</td>
+                  <td style={{ padding: "6px 8px", fontSize: 9, color: "#64748b" }}>{displayDesc}</td>
+                  <td style={{ padding: "6px 8px", fontSize: 9, color: "#334155", textAlign: "center" }}>{qty}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
 

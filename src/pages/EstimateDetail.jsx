@@ -259,8 +259,8 @@ export default function EstimateDetail() {
           customer={{ name: estimate.customer_name, phone: customer?.phone, email: customer?.email }}
           vehicle={{ info: estimate.vehicle_info }}
           lineItems={[
-            ...laborItems.map(l => ({ description: l.description, type: 'labor', quantity: l.hours, unit_price: l.rate, total: l.total })),
-            ...partsItems.map(p => ({ description: p.name, type: 'part', quantity: p.quantity, unit_price: p.unit_price, total: p.total }))
+            ...laborItems.map(l => ({ name: l.description || "Labor", description: `${parseFloat(l.hours)||0}h @ $${parseFloat(l.rate)||0}/hr`, qty: parseFloat(l.hours) || 1, unit_price: parseFloat(l.rate) || 0 })),
+            ...partsItems.map(p => ({ name: p.name || "Part", description: p.part_number ? `Part #: ${p.part_number}` : "", qty: parseFloat(p.quantity) || 1, unit_price: parseFloat(p.unit_price) || 0 }))
           ]}
           paymentHistory={[]}
           financials={{ laborTotal, partsTotal, taxRate, taxAmount, grandTotal }}
