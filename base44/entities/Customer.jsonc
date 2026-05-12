@@ -21,21 +21,6 @@
     "notes": {
       "type": "string",
       "description": "Additional notes"
-    },
-    "notes_log": {
-      "type": "array",
-      "description": "Private notes log for this customer",
-      "items": {
-        "type": "object",
-        "properties": {
-          "text": {
-            "type": "string"
-          },
-          "created_at": {
-            "type": "string"
-          }
-        }
-      }
     }
   },
   "required": [

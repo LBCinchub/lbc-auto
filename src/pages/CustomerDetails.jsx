@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft, Phone, Mail, MapPin, FileText, Car, Calendar,
   ClipboardList, Pencil, Wrench, ChevronRight, DollarSign,
-  Clock, Plus, StickyNote, CalendarPlus, Trash2, Lock
+  Clock, Plus, StickyNote, CalendarPlus, Trash2
 } from "lucide-react";
 import { formatPhone } from "@/utils/formatPhone";
 import CustomerFormDialog from "../components/customers/CustomerFormDialog";
@@ -150,9 +150,6 @@ export default function CustomerDetails() {
   const [notesValue, setNotesValue] = useState("");
   const [notesSaving, setNotesSaving] = useState(false);
   const [notesSaved, setNotesSaved] = useState(false);
-  // Private notes log
-  const [newNote, setNewNote] = useState("");
-  const [savingNote, setSavingNote] = useState(false);
 
   useEffect(() => {
     if (!customerId) return;
@@ -206,24 +203,6 @@ export default function CustomerDetails() {
     setNotesSaving(false);
     setNotesSaved(true);
     setTimeout(() => setNotesSaved(false), 2000);
-  };
-
-  const addNote = async () => {
-    if (!newNote.trim() || !customer) return;
-    setSavingNote(true);
-    const entry = { text: newNote.trim(), created_at: new Date().toISOString() };
-    const updatedLog = [entry, ...(customer.notes_log || [])];
-    await base44.entities.Customer.update(customer.id, { notes_log: updatedLog });
-    setCustomer(prev => ({ ...prev, notes_log: updatedLog }));
-    setNewNote("");
-    setSavingNote(false);
-  };
-
-  const deleteNote = async (idx) => {
-    if (!window.confirm("Delete this note?")) return;
-    const updatedLog = (customer.notes_log || []).filter((_, i) => i !== idx);
-    await base44.entities.Customer.update(customer.id, { notes_log: updatedLog });
-    setCustomer(prev => ({ ...prev, notes_log: updatedLog }));
   };
 
   const fmtDate = (d) => d ? new Date(d).toLocaleDateString("en-CA") : "—";
@@ -488,51 +467,28 @@ export default function CustomerDetails() {
             </TabsContent>
 
             {/* Notes */}
-            <TabsContent value="notes" className="mt-4 space-y-4">
-              {/* Private Notes Log */}
-              <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-5 space-y-4">
-                <div className="flex items-center gap-2 text-gray-300 text-sm font-semibold">
-                  <Lock className="w-3.5 h-3.5 text-amber-400" /> Private Customer Notes
-                  <span className="text-xs text-gray-600 font-normal ml-1">— only visible to shop staff</span>
+            <TabsContent value="notes" className="mt-4">
+              <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-5 space-y-3">
+                <div className="flex items-center gap-2 text-gray-400 text-sm font-medium">
+                  <StickyNote className="w-4 h-4" /> Internal Notes
                 </div>
-                <div className="space-y-2">
-                  <Textarea
-                    value={newNote}
-                    onChange={e => setNewNote(e.target.value)}
-                    placeholder="Add a private note about this customer..."
-                    className="bg-gray-800 border-gray-700 text-white min-h-[100px] resize-none"
-                    rows={4}
-                  />
-                  <div className="flex justify-end">
-                    <Button
-                      onClick={addNote}
-                      disabled={savingNote || !newNote.trim()}
-                      className="bg-sky-600 hover:bg-sky-500"
-                    >
-                      {savingNote ? "Saving..." : "Add Note"}
-                    </Button>
-                  </div>
+                <Textarea
+                  value={notesValue}
+                  onChange={e => setNotesValue(e.target.value)}
+                  placeholder="Add internal notes about this customer (visible to shop staff only)..."
+                  className="bg-gray-800 border-gray-700 text-white min-h-[160px] resize-none"
+                  rows={6}
+                />
+                <div className="flex items-center gap-3">
+                  <Button
+                    onClick={saveNotes}
+                    disabled={notesSaving}
+                    className="bg-sky-600 hover:bg-sky-500"
+                  >
+                    {notesSaving ? "Saving..." : notesSaved ? "Saved ✓" : "Save Notes"}
+                  </Button>
+                  {notesSaved && <span className="text-emerald-400 text-sm">Saved successfully</span>}
                 </div>
-
-                {/* Notes list */}
-                {(customer?.notes_log || []).length === 0 ? (
-                  <div className="text-gray-600 text-sm text-center py-4">No notes yet.</div>
-                ) : (
-                  <div className="space-y-2 pt-1">
-                    {(customer.notes_log || []).map((note, idx) => (
-                      <div key={idx} className="flex gap-3 rounded-lg border border-gray-800 bg-gray-800/40 p-3">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-white whitespace-pre-wrap">{note.text}</p>
-                          <p className="text-xs text-gray-600 mt-1">{new Date(note.created_at).toLocaleString()}</p>
-                        </div>
-                        <Button size="icon" variant="ghost" className="h-7 w-7 text-gray-600 hover:text-rose-400 flex-shrink-0"
-                          onClick={() => deleteNote(idx)}>
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
             </TabsContent>
           </Tabs>
