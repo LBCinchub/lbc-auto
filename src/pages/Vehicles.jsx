@@ -25,6 +25,17 @@ export default function Vehicles() {
     base44.auth.me().then(setUser);
   }, []);
 
+  // Auto-open edit dialog if coming from global search
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const vehicleId = params.get("vehicleId");
+    if (vehicleId) {
+      base44.entities.Vehicle.get(vehicleId).then(v => {
+        if (v) { setEditingVehicle(v); setDialogOpen(true); }
+      }).catch(() => {});
+    }
+  }, []);
+
   const { data: vehicles = [], isLoading } = useQuery({
     queryKey: ["vehicles", user?.email],
     queryFn: () => user ? base44.entities.Vehicle.filter({created_by: user.email}, "-created_date", 10000) : Promise.resolve([]),

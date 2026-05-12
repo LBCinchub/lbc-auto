@@ -158,7 +158,7 @@ export default function GlobalSearch() {
 
     // Appointments
     appointments.forEach(a => {
-      const h = [a.customer_name, a.vehicle_info, a.service_type, a.date].filter(Boolean).join(" ");
+      const h = [a.customer_name, a.vehicle_info, a.service_type, a.date, a.notes, a.time_slot].filter(Boolean).join(" ");
       const score = scoreMatch(h, tokens);
       if (score >= 0) all.push({ type: "appointment", score, item: a });
     });
@@ -168,8 +168,8 @@ export default function GlobalSearch() {
 
   const typeConfig = {
     order:       { icon: Wrench,        label: "Repair Order", color: "text-sky-400",    bg: "bg-sky-500/10",    nav: (item) => navigate(`/RepairOrderDetail/${item.id}`) },
-    customer:    { icon: Users,         label: "Customer",     color: "text-emerald-400", bg: "bg-emerald-500/10", nav: (item) => navigate(`/Customers?customerId=${item.id}`) },
-    vehicle:     { icon: Car,           label: "Vehicle",      color: "text-amber-400",  bg: "bg-amber-500/10",  nav: (item) => navigate(`/VehicleTimeline/${item.id}`) },
+    customer:    { icon: Users,         label: "Customer",     color: "text-emerald-400", bg: "bg-emerald-500/10", nav: (item) => navigate(`/CustomerDetails?id=${item.id}`) },
+    vehicle:     { icon: Car,           label: "Vehicle",      color: "text-amber-400",  bg: "bg-amber-500/10",  nav: (item) => navigate(`/Vehicles?vehicleId=${item.id}`) },
     invoice:     { icon: FileText,      label: "Invoice",      color: "text-purple-400", bg: "bg-purple-500/10", nav: (item) => navigate(`/InvoiceDetail/${item.id}`) },
     part:        { icon: Package,       label: "Part",         color: "text-rose-400",   bg: "bg-rose-500/10",   nav: () => navigate(`/Parts`) },
     estimate:    { icon: ClipboardList, label: "Estimate",     color: "text-violet-400", bg: "bg-violet-500/10", nav: (item) => navigate(`/EstimateDetail/${item.id}`) },

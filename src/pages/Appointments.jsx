@@ -27,11 +27,16 @@ export default function Appointments() {
     base44.auth.me().then(setUser);
   }, []);
 
-  // Auto-open dialog if coming from customer profile
+  // Auto-open dialog if coming from customer profile or global search
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const customerId = params.get("customerId");
-    if (customerId) {
+    const appointmentId = params.get("appointmentId");
+    if (appointmentId) {
+      base44.entities.Appointment.get(appointmentId).then(appt => {
+        if (appt) { setEditing(appt); setDialogOpen(true); }
+      }).catch(() => {});
+    } else if (customerId) {
       setEditing({ _prefillCustomerId: customerId, _prefillCustomerName: params.get("customerName") || "" });
       setDialogOpen(true);
     }
