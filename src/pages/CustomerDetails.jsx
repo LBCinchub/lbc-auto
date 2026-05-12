@@ -8,13 +8,14 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft, Phone, Mail, MapPin, FileText, Car, Calendar,
   ClipboardList, Pencil, Wrench, ChevronRight, DollarSign,
-  Clock, Plus, StickyNote, CalendarPlus
+  Clock, Plus, StickyNote, CalendarPlus, Trash2
 } from "lucide-react";
 import { formatPhone } from "@/utils/formatPhone";
 import CustomerFormDialog from "../components/customers/CustomerFormDialog";
 import RepairOrderFormDialog from "../components/orders/RepairOrderFormDialog";
 import AppointmentFormDialog from "../components/appointments/AppointmentFormDialog";
 import EstimateFormDialog from "../components/estimates/EstimateFormDialog";
+import VehicleFormDialog from "../components/vehicles/VehicleFormDialog";
 import { useQueryClient } from "@tanstack/react-query";
 
 const AVATAR_COLORS = [
@@ -142,6 +143,8 @@ export default function CustomerDetails() {
   const [roOpen, setRoOpen] = useState(false);
   const [apptOpen, setApptOpen] = useState(false);
   const [estimateOpen, setEstimateOpen] = useState(false);
+  const [vehicleDialogOpen, setVehicleDialogOpen] = useState(false);
+  const [editingVehicle, setEditingVehicle] = useState(null);
 
   // Notes state
   const [notesValue, setNotesValue] = useState("");
@@ -357,12 +360,36 @@ export default function CustomerDetails() {
 
             {/* Vehicles with Timeline */}
             <TabsContent value="vehicles" className="mt-4">
+              <div className="flex justify-end mb-3">
+                <Button size="sm" variant="outline"
+                  className="border-sky-500/40 bg-sky-500/10 text-sky-400 hover:bg-sky-500/20 hover:text-sky-300 gap-1.5"
+                  onClick={() => { setEditingVehicle(null); setVehicleDialogOpen(true); }}>
+                  <Plus className="w-3.5 h-3.5" /> Add Vehicle
+                </Button>
+              </div>
               {vehicles.length === 0 ? (
                 <div className="text-gray-500 text-sm py-8 text-center">No vehicles on file.</div>
               ) : (
                 <div className="space-y-4">
                   {vehicles.map(v => (
-                    <VehicleTimeline key={v.id} vehicle={v} repairOrders={repairOrders} />
+                    <div key={v.id} className="relative group">
+                      <div className="absolute top-3 right-3 flex gap-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button size="icon" variant="ghost" className="h-7 w-7 text-gray-500 hover:text-white bg-gray-900/80"
+                          onClick={() => { setEditingVehicle(v); setVehicleDialogOpen(true); }}>
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-7 w-7 text-gray-500 hover:text-rose-400 bg-gray-900/80"
+                          onClick={async () => {
+                            if (window.confirm(`Delete ${v.year} ${v.make} ${v.model}?`)) {
+                              await base44.entities.Vehicle.delete(v.id);
+                              setVehicles(prev => prev.filter(x => x.id !== v.id));
+                            }
+                          }}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                      <VehicleTimeline vehicle={v} repairOrders={repairOrders} />
+                    </div>
                   ))}
                 </div>
               )}
@@ -516,6 +543,21 @@ export default function CustomerDetails() {
           customers={[customer]}
           vehicles={vehicles}
           parts={[]}
+        />
+      )}
+
+      {/* Vehicle Add/Edit Dialog */}
+      {customer && (
+        <VehicleFormDialog
+          open={vehicleDialogOpen}
+          onClose={() => { setVehicleDialogOpen(false); setEditingVehicle(null); }}
+          vehicle={editingVehicle ? editingVehicle : { customer_id: customer.id, customer_name: customer.full_name }}
+          onSaved={() => {
+            setVehicleDialogOpen(false);
+            setEditingVehicle(null);
+            base44.entities.Vehicle.filter({ customer_id: customerId }).then(setVehicles);
+          }}
+          customers={[customer]}
         />
       )}
     </div>
