@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { base44 } from "@/api/base44Client";
 import { Textarea } from "@/components/ui/textarea";
 import { Search, X, Plus, Trash2, Store, Loader2 } from "lucide-react";
+import QuickPartGroups from "@/components/shared/QuickPartGroups";
 import { fuzzyMatch } from "@/utils/fuzzySearch";
 
 const emptyForm = {
@@ -568,6 +569,13 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
                 <Plus className="w-3.5 h-3.5" /> Add Part
               </Button>
             </div>
+            <QuickPartGroups
+              currentParts={partsItems}
+              onAddParts={(names) => {
+                const newRows = names.map(n => ({ name: n, quantity: 1, unit_price: 0, total: 0 }));
+                setPartsItems(p => [...p, ...newRows]);
+              }}
+            />
             <div className="rounded-lg border border-gray-800 overflow-hidden">
               <table className="w-full text-sm">
                 <thead className="bg-gray-800/60 text-gray-500 text-xs">

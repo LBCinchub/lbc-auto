@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { base44 } from "@/api/base44Client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, Loader2, X, Search } from "lucide-react";
+import QuickPartGroups from "@/components/shared/QuickPartGroups";
 
 const emptyLaborRow = () => ({ description: "", hours: "", rate: "120", total: 0 });
 const emptyPartRow  = () => ({ name: "", part_number: "", quantity: "", unit_price: "", total: 0 });
@@ -524,6 +525,13 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
                 <Plus className="w-4 h-4 mr-1" /> Add Row
               </Button>
             </div>
+            <QuickPartGroups
+              currentParts={form.parts_items}
+              onAddParts={(names) => {
+                const newRows = names.map(n => ({ name: n, part_number: "", quantity: "1", unit_price: "", total: 0 }));
+                setForm(f => ({ ...f, parts_items: [...f.parts_items, ...newRows] }));
+              }}
+            />
             <div className="rounded-lg border border-gray-800 overflow-hidden">
               <table className="w-full text-sm">
                 <thead className="bg-gray-800/60 text-gray-500 text-xs">

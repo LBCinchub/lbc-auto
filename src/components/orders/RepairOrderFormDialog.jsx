@@ -13,6 +13,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, X, Loader2 } from "lucide-react";
 
 import CustomerSearchInput from "@/components/shared/CustomerSearchInput";
+import QuickPartGroups from "@/components/shared/QuickPartGroups";
 
 const statuses = [
   { value: "waiting", label: "Waiting" },
@@ -565,6 +566,13 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                 </Button>
               </div>
             </div>
+            <QuickPartGroups
+              currentParts={form.parts_used}
+              onAddParts={(names) => {
+                const newRows = names.map(n => ({ part_id: "", name: n, quantity: 1, unit_price: "", total: 0 }));
+                setForm(f => ({ ...f, parts_used: [...f.parts_used, ...newRows] }));
+              }}
+            />
             {newPartForm !== null && (
               <div className="bg-gray-800 border border-amber-500/30 rounded-lg p-3 mb-3 space-y-2">
                 <p className="text-xs text-amber-400 font-medium">New Part — Add to Inventory</p>
