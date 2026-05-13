@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { Users, Phone, Mail, ChevronRight, Pencil, Trash2 } from "lucide-react";
+import { Users, Phone, Mail, Car, Eye, Pencil, Trash2 } from "lucide-react";
 import CustomerProfileDialog from "../components/customers/CustomerProfileDialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -17,7 +17,7 @@ import EstimateFormDialog from "../components/estimates/EstimateFormDialog";
 import RepairOrderFormDialog from "../components/orders/RepairOrderFormDialog";
 import InvoiceFormDialog from "../components/invoices/InvoiceFormDialog";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 30;
 const AVATAR_COLORS = [
   "bg-sky-500","bg-violet-500","bg-emerald-500","bg-amber-500","bg-rose-500","bg-indigo-500"
 ];
@@ -146,15 +146,9 @@ export default function Customers() {
       </div>
 
       {isLoading ? (
-        <div className="space-y-3">
-          {[1,2,3,4,5].map(i => (
-            <div key={i} className="flex items-center gap-4 rounded-xl border border-gray-800 bg-gray-900/40 p-4 animate-pulse">
-              <div className="w-11 h-11 rounded-full bg-gray-800 flex-shrink-0" />
-              <div className="flex-1 space-y-2">
-                <div className="h-4 bg-gray-800 rounded w-1/3" />
-                <div className="h-3 bg-gray-800/60 rounded w-1/2" />
-              </div>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1,2,3,4,5,6].map(i => (
+            <div key={i} className="h-52 rounded-xl bg-gray-800/30 animate-pulse" />
           ))}
         </div>
       ) : filtered.length === 0 ? (
@@ -164,63 +158,89 @@ export default function Customers() {
           actionLabel="Add Customer" />
       ) : (
         <>
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {paginated.map(customer => {
               const cv = vehiclesByCustomer[customer.id] || [];
               return (
                 <div key={customer.id}
-                  onClick={() => navigate(`/CustomerDetails?id=${customer.id}`)}
-                  className="flex items-center gap-4 rounded-xl border border-gray-800/60 bg-gray-900/50 px-4 py-3.5 hover:border-sky-500/30 hover:bg-gray-800/50 transition-all cursor-pointer group">
-                  {/* Avatar */}
-                  <div className={`w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 ${getAvatarColor(customer.full_name)}`}>
-                    <span className="text-white font-bold text-sm">{getInitials(customer.full_name)}</span>
-                  </div>
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-white capitalize truncate">{customer.full_name}</div>
-                    <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-0.5">
-                      {customer.phone && (
-                        <a
-                          href={`tel:${customer.phone}`}
-                          onClick={e => e.stopPropagation()}
-                          className="flex items-center gap-1 text-xs text-amber-400 hover:text-amber-300"
-                        >
-                          <Phone className="w-3 h-3" /> {formatPhone(customer.phone)}
-                        </a>
-                      )}
-                      {customer.email && (
-                        <span className="flex items-center gap-1 text-xs text-gray-400">
-                          <Mail className="w-3 h-3" /> {customer.email}
-                        </span>
-                      )}
+                  className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5 hover:border-sky-500/30 transition-colors flex flex-col gap-3">
+
+                  {/* Top row: avatar + name + actions */}
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${getAvatarColor(customer.full_name)}`}>
+                        <span className="text-white font-bold text-sm">{getInitials(customer.full_name)}</span>
+                      </div>
+                      <div>
+                        <h3 className="text-white font-bold capitalize leading-tight">{customer.full_name}</h3>
+                        {customer.address && (
+                          <p className="text-xs text-gray-500 truncate max-w-[160px]">{customer.address}</p>
+                        )}
+                      </div>
                     </div>
-                    {/* Vehicle badges */}
-                    <div className="flex flex-wrap gap-1.5 mt-1.5" onClick={e => e.stopPropagation()}>
-                      {cv.length === 0 ? (
-                        <span className="text-xs text-gray-600">No vehicles</span>
-                      ) : cv.map(v => (
-                        <button
-                          key={v.id}
-                          onClick={() => navigate(`/Vehicles?search=${encodeURIComponent([v.year, v.make, v.model].filter(Boolean).join(" "))}`)}
-                          className="text-xs bg-gray-800 hover:bg-sky-500/20 border border-gray-700 hover:border-sky-500/40 text-gray-300 hover:text-sky-300 px-2 py-0.5 rounded-full transition-colors"
-                        >
-                          {[v.year, v.make, v.model].filter(Boolean).join(" ")}
-                        </button>
-                      ))}
+                    <div className="flex gap-1 flex-shrink-0">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-sky-400"
+                        onClick={() => navigate(`/CustomerDetails?id=${customer.id}`)}>
+                        <Eye className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-white"
+                        onClick={() => { setEditingCustomer(customer); setDialogOpen(true); }}>
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-rose-400"
+                        onClick={() => handleDelete(customer.id)}>
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
                     </div>
                   </div>
-                  {/* Actions */}
-                  <div className="flex items-center gap-1 flex-shrink-0" onClick={e => e.stopPropagation()}>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-600 hover:text-white"
-                      onClick={() => { setEditingCustomer(customer); setDialogOpen(true); }}>
-                      <Pencil className="w-3.5 h-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-600 hover:text-rose-400"
-                      onClick={() => handleDelete(customer.id)}>
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
+
+                  {/* Contact info */}
+                  <div className="space-y-1">
+                    {customer.phone && (
+                      <a href={`tel:${customer.phone}`}
+                        className="flex items-center gap-2 text-sm text-amber-400 hover:text-amber-300">
+                        <Phone className="w-3.5 h-3.5 flex-shrink-0" />
+                        {formatPhone(customer.phone)}
+                      </a>
+                    )}
+                    {customer.email && (
+                      <div className="flex items-center gap-2 text-sm text-gray-400">
+                        <Mail className="w-3.5 h-3.5 flex-shrink-0" />
+                        <span className="truncate">{customer.email}</span>
+                      </div>
+                    )}
                   </div>
-                  <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-sky-400 transition-colors flex-shrink-0" />
+
+                  {/* Divider */}
+                  <div className="border-t border-gray-800/60" />
+
+                  {/* Vehicles */}
+                  <div className="space-y-2">
+                    {cv.length === 0 ? (
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Car className="w-3.5 h-3.5" />
+                        <span>No vehicle linked</span>
+                      </div>
+                    ) : cv.map(v => (
+                      <div key={v.id}
+                        className="cursor-pointer group"
+                        onClick={() => navigate(`/VehicleTimeline/${v.id}`)}>
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-md bg-sky-500/20 flex items-center justify-center flex-shrink-0">
+                            <Car className="w-3.5 h-3.5 text-sky-400" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm text-green-400 font-medium group-hover:text-green-300 capitalize leading-tight">
+                              {[v.year, v.make, v.model].filter(Boolean).join(" ")}
+                            </p>
+                            {v.vin && (
+                              <p className="text-xs text-gray-600 font-mono truncate">VIN: {v.vin}</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               );
             })}
