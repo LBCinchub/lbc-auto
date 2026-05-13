@@ -115,7 +115,7 @@ export default function Sidebar({ currentPage }) {
 
         {/* Global Search */}
         {!collapsed && (
-          <div className="px-3 py-2 border-b border-gray-800/50">
+          <div className={cn("px-3 py-2 border-b", isLight ? "border-gray-200" : "border-gray-800/50")}>
             <GlobalSearch />
           </div>
         )}

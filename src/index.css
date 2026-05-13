@@ -108,3 +108,159 @@
     font-size: 0.9rem;
   }
 }
+
+/* ============================================================
+   LIGHT MODE OVERRIDES
+   Targets .light on <html> (set by ThemeContext).
+   Converts all dark gray surfaces to white/light-gray.
+   Dark mode is completely untouched.
+   ============================================================ */
+
+/* Base page background */
+.light body,
+.light .min-h-screen {
+  background-color: #f1f5f9 !important;
+}
+
+/* Main layout content area */
+.light main {
+  background-color: #f1f5f9 !important;
+}
+
+/* ---- Cards / panels: bg-gray-900, bg-gray-800, bg-gray-950 → white ---- */
+.light .bg-gray-950,
+.light .bg-gray-900,
+.light .bg-gray-900\/50,
+.light .bg-gray-900\/60,
+.light .bg-gray-900\/40 {
+  background-color: #ffffff !important;
+}
+
+.light .bg-gray-800,
+.light .bg-gray-800\/30,
+.light .bg-gray-800\/40,
+.light .bg-gray-800\/50,
+.light .bg-gray-800\/60 {
+  background-color: #f8fafc !important;
+}
+
+/* Hover states: don't go dark on hover */
+.light .hover\:bg-gray-800\/50:hover,
+.light .hover\:bg-gray-800:hover {
+  background-color: #f1f5f9 !important;
+}
+
+/* ---- Borders: gray-800, gray-700 → light ---- */
+.light .border-gray-800,
+.light .border-gray-800\/50,
+.light .border-gray-800\/60 {
+  border-color: #e2e8f0 !important;
+}
+
+.light .border-gray-700 {
+  border-color: #cbd5e1 !important;
+}
+
+/* ---- Text overrides ---- */
+.light .text-white {
+  color: #0f172a !important;
+}
+
+.light .text-gray-400 {
+  color: #475569 !important;
+}
+
+.light .text-gray-500 {
+  color: #64748b !important;
+}
+
+.light .text-gray-600 {
+  color: #94a3b8 !important;
+}
+
+.light .text-gray-300 {
+  color: #334155 !important;
+}
+
+/* ---- Sidebar specific ---- */
+.light aside {
+  background-color: #ffffff !important;
+  border-right-color: #e2e8f0 !important;
+}
+
+.light aside .border-b,
+.light aside .border-t {
+  border-color: #e2e8f0 !important;
+}
+
+/* Sidebar search area */
+.light aside .border-b.border-gray-800\/50 {
+  border-color: #e2e8f0 !important;
+}
+
+/* ---- Tab bar ---- */
+.light [role="tablist"],
+.light .bg-gray-900.border.border-gray-800 {
+  background-color: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+}
+
+.light [role="tab"][data-state="active"] {
+  background-color: #1e293b !important;
+  color: #ffffff !important;
+}
+
+.light [role="tab"][data-state="inactive"] {
+  color: #475569 !important;
+}
+
+/* ---- Inputs & textareas ---- */
+.light input,
+.light textarea,
+.light select {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+.light input::placeholder,
+.light textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* ---- Outline buttons in light mode ---- */
+.light .border-gray-700.text-gray-300 {
+  border-color: #cbd5e1 !important;
+  color: #334155 !important;
+}
+
+/* ---- Skeleton loaders ---- */
+.light .bg-gray-800.rounded,
+.light .animate-pulse.bg-gray-800 {
+  background-color: #e2e8f0 !important;
+}
+
+/* ---- Timeline vertical line ---- */
+.light .bg-gray-700 {
+  background-color: #cbd5e1 !important;
+}
+
+/* ---- Status dot border for timeline ---- */
+.light .border-gray-900 {
+  border-color: #ffffff !important;
+}
+
+/* ---- Dialog / modal overlays ---- */
+.light [role="dialog"] .bg-gray-900,
+.light [role="dialog"] .bg-gray-800 {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* ---- Scrollbar in light mode ---- */
+.light ::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.3);
+}
+.light ::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.5);
+}
