@@ -1,39 +1,38 @@
-**Welcome to your Base44 project** 
+# LBC Auto — AI-Powered Auto Shop Management
 
-**About**
+> The smartest shop management software built for independent auto repair businesses.
 
-View and Edit  your app on [Base44.com](http://Base44.com) 
+LBC Auto is a live, revenue-generating product by LBC Network — currently deployed at Terry Fox Auto Center in Gatineau, Quebec.
 
-This project contains everything you need to run your app locally.
+---
 
-**Edit the code in your local development environment**
+## What it does
 
-Any change pushed to the repo will also be reflected in the Base44 Builder.
+- Customer & vehicle management
+- Repair orders, estimates & invoicing
+- VIN lookup & vehicle history
+- Solana payments ($LBC + USDC)
+- AI diagnostics assistant
+- Multi-location support
 
-**Prerequisites:** 
+---
 
-1. Clone the repository using the project's Git URL 
-2. Navigate to the project directory
-3. Install dependencies: `npm install`
-4. Create an `.env.local` file and set the right environment variables
+## Live Deployment
 
-```
-VITE_BASE44_APP_ID=your_app_id
-VITE_BASE44_APP_BASE_URL=your_backend_url
+Shop: Terry Fox Auto Center
+Address: 124 Principale St, Gatineau, QC J9H 3M4
+App: https://lbchub.tech
 
-e.g.
-VITE_BASE44_APP_ID=cbef744a8545c389ef439ea6
-VITE_BASE44_APP_BASE_URL=https://my-to-do-list-81bfaad7.base44.app
-```
+---
 
-Run the app: `npm run dev`
+## Pricing
 
-**Publish your changes**
+$2,000 USDC — one-time payment. No subscriptions. No recurring fees.
 
-Open [Base44.com](http://Base44.com) and click on Publish.
+---
 
-**Docs & Support**
+## Built by
 
-Documentation: [https://docs.base44.com/Integrations/Using-GitHub](https://docs.base44.com/Integrations/Using-GitHub)
+LBC NETWORK inc | Ottawa, Canada
+Part of the LBC Digital City ecosystem.
 
-Support: [https://app.base44.com/support](https://app.base44.com/support)
