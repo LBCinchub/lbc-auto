@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Car, Pencil, Trash2, Clock } from "lucide-react";
+import { Car, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { fuzzyMatch } from "@/utils/fuzzySearch";
@@ -122,7 +122,7 @@ export default function Vehicles() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map(v => (
-            <div key={v.id} className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5 hover:border-sky-500/30 transition-colors">
+            <div key={v.id} className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5 hover:border-sky-500/50 hover:shadow-sky-500/10 hover:shadow-lg transition-all duration-200 cursor-pointer" onClick={() => navigate(`/VehicleTimeline/${v.id}`)}>
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-sky-500/20 flex items-center justify-center">
@@ -150,16 +150,12 @@ export default function Vehicles() {
                   </div>
                 </div>
                 <div className="flex gap-1">
-                   <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-sky-400"
-                     onClick={() => navigate(`/VehicleTimeline/${v.id}`)}>
-                     <Clock className="w-3.5 h-3.5" />
-                   </Button>
                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-white"
-                     onClick={() => { setEditingVehicle(v); setDialogOpen(true); }}>
+                     onClick={(e) => { e.stopPropagation(); setEditingVehicle(v); setDialogOpen(true); }}>
                      <Pencil className="w-3.5 h-3.5" />
                    </Button>
                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-rose-400"
-                     onClick={() => handleDelete(v.id)}>
+                     onClick={(e) => { e.stopPropagation(); handleDelete(v.id); }}>
                      <Trash2 className="w-3.5 h-3.5" />
                    </Button>
                  </div>
