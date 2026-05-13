@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import PrintTemplate from "@/components/shared/PrintTemplate";
+import TechnicianNotes from "@/components/invoices/TechnicianNotes";
 
 
 
@@ -25,6 +26,7 @@ export default function InvoiceDetail() {
   const [partsItems, setPartsItems] = useState([]);
   const [partsUsed, setPartsUsed] = useState([]);
   const [initialized, setInitialized] = useState(false);
+  const [techNotes, setTechNotes] = useState("");
   const [showPayment, setShowPayment] = useState(false);
   const [payAmount, setPayAmount] = useState("");
   const [payMethod, setPayMethod] = useState("cash");
@@ -62,6 +64,7 @@ export default function InvoiceDetail() {
           .map(i => ({ name: i.description || "", quantity: i.quantity || 1, unit_price: i.unit_price || 0, total: i.total || 0 }))
       );
       setPartsUsed(invoice.parts_used || []);
+      setTechNotes(invoice.technician_notes || "");
       setInitialized(true);
     }
   }, [invoice, initialized]);
@@ -159,6 +162,7 @@ export default function InvoiceDetail() {
       total: newTotal,
       balance_due: Math.max(0, newTotal - amountPaid),
       parts_used: partsUsed,
+      technician_notes: techNotes,
     });
     queryClient.invalidateQueries({ queryKey: ["invoice", invoiceId] });
     queryClient.invalidateQueries({ queryKey: ["invoices"] });
@@ -247,7 +251,7 @@ export default function InvoiceDetail() {
             amountPaid: invoice.amount_paid || 0,
             balanceDue: invoice.balance_due || 0,
           }}
-          notes={invoice.customer_note}
+          notes={[invoice.customer_note, techNotes].filter(Boolean).join("\n\n")}
         />
       </div>
 
@@ -409,6 +413,14 @@ export default function InvoiceDetail() {
               </tbody>
             </table>
           </div>
+        </div>
+
+        {/* Technician Notes & Reminders */}
+        <div className="rounded-xl border border-emerald-800/40 bg-gray-900/60 p-5">
+          <h2 className="text-white font-semibold mb-4 flex items-center gap-2">
+            🔧 Technician Notes &amp; Reminders
+          </h2>
+          <TechnicianNotes value={techNotes} onChange={setTechNotes} />
         </div>
 
         {/* Totals */}
