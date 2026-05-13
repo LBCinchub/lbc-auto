@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { Users, Phone, Mail, Car, Eye, Pencil, Trash2 } from "lucide-react";
+import { Users, Phone, Mail, Car, Pencil, Trash2 } from "lucide-react";
 import CustomerProfileDialog from "../components/customers/CustomerProfileDialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -163,7 +163,8 @@ export default function Customers() {
               const cv = vehiclesByCustomer[customer.id] || [];
               return (
                 <div key={customer.id}
-                  className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5 hover:border-sky-500/30 transition-colors flex flex-col gap-3">
+                  onClick={() => navigate(`/CustomerDetails?id=${customer.id}`)}
+                  className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5 hover:border-sky-500/50 hover:shadow-lg hover:shadow-sky-500/5 hover:-translate-y-0.5 transition-all duration-200 flex flex-col gap-3 cursor-pointer">
 
                   {/* Top row: avatar + name + actions */}
                   <div className="flex items-start justify-between">
@@ -179,16 +180,12 @@ export default function Customers() {
                       </div>
                     </div>
                     <div className="flex gap-1 flex-shrink-0">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-sky-400"
-                        onClick={() => navigate(`/CustomerDetails?id=${customer.id}`)}>
-                        <Eye className="w-3.5 h-3.5" />
-                      </Button>
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-white"
-                        onClick={() => { setEditingCustomer(customer); setDialogOpen(true); }}>
+                        onClick={e => { e.stopPropagation(); setEditingCustomer(customer); setDialogOpen(true); }}>
                         <Pencil className="w-3.5 h-3.5" />
                       </Button>
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-rose-400"
-                        onClick={() => handleDelete(customer.id)}>
+                        onClick={e => { e.stopPropagation(); handleDelete(customer.id); }}>
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </div>
