@@ -26,11 +26,8 @@ export default function VehicleTimeline() {
 
   const { data: invoices = [] } = useQuery({
     queryKey: ["invoices", vehicleId],
-    queryFn: async () => {
-      const allInvoices = await base44.entities.Invoice.list("-created_date", 500);
-      return allInvoices.filter(inv => inv.vehicle_info?.includes(vehicle?.license_plate || ""));
-    },
-    enabled: !!vehicleId && !!vehicle,
+    queryFn: () => base44.entities.Invoice.filter({ vehicle_id: vehicleId }, "-created_date", 100),
+    enabled: !!vehicleId,
   });
 
   // Combine and sort timeline events
@@ -126,7 +123,7 @@ export default function VehicleTimeline() {
         <h2 className="text-xl font-bold text-white mb-8">Service History</h2>
         
         {timelineEvents.length === 0 ? (
-          <p className="text-gray-400 text-center py-8">No service history yet</p>
+          <p className="text-gray-400 text-center py-8">No service history for this vehicle.</p>
         ) : (
           <div className="space-y-4">
             {timelineEvents.map((event, idx) => (
