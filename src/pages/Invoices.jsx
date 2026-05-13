@@ -17,6 +17,7 @@ import StatusBadge from "../components/shared/StatusBadge";
 import InvoiceFormDialog from "../components/invoices/InvoiceFormDialog";
 import InvoicePrintView from "../components/invoices/InvoicePrintView";
 import PaymentReceiptDialog from "../components/invoices/PaymentReceiptDialog";
+import DateFilter, { applyDateFilter } from "../components/shared/DateFilter";
 
 const PAGE_SIZE = 20;
 
@@ -30,6 +31,7 @@ export default function Invoices() {
   const [printInvoice, setPrintInvoice] = useState(null);
   const [paymentInvoice, setPaymentInvoice] = useState(null);
   const [sendingAuth, setSendingAuth] = useState(null);
+  const [dateRange, setDateRange] = useState(null);
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -99,21 +101,25 @@ export default function Invoices() {
     enabled: !!user,
   });
 
-  const filtered = invoices
-    .filter(i => statusFilter === "all" || i.status === statusFilter || (statusFilter === "unpaid" && i.status === "partial"))
-    .filter(i => {
-      if (searchField === "invoice_number") return fuzzyMatch(search, [i.invoice_number]);
-      if (searchField === "customer") return fuzzyMatch(search, [i.customer_name]);
-      if (searchField === "vehicle") return fuzzyMatch(search, [i.vehicle_info]);
-      const customer = customers.find(c => c.id === i.customer_id);
-      return fuzzyMatch(search, [i.invoice_number, i.customer_name, i.vehicle_info, customer?.phone, customer?.email]);
-    });
+  const filtered = applyDateFilter(
+    invoices
+      .filter(i => statusFilter === "all" || i.status === statusFilter || (statusFilter === "unpaid" && i.status === "partial"))
+      .filter(i => {
+        if (searchField === "invoice_number") return fuzzyMatch(search, [i.invoice_number]);
+        if (searchField === "customer") return fuzzyMatch(search, [i.customer_name]);
+        if (searchField === "vehicle") return fuzzyMatch(search, [i.vehicle_info]);
+        const customer = customers.find(c => c.id === i.customer_id);
+        return fuzzyMatch(search, [i.invoice_number, i.customer_name, i.vehicle_info, customer?.phone, customer?.email]);
+      }),
+    dateRange,
+    r => r.created_date
+  );
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   // Reset to page 1 when filters change
-  useEffect(() => { setPage(1); }, [search, searchField, statusFilter]);
+  useEffect(() => { setPage(1); }, [search, searchField, statusFilter, dateRange]);
 
   const handleDelete = async (id) => {
     if (window.confirm("Delete this invoice?")) {
@@ -255,7 +261,7 @@ export default function Invoices() {
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
-        <PageHeader title="Invoices" subtitle={`${invoices.length} total invoices`}
+        <PageHeader title="Invoices" subtitle={dateRange ? `${filtered.length} invoices found` : `${invoices.length} total invoices`}
           onAdd={() => { setEditingInvoice(null); setDialogOpen(true); }} addLabel="Create Invoice" />
         <Button variant="outline" size="sm" onClick={exportCSV} className="border-gray-700 text-gray-300 hover:text-white gap-2 flex-shrink-0">
           <Sheet className="w-4 h-4" /> Export CSV ({filtered.length})
@@ -293,6 +299,8 @@ export default function Invoices() {
           </TabsList>
         </Tabs>
       </div>
+
+      <DateFilter onChange={setDateRange} />
 
       {isLoading ? (
         <div className="space-y-3">

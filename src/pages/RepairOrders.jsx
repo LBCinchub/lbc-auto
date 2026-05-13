@@ -15,6 +15,7 @@ import EmptyState from "../components/shared/EmptyState";
 import StatusBadge from "../components/shared/StatusBadge";
 import RepairOrderFormDialog from "../components/orders/RepairOrderFormDialog";
 import InvoiceFormDialog from "../components/invoices/InvoiceFormDialog";
+import DateFilter, { applyDateFilter } from "../components/shared/DateFilter";
 
 const statusFilters = [
   { value: "all", label: "All" },
@@ -37,6 +38,7 @@ export default function RepairOrders() {
   const [historyOrder, setHistoryOrder] = useState(null);
   const [invoiceOrder, setInvoiceOrder] = useState(null);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
+  const [dateRange, setDateRange] = useState(null);
   const [user, setUser] = useState(null);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -84,22 +86,26 @@ export default function RepairOrders() {
     enabled: !!user,
   });
 
-  const filtered = orders
-    .filter(o => statusFilter === "all" || o.status === statusFilter)
-    .filter(o => {
-      if (searchField === "order_number") return fuzzyMatch(search, [o.order_number]);
-      if (searchField === "customer") return fuzzyMatch(search, [o.customer_name]);
-      if (searchField === "vehicle") return fuzzyMatch(search, [o.vehicle_info]);
-      const vehicle = vehicles.find(v => v.id === o.vehicle_id);
-      if (searchField === "vin") return fuzzyMatch(search, [vehicle?.vin, vehicle?.license_plate]);
-      const customer = customers.find(c => c.id === o.customer_id);
-      return fuzzyMatch(search, [o.order_number, o.customer_name, o.vehicle_info, o.description, o.mechanic_name, customer?.phone, vehicle?.vin, vehicle?.license_plate]);
-    });
+  const filtered = applyDateFilter(
+    orders
+      .filter(o => statusFilter === "all" || o.status === statusFilter)
+      .filter(o => {
+        if (searchField === "order_number") return fuzzyMatch(search, [o.order_number]);
+        if (searchField === "customer") return fuzzyMatch(search, [o.customer_name]);
+        if (searchField === "vehicle") return fuzzyMatch(search, [o.vehicle_info]);
+        const vehicle = vehicles.find(v => v.id === o.vehicle_id);
+        if (searchField === "vin") return fuzzyMatch(search, [vehicle?.vin, vehicle?.license_plate]);
+        const customer = customers.find(c => c.id === o.customer_id);
+        return fuzzyMatch(search, [o.order_number, o.customer_name, o.vehicle_info, o.description, o.mechanic_name, customer?.phone, vehicle?.vin, vehicle?.license_plate]);
+      }),
+    dateRange,
+    r => r.created_date
+  );
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  useEffect(() => { setPage(1); }, [search, searchField, statusFilter]);
+  useEffect(() => { setPage(1); }, [search, searchField, statusFilter, dateRange]);
 
   const handleDelete = async (id) => {
     if (window.confirm("Delete this repair order?")) {
@@ -119,7 +125,7 @@ export default function RepairOrders() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Repair Orders" subtitle={`${orders.length} total orders`}
+      <PageHeader title="Repair Orders" subtitle={dateRange ? `${filtered.length} orders found` : `${orders.length} total orders`}
         onAdd={() => { setEditingOrder(null); setDialogOpen(true); }} addLabel="New Order" />
 
       <div className="flex gap-2 items-center">
@@ -144,6 +150,8 @@ export default function RepairOrders() {
            } />
          </div>
        </div>
+
+       <DateFilter onChange={setDateRange} />
 
        <Tabs value={statusFilter} onValueChange={setStatusFilter}>
          <TabsList className="bg-gray-800/50 flex-wrap h-auto">

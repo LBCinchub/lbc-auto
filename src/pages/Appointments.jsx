@@ -12,6 +12,7 @@ import EmptyState from "../components/shared/EmptyState";
 import StatusBadge from "../components/shared/StatusBadge";
 import AppointmentFormDialog from "../components/appointments/AppointmentFormDialog";
 import RepairOrderFormDialog from "../components/orders/RepairOrderFormDialog";
+import DateFilter, { applyDateFilter } from "../components/shared/DateFilter";
 
 export default function Appointments() {
   const [search, setSearch] = useState("");
@@ -20,6 +21,7 @@ export default function Appointments() {
   const [editing, setEditing] = useState(null);
   const [roPrompt, setRoPrompt] = useState(null); // appointment to create RO from
   const [roDialogOpen, setRoDialogOpen] = useState(false);
+  const [dateRange, setDateRange] = useState(null);
   const [user, setUser] = useState(null);
   const queryClient = useQueryClient();
 
@@ -64,18 +66,22 @@ export default function Appointments() {
   });
 
   const today = new Date().toISOString().split("T")[0];
-  const filtered = appointments
-    .filter(a => {
-      if (view === "upcoming") return a.date >= today && a.status !== "cancelled";
-      if (view === "today") return a.date === today;
-      if (view === "past") return a.date < today;
-      return true;
-    })
-    .filter(a => fuzzyMatch(search, [a.customer_name, a.service_type, a.vehicle_info, a.mechanic_name, a.notes]))
-    .sort((a, b) => {
-      if (a.date === b.date) return (a.time_slot || "").localeCompare(b.time_slot || "");
-      return a.date.localeCompare(b.date);
-    });
+  const filtered = applyDateFilter(
+    appointments
+      .filter(a => {
+        if (view === "upcoming") return a.date >= today && a.status !== "cancelled";
+        if (view === "today") return a.date === today;
+        if (view === "past") return a.date < today;
+        return true;
+      })
+      .filter(a => fuzzyMatch(search, [a.customer_name, a.service_type, a.vehicle_info, a.mechanic_name, a.notes]))
+      .sort((a, b) => {
+        if (a.date === b.date) return (a.time_slot || "").localeCompare(b.time_slot || "");
+        return a.date.localeCompare(b.date);
+      }),
+    dateRange,
+    r => r.date
+  );
 
   const handleDelete = async (id) => {
     if (window.confirm("Delete this appointment?")) {
@@ -108,7 +114,7 @@ export default function Appointments() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Appointments" subtitle={`${appointments.length} total`}
+      <PageHeader title="Appointments" subtitle={dateRange ? `${filtered.length} appointments found` : `${appointments.length} total`}
         onAdd={() => { setEditing(null); setDialogOpen(true); }} addLabel="Book Appointment" />
 
       <div className="flex flex-col sm:flex-row gap-4">
@@ -124,6 +130,8 @@ export default function Appointments() {
           </TabsList>
         </Tabs>
       </div>
+
+      <DateFilter onChange={setDateRange} />
 
       {isLoading ? (
         <div className="space-y-3">

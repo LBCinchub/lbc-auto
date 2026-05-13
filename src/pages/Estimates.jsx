@@ -12,6 +12,7 @@ import SearchBar from "../components/shared/SearchBar";
 import EmptyState from "../components/shared/EmptyState";
 import EstimateFormDialog from "../components/estimates/EstimateFormDialog";
 import InvoiceFormDialog from "../components/invoices/InvoiceFormDialog";
+import DateFilter, { applyDateFilter } from "../components/shared/DateFilter";
 
 const STATUS_STYLES = {
   draft:    "bg-gray-700/50 text-gray-300",
@@ -28,6 +29,7 @@ export default function Estimates() {
   const [editing, setEditing] = useState(null);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [invoiceFromEstimate, setInvoiceFromEstimate] = useState(null);
+  const [dateRange, setDateRange] = useState(null);
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -74,13 +76,17 @@ export default function Estimates() {
     enabled: !!user,
   });
 
-  const filtered = estimates.filter(e => {
-    if (searchField === "customer") return fuzzyMatch(search, [e.customer_name]);
-    if (searchField === "vehicle") return fuzzyMatch(search, [e.vehicle_info]);
-    if (searchField === "estimate_number") return fuzzyMatch(search, [e.estimate_number]);
-    const customer = customers.find(c => c.id === e.customer_id);
-    return fuzzyMatch(search, [e.estimate_number, e.customer_name, e.vehicle_info, e.notes, customer?.phone]);
-  });
+  const filtered = applyDateFilter(
+    estimates.filter(e => {
+      if (searchField === "customer") return fuzzyMatch(search, [e.customer_name]);
+      if (searchField === "vehicle") return fuzzyMatch(search, [e.vehicle_info]);
+      if (searchField === "estimate_number") return fuzzyMatch(search, [e.estimate_number]);
+      const customer = customers.find(c => c.id === e.customer_id);
+      return fuzzyMatch(search, [e.estimate_number, e.customer_name, e.vehicle_info, e.notes, customer?.phone]);
+    }),
+    dateRange,
+    r => r.created_date
+  );
 
   const handleDelete = async (id) => {
     if (window.confirm("Delete this estimate?")) {
@@ -155,7 +161,7 @@ export default function Estimates() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <PageHeader
           title="Estimates"
-          subtitle={`${estimates.length} estimates`}
+          subtitle={dateRange ? `${filtered.length} estimates found` : `${estimates.length} estimates`}
           onAdd={openNew}
           addLabel="New Estimate"
         />
@@ -185,6 +191,8 @@ export default function Estimates() {
           } />
         </div>
       </div>
+
+      <DateFilter onChange={setDateRange} />
 
       {isLoading ? (
         <div className="space-y-3">

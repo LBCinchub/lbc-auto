@@ -16,6 +16,7 @@ import AppointmentFormDialog from "../components/appointments/AppointmentFormDia
 import EstimateFormDialog from "../components/estimates/EstimateFormDialog";
 import RepairOrderFormDialog from "../components/orders/RepairOrderFormDialog";
 import InvoiceFormDialog from "../components/invoices/InvoiceFormDialog";
+import DateFilter, { applyDateFilter } from "../components/shared/DateFilter";
 
 const PAGE_SIZE = 30;
 const AVATAR_COLORS = [
@@ -39,6 +40,7 @@ export default function Customers() {
   const [profileCustomer, setProfileCustomer] = useState(null);
   const [activeQuickAction, setActiveQuickAction] = useState(null);
   const [quickActionData, setQuickActionData] = useState(null);
+  const [dateRange, setDateRange] = useState(null);
   const [user, setUser] = useState(null);
   const queryClient = useQueryClient();
 
@@ -89,21 +91,25 @@ export default function Customers() {
     return map;
   }, {});
 
-  const filtered = customers.filter(c => {
-    const customerVehicles = vehiclesByCustomer[c.id] || [];
-    const vins = customerVehicles.map(v => v.vin).join(" ");
-    const plates = customerVehicles.map(v => v.license_plate).join(" ");
-    const carInfo = customerVehicles.map(v => `${v.year} ${v.make} ${v.model}`).join(" ");
-    if (searchField === "name") return fuzzyMatch(search, [c.full_name]);
-    if (searchField === "phone") return fuzzyMatch(search, [c.phone]);
-    if (searchField === "email") return fuzzyMatch(search, [c.email]);
-    return fuzzyMatch(search, [c.full_name, c.phone, c.email, c.address, vins, plates, carInfo]);
-  });
+  const filtered = applyDateFilter(
+    customers.filter(c => {
+      const customerVehicles = vehiclesByCustomer[c.id] || [];
+      const vins = customerVehicles.map(v => v.vin).join(" ");
+      const plates = customerVehicles.map(v => v.license_plate).join(" ");
+      const carInfo = customerVehicles.map(v => `${v.year} ${v.make} ${v.model}`).join(" ");
+      if (searchField === "name") return fuzzyMatch(search, [c.full_name]);
+      if (searchField === "phone") return fuzzyMatch(search, [c.phone]);
+      if (searchField === "email") return fuzzyMatch(search, [c.email]);
+      return fuzzyMatch(search, [c.full_name, c.phone, c.email, c.address, vins, plates, carInfo]);
+    }),
+    dateRange,
+    r => r.created_date
+  );
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  useEffect(() => { setPage(1); }, [search, searchField]);
+  useEffect(() => { setPage(1); }, [search, searchField, dateRange]);
 
   const handleDelete = async (id) => {
     if (window.confirm("Delete this customer?")) {
@@ -120,7 +126,7 @@ export default function Customers() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Customers" subtitle={`${customers.length} total customers`}
+      <PageHeader title="Customers" subtitle={dateRange ? `${filtered.length} customers found` : `${customers.length} total customers`}
         onAdd={() => { setEditingCustomer(null); setDialogOpen(true); }} addLabel="Add Customer" />
 
       <div className="flex gap-2 items-center">
@@ -144,6 +150,8 @@ export default function Customers() {
           } />
         </div>
       </div>
+
+      <DateFilter onChange={setDateRange} />
 
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
