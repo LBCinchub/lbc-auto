@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, ChevronRight, Plus, X, Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -29,23 +30,21 @@ function loadCustomGroups() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
+  } catch { return []; }
 }
 
 function saveCustomGroups(groups) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(groups));
 }
 
-// GroupDropdown: checklist popover for a single group
-function GroupDropdown({ group, onAdd, onClose }) {
-  const ref = useRef(null);
-  // checked state: { [partName]: bool }
+// Portal-based floating popover, positioned via getBoundingClientRect
+function GroupPopover({ group, anchorRect, onAdd, onClose }) {
+  const popoverRef = useRef(null);
+  const [visible, setVisible] = useState(false);
+
   const [checked, setChecked] = useState(() =>
     Object.fromEntries(group.parts.map(p => [p, true]))
   );
-  // qty/price per part
   const [quantities, setQuantities] = useState(() =>
     Object.fromEntries(group.parts.map(p => [p, "1"]))
   );
@@ -53,13 +52,20 @@ function GroupDropdown({ group, onAdd, onClose }) {
     Object.fromEntries(group.parts.map(p => [p, "0.00"]))
   );
 
+  // Animate in
+  useEffect(() => {
+    requestAnimationFrame(() => setVisible(true));
+  }, []);
+
   // Close on outside click
   useEffect(() => {
     const handler = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) onClose();
+      if (popoverRef.current && !popoverRef.current.contains(e.target)) {
+        onClose();
+      }
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("mousedown", handler, true);
+    return () => document.removeEventListener("mousedown", handler, true);
   }, [onClose]);
 
   const selectedCount = group.parts.filter(p => checked[p]).length;
@@ -81,93 +87,143 @@ function GroupDropdown({ group, onAdd, onClose }) {
     setChecked(Object.fromEntries(group.parts.map(p => [p, !allChecked])));
   };
 
-  return (
+  // Position: below anchor, clamp to viewport
+  const viewportWidth = window.innerWidth;
+  const popoverWidth = 320;
+  let left = anchorRect.left;
+  if (left + popoverWidth > viewportWidth - 8) {
+    left = viewportWidth - popoverWidth - 8;
+  }
+  const top = anchorRect.bottom + window.scrollY + 6;
+
+  return createPortal(
     <div
-      ref={ref}
-      className="absolute z-50 top-full left-0 mt-1 w-80 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl overflow-hidden"
-      style={{ minWidth: "300px" }}
+      ref={popoverRef}
+      style={{
+        position: "absolute",
+        top,
+        left,
+        width: popoverWidth,
+        zIndex: 9999,
+        background: "#111827",
+        border: "1px solid rgba(255,255,255,0.12)",
+        borderRadius: 12,
+        boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+        overflow: "hidden",
+        opacity: visible ? 1 : 0,
+        transform: visible ? "translateY(0)" : "translateY(-6px)",
+        transition: "opacity 150ms ease-out, transform 150ms ease-out",
+      }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 bg-gray-800 border-b border-gray-700">
-        <span className="text-sm font-semibold text-white">{group.emoji} {group.name}</span>
-        <button onClick={onClose} className="text-gray-500 hover:text-gray-300">
-          <X className="w-3.5 h-3.5" />
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", background: "rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>{group.emoji} {group.name}</span>
+        <button onClick={onClose} style={{ color: "#6b7280", cursor: "pointer", background: "none", border: "none", padding: 2 }}>
+          <X size={14} />
         </button>
       </div>
 
       {/* Column headers */}
-      <div className="grid grid-cols-[1fr_52px_72px] gap-1 px-3 py-1.5 bg-gray-800/50 border-b border-gray-700/50 text-xs text-gray-500 uppercase tracking-wider">
-        <span>
-          <button onClick={toggleAll} className="hover:text-gray-300 transition-colors">
-            Part Name
-          </button>
-        </span>
-        <span className="text-right">Qty</span>
-        <span className="text-right">Unit $</span>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 48px 68px", gap: 4, padding: "6px 12px", background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+        <button onClick={toggleAll} style={{ textAlign: "left", fontSize: 10, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em", cursor: "pointer", background: "none", border: "none" }}>
+          Part Name (toggle all)
+        </button>
+        <span style={{ fontSize: 10, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", textAlign: "right" }}>Qty</span>
+        <span style={{ fontSize: 10, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", textAlign: "right" }}>Unit $</span>
       </div>
 
-      {/* Parts list */}
-      <div className="max-h-64 overflow-y-auto">
+      {/* Scrollable parts list */}
+      <div style={{ maxHeight: 220, overflowY: "auto" }}>
         {group.parts.map(part => (
-          <div key={part} className={`grid grid-cols-[1fr_52px_72px] gap-1 items-center px-3 py-1.5 border-b border-gray-800/60 transition-colors ${checked[part] ? "bg-gray-900" : "bg-gray-900/40 opacity-50"}`}>
-            <label className="flex items-center gap-2 cursor-pointer min-w-0">
+          <div
+            key={part}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 48px 68px",
+              gap: 4,
+              alignItems: "center",
+              padding: "5px 12px",
+              borderBottom: "1px solid rgba(255,255,255,0.05)",
+              opacity: checked[part] ? 1 : 0.45,
+              transition: "opacity 100ms",
+            }}
+          >
+            <label style={{ display: "flex", alignItems: "center", gap: 7, cursor: "pointer", minWidth: 0 }}>
               <div
                 onClick={() => setChecked(c => ({ ...c, [part]: !c[part] }))}
-                className={`w-4 h-4 flex-shrink-0 rounded border flex items-center justify-center transition-colors cursor-pointer ${
-                  checked[part]
-                    ? "bg-sky-500 border-sky-500"
-                    : "bg-gray-800 border-gray-600"
-                }`}
+                style={{
+                  width: 15, height: 15, flexShrink: 0, borderRadius: 4,
+                  border: checked[part] ? "none" : "1.5px solid #4b5563",
+                  background: checked[part] ? "#0ea5e9" : "#1f2937",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  cursor: "pointer", transition: "background 120ms",
+                }}
               >
-                {checked[part] && <Check className="w-2.5 h-2.5 text-white" />}
+                {checked[part] && <Check size={10} color="#fff" strokeWidth={3} />}
               </div>
-              <span className="text-xs text-white truncate">{part}</span>
+              <span style={{ fontSize: 12, color: "#e5e7eb", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{part}</span>
             </label>
-            <Input
+            <input
               type="number"
               value={quantities[part]}
               onChange={e => setQuantities(q => ({ ...q, [part]: e.target.value }))}
-              className="bg-gray-800 border-gray-700 text-white h-6 text-xs text-right px-1"
+              disabled={!checked[part]}
               min="1"
               step="1"
-              disabled={!checked[part]}
+              style={{
+                width: "100%", textAlign: "right", fontSize: 12, padding: "2px 4px",
+                background: "#1f2937", border: "1px solid #374151", borderRadius: 4,
+                color: "#fff", outline: "none", height: 24,
+              }}
             />
-            <Input
+            <input
               type="number"
               value={prices[part]}
               onChange={e => setPrices(p => ({ ...p, [part]: e.target.value }))}
-              className="bg-gray-800 border-gray-700 text-white h-6 text-xs text-right px-1"
+              disabled={!checked[part]}
               min="0"
               step="0.01"
-              disabled={!checked[part]}
+              style={{
+                width: "100%", textAlign: "right", fontSize: 12, padding: "2px 4px",
+                background: "#1f2937", border: "1px solid #374151", borderRadius: 4,
+                color: "#fff", outline: "none", height: 24,
+              }}
             />
           </div>
         ))}
       </div>
 
-      {/* Footer */}
-      <div className="px-3 py-2 bg-gray-800 border-t border-gray-700 flex items-center justify-between gap-2">
-        <span className="text-xs text-gray-500">{selectedCount} of {group.parts.length} selected</span>
-        <Button
+      {/* Sticky footer */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", background: "rgba(255,255,255,0.05)", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+        <span style={{ fontSize: 11, color: "#6b7280" }}>{selectedCount} of {group.parts.length} selected</span>
+        <button
           type="button"
-          size="sm"
           onClick={handleAdd}
           disabled={selectedCount === 0}
-          className="bg-sky-500 hover:bg-sky-600 text-white h-7 text-xs gap-1"
+          style={{
+            display: "flex", alignItems: "center", gap: 4,
+            padding: "5px 12px", fontSize: 12, fontWeight: 600,
+            background: selectedCount === 0 ? "#374151" : "#0ea5e9",
+            color: selectedCount === 0 ? "#6b7280" : "#fff",
+            border: "none", borderRadius: 6, cursor: selectedCount === 0 ? "not-allowed" : "pointer",
+            transition: "background 120ms",
+          }}
         >
-          <Plus className="w-3 h-3" /> Add Selected Parts
-        </Button>
+          <Plus size={12} /> Add Selected ({selectedCount})
+        </button>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
 // onAddParts(parts) receives array of { name, quantity, unit_price }
 export default function QuickPartGroups({ onAddParts, currentParts = [] }) {
   const [open, setOpen] = useState(false);
-  const [activeGroupId, setActiveGroupId] = useState(null);
+  const [activeGroup, setActiveGroup] = useState(null); // { id, rect }
   const [customGroups, setCustomGroups] = useState([]);
   const [newGroupName, setNewGroupName] = useState("");
+  const buttonRefs = useRef({});
 
   useEffect(() => {
     setCustomGroups(loadCustomGroups());
@@ -175,13 +231,19 @@ export default function QuickPartGroups({ onAddParts, currentParts = [] }) {
 
   const allGroups = [...PRESET_GROUPS, ...customGroups];
 
-  const handleGroupClick = (groupId) => {
-    setActiveGroupId(prev => prev === groupId ? null : groupId);
-  };
+  const handleGroupClick = useCallback((group) => {
+    if (activeGroup?.id === group.id) {
+      setActiveGroup(null);
+      return;
+    }
+    const el = buttonRefs.current[group.id];
+    const rect = el ? el.getBoundingClientRect() : null;
+    setActiveGroup({ id: group.id, group, rect });
+  }, [activeGroup]);
 
   const handleAdd = (parts) => {
     onAddParts(parts);
-    setActiveGroupId(null);
+    setActiveGroup(null);
   };
 
   const handleSaveCustom = () => {
@@ -206,6 +268,7 @@ export default function QuickPartGroups({ onAddParts, currentParts = [] }) {
     const updated = customGroups.filter(g => g.id !== id);
     setCustomGroups(updated);
     saveCustomGroups(updated);
+    if (activeGroup?.id === id) setActiveGroup(null);
   };
 
   return (
@@ -213,8 +276,8 @@ export default function QuickPartGroups({ onAddParts, currentParts = [] }) {
       {/* Header toggle */}
       <button
         type="button"
-        onClick={() => { setOpen(o => !o); setActiveGroupId(null); }}
-        className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg bg-gray-800/60 border border-gray-700 hover:border-yellow-500/50 transition-colors group"
+        onClick={() => { setOpen(o => !o); setActiveGroup(null); }}
+        className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg bg-gray-800/60 border border-gray-700 hover:border-yellow-500/50 transition-colors"
       >
         {open ? <ChevronDown className="w-4 h-4 text-yellow-400 flex-shrink-0" /> : <ChevronRight className="w-4 h-4 text-yellow-400 flex-shrink-0" />}
         <span className="text-sm font-medium text-white">⚡ Quick Part Groups</span>
@@ -223,29 +286,21 @@ export default function QuickPartGroups({ onAddParts, currentParts = [] }) {
 
       {open && (
         <div className="mt-2 rounded-lg border border-gray-700 bg-gray-900/70 p-3 space-y-3">
-          {/* Scrollable group cards */}
-          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
+          {/* Scrollable group cards — overflow visible so nothing clips the portal */}
+          <div className="flex gap-2 overflow-x-auto pb-1">
             {allGroups.map(group => (
               <div key={group.id} className="relative flex-shrink-0">
                 <button
+                  ref={el => { buttonRefs.current[group.id] = el; }}
                   type="button"
-                  onClick={() => handleGroupClick(group.id)}
-                  className={`flex flex-col items-center gap-1 px-3 py-2.5 rounded-lg bg-gray-800 border ${group.color} transition-all hover:bg-gray-750 min-w-[90px] max-w-[110px] ${activeGroupId === group.id ? "ring-2 ring-sky-500/50" : ""}`}
+                  onClick={() => handleGroupClick(group)}
+                  className={`flex flex-col items-center gap-1 px-3 py-2.5 rounded-lg bg-gray-800 border ${group.color} transition-all hover:bg-gray-750 min-w-[90px] max-w-[110px] ${activeGroup?.id === group.id ? "ring-2 ring-sky-500/60" : ""}`}
                   title={`${group.parts.length} parts`}
                 >
                   <span className="text-xl leading-none">{group.emoji}</span>
                   <span className="text-xs text-white font-medium text-center leading-tight">{group.name}</span>
                   <span className="text-xs text-gray-500">{group.parts.length} parts</span>
                 </button>
-
-                {/* Checklist dropdown */}
-                {activeGroupId === group.id && (
-                  <GroupDropdown
-                    group={group}
-                    onAdd={handleAdd}
-                    onClose={() => setActiveGroupId(null)}
-                  />
-                )}
 
                 {/* Delete button for custom groups */}
                 {group.id.startsWith("custom_") && (
@@ -285,6 +340,17 @@ export default function QuickPartGroups({ onAddParts, currentParts = [] }) {
             <p className="text-xs text-gray-600 -mt-1">Add parts first to save them as a group</p>
           )}
         </div>
+      )}
+
+      {/* Portal popover — rendered at document.body, never inside modal scroll */}
+      {activeGroup && activeGroup.rect && (
+        <GroupPopover
+          key={activeGroup.id}
+          group={activeGroup.group}
+          anchorRect={activeGroup.rect}
+          onAdd={handleAdd}
+          onClose={() => setActiveGroup(null)}
+        />
       )}
     </div>
   );
