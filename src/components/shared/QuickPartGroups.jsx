@@ -107,122 +107,132 @@ function GroupPopover({ group, anchorRect, onAdd, onClose }) {
     : anchorRect.bottom + window.scrollY + gap;
 
   return createPortal(
-    <div
-      ref={popoverRef}
-      style={{
-        position: "absolute",
-        top,
-        left,
-        width: popoverWidth,
-        zIndex: 9999,
-        background: "#111827",
-        border: "1px solid rgba(255,255,255,0.12)",
-        borderRadius: 12,
-        boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
-        overflow: "hidden",
-        opacity: visible ? 1 : 0,
-        transform: visible ? "translateY(0)" : "translateY(-6px)",
-        transition: "opacity 150ms ease-out, transform 150ms ease-out",
-      }}
-    >
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", background: "rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>{group.emoji} {group.name}</span>
-        <button onClick={onClose} style={{ color: "#6b7280", cursor: "pointer", background: "none", border: "none", padding: 2 }}>
-          <X size={14} />
-        </button>
-      </div>
+    <>
+      <style>{`
+        .qpg-scroll::-webkit-scrollbar { width: 4px; }
+        .qpg-scroll::-webkit-scrollbar-track { background: transparent; }
+        .qpg-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+        .qpg-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.28); }
+      `}</style>
+      <div
+        ref={popoverRef}
+        style={{
+          position: "absolute",
+          top,
+          left,
+          width: popoverWidth,
+          maxHeight: 320,
+          zIndex: 9999,
+          background: "#111827",
+          border: "1px solid rgba(255,255,255,0.12)",
+          borderRadius: 12,
+          boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+          display: "flex",
+          flexDirection: "column",
+          opacity: visible ? 1 : 0,
+          transform: visible ? "translateY(0)" : "translateY(-6px)",
+          transition: "opacity 150ms ease-out, transform 150ms ease-out",
+        }}
+      >
+        {/* Sticky header */}
+        <div style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", background: "rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.08)", borderRadius: "12px 12px 0 0" }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>{group.emoji} {group.name}</span>
+          <button onClick={onClose} style={{ color: "#6b7280", cursor: "pointer", background: "none", border: "none", padding: 2 }}>
+            <X size={14} />
+          </button>
+        </div>
 
-      {/* Column headers */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 48px 68px", gap: 4, padding: "6px 12px", background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-        <button onClick={toggleAll} style={{ textAlign: "left", fontSize: 10, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em", cursor: "pointer", background: "none", border: "none" }}>
-          Part Name (toggle all)
-        </button>
-        <span style={{ fontSize: 10, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", textAlign: "right" }}>Qty</span>
-        <span style={{ fontSize: 10, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", textAlign: "right" }}>Unit $</span>
-      </div>
+        {/* Sticky column headers */}
+        <div style={{ flexShrink: 0, display: "grid", gridTemplateColumns: "1fr 48px 68px", gap: 4, padding: "6px 12px", background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+          <button onClick={toggleAll} style={{ textAlign: "left", fontSize: 10, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em", cursor: "pointer", background: "none", border: "none" }}>
+            Part Name (toggle all)
+          </button>
+          <span style={{ fontSize: 10, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", textAlign: "right" }}>Qty</span>
+          <span style={{ fontSize: 10, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", textAlign: "right" }}>Unit $</span>
+        </div>
 
-      {/* Scrollable parts list */}
-      <div style={{ maxHeight: 220, overflowY: "auto" }}>
-        {group.parts.map(part => (
-          <div
-            key={part}
+        {/* Scrollable parts list */}
+        <div className="qpg-scroll" style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
+          {group.parts.map(part => (
+            <div
+              key={part}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 48px 68px",
+                gap: 4,
+                alignItems: "center",
+                padding: "5px 12px",
+                borderBottom: "1px solid rgba(255,255,255,0.05)",
+                opacity: checked[part] ? 1 : 0.45,
+                transition: "opacity 100ms",
+              }}
+            >
+              <label style={{ display: "flex", alignItems: "center", gap: 7, cursor: "pointer", minWidth: 0 }}>
+                <div
+                  onClick={() => setChecked(c => ({ ...c, [part]: !c[part] }))}
+                  style={{
+                    width: 15, height: 15, flexShrink: 0, borderRadius: 4,
+                    border: checked[part] ? "none" : "1.5px solid #4b5563",
+                    background: checked[part] ? "#0ea5e9" : "#1f2937",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    cursor: "pointer", transition: "background 120ms",
+                  }}
+                >
+                  {checked[part] && <Check size={10} color="#fff" strokeWidth={3} />}
+                </div>
+                <span style={{ fontSize: 12, color: "#e5e7eb", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{part}</span>
+              </label>
+              <input
+                type="number"
+                value={quantities[part]}
+                onChange={e => setQuantities(q => ({ ...q, [part]: e.target.value }))}
+                disabled={!checked[part]}
+                min="1"
+                step="1"
+                style={{
+                  width: "100%", textAlign: "right", fontSize: 12, padding: "2px 4px",
+                  background: "#1f2937", border: "1px solid #374151", borderRadius: 4,
+                  color: "#fff", outline: "none", height: 24,
+                }}
+              />
+              <input
+                type="number"
+                value={prices[part]}
+                onChange={e => setPrices(p => ({ ...p, [part]: e.target.value }))}
+                disabled={!checked[part]}
+                min="0"
+                step="0.01"
+                style={{
+                  width: "100%", textAlign: "right", fontSize: 12, padding: "2px 4px",
+                  background: "#1f2937", border: "1px solid #374151", borderRadius: 4,
+                  color: "#fff", outline: "none", height: 24,
+                }}
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* Sticky footer */}
+        <div style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", background: "rgba(255,255,255,0.05)", borderTop: "1px solid rgba(255,255,255,0.08)", borderRadius: "0 0 12px 12px" }}>
+          <span style={{ fontSize: 11, color: "#6b7280" }}>{selectedCount} of {group.parts.length} selected</span>
+          <button
+            type="button"
+            onClick={handleAdd}
+            disabled={selectedCount === 0}
             style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 48px 68px",
-              gap: 4,
-              alignItems: "center",
-              padding: "5px 12px",
-              borderBottom: "1px solid rgba(255,255,255,0.05)",
-              opacity: checked[part] ? 1 : 0.45,
-              transition: "opacity 100ms",
+              display: "flex", alignItems: "center", gap: 4,
+              padding: "5px 12px", fontSize: 12, fontWeight: 600,
+              background: selectedCount === 0 ? "#374151" : "#0ea5e9",
+              color: selectedCount === 0 ? "#6b7280" : "#fff",
+              border: "none", borderRadius: 6, cursor: selectedCount === 0 ? "not-allowed" : "pointer",
+              transition: "background 120ms",
             }}
           >
-            <label style={{ display: "flex", alignItems: "center", gap: 7, cursor: "pointer", minWidth: 0 }}>
-              <div
-                onClick={() => setChecked(c => ({ ...c, [part]: !c[part] }))}
-                style={{
-                  width: 15, height: 15, flexShrink: 0, borderRadius: 4,
-                  border: checked[part] ? "none" : "1.5px solid #4b5563",
-                  background: checked[part] ? "#0ea5e9" : "#1f2937",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  cursor: "pointer", transition: "background 120ms",
-                }}
-              >
-                {checked[part] && <Check size={10} color="#fff" strokeWidth={3} />}
-              </div>
-              <span style={{ fontSize: 12, color: "#e5e7eb", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{part}</span>
-            </label>
-            <input
-              type="number"
-              value={quantities[part]}
-              onChange={e => setQuantities(q => ({ ...q, [part]: e.target.value }))}
-              disabled={!checked[part]}
-              min="1"
-              step="1"
-              style={{
-                width: "100%", textAlign: "right", fontSize: 12, padding: "2px 4px",
-                background: "#1f2937", border: "1px solid #374151", borderRadius: 4,
-                color: "#fff", outline: "none", height: 24,
-              }}
-            />
-            <input
-              type="number"
-              value={prices[part]}
-              onChange={e => setPrices(p => ({ ...p, [part]: e.target.value }))}
-              disabled={!checked[part]}
-              min="0"
-              step="0.01"
-              style={{
-                width: "100%", textAlign: "right", fontSize: 12, padding: "2px 4px",
-                background: "#1f2937", border: "1px solid #374151", borderRadius: 4,
-                color: "#fff", outline: "none", height: 24,
-              }}
-            />
-          </div>
-        ))}
+            <Plus size={12} /> Add Selected ({selectedCount})
+          </button>
+        </div>
       </div>
-
-      {/* Sticky footer */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", background: "rgba(255,255,255,0.05)", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-        <span style={{ fontSize: 11, color: "#6b7280" }}>{selectedCount} of {group.parts.length} selected</span>
-        <button
-          type="button"
-          onClick={handleAdd}
-          disabled={selectedCount === 0}
-          style={{
-            display: "flex", alignItems: "center", gap: 4,
-            padding: "5px 12px", fontSize: 12, fontWeight: 600,
-            background: selectedCount === 0 ? "#374151" : "#0ea5e9",
-            color: selectedCount === 0 ? "#6b7280" : "#fff",
-            border: "none", borderRadius: 6, cursor: selectedCount === 0 ? "not-allowed" : "pointer",
-            transition: "background 120ms",
-          }}
-        >
-          <Plus size={12} /> Add Selected ({selectedCount})
-        </button>
-      </div>
-    </div>,
+    </>,
     document.body
   );
 }
