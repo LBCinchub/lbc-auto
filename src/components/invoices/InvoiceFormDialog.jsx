@@ -678,8 +678,8 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         </div>{/* end space-y-6 */}
         </div>{/* end scrollable body */}
 
-        {/* Sticky footer */}
-        <div className="flex-shrink-0 sticky bottom-0 z-10 bg-gray-900 px-6 py-4 border-t border-gray-800 flex gap-3">
+        {/* Footer */}
+        <div className="flex-shrink-0 bg-gray-900 px-6 py-4 border-t border-gray-800 flex gap-3">
           <Button variant="outline" onClick={onClose} className="flex-1 border-gray-700 text-gray-300">Cancel</Button>
           <Button onClick={handleSave} disabled={saving || (!form.customer_id && !form.customer_name)} className="flex-1 bg-sky-500 hover:bg-sky-600 text-white gap-2">
             {saving ? <><Loader2 className="w-4 h-4 animate-spin" />Saving...</> : "Save Invoice"}
