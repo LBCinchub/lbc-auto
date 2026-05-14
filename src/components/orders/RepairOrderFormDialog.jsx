@@ -572,16 +572,18 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                 </Button>
               </div>
             </div>
-            <QuickPartGroups
-              currentParts={form.parts_used}
-              onAddParts={(parts) => {
-                const newRows = parts.map(p => ({ part_id: "", name: p.name, quantity: p.quantity || 1, unit_price: String(p.unit_price || ""), total: (p.quantity || 1) * (p.unit_price || 0) }));
-                setForm(f => {
-                  const existing = f.parts_used.filter(r => r.name.trim() !== "");
-                  return { ...f, parts_used: [...existing, ...newRows] };
-                });
-              }}
-            />
+            <div className="sticky top-0 z-10 bg-gray-900 pb-2 border-b border-gray-800 mb-2">
+              <QuickPartGroups
+                currentParts={form.parts_used}
+                onAddParts={(parts) => {
+                  const newRows = parts.map(p => ({ part_id: "", name: p.name, quantity: p.quantity || 1, unit_price: String(p.unit_price || ""), total: (p.quantity || 1) * (p.unit_price || 0) }));
+                  setForm(f => {
+                    const existing = f.parts_used.filter(r => r.name.trim() !== "");
+                    return { ...f, parts_used: [...existing, ...newRows] };
+                  });
+                }}
+              />
+            </div>
             {newPartForm !== null && (
               <div className="bg-gray-800 border border-amber-500/30 rounded-lg p-3 mb-3 space-y-2">
                 <p className="text-xs text-amber-400 font-medium">New Part — Add to Inventory</p>
@@ -601,9 +603,9 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                 </div>
               </div>
             )}
-            <div className="rounded-lg border border-gray-800 overflow-hidden">
+            <div className="rounded-lg border border-gray-800 overflow-hidden" style={{ maxHeight: "220px", overflowY: "auto" }}>
               <table className="w-full text-sm">
-                <thead className="bg-gray-800/60 text-gray-500 text-xs">
+                <thead className="bg-gray-800/60 text-gray-500 text-xs sticky top-0">
                   <tr>
                     <th className="px-3 py-2 text-left">Part Name</th>
                     <th className="px-3 py-2 text-left w-36">From Inventory</th>
