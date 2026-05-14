@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { ChevronDown, ChevronRight, Plus, X } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { ChevronDown, ChevronRight, Plus, X, Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -38,9 +38,134 @@ function saveCustomGroups(groups) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(groups));
 }
 
-// onAddParts(parts) receives an array of part name strings
+// GroupDropdown: checklist popover for a single group
+function GroupDropdown({ group, onAdd, onClose }) {
+  const ref = useRef(null);
+  // checked state: { [partName]: bool }
+  const [checked, setChecked] = useState(() =>
+    Object.fromEntries(group.parts.map(p => [p, true]))
+  );
+  // qty/price per part
+  const [quantities, setQuantities] = useState(() =>
+    Object.fromEntries(group.parts.map(p => [p, "1"]))
+  );
+  const [prices, setPrices] = useState(() =>
+    Object.fromEntries(group.parts.map(p => [p, "0.00"]))
+  );
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) onClose();
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [onClose]);
+
+  const selectedCount = group.parts.filter(p => checked[p]).length;
+
+  const handleAdd = () => {
+    const parts = group.parts
+      .filter(p => checked[p])
+      .map(p => ({
+        name: p,
+        quantity: parseFloat(quantities[p]) || 1,
+        unit_price: parseFloat(prices[p]) || 0,
+      }));
+    if (parts.length === 0) return;
+    onAdd(parts);
+  };
+
+  const toggleAll = () => {
+    const allChecked = group.parts.every(p => checked[p]);
+    setChecked(Object.fromEntries(group.parts.map(p => [p, !allChecked])));
+  };
+
+  return (
+    <div
+      ref={ref}
+      className="absolute z-50 top-full left-0 mt-1 w-80 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl overflow-hidden"
+      style={{ minWidth: "300px" }}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between px-3 py-2 bg-gray-800 border-b border-gray-700">
+        <span className="text-sm font-semibold text-white">{group.emoji} {group.name}</span>
+        <button onClick={onClose} className="text-gray-500 hover:text-gray-300">
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {/* Column headers */}
+      <div className="grid grid-cols-[1fr_52px_72px] gap-1 px-3 py-1.5 bg-gray-800/50 border-b border-gray-700/50 text-xs text-gray-500 uppercase tracking-wider">
+        <span>
+          <button onClick={toggleAll} className="hover:text-gray-300 transition-colors">
+            Part Name
+          </button>
+        </span>
+        <span className="text-right">Qty</span>
+        <span className="text-right">Unit $</span>
+      </div>
+
+      {/* Parts list */}
+      <div className="max-h-64 overflow-y-auto">
+        {group.parts.map(part => (
+          <div key={part} className={`grid grid-cols-[1fr_52px_72px] gap-1 items-center px-3 py-1.5 border-b border-gray-800/60 transition-colors ${checked[part] ? "bg-gray-900" : "bg-gray-900/40 opacity-50"}`}>
+            <label className="flex items-center gap-2 cursor-pointer min-w-0">
+              <div
+                onClick={() => setChecked(c => ({ ...c, [part]: !c[part] }))}
+                className={`w-4 h-4 flex-shrink-0 rounded border flex items-center justify-center transition-colors cursor-pointer ${
+                  checked[part]
+                    ? "bg-sky-500 border-sky-500"
+                    : "bg-gray-800 border-gray-600"
+                }`}
+              >
+                {checked[part] && <Check className="w-2.5 h-2.5 text-white" />}
+              </div>
+              <span className="text-xs text-white truncate">{part}</span>
+            </label>
+            <Input
+              type="number"
+              value={quantities[part]}
+              onChange={e => setQuantities(q => ({ ...q, [part]: e.target.value }))}
+              className="bg-gray-800 border-gray-700 text-white h-6 text-xs text-right px-1"
+              min="1"
+              step="1"
+              disabled={!checked[part]}
+            />
+            <Input
+              type="number"
+              value={prices[part]}
+              onChange={e => setPrices(p => ({ ...p, [part]: e.target.value }))}
+              className="bg-gray-800 border-gray-700 text-white h-6 text-xs text-right px-1"
+              min="0"
+              step="0.01"
+              disabled={!checked[part]}
+            />
+          </div>
+        ))}
+      </div>
+
+      {/* Footer */}
+      <div className="px-3 py-2 bg-gray-800 border-t border-gray-700 flex items-center justify-between gap-2">
+        <span className="text-xs text-gray-500">{selectedCount} of {group.parts.length} selected</span>
+        <Button
+          type="button"
+          size="sm"
+          onClick={handleAdd}
+          disabled={selectedCount === 0}
+          className="bg-sky-500 hover:bg-sky-600 text-white h-7 text-xs gap-1"
+        >
+          <Plus className="w-3 h-3" /> Add Selected Parts
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// onAddParts(parts) receives array of { name, quantity, unit_price }
 export default function QuickPartGroups({ onAddParts, currentParts = [] }) {
   const [open, setOpen] = useState(false);
+  const [activeGroupId, setActiveGroupId] = useState(null);
   const [customGroups, setCustomGroups] = useState([]);
   const [newGroupName, setNewGroupName] = useState("");
 
@@ -48,9 +173,15 @@ export default function QuickPartGroups({ onAddParts, currentParts = [] }) {
     setCustomGroups(loadCustomGroups());
   }, []);
 
+  const allGroups = [...PRESET_GROUPS, ...customGroups];
+
+  const handleGroupClick = (groupId) => {
+    setActiveGroupId(prev => prev === groupId ? null : groupId);
+  };
+
   const handleAdd = (parts) => {
     onAddParts(parts);
-    setOpen(false);
+    setActiveGroupId(null);
   };
 
   const handleSaveCustom = () => {
@@ -77,14 +208,12 @@ export default function QuickPartGroups({ onAddParts, currentParts = [] }) {
     saveCustomGroups(updated);
   };
 
-  const allGroups = [...PRESET_GROUPS, ...customGroups];
-
   return (
     <div className="mb-3">
       {/* Header toggle */}
       <button
         type="button"
-        onClick={() => setOpen(o => !o)}
+        onClick={() => { setOpen(o => !o); setActiveGroupId(null); }}
         className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg bg-gray-800/60 border border-gray-700 hover:border-yellow-500/50 transition-colors group"
       >
         {open ? <ChevronDown className="w-4 h-4 text-yellow-400 flex-shrink-0" /> : <ChevronRight className="w-4 h-4 text-yellow-400 flex-shrink-0" />}
@@ -94,20 +223,30 @@ export default function QuickPartGroups({ onAddParts, currentParts = [] }) {
 
       {open && (
         <div className="mt-2 rounded-lg border border-gray-700 bg-gray-900/70 p-3 space-y-3">
-          {/* Scrollable cards row */}
+          {/* Scrollable group cards */}
           <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
             {allGroups.map(group => (
               <div key={group.id} className="relative flex-shrink-0">
                 <button
                   type="button"
-                  onClick={() => handleAdd(group.parts)}
-                  className={`flex flex-col items-center gap-1 px-3 py-2.5 rounded-lg bg-gray-800 border ${group.color} transition-all hover:bg-gray-750 min-w-[90px] max-w-[110px]`}
-                  title={`Add: ${group.parts.join(", ")}`}
+                  onClick={() => handleGroupClick(group.id)}
+                  className={`flex flex-col items-center gap-1 px-3 py-2.5 rounded-lg bg-gray-800 border ${group.color} transition-all hover:bg-gray-750 min-w-[90px] max-w-[110px] ${activeGroupId === group.id ? "ring-2 ring-sky-500/50" : ""}`}
+                  title={`${group.parts.length} parts`}
                 >
                   <span className="text-xl leading-none">{group.emoji}</span>
                   <span className="text-xs text-white font-medium text-center leading-tight">{group.name}</span>
                   <span className="text-xs text-gray-500">{group.parts.length} parts</span>
                 </button>
+
+                {/* Checklist dropdown */}
+                {activeGroupId === group.id && (
+                  <GroupDropdown
+                    group={group}
+                    onAdd={handleAdd}
+                    onClose={() => setActiveGroupId(null)}
+                  />
+                )}
+
                 {/* Delete button for custom groups */}
                 {group.id.startsWith("custom_") && (
                   <button

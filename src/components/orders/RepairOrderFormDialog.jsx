@@ -568,9 +568,12 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
             </div>
             <QuickPartGroups
               currentParts={form.parts_used}
-              onAddParts={(names) => {
-                const newRows = names.map(n => ({ part_id: "", name: n, quantity: 1, unit_price: "", total: 0 }));
-                setForm(f => ({ ...f, parts_used: [...f.parts_used, ...newRows] }));
+              onAddParts={(parts) => {
+                const newRows = parts.map(p => ({ part_id: "", name: p.name, quantity: p.quantity || 1, unit_price: String(p.unit_price || ""), total: (p.quantity || 1) * (p.unit_price || 0) }));
+                setForm(f => {
+                  const existing = f.parts_used.filter(r => r.name.trim() !== "");
+                  return { ...f, parts_used: [...existing, ...newRows] };
+                });
               }}
             />
             {newPartForm !== null && (

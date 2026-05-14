@@ -571,10 +571,10 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
             </div>
             <QuickPartGroups
               currentParts={partsItems}
-              onAddParts={(names) => {
-                const newRows = names.map(n => ({ name: n, quantity: 1, unit_price: 0, total: 0 }));
-                setPartsItems(p => {
-                  const existing = p.filter(r => r.name.trim() !== "");
+              onAddParts={(parts) => {
+                const newRows = parts.map(p => ({ name: p.name, quantity: p.quantity || 1, unit_price: p.unit_price || 0, total: (p.quantity || 1) * (p.unit_price || 0) }));
+                setPartsItems(prev => {
+                  const existing = prev.filter(r => r.name.trim() !== "");
                   return [...existing, ...newRows];
                 });
               }}

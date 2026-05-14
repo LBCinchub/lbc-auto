@@ -527,9 +527,12 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
             </div>
             <QuickPartGroups
               currentParts={form.parts_items}
-              onAddParts={(names) => {
-                const newRows = names.map(n => ({ name: n, part_number: "", quantity: "1", unit_price: "", total: 0 }));
-                setForm(f => ({ ...f, parts_items: [...f.parts_items, ...newRows] }));
+              onAddParts={(parts) => {
+                const newRows = parts.map(p => ({ name: p.name, part_number: "", quantity: String(p.quantity || 1), unit_price: String(p.unit_price || ""), total: (p.quantity || 1) * (p.unit_price || 0) }));
+                setForm(f => {
+                  const existing = f.parts_items.filter(r => r.name.trim() !== "");
+                  return { ...f, parts_items: [...existing, ...newRows] };
+                });
               }}
             />
             <div className="rounded-lg border border-gray-800 overflow-hidden">
