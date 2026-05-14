@@ -300,7 +300,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-3xl flex flex-col p-0" style={{ maxHeight: "90vh" }}>
+      <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-3xl flex flex-col p-0" style={{ maxHeight: "90vh", height: "90vh" }}>
         {/* Fixed header */}
         <div className="flex-shrink-0 px-6 pt-6 pb-4 border-b border-gray-800">
           <DialogHeader>
@@ -644,7 +644,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
         </div>{/* end scrollable body */}
 
         {/* Sticky footer */}
-        <div className="flex-shrink-0 px-6 py-4 border-t border-gray-800 flex gap-3">
+        <div className="flex-shrink-0 sticky bottom-0 z-10 bg-gray-900 px-6 py-4 border-t border-gray-800 flex gap-3">
           <Button variant="outline" onClick={onClose} className="flex-1 border-gray-700 text-gray-300">Cancel</Button>
           <Button onClick={handleSave} disabled={saving || !canSave} className="flex-1 bg-sky-500 hover:bg-sky-600">
             {saving ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Saving...</> : "Save Estimate"}

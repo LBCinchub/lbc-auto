@@ -366,7 +366,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-2xl flex flex-col p-0" style={{ maxHeight: "90vh" }}>
+      <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-2xl flex flex-col p-0" style={{ maxHeight: "90vh", height: "90vh" }}>
         {/* Fixed header */}
         <div className="flex-shrink-0 px-6 pt-6 pb-4 border-b border-gray-800">
           <DialogHeader>
@@ -769,7 +769,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         </div>{/* end scrollable body */}
 
         {/* Sticky footer */}
-        <div className="flex-shrink-0 px-6 py-4 border-t border-gray-800 flex gap-3">
+        <div className="flex-shrink-0 sticky bottom-0 z-10 bg-gray-900 px-6 py-4 border-t border-gray-800 flex gap-3">
           <Button variant="outline" onClick={onClose} className="flex-1 border-gray-700 text-gray-300">Cancel</Button>
           <Button onClick={handleSave} disabled={saving || !form.customer_id || !form.vehicle_id || !form.description}
             className="flex-1 bg-sky-500 hover:bg-sky-600">
