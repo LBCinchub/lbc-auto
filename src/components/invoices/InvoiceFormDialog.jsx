@@ -9,13 +9,14 @@ import { base44 } from "@/api/base44Client";
 import { Textarea } from "@/components/ui/textarea";
 import { Search, X, Plus, Trash2, Store, Loader2 } from "lucide-react";
 import { fuzzyMatch } from "@/utils/fuzzySearch";
+import TechnicianNotes from "@/components/invoices/TechnicianNotes";
 
 const emptyForm = {
   repair_order_id: "", estimate_id: "", customer_id: "", customer_name: "", customer_phone: "", vehicle_info: "",
   parts_total: 0, labor_total: 0, tax_rate: 0, apply_tax_parts: true, apply_tax_labor: true, status: "unpaid",
   due_date: "", payment_method: "", amount_paid: 0, payment_history: [],
   receipt_number: "", card_last4: "", cashier_name: "", parts_used: [], labor_items: [], customer_note: "",
-  discount_type: "none", discount_value: 0,
+  discount_type: "none", discount_value: 0, technician_notes: "",
 };
 
 const emptyLaborRow = () => ({ description: "", hours: 1, rate: 0, total: 0 });
@@ -68,6 +69,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
           discount_value: invoice.discount_value || 0,
           apply_tax_parts: invoice.apply_tax_parts !== false,
           apply_tax_labor: invoice.apply_tax_labor !== false,
+          technician_notes: invoice.technician_notes || "",
         });
         const li = invoice.line_items || [];
         setLaborItems(li.filter(i => i.type === "labor").map(i => ({ description: i.description || "", hours: i.quantity || 1, rate: i.unit_price || 0, total: i.total || 0 })));
@@ -264,7 +266,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
       if (form.due_date < new Date().toISOString().split("T")[0]) finalStatus = "overdue";
     }
 
-    const data = { ...form, customer_id: resolvedCustomerId, invoice_number: invoiceNum, labor_items: laborItems, parts_used, labor_total: laborTotal, parts_total: partsTotal, tax_amount: finalTax, total: finalTotal, balance_due: finalBalance, status: finalStatus, paid_date: paidDate, payment_history: paymentHistory, line_items, estimate_id: form.estimate_id || sourceEstimate?.id || "" };
+    const data = { ...form, customer_id: resolvedCustomerId, invoice_number: invoiceNum, labor_items: laborItems, parts_used, labor_total: laborTotal, parts_total: partsTotal, tax_amount: finalTax, total: finalTotal, balance_due: finalBalance, status: finalStatus, paid_date: paidDate, payment_history: paymentHistory, line_items, estimate_id: form.estimate_id || sourceEstimate?.id || "", technician_notes: form.technician_notes || "" };
 
     if (invoice && invoice.id) {
       await base44.entities.Invoice.update(invoice.id, data);
@@ -673,6 +675,15 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
           <div>
             <Label className="text-gray-400 text-xs uppercase tracking-wider">Note for Customer</Label>
             <Textarea value={form.customer_note || ""} onChange={e => setForm({ ...form, customer_note: e.target.value })} className="bg-gray-800 border-gray-700 text-white mt-2" placeholder="e.g. Please come back for a follow-up..." rows={2} />
+          </div>
+
+          {/* Technician Notes & Reminders */}
+          <div className="rounded-xl border border-gray-700 bg-gray-800/30 p-4">
+            <p className="text-gray-300 text-sm font-semibold mb-4">🔧 Technician Notes & Reminders</p>
+            <TechnicianNotes
+              value={form.technician_notes || ""}
+              onChange={val => setForm(f => ({ ...f, technician_notes: val }))}
+            />
           </div>
 
         </div>{/* end space-y-6 */}

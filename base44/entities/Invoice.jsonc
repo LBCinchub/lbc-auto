@@ -96,6 +96,10 @@
       "type": "string",
       "description": "Note for the customer shown on the invoice"
     },
+    "technician_notes": {
+      "type": "string",
+      "description": "Technician notes and reminders (oil change due, re-torque, etc.)"
+    },
     "payment_history": {
       "type": "array",
       "description": "Record of all payments made",
