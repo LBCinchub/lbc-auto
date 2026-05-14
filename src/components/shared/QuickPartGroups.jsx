@@ -152,7 +152,7 @@ function GroupPopover({ group, anchorRect, onAdd, onClose }) {
         </div>
 
         {/* Scrollable parts list */}
-        <div className="qpg-scroll" style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
+        <div className="qpg-scroll" style={{ height: "200px", minHeight: "200px", maxHeight: "200px", overflowY: "scroll", overflowX: "hidden", display: "block" }}>
           {group.parts.map(part => (
             <div
               key={part}
