@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -296,16 +297,12 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-3xl flex flex-col p-0" style={{ maxHeight: "90vh", height: "90vh" }}>
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-gray-900 border-b border-gray-800 px-6 py-4 flex items-center justify-between">
-          <DialogTitle className="text-lg font-semibold text-white">
-            {invoice?.id ? "Edit Invoice" : sourceEstimate ? `Invoice from Estimate #${sourceEstimate.estimate_number}${sourceEstimate.created_date ? ` · ${new Date(sourceEstimate.created_date).toLocaleDateString()}` : ""}` : "Create Invoice"}
-          </DialogTitle>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={onClose} className="border-gray-700 text-gray-300">Cancel</Button>
-            <Button size="sm" onClick={handleSave} disabled={saving || (!form.customer_id && !form.customer_name)} className="bg-sky-500 hover:bg-sky-600 text-white gap-2">
-              {saving ? <><Loader2 className="w-4 h-4 animate-spin" />Saving...</> : "Save Invoice"}
-            </Button>
-          </div>
+        <div className="flex-shrink-0 px-6 pt-6 pb-4 border-b border-gray-800">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold text-white">
+              {invoice?.id ? "Edit Invoice" : sourceEstimate ? `Invoice from Estimate #${sourceEstimate.estimate_number}${sourceEstimate.created_date ? ` · ${new Date(sourceEstimate.created_date).toLocaleDateString()}` : ""}` : "Create Invoice"}
+            </DialogTitle>
+          </DialogHeader>
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5">
@@ -680,6 +677,14 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
 
         </div>{/* end space-y-6 */}
         </div>{/* end scrollable body */}
+
+        {/* Sticky footer */}
+        <div className="flex-shrink-0 sticky bottom-0 z-10 bg-gray-900 px-6 py-4 border-t border-gray-800 flex gap-3">
+          <Button variant="outline" onClick={onClose} className="flex-1 border-gray-700 text-gray-300">Cancel</Button>
+          <Button onClick={handleSave} disabled={saving || (!form.customer_id && !form.customer_name)} className="flex-1 bg-sky-500 hover:bg-sky-600 text-white gap-2">
+            {saving ? <><Loader2 className="w-4 h-4 animate-spin" />Saving...</> : "Save Invoice"}
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
