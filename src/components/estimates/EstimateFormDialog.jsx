@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { base44 } from "@/api/base44Client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, Loader2, X, Search } from "lucide-react";
-import QuickPartGroups from "@/components/shared/QuickPartGroups";
 
 const emptyLaborRow = () => ({ description: "", hours: "", rate: "120", total: 0 });
 const emptyPartRow  = () => ({ name: "", part_number: "", quantity: "", unit_price: "", total: 0 });
@@ -529,18 +528,6 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
              <Button size="sm" variant="ghost" onClick={addPart} className="text-sky-400 hover:text-sky-300 h-7 px-2">
                <Plus className="w-4 h-4 mr-1" /> Add Row
              </Button>
-           </div>
-           <div className="sticky top-0 z-10 bg-gray-900 pb-2 border-b border-gray-800 mb-2">
-             <QuickPartGroups
-               currentParts={form.parts_items}
-               onAddParts={(parts) => {
-                 const newRows = parts.map(p => ({ name: p.name, part_number: "", quantity: String(p.quantity || 1), unit_price: String(p.unit_price || ""), total: (p.quantity || 1) * (p.unit_price || 0) }));
-                 setForm(f => {
-                   const existing = f.parts_items.filter(r => r.name.trim() !== "");
-                   return { ...f, parts_items: [...existing, ...newRows] };
-                 });
-               }}
-             />
            </div>
            <div className="rounded-lg border border-gray-800 overflow-hidden" style={{ maxHeight: "220px", overflowY: "auto" }}>
              <table className="w-full text-sm">

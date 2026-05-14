@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { base44 } from "@/api/base44Client";
 import { Textarea } from "@/components/ui/textarea";
 import { Search, X, Plus, Trash2, Store, Loader2 } from "lucide-react";
-import QuickPartGroups from "@/components/shared/QuickPartGroups";
 import { fuzzyMatch } from "@/utils/fuzzySearch";
 
 const emptyForm = {
@@ -569,18 +568,6 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
               <Button size="sm" variant="ghost" onClick={() => setPartsItems(p => [...p, emptyPartRow()])} className="text-sky-400 hover:text-sky-300 h-7 px-2 gap-1">
                 <Plus className="w-3.5 h-3.5" /> Add Part
               </Button>
-            </div>
-            <div className="sticky top-0 z-10 bg-gray-900 pb-2 border-b border-gray-800 mb-2">
-              <QuickPartGroups
-                currentParts={partsItems}
-                onAddParts={(parts) => {
-                  const newRows = parts.map(p => ({ name: p.name, quantity: p.quantity || 1, unit_price: p.unit_price || 0, total: (p.quantity || 1) * (p.unit_price || 0) }));
-                  setPartsItems(prev => {
-                    const existing = prev.filter(r => r.name.trim() !== "");
-                    return [...existing, ...newRows];
-                  });
-                }}
-              />
             </div>
             <div className="rounded-lg border border-gray-800 overflow-hidden" style={{ maxHeight: "220px", overflowY: "auto" }}>
               <table className="w-full text-sm">
