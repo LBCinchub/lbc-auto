@@ -87,14 +87,24 @@ function GroupPopover({ group, anchorRect, onAdd, onClose }) {
     setChecked(Object.fromEntries(group.parts.map(p => [p, !allChecked])));
   };
 
-  // Position: below anchor, clamp to viewport
+  // Position: smart flip — open below if enough space, else open above
   const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
   const popoverWidth = 320;
+  const popoverHeight = 340; // approximate max height
+  const gap = 8;
+
   let left = anchorRect.left;
   if (left + popoverWidth > viewportWidth - 8) {
     left = viewportWidth - popoverWidth - 8;
   }
-  const top = anchorRect.bottom + window.scrollY + 6;
+
+  const spaceBelow = viewportHeight - anchorRect.bottom;
+  const openAbove = spaceBelow < popoverHeight + gap;
+
+  const top = openAbove
+    ? anchorRect.top + window.scrollY - popoverHeight - gap
+    : anchorRect.bottom + window.scrollY + gap;
 
   return createPortal(
     <div
