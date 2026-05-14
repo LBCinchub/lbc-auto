@@ -300,12 +300,17 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-3xl max-h-[92vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{estimate ? "Edit Estimate" : "New Service Estimate"}</DialogTitle>
-        </DialogHeader>
+      <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-3xl flex flex-col p-0" style={{ maxHeight: "90vh" }}>
+        {/* Fixed header */}
+        <div className="flex-shrink-0 px-6 pt-6 pb-4 border-b border-gray-800">
+          <DialogHeader>
+            <DialogTitle>{estimate ? "Edit Estimate" : "New Service Estimate"}</DialogTitle>
+          </DialogHeader>
+        </div>
 
-        <div className="space-y-6 mt-2">
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="space-y-6">
            {/* Customer & Vehicle */}
            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
              <div>
@@ -633,13 +638,15 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex gap-3 pt-1">
-            <Button variant="outline" onClick={onClose} className="flex-1 border-gray-700 text-gray-300">Cancel</Button>
-            <Button onClick={handleSave} disabled={saving || !canSave} className="flex-1 bg-sky-500 hover:bg-sky-600">
-              {saving ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Saving...</> : "Save Estimate"}
-            </Button>
-          </div>
+        </div>{/* end space-y-6 */}
+        </div>{/* end scrollable body */}
+
+        {/* Sticky footer */}
+        <div className="flex-shrink-0 px-6 py-4 border-t border-gray-800 flex gap-3">
+          <Button variant="outline" onClick={onClose} className="flex-1 border-gray-700 text-gray-300">Cancel</Button>
+          <Button onClick={handleSave} disabled={saving || !canSave} className="flex-1 bg-sky-500 hover:bg-sky-600">
+            {saving ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Saving...</> : "Save Estimate"}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

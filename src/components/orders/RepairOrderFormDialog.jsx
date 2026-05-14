@@ -366,11 +366,17 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{order ? "Edit Repair Order" : "New Repair Order"}</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 mt-2">
+      <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-2xl flex flex-col p-0" style={{ maxHeight: "90vh" }}>
+        {/* Fixed header */}
+        <div className="flex-shrink-0 px-6 pt-6 pb-4 border-b border-gray-800">
+          <DialogHeader>
+            <DialogTitle>{order ? "Edit Repair Order" : "New Repair Order"}</DialogTitle>
+          </DialogHeader>
+        </div>
+
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="space-y-4">
            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
              <div>
                <Label className="text-gray-400">Customer *</Label>
@@ -757,13 +763,16 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
             )}
           </div>
 
-          <div className="flex gap-3 pt-2">
-            <Button variant="outline" onClick={onClose} className="flex-1 border-gray-700 text-gray-300">Cancel</Button>
-            <Button onClick={handleSave} disabled={saving || !form.customer_id || !form.vehicle_id || !form.description}
-              className="flex-1 bg-sky-500 hover:bg-sky-600">
-              {saving ? "Saving..." : "Save Order"}
-            </Button>
-          </div>
+        </div>{/* end space-y-4 */}
+        </div>{/* end scrollable body */}
+
+        {/* Sticky footer */}
+        <div className="flex-shrink-0 px-6 py-4 border-t border-gray-800 flex gap-3">
+          <Button variant="outline" onClick={onClose} className="flex-1 border-gray-700 text-gray-300">Cancel</Button>
+          <Button onClick={handleSave} disabled={saving || !form.customer_id || !form.vehicle_id || !form.description}
+            className="flex-1 bg-sky-500 hover:bg-sky-600">
+            {saving ? "Saving..." : "Save Order"}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

@@ -295,7 +295,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-3xl max-h-[92vh] overflow-y-auto p-0">
+      <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-3xl flex flex-col p-0" style={{ maxHeight: "90vh" }}>
         {/* Header */}
         <div className="sticky top-0 z-10 bg-gray-900 border-b border-gray-800 px-6 py-4 flex items-center justify-between">
           <DialogTitle className="text-lg font-semibold text-white">
@@ -309,7 +309,8 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
           </div>
         </div>
 
-        <div className="px-6 py-5 space-y-6">
+        <div className="flex-1 overflow-y-auto px-6 py-5">
+        <div className="space-y-6">
 
           {/* Customer + Vehicle + Repair Order Link — unified layout */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -688,7 +689,8 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
             <Textarea value={form.customer_note || ""} onChange={e => setForm({ ...form, customer_note: e.target.value })} className="bg-gray-800 border-gray-700 text-white mt-2" placeholder="e.g. Please come back for a follow-up..." rows={2} />
           </div>
 
-        </div>
+        </div>{/* end space-y-6 */}
+        </div>{/* end scrollable body */}
       </DialogContent>
     </Dialog>
   );
