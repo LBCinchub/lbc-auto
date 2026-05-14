@@ -152,7 +152,7 @@ function GroupPopover({ group, anchorRect, onAdd, onClose }) {
         </div>
 
         {/* Scrollable parts list */}
-        <div className="qpg-scroll" style={{ height: "200px", minHeight: "200px", maxHeight: "200px", overflowY: "scroll", overflowX: "hidden", display: "block" }}>
+        <div className="qpg-scroll" onMouseDown={e => e.stopPropagation()} style={{ height: "200px", minHeight: "200px", maxHeight: "200px", overflowY: "scroll", overflowX: "hidden", display: "block" }}>
           {group.parts.map(part => (
             <div
               key={part}
@@ -219,7 +219,8 @@ function GroupPopover({ group, anchorRect, onAdd, onClose }) {
           <span style={{ fontSize: 11, color: "#6b7280" }}>{selectedCount} of {group.parts.length} selected</span>
           <button
             type="button"
-            onClick={handleAdd}
+            onMouseDown={e => { e.stopPropagation(); e.preventDefault(); }}
+            onClick={e => { e.stopPropagation(); handleAdd(); }}
             disabled={selectedCount === 0}
             style={{
               display: "flex", alignItems: "center", gap: 4,
