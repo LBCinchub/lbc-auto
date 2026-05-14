@@ -167,21 +167,23 @@ function GroupPopover({ group, anchorRect, onAdd, onClose }) {
                 transition: "opacity 100ms",
               }}
             >
-              <label style={{ display: "flex", alignItems: "center", gap: 7, cursor: "pointer", minWidth: 0 }}>
+              <div
+                onClick={() => setChecked(c => ({ ...c, [part]: !c[part] }))}
+                style={{ display: "flex", alignItems: "center", gap: 7, cursor: "pointer", minWidth: 0, userSelect: "none" }}
+              >
                 <div
-                  onClick={() => setChecked(c => ({ ...c, [part]: !c[part] }))}
                   style={{
                     width: 15, height: 15, flexShrink: 0, borderRadius: 4,
                     border: checked[part] ? "none" : "1.5px solid #4b5563",
                     background: checked[part] ? "#0ea5e9" : "#1f2937",
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    cursor: "pointer", transition: "background 120ms",
+                    pointerEvents: "none", transition: "background 120ms",
                   }}
                 >
                   {checked[part] && <Check size={10} color="#fff" strokeWidth={3} />}
                 </div>
                 <span style={{ fontSize: 12, color: "#e5e7eb", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{part}</span>
-              </label>
+              </div>
               <input
                 type="number"
                 value={quantities[part]}
