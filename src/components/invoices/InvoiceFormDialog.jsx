@@ -573,7 +573,10 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
               currentParts={partsItems}
               onAddParts={(names) => {
                 const newRows = names.map(n => ({ name: n, quantity: 1, unit_price: 0, total: 0 }));
-                setPartsItems(p => [...p, ...newRows]);
+                setPartsItems(p => {
+                  const existing = p.filter(r => r.name.trim() !== "");
+                  return [...existing, ...newRows];
+                });
               }}
             />
             <div className="rounded-lg border border-gray-800 overflow-hidden">

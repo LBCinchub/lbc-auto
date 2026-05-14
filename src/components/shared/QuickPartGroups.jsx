@@ -50,6 +50,7 @@ export default function QuickPartGroups({ onAddParts, currentParts = [] }) {
 
   const handleAdd = (parts) => {
     onAddParts(parts);
+    setOpen(false);
   };
 
   const handleSaveCustom = () => {
