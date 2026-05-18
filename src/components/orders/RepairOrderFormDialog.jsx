@@ -767,15 +767,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
               <span className="text-white">Total</span>
               <span className="text-emerald-400">${totalCost.toFixed(2)}</span>
             </div>
-            {order && (
-              <div className="pt-2 mt-2 border-t border-gray-700">
-                <label className="flex items-center gap-2 text-gray-400 cursor-pointer">
-                  <input type="checkbox" checked={form.custom_total} onChange={e => setForm({...form, custom_total: e.target.checked})}
-                    className="w-4 h-4 rounded" />
-                  <span className="text-xs">Lock this total (don't recalculate)</span>
-                </label>
-              </div>
-            )}
+
           </div>
 
         </div>{/* end space-y-4 */}
