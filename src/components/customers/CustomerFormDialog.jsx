@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +25,7 @@ export default function CustomerFormDialog({ open, onClose, customer, onSaved, o
   const [saving, setSaving] = useState(false);
   const [savedCustomer, setSavedCustomer] = useState(null);
   const [savedVehicle, setSavedVehicle] = useState(null);
+  const fullNameRef = useRef(null);
 
   useEffect(() => {
     if (customer) {
@@ -42,6 +43,9 @@ export default function CustomerFormDialog({ open, onClose, customer, onSaved, o
     }
     setSavedCustomer(null);
     setSavedVehicle(null);
+    if (open) {
+      setTimeout(() => fullNameRef.current?.focus(), 50);
+    }
   }, [customer, open]);
 
   const handleSave = async () => {
@@ -207,35 +211,35 @@ export default function CustomerFormDialog({ open, onClose, customer, onSaved, o
         </DialogHeader>
         <div className="space-y-4 mt-2">
           <div>
-            <Label className="text-gray-400">Full Name *</Label>
-            <Input value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value})}
+            <Label htmlFor="cf-full-name" className="text-gray-400">Full Name *</Label>
+            <Input id="cf-full-name" ref={fullNameRef} value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value})}
               className="bg-gray-800 border-gray-700 text-white mt-1" />
           </div>
           <div>
-            <Label className="text-gray-400">Phone *</Label>
-            <Input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})}
+            <Label htmlFor="cf-phone" className="text-gray-400">Phone *</Label>
+            <Input id="cf-phone" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})}
               className="bg-gray-800 border-gray-700 text-white mt-1" />
           </div>
           <div>
-            <Label className="text-gray-400">Email</Label>
-            <Input value={form.email} onChange={e => setForm({...form, email: e.target.value})}
+            <Label htmlFor="cf-email" className="text-gray-400">Email</Label>
+            <Input id="cf-email" value={form.email} onChange={e => setForm({...form, email: e.target.value})}
               className="bg-gray-800 border-gray-700 text-white mt-1" />
           </div>
           <div>
-            <Label className="text-gray-400">Address</Label>
-            <Input value={form.address} onChange={e => setForm({...form, address: e.target.value})}
+            <Label htmlFor="cf-address" className="text-gray-400">Address</Label>
+            <Input id="cf-address" value={form.address} onChange={e => setForm({...form, address: e.target.value})}
               className="bg-gray-800 border-gray-700 text-white mt-1" />
           </div>
           <div>
-            <Label className="text-gray-400">Notes</Label>
-            <Textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})}
+            <Label htmlFor="cf-notes" className="text-gray-400">Notes</Label>
+            <Textarea id="cf-notes" value={form.notes} onChange={e => setForm({...form, notes: e.target.value})}
               className="bg-gray-800 border-gray-700 text-white mt-1" rows={3} />
           </div>
           {!customer && (
             <div className="border border-gray-700 rounded-lg p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <Label className="text-gray-300 font-medium">Add a Vehicle</Label>
-                <Switch checked={addVehicle} onCheckedChange={setAddVehicle} />
+                <Switch checked={addVehicle} onCheckedChange={v => setAddVehicle(v)} />
               </div>
               {addVehicle && (
                 <div className="space-y-3 pt-1">
