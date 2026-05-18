@@ -38,10 +38,21 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
   const [decodingVin, setDecodingVin] = useState(false);
   const [userTaxRate, setUserTaxRate] = useState(0);
   const [localVehicles, setLocalVehicles] = useState([]);
+  const [fetchedVehicles, setFetchedVehicles] = useState([]);
+  const [loadingVehicles, setLoadingVehicles] = useState(false);
 
   useEffect(() => {
-    if (!open) setLocalVehicles([]);
+    if (!open) { setLocalVehicles([]); setFetchedVehicles([]); }
   }, [open]);
+
+  // Reactive vehicle fetch whenever customer changes
+  useEffect(() => {
+    if (!form.customer_id) { setFetchedVehicles([]); return; }
+    setLoadingVehicles(true);
+    base44.entities.Vehicle.filter({ customer_id: form.customer_id })
+      .then(vehs => setFetchedVehicles(vehs))
+      .finally(() => setLoadingVehicles(false));
+  }, [form.customer_id]);
 
   useEffect(() => {
     base44.auth.me().then(u => {
@@ -110,19 +121,17 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
     }
   }, [order, open]);
 
-  const allVehicles = React.useMemo(() => {
-    const ids = new Set(vehicles.map(v => v.id));
-    return [...vehicles, ...localVehicles.filter(v => !ids.has(v.id))];
-  }, [vehicles, localVehicles]);
-
-  const customerVehicles = allVehicles.filter(v => v.customer_id === form.customer_id);
+  const customerVehicles = React.useMemo(() => {
+    const ids = new Set(fetchedVehicles.map(v => v.id));
+    return [...fetchedVehicles, ...localVehicles.filter(v => v.customer_id === form.customer_id && !ids.has(v.id))];
+  }, [fetchedVehicles, localVehicles, form.customer_id]);
 
   const handleCustomerChange = (id, name) => {
     setForm({ ...form, customer_id: id, customer_name: name || "", vehicle_id: "", vehicle_info: "" });
   };
 
   const handleVehicleChange = (id) => {
-    const v = allVehicles.find(v => v.id === id);
+    const v = customerVehicles.find(v => v.id === id);
     setForm({ ...form, vehicle_id: id, vehicle_info: v ? `${v.year} ${v.make} ${v.model}` : "" });
   };
 
@@ -432,15 +441,16 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                  </div>
                ) : (
                  <div>
-                   <Select value={form.vehicle_id} onValueChange={handleVehicleChange}>
+                   <Select value={form.vehicle_id} onValueChange={handleVehicleChange} disabled={loadingVehicles}>
                      <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
-                       <SelectValue placeholder="Select vehicle" />
+                       <SelectValue placeholder={loadingVehicles ? "Loading vehicles..." : "Select vehicle"} />
                      </SelectTrigger>
                      <SelectContent className="bg-gray-800 border-gray-700">
-                       {customerVehicles.map(v => (
+                       {loadingVehicles && <div className="px-3 py-2 text-xs text-gray-500">Loading vehicles...</div>}
+                       {!loadingVehicles && customerVehicles.map(v => (
                          <SelectItem key={v.id} value={v.id}>{v.year} {v.make} {v.model}</SelectItem>
                        ))}
-                       {form.customer_id && customerVehicles.length === 0 && (
+                       {!loadingVehicles && form.customer_id && customerVehicles.length === 0 && (
                          <button onClick={() => setNewVehicleForm({ vin: "", year: "", make: "", model: "", license_plate: "", color: "", engine_type: "" })}
                            className="w-full px-3 py-2 text-left text-sky-400 hover:bg-sky-500/20 flex items-center gap-2 text-sm">
                            <Plus className="w-3.5 h-3.5" /> Add vehicle

@@ -31,6 +31,8 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
   const [decodingVin, setDecodingVin] = useState(false);
   const [localCustomers, setLocalCustomers] = useState([]);
   const [localVehicles, setLocalVehicles] = useState([]);
+  const [fetchedVehicles, setFetchedVehicles] = useState([]);
+  const [loadingVehicles, setLoadingVehicles] = useState(false);
   const [form, setForm] = useState({
     customer_id: "", customer_name: "", customer_phone: "", vehicle_id: "", vehicle_info: "",
     mechanic_id: "", mechanic_name: "", service_type: "", date: "",
@@ -41,8 +43,17 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!open) { setLocalCustomers([]); setLocalVehicles([]); }
+    if (!open) { setLocalCustomers([]); setLocalVehicles([]); setFetchedVehicles([]); }
   }, [open]);
+
+  // Reactive vehicle fetch whenever customer changes
+  useEffect(() => {
+    if (!form.customer_id) { setFetchedVehicles([]); return; }
+    setLoadingVehicles(true);
+    base44.entities.Vehicle.filter({ customer_id: form.customer_id })
+      .then(vehs => setFetchedVehicles(vehs))
+      .finally(() => setLoadingVehicles(false));
+  }, [form.customer_id]);
 
   useEffect(() => {
     if (appointment && !appointment._prefillCustomerId) {
@@ -83,9 +94,11 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
 
   // Merge fetched lists with locally-created ones so new records show immediately
   const allCustomers = [...customers, ...localCustomers.filter(lc => !customers.find(c => c.id === lc.id))];
-  const allVehicles = [...vehicles, ...localVehicles.filter(lv => !vehicles.find(v => v.id === lv.id))];
 
-  const customerVehicles = allVehicles.filter(v => v.customer_id === form.customer_id);
+  const customerVehicles = React.useMemo(() => {
+    const ids = new Set(fetchedVehicles.map(v => v.id));
+    return [...fetchedVehicles, ...localVehicles.filter(v => v.customer_id === form.customer_id && !ids.has(v.id))];
+  }, [fetchedVehicles, localVehicles, form.customer_id]);
 
   const handleCustomerChange = (id) => {
     const c = allCustomers.find(c => c.id === id);
@@ -100,7 +113,7 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
   );
 
   const handleVehicleChange = (id) => {
-    const v = allVehicles.find(v => v.id === id);
+    const v = customerVehicles.find(v => v.id === id);
     setForm({ ...form, vehicle_id: id, vehicle_info: v ? `${v.year} ${v.make} ${v.model}` : "" });
   };
 
@@ -311,14 +324,18 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
               </div>
             ) : (
               <div>
-                <Select value={form.vehicle_id} onValueChange={handleVehicleChange}>
+                <Select value={form.vehicle_id} onValueChange={handleVehicleChange} disabled={loadingVehicles}>
                   <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
-                    <SelectValue placeholder="Select vehicle" />
+                    <SelectValue placeholder={loadingVehicles ? "Loading vehicles..." : "Select vehicle"} />
                   </SelectTrigger>
                   <SelectContent className="bg-gray-800 border-gray-700">
-                    {customerVehicles.map(v => (
+                    {loadingVehicles && <div className="px-3 py-2 text-xs text-gray-500">Loading vehicles...</div>}
+                    {!loadingVehicles && customerVehicles.map(v => (
                       <SelectItem key={v.id} value={v.id}>{v.year} {v.make} {v.model}</SelectItem>
                     ))}
+                    {!loadingVehicles && form.customer_id && customerVehicles.length === 0 && (
+                      <div className="px-3 py-2 text-xs text-gray-500">No vehicles on file</div>
+                    )}
                   </SelectContent>
                 </Select>
                 {form.customer_id && (

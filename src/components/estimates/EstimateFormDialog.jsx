@@ -38,6 +38,8 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
   const [showPartSearch, setShowPartSearch] = useState(null);
   const [localVehicles, setLocalVehicles] = useState([]);
   const [localCustomers, setLocalCustomers] = useState([]);
+  const [fetchedVehicles, setFetchedVehicles] = useState([]);
+  const [loadingVehicles, setLoadingVehicles] = useState(false);
   const { toast } = useToast();
   const searchDebounce = useRef(null);
 
@@ -74,6 +76,15 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
     });
   }, [estimate, open, repairOrderId]);
 
+  // Reactive vehicle fetch whenever customer changes
+  useEffect(() => {
+    if (!form.customer_id) { setFetchedVehicles([]); return; }
+    setLoadingVehicles(true);
+    base44.entities.Vehicle.filter({ customer_id: form.customer_id })
+      .then(vehs => setFetchedVehicles(vehs))
+      .finally(() => setLoadingVehicles(false));
+  }, [form.customer_id]);
+
   // Bug 1: Live customer search with debounce
   const searchCustomers = useCallback(async (q) => {
     if (!q.trim()) { setCustomerDropdown([]); setShowCustomerDropdown(false); return; }
@@ -109,12 +120,6 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
     setValidationErrors(e => ({ ...e, customer: "" }));
   }, []);
 
-  // Merge parent lists with any locally created ones so new records appear immediately
-  const allVehicles = useMemo(() => {
-    const ids = new Set(vehicles.map(v => v.id));
-    return [...vehicles, ...localVehicles.filter(v => !ids.has(v.id))];
-  }, [vehicles, localVehicles]);
-
   const allCustomers = useMemo(() => {
     const ids = new Set(customers.map(c => c.id));
     return [...customers, ...localCustomers.filter(c => !ids.has(c.id))];
@@ -124,7 +129,13 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
     !customerSearch || c.full_name.toLowerCase().includes(customerSearch.toLowerCase()) || (c.phone || "").includes(customerSearch)
   );
 
-  const customerVehicles = allVehicles.filter(v => v.customer_id === form.customer_id);
+  // customerVehicles = fetched vehicles + any locally-created ones for this customer
+  const customerVehicles = useMemo(() => {
+    const fetched = fetchedVehicles;
+    const ids = new Set(fetched.map(v => v.id));
+    return [...fetched, ...localVehicles.filter(v => v.customer_id === form.customer_id && !ids.has(v.id))];
+  }, [fetchedVehicles, localVehicles, form.customer_id]);
+
   const filteredVehicles = customerVehicles.filter(v =>
     !vehicleSearch || `${v.year} ${v.make} ${v.model} ${v.license_plate || ""}`.toLowerCase().includes(vehicleSearch.toLowerCase())
   );
@@ -199,7 +210,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
   };
 
   const handleVehicleChange = (vid) => {
-    const v = allVehicles.find(v => v.id === vid);
+    const v = customerVehicles.find(v => v.id === vid);
     setForm(f => ({ ...f, vehicle_id: vid, vehicle_info: v ? `${v.year} ${v.make} ${v.model}` : "" }));
   };
 
@@ -492,12 +503,13 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
                  </div>
                ) : (
                  <div>
-                   <Select value={form.vehicle_id} onValueChange={(v) => { handleVehicleChange(v); setVehicleSearch(""); }} disabled={!form.customer_id}>
+                   <Select value={form.vehicle_id} onValueChange={(v) => { handleVehicleChange(v); setVehicleSearch(""); }} disabled={!form.customer_id || loadingVehicles}>
                        <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
-                         <SelectValue placeholder="Select vehicle..." />
+                         <SelectValue placeholder={loadingVehicles ? "Loading vehicles..." : "Select vehicle..."} />
                        </SelectTrigger>
                        <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                         {customerVehicles.length > 3 && (
+                         {loadingVehicles && <div className="px-3 py-2 text-xs text-gray-500">Loading vehicles...</div>}
+                         {!loadingVehicles && customerVehicles.length > 3 && (
                            <div className="px-2 pb-1 pt-1">
                              <div className="relative">
                                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
@@ -512,10 +524,10 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
                              </div>
                            </div>
                          )}
-                         {filteredVehicles.map(v => (
+                         {!loadingVehicles && filteredVehicles.map(v => (
                            <SelectItem key={v.id} value={v.id}>{v.year} {v.make} {v.model} {v.license_plate ? `(${v.license_plate})` : ""}</SelectItem>
                          ))}
-                         {form.customer_id && filteredVehicles.length === 0 && (
+                         {!loadingVehicles && form.customer_id && filteredVehicles.length === 0 && (
                            <button onClick={() => setNewVehicleForm({ vin: "", year: "", make: "", model: "", license_plate: "", color: "", engine_type: "" })}
                              className="w-full px-3 py-2 text-left text-sky-400 hover:bg-sky-500/20 flex items-center gap-2 text-sm">
                              <Plus className="w-3.5 h-3.5" /> Add vehicle

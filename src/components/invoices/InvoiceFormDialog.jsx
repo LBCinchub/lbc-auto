@@ -25,6 +25,8 @@ const emptyPartRow = () => ({ name: "", quantity: 1, unit_price: 0, total: 0 });
 export default function InvoiceFormDialog({ open, onClose, invoice, orders, customers, vehicles = [], invoices = [], estimates = [], onSaved, initialOrderId, sourceEstimate }) {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [fetchedVehicles, setFetchedVehicles] = useState([]);
+  const [loadingVehicles, setLoadingVehicles] = useState(false);
   const [orderSearch, setOrderSearch] = useState("");
   const [invoiceSearch, setInvoiceSearch] = useState("");
   const [estimateSearch, setEstimateSearch] = useState("");
@@ -116,6 +118,15 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
       }
       });
       }, [open, invoice, initialOrderId, sourceEstimate, orders]);
+
+  // Reactive vehicle fetch whenever customer changes (only when not linked to a repair order or estimate)
+  useEffect(() => {
+    if (!form.customer_id || form.repair_order_id || sourceEstimate) { setFetchedVehicles([]); return; }
+    setLoadingVehicles(true);
+    base44.entities.Vehicle.filter({ customer_id: form.customer_id })
+      .then(vehs => setFetchedVehicles(vehs))
+      .finally(() => setLoadingVehicles(false));
+  }, [form.customer_id, form.repair_order_id, sourceEstimate]);
 
   const handleOrderSelect = useCallback(async (orderId) => {
     const order = orders.find(o => o.id === orderId);
@@ -352,18 +363,19 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
               <div className="mt-1">
                 {form.customer_id && !form.repair_order_id && !sourceEstimate ? (
                   <Select value={form.vehicle_id || ""} onValueChange={vid => {
-                    const v = vehicles.find(v => v.id === vid);
+                    const v = fetchedVehicles.find(v => v.id === vid);
                     setForm(f => ({ ...f, vehicle_id: vid, vehicle_info: v ? `${v.year} ${v.make} ${v.model}` : "" }));
-                  }}>
+                  }} disabled={loadingVehicles}>
                     <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
-                      <SelectValue placeholder="Select vehicle..." />
+                      <SelectValue placeholder={loadingVehicles ? "Loading vehicles..." : "Select vehicle..."} />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                      {vehicles.filter(v => v.customer_id === form.customer_id).map(v => (
+                      {loadingVehicles && <div className="px-3 py-2 text-xs text-gray-500">Loading vehicles...</div>}
+                      {!loadingVehicles && fetchedVehicles.map(v => (
                         <SelectItem key={v.id} value={v.id}>{v.year} {v.make} {v.model}{v.license_plate ? ` (${v.license_plate})` : ""}</SelectItem>
                       ))}
-                      {vehicles.filter(v => v.customer_id === form.customer_id).length === 0 && (
-                        <div className="px-3 py-2 text-xs text-gray-500">No vehicles found for this customer</div>
+                      {!loadingVehicles && fetchedVehicles.length === 0 && (
+                        <div className="px-3 py-2 text-xs text-gray-500">No vehicles on file</div>
                       )}
                     </SelectContent>
                   </Select>
