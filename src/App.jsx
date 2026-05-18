@@ -24,6 +24,7 @@ import Billing from './pages/Billing';
 import PartsLookup from './pages/PartsLookup';
 import ImportCustomers from './pages/ImportCustomers';
 import CustomerDetails from './pages/CustomerDetails';
+import MissingPhones from './pages/MissingPhones';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -106,6 +107,7 @@ const AuthenticatedApp = () => {
       <Route path="/PartsLookup" element={<LayoutWrapper currentPageName="PartsLookup"><PartsLookup /></LayoutWrapper>} />
       <Route path="/ImportCustomers" element={<LayoutWrapper currentPageName="ImportCustomers"><ImportCustomers /></LayoutWrapper>} />
       <Route path="/CustomerDetails" element={<LayoutWrapper currentPageName="Customers"><CustomerDetails /></LayoutWrapper>} />
+      <Route path="/MissingPhones" element={<LayoutWrapper currentPageName="MissingPhones"><MissingPhones /></LayoutWrapper>} />
       <Route path="/PaymentWall" element={<PaymentWall />} />
       <Route path="/landing" element={<Landing />} />
       <Route path="*" element={<PageNotFound />} />

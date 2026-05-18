@@ -26,7 +26,8 @@ import {
   CreditCard,
   Sun,
   Moon,
-  FileUp
+  FileUp,
+  Phone
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/lib/ThemeContext";
@@ -35,6 +36,7 @@ import GlobalSearch from "@/components/shared/GlobalSearch";
 const navItems = [
   { name: "Dashboard", icon: LayoutDashboard, page: "Dashboard" },
   { name: "Customers", icon: Users, page: "Customers" },
+  { name: "Missing Phones", icon: Phone, page: "MissingPhones", path: "/MissingPhones" },
   { name: "Vehicles", icon: Car, page: "Vehicles" },
   { name: "Appointments", icon: Calendar, page: "Appointments" },
   { name: "Estimates", icon: ClipboardList, page: "Estimates" },
