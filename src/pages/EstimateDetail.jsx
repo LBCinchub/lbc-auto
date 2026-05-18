@@ -256,7 +256,7 @@ export default function EstimateDetail() {
           docNumber={estimate.estimate_number}
           createdDate={new Date(estimate.created_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           user={user}
-          customer={{ name: estimate.customer_name, phone: customer?.phone, email: customer?.email }}
+          customer={{ name: estimate.customer_name || customer?.full_name || "—", phone: customer?.phone, email: customer?.email }}
           vehicle={{ info: estimate.vehicle_info }}
           lineItems={[
             ...laborItems.map(l => ({ name: l.description || "Labor", description: `${parseFloat(l.hours)||0}h @ $${parseFloat(l.rate)||0}/hr`, qty: parseFloat(l.hours) || 1, unit_price: parseFloat(l.rate) || 0 })),

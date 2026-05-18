@@ -110,7 +110,8 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
 
   // Bug 2: Fetch selected customer info + their vehicles
   const selectCustomerFromDropdown = useCallback(async (c) => {
-    handleCustomerChange(c.id);
+    // Set both customer_id and customer_name directly from the selected object
+    setForm(f => ({ ...f, customer_id: c.id, customer_name: c.full_name || "", vehicle_id: "", vehicle_info: "" }));
     setCustomerSearch(c.full_name);
     setShowCustomerDropdown(false);
     setCustomerDropdown([]);

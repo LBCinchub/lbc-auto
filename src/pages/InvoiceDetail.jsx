@@ -222,7 +222,7 @@ export default function InvoiceDetail() {
           docNumber={invoice.invoice_number}
           createdDate={new Date(invoice.created_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           user={user}
-          customer={{ name: invoice.customer_name, phone: customer?.phone, email: customer?.email }}
+          customer={{ name: invoice.customer_name || customer?.full_name || "—", phone: customer?.phone, email: customer?.email }}
           vehicle={{ info: invoice.vehicle_info }}
           lineItems={[
             ...(laborItems.map(r => ({
