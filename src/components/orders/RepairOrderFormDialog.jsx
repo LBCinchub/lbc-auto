@@ -118,7 +118,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         total_cost: order.total_cost || 0,
         custom_total: order.total_cost ? true : false,
         apply_tax: order.apply_tax !== false,
-        tax_applies_to: "both",
+        tax_applies_to: order.tax_applies_to || "both",
       });
     } else {
       // New repair order (possibly pre-filled with customer info from customer profile or appointment)
@@ -272,7 +272,11 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         ? subtotal * ((form.discount_value || 0) / 100)
         : form.discount_type === "fixed" ? (form.discount_value || 0) : 0;
       const afterDiscount = subtotal - discountAmount;
-      const taxAmt = form.apply_tax ? afterDiscount * (userTaxRate / 100) : 0;
+      const taxAppliesTo = form.tax_applies_to || "both";
+      let taxableBase = afterDiscount;
+      if (taxAppliesTo === "labor") taxableBase = laborCost;
+      else if (taxAppliesTo === "parts") taxableBase = partsCost;
+      const taxAmt = form.apply_tax ? taxableBase * (userTaxRate / 100) : 0;
       const calculatedTotal = afterDiscount + taxAmt;
       const finalTotal = form.custom_total ? Number(form.total_cost) || 0 : calculatedTotal;
 

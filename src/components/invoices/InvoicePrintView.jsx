@@ -76,6 +76,7 @@ export default function InvoicePrintView({ invoice, onClose }) {
     subtotal,
     taxRate: TAX_RATE,
     taxAmount: invoice.tax_amount || 0,
+    taxAppliesTo: invoice.tax_applies_to || "both",
     grandTotal: invoice.total || 0,
     amountPaid: invoice.amount_paid || 0,
     balanceDue: invoice.balance_due ?? (invoice.total || 0),

@@ -273,6 +273,7 @@ export default function EstimateDetail() {
     subtotal: (estimate.parts_total || 0) + (estimate.labor_total || 0),
     taxRate: estimate.tax_rate || 0,
     taxAmount: estimate.tax_amount || 0,
+    taxAppliesTo: estimate.tax_applies_to || "both",
     grandTotal: estimate.grand_total || 0,
     amountPaid: 0,
     balanceDue: estimate.grand_total || 0,

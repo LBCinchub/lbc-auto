@@ -41,6 +41,7 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
     subtotal = 0,
     taxRate = 0,
     taxAmount = 0,
+    taxAppliesTo = null,
     grandTotal = 0,
     amountPaid = 0,
     balanceDue = 0,
@@ -240,7 +241,7 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
               </div>
               {taxRate > 0 && (
                 <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 10, color: "#475569" }}>
-                  <span>Tax ({taxRate}%)</span><span>${taxAmount.toFixed(2)}</span>
+                  <span>Tax ({taxRate}%{taxAppliesTo && taxAppliesTo !== "both" ? ` · ${taxAppliesTo === "labor" ? "Labor only" : "Parts only"}` : ""})</span><span>${taxAmount.toFixed(2)}</span>
                 </div>
               )}
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontWeight: 700, color: "#0f172a", borderTop: "2px solid #0f172a", marginTop: 4, paddingTop: 5 }}>
