@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -54,6 +54,16 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
       .then(vehs => setFetchedVehicles(vehs))
       .finally(() => setLoadingVehicles(false));
   }, [form.customer_id]);
+
+  // Pre-fill: when editing an existing appointment, ensure customer is in the list
+  useEffect(() => {
+    if (!appointment?.customer_id || appointment._prefillCustomerId) return;
+    const alreadyPresent = customers.find(c => c.id === appointment.customer_id);
+    if (alreadyPresent) return;
+    base44.entities.Customer.get(appointment.customer_id)
+      .then(c => { if (c) setLocalCustomers([c]); })
+      .catch(() => {});
+  }, [appointment?.customer_id]);
 
   useEffect(() => {
     if (appointment && !appointment._prefillCustomerId) {

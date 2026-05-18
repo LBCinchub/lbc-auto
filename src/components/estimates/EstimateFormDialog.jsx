@@ -85,6 +85,27 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
       .finally(() => setLoadingVehicles(false));
   }, [form.customer_id]);
 
+  // Pre-fill customer search box and customer info card when editing an existing record
+  useEffect(() => {
+    if (!estimate?.customer_id) return;
+    const nameFromRecord = estimate.customer_name || "";
+    // Immediately show stored name as fallback
+    setCustomerSearch(nameFromRecord);
+    // Then fetch the live customer record to populate the info card
+    base44.entities.Customer.get(estimate.customer_id)
+      .then(c => {
+        if (c) {
+          setCustomerSearch(c.full_name || nameFromRecord);
+          base44.entities.Vehicle.filter({ customer_id: c.id }).then(vehs => {
+            setSelectedCustomerInfo({ customer: c, vehicles: vehs });
+          });
+        }
+      })
+      .catch(() => {
+        // fallback already set above
+      });
+  }, [estimate?.customer_id]);
+
   // Bug 1: Live customer search with debounce
   const searchCustomers = useCallback(async (q) => {
     if (!q.trim()) { setCustomerDropdown([]); setShowCustomerDropdown(false); return; }

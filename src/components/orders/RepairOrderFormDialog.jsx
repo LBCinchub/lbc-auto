@@ -43,9 +43,21 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
   const [fetchedVehicles, setFetchedVehicles] = useState([]);
   const [loadingVehicles, setLoadingVehicles] = useState(false);
 
+  const [localCustomers, setLocalCustomers] = useState([]);
+
   useEffect(() => {
     if (!open) { setLocalVehicles([]); setFetchedVehicles([]); }
   }, [open]);
+
+  // Pre-fill: when editing an existing order, ensure the customer appears in the list
+  useEffect(() => {
+    if (!order?.customer_id) return;
+    const alreadyPresent = customers.find(c => c.id === order.customer_id);
+    if (alreadyPresent) return;
+    base44.entities.Customer.get(order.customer_id)
+      .then(c => { if (c) setLocalCustomers([c]); })
+      .catch(() => {});
+  }, [order?.customer_id]);
 
   // Reactive vehicle fetch whenever customer changes
   useEffect(() => {
@@ -412,7 +424,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                  </div>
                )}
                <div className="mt-1">
-                 <CustomerSearchInput customers={customers} value={form.customer_id} onChange={handleCustomerChange} />
+                 <CustomerSearchInput customers={[...customers, ...localCustomers.filter(lc => !customers.find(c => c.id === lc.id))]} value={form.customer_id} onChange={handleCustomerChange} />
                  <button onClick={() => setNewCustomerForm({ full_name: "", phone: "", email: "" })}
                    className="mt-2 w-full px-3 py-1 rounded text-xs bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/40 text-sky-400 flex items-center justify-center gap-2">
                    <Plus className="w-3 h-3" /> New customer
