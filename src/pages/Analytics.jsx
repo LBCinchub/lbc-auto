@@ -18,10 +18,12 @@ import StatCard from "../components/dashboard/StatCard";
 
 const COLORS = ["#0ea5e9", "#8b5cf6", "#10b981", "#f59e0b", "#ef4444", "#ec4899"];
 
-const REVENUE_PERIODS = ["Day", "Week", "Month", "Year"];
+const REVENUE_PERIODS = ["Day", "Week", "Month", "Year", "Custom"];
 
 export default function Analytics() {
   const [revPeriod, setRevPeriod] = useState("Month");
+  const [customDateFrom, setCustomDateFrom] = useState("");
+  const [customDateTo, setCustomDateTo] = useState("");
   const [activeTab, setActiveTab] = useState("insights");
   const [filterMechanic, setFilterMechanic] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
@@ -113,6 +115,17 @@ export default function Analytics() {
   const avgPerJob = paidInvoices.length > 0 ? totalRevenue / paidInvoices.length : 0;
 
   const filteredRevenue = useMemo(() => {
+    if (revPeriod === "Custom") {
+      return paidInvoices
+        .filter(i => {
+          const d = i.paid_date || i.created_date?.substring(0, 10);
+          if (!d) return false;
+          if (customDateFrom && d < customDateFrom) return false;
+          if (customDateTo && d > customDateTo) return false;
+          return true;
+        })
+        .reduce((sum, i) => sum + (i.total || 0), 0);
+    }
     const now = new Date();
     const cutoff = revPeriod === "Day" ? startOfDay(now)
       : revPeriod === "Week" ? startOfWeek(now, { weekStartsOn: 1 })
@@ -125,7 +138,7 @@ export default function Analytics() {
         try { return isAfter(parseISO(d), cutoff) || parseISO(d).getTime() === cutoff.getTime(); } catch { return false; }
       })
       .reduce((sum, i) => sum + (i.total || 0), 0);
-  }, [paidInvoices, revPeriod]);
+  }, [paidInvoices, revPeriod, customDateFrom, customDateTo]);
 
   // Monthly revenue
   const monthlyData = {};
@@ -1054,23 +1067,41 @@ export default function Analytics() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Clickable Total Revenue card with period toggle */}
-        <div className="rounded-xl border border-green-700/30 bg-gradient-to-br from-green-900/30 to-green-950/10 p-4 cursor-pointer select-none"
-          onClick={() => setRevPeriod(p => { const i = REVENUE_PERIODS.indexOf(p); return REVENUE_PERIODS[(i + 1) % REVENUE_PERIODS.length]; })}>
+        <div className={`rounded-xl border border-green-700/30 bg-gradient-to-br from-green-900/30 to-green-950/10 p-4 select-none ${revPeriod !== "Custom" ? "cursor-pointer" : ""}`}
+          onClick={() => { if (revPeriod !== "Custom") setRevPeriod(p => { const i = REVENUE_PERIODS.indexOf(p); return REVENUE_PERIODS[(i + 1) % REVENUE_PERIODS.length]; }); }}>
           <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-gray-400 font-medium">Revenue ({revPeriod})</p>
+            <p className="text-xs text-gray-400 font-medium">Revenue ({revPeriod === "Custom" && (customDateFrom || customDateTo) ? `${customDateFrom || "…"} → ${customDateTo || "…"}` : revPeriod})</p>
             <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center">
               <DollarSign className="w-4 h-4 text-green-400" />
             </div>
           </div>
           <p className="text-2xl font-bold text-green-400">${filteredRevenue.toFixed(2)}</p>
-          <div className="flex gap-1 mt-2">
+          <div className="flex gap-1 mt-2 flex-wrap">
             {REVENUE_PERIODS.map(p => (
               <span key={p} onClick={e => { e.stopPropagation(); setRevPeriod(p); }}
-                className={`text-[10px] px-1.5 py-0.5 rounded font-medium transition-colors ${
+                className={`text-[10px] px-1.5 py-0.5 rounded font-medium transition-colors cursor-pointer ${
                   revPeriod === p ? "bg-green-500/30 text-green-300" : "text-gray-600 hover:text-gray-400"
                 }`}>{p}</span>
             ))}
           </div>
+          {revPeriod === "Custom" && (
+            <div className="flex gap-2 mt-3" onClick={e => e.stopPropagation()}>
+              <input
+                type="date"
+                value={customDateFrom}
+                onChange={e => setCustomDateFrom(e.target.value)}
+                className="flex-1 bg-gray-800 border border-gray-700 text-white text-xs rounded px-2 py-1 focus:outline-none focus:border-green-500"
+                placeholder="From"
+              />
+              <input
+                type="date"
+                value={customDateTo}
+                onChange={e => setCustomDateTo(e.target.value)}
+                className="flex-1 bg-gray-800 border border-gray-700 text-white text-xs rounded px-2 py-1 focus:outline-none focus:border-green-500"
+                placeholder="To"
+              />
+            </div>
+          )}
         </div>
         <StatCard title="Avg Per Job" value={`$${avgPerJob.toFixed(2)}`} icon={TrendingUp} color="sky" />
         <StatCard title="Total Orders" value={orders.length} icon={Wrench} color="purple" />
