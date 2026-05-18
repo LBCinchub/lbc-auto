@@ -1,0 +1,43 @@
+name: LBC Smart Commit Tagger
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  smart-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Generate Smart Commit Summary
+        run: |
+          CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "none")
+          echo "## 🧠 LBC Brain — Smart Commit" >> $GITHUB_STEP_SUMMARY
+          echo "**Repo:** ${{ github.repository }} | **Branch:** main" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Files Changed:" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "$CHANGED" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "### Categories:" >> $GITHUB_STEP_SUMMARY
+          echo "$CHANGED" | while read file; do
+            case "$file" in
+              *[Ll]umina*|*AIBot*) echo "- 🤖 AI/Lumina: $file" >> $GITHUB_STEP_SUMMARY ;;
+              *[Mm]emory*) echo "- 🧠 Memory: $file" >> $GITHUB_STEP_SUMMARY ;;
+              *[Cc]hat*|*[Mm]essage*) echo "- 💬 Chat: $file" >> $GITHUB_STEP_SUMMARY ;;
+              *[Pp]roduct*|*[Mm]arket*) echo "- 🛒 Marketplace: $file" >> $GITHUB_STEP_SUMMARY ;;
+              *[Pp]ost*|*[Ff]eed*) echo "- 📰 Feed: $file" >> $GITHUB_STEP_SUMMARY ;;
+              *[Pp]ayment*|*[Ww]allet*) echo "- 💳 Payments: $file" >> $GITHUB_STEP_SUMMARY ;;
+              *[Tt]rip*|*[Tt]ravel*) echo "- ✈️ Travel: $file" >> $GITHUB_STEP_SUMMARY ;;
+              *[Ss]olana*|*[Tt]oken*) echo "- ⛓️ Blockchain: $file" >> $GITHUB_STEP_SUMMARY ;;
+              src/pages/*) echo "- 📄 Page: $file" >> $GITHUB_STEP_SUMMARY ;;
+              src/api/*) echo "- ⚙️ API: $file" >> $GITHUB_STEP_SUMMARY ;;
+              *.css) echo "- 🎨 Styles: $file" >> $GITHUB_STEP_SUMMARY ;;
+              *) echo "- 📦 $file" >> $GITHUB_STEP_SUMMARY ;;
+            esac
+          done
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "_Auto-tagged by LBC Brain 🧠_" >> $GITHUB_STEP_SUMMARY
