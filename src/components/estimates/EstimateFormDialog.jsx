@@ -185,8 +185,9 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
   const removePart = (idx) => setForm(f => ({ ...f, parts_items: f.parts_items.filter((_, i) => i !== idx) }));
 
   // ---- Totals ----
-  const laborTotal = form.labor_items.reduce((s, r) => s + ((parseFloat(r.hours) || 0) * (parseFloat(r.rate) || 0)), 0);
-  const partsTotal = form.parts_items.reduce((s, r) => s + (r.total || 0), 0);
+  // Compute totals inline from raw field values — never rely on stale r.total in state
+  const laborTotal = form.labor_items.reduce((s, r) => s + (parseFloat(r.hours) || 0) * (parseFloat(r.rate) || 0), 0);
+  const partsTotal = form.parts_items.reduce((s, r) => s + (parseFloat(r.quantity) || 0) * (parseFloat(r.unit_price) || 0), 0);
   const subtotal   = laborTotal + partsTotal;
   const taxRate    = form.apply_tax ? (parseFloat(form.tax_rate) || 0) : 0;
 
@@ -732,13 +733,14 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
           <div className="rounded-xl border border-gray-700 bg-gray-800/40 p-4 space-y-2 text-sm">
             <div className="flex justify-between text-gray-400"><span>Labor Subtotal</span><span>${laborTotal.toFixed(2)}</span></div>
             <div className="flex justify-between text-gray-400"><span>Parts Subtotal</span><span>${partsTotal.toFixed(2)}</span></div>
+            <div className="flex justify-between text-gray-400 border-t border-gray-700/50 pt-2"><span>Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
             <div className="flex justify-between text-gray-400">
               <span>Tax ({parseFloat(form.tax_rate) || 0}%)</span>
               <span className={form.apply_tax ? "" : "line-through opacity-50"}>{form.apply_tax ? `$${taxAmount.toFixed(2)}` : "Not applied"}</span>
             </div>
-            <div className="flex justify-between text-white font-bold text-base border-t border-gray-700 pt-2 mt-2">
+            <div className="flex justify-between font-bold border-t border-gray-700 pt-2 mt-2" style={{ fontSize: "18px", color: "#00d4ff" }}>
               <span>Grand Total</span>
-              <span className="text-sky-400">${grandTotal.toFixed(2)}</span>
+              <span>${grandTotal.toFixed(2)}</span>
             </div>
           </div>
 

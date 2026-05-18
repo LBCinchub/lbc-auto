@@ -64,8 +64,9 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
 
   // Live cost calculation (only if not custom/saved)
   const mechanic = mechanics.find(m => m.id === form.mechanic_id);
+  // Always compute from raw field values — never rely on stale .total in state
   const laborCost = (form.labor_items || []).reduce((s, r) => s + (parseFloat(r.hours) || 0) * (parseFloat(r.rate) || 120), 0);
-  const partsCost = form.parts_used.reduce((sum, p) => sum + (Number(p.unit_price) || 0) * (Number(p.quantity) || 0), 0);
+  const partsCost = (form.parts_used || []).reduce((sum, p) => sum + (parseFloat(p.unit_price) || 0) * (parseFloat(p.quantity) || 0), 0);
   const TAX_RATE = userTaxRate;
   const subtotal = laborCost + partsCost;
   const discountAmount = form.discount_type === "percentage" 
