@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, Loader2, X, Search } from "lucide-react";
+import { Plus, Trash2, Loader2, X, Search, CheckCircle2 } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 const emptyLaborRow = () => ({ description: "", hours: "", rate: "120", total: 0 });
 const emptyPartRow  = () => ({ name: "", part_number: "", quantity: "", unit_price: "", total: 0 });
@@ -22,16 +23,23 @@ const emptyForm = {
 export default function EstimateFormDialog({ open, onClose, estimate, customers, vehicles, parts = [], repairOrderId, onSaved }) {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [validationErrors, setValidationErrors] = useState({});
   const [newCustomerForm, setNewCustomerForm] = useState(null);
   const queryClient = useQueryClient();
   const [newVehicleForm, setNewVehicleForm] = useState(null);
   const [decodingVin, setDecodingVin] = useState(false);
   const [customerSearch, setCustomerSearch] = useState("");
+  const [customerDropdown, setCustomerDropdown] = useState([]);
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  const [selectedCustomerInfo, setSelectedCustomerInfo] = useState(null); // { customer, vehicles }
   const [vehicleSearch, setVehicleSearch] = useState("");
   const [partSearch, setPartSearch] = useState("");
-  const [showPartSearch, setShowPartSearch] = useState(null); // idx of parts row being searched
+  const [showPartSearch, setShowPartSearch] = useState(null);
   const [localVehicles, setLocalVehicles] = useState([]);
   const [localCustomers, setLocalCustomers] = useState([]);
+  const { toast } = useToast();
+  const searchDebounce = useRef(null);
 
   useEffect(() => {
     // Load user's saved tax rate
@@ -65,6 +73,41 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
       }
     });
   }, [estimate, open, repairOrderId]);
+
+  // Bug 1: Live customer search with debounce
+  const searchCustomers = useCallback(async (q) => {
+    if (!q.trim()) { setCustomerDropdown([]); setShowCustomerDropdown(false); return; }
+    const all = await base44.entities.Customer.list();
+    const lower = q.toLowerCase();
+    const results = all.filter(c =>
+      c.full_name.toLowerCase().includes(lower) || (c.phone || "").includes(q)
+    );
+    setCustomerDropdown(results.slice(0, 8));
+    setShowCustomerDropdown(true);
+  }, []);
+
+  const handleCustomerSearchChange = (val) => {
+    setCustomerSearch(val);
+    if (form.customer_id) {
+      // Clear selection when user types again
+      setForm(f => ({ ...f, customer_id: "", customer_name: "", vehicle_id: "", vehicle_info: "" }));
+      setSelectedCustomerInfo(null);
+    }
+    if (searchDebounce.current) clearTimeout(searchDebounce.current);
+    searchDebounce.current = setTimeout(() => searchCustomers(val), 300);
+  };
+
+  // Bug 2: Fetch selected customer info + their vehicles
+  const selectCustomerFromDropdown = useCallback(async (c) => {
+    handleCustomerChange(c.id);
+    setCustomerSearch(c.full_name);
+    setShowCustomerDropdown(false);
+    setCustomerDropdown([]);
+    // Fetch their vehicles
+    const vehs = await base44.entities.Vehicle.filter({ customer_id: c.id });
+    setSelectedCustomerInfo({ customer: c, vehicles: vehs });
+    setValidationErrors(e => ({ ...e, customer: "" }));
+  }, []);
 
   // Merge parent lists with any locally created ones so new records appear immediately
   const allVehicles = useMemo(() => {
@@ -149,6 +192,12 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
     setForm(f => ({ ...f, customer_id: cid, customer_name: customer?.full_name || "", vehicle_id: "", vehicle_info: "" }));
   };
 
+  const clearCustomerSelection = () => {
+    setForm(f => ({ ...f, customer_id: "", customer_name: "", vehicle_id: "", vehicle_info: "" }));
+    setSelectedCustomerInfo(null);
+    setCustomerSearch("");
+  };
+
   const handleVehicleChange = (vid) => {
     const v = allVehicles.find(v => v.id === vid);
     setForm(f => ({ ...f, vehicle_id: vid, vehicle_info: v ? `${v.year} ${v.make} ${v.model}` : "" }));
@@ -163,7 +212,10 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
     });
     setLocalCustomers(prev => [...prev, created]);
     handleCustomerChange(created.id);
+    setCustomerSearch(created.full_name);
+    setSelectedCustomerInfo({ customer: created, vehicles: [] });
     setNewCustomerForm(null);
+    setValidationErrors(e => ({ ...e, customer: "" }));
     queryClient.invalidateQueries({ queryKey: ["customers"] });
     queryClient.refetchQueries({ queryKey: ["customers"] });
   };
@@ -216,7 +268,22 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
   };
 
   const handleSave = async () => {
+    // Bug 3: Validate before saving
+    const errors = {};
+    if (!form.customer_id) errors.customer = "Please select a customer";
+    if (!form.vehicle_id) errors.vehicle = "Please select a vehicle";
+    const hasLineItem =
+      form.labor_items.some(r => r.description?.trim()) ||
+      form.parts_items.some(r => r.name?.trim());
+    if (!hasLineItem) errors.lineItems = "Please add at least one labor or parts row";
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    setValidationErrors({});
+    setSaveError("");
     setSaving(true);
+    try {
     const estNum = estimate?.estimate_number || `EST-${Date.now().toString().slice(-6)}`;
     const payload = {
       ...form,
@@ -291,11 +358,16 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
       await base44.entities.Estimate.create(payload);
     }
     setSaving(false);
+    toast({ title: "Estimate saved successfully" });
     onSaved();
     onClose();
+    } catch (err) {
+      setSaving(false);
+      setSaveError("Failed to save — please try again");
+    }
   };
 
-  const canSave = form.customer_id && form.vehicle_id;
+  const canSave = true; // Never disable — validate on click instead
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -305,6 +377,11 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
           <DialogHeader>
             <DialogTitle>{estimate ? "Edit Estimate" : "New Service Estimate"}</DialogTitle>
           </DialogHeader>
+          {saveError && (
+            <div className="mt-3 px-3 py-2 rounded-md bg-rose-500/10 border border-rose-500/40 text-rose-400 text-sm">
+              {saveError}
+            </div>
+          )}
         </div>
 
         {/* Scrollable body */}
@@ -317,24 +394,56 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
                <div className="relative mt-1">
                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                  <Input
-                   value={form.customer_id ? (customers.find(c => c.id === form.customer_id)?.full_name || customerSearch) : customerSearch}
-                   onChange={e => { setCustomerSearch(e.target.value); setForm(f => ({ ...f, customer_id: "", customer_name: "", vehicle_id: "", vehicle_info: "" })); }}
+                   value={customerSearch}
+                   onChange={e => handleCustomerSearchChange(e.target.value)}
+                   onFocus={() => { if (customerDropdown.length > 0) setShowCustomerDropdown(true); }}
+                   onBlur={() => setTimeout(() => setShowCustomerDropdown(false), 150)}
                    placeholder="Search customer by name or phone..."
-                   className="bg-gray-800 border-gray-700 text-white pl-8"
+                   className={`bg-gray-800 border-gray-700 text-white pl-8 ${validationErrors.customer ? "border-rose-500" : ""}`}
                  />
-                 {customerSearch && !form.customer_id && (
+                 {showCustomerDropdown && customerDropdown.length > 0 && (
                    <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg overflow-hidden shadow-xl">
-                     {filteredCustomers.slice(0, 6).map(c => (
-                       <button key={c.id} onClick={() => { handleCustomerChange(c.id); setCustomerSearch(""); }}
+                     {customerDropdown.map(c => (
+                       <button key={c.id} onMouseDown={() => selectCustomerFromDropdown(c)}
                          className="w-full px-3 py-2 text-left hover:bg-sky-500/20 text-sm text-white flex justify-between">
                          <span>{c.full_name}</span>
                          <span className="text-gray-400 text-xs">{c.phone}</span>
                        </button>
                      ))}
-                     {filteredCustomers.length === 0 && <div className="px-3 py-2 text-xs text-gray-500">No customers found</div>}
+                   </div>
+                 )}
+                 {showCustomerDropdown && customerSearch && customerDropdown.length === 0 && (
+                   <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-xl px-3 py-2 text-xs text-gray-500">
+                     No customers found
                    </div>
                  )}
                </div>
+               {validationErrors.customer && <p className="text-rose-400 text-xs mt-1">{validationErrors.customer}</p>}
+
+               {/* Bug 2: Customer info card */}
+               {selectedCustomerInfo && (
+                 <div className="mt-2 rounded-lg border border-sky-500/30 bg-gray-800/60 p-3 text-xs space-y-1">
+                   <div className="flex items-center justify-between">
+                     <div className="flex items-center gap-1.5 text-sky-400 font-medium">
+                       <CheckCircle2 className="w-3.5 h-3.5" />
+                       {selectedCustomerInfo.customer.full_name}
+                     </div>
+                     <button onClick={clearCustomerSelection} className="text-gray-500 hover:text-gray-300 text-xs underline">Change</button>
+                   </div>
+                   {selectedCustomerInfo.customer.phone && <p className="text-gray-400">📞 {selectedCustomerInfo.customer.phone}</p>}
+                   {selectedCustomerInfo.customer.email && <p className="text-gray-400">✉️ {selectedCustomerInfo.customer.email}</p>}
+                   <div className="pt-1 border-t border-gray-700">
+                     {selectedCustomerInfo.vehicles.length > 0 ? (
+                       selectedCustomerInfo.vehicles.map(v => (
+                         <p key={v.id} className="text-gray-300">{v.year} {v.make} {v.model}{v.license_plate ? ` — Plate: ${v.license_plate}` : ""}</p>
+                       ))
+                     ) : (
+                       <p className="text-gray-500 italic">No vehicles on file — you can add one after saving.</p>
+                     )}
+                   </div>
+                 </div>
+               )}
+
                {newCustomerForm !== null ? (
                  <div className="bg-gray-800 border border-sky-500/30 rounded-lg p-3 space-y-2 mt-2">
                    <div className="flex items-center justify-between">
@@ -358,6 +467,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
              </div>
              <div>
                <Label className="text-gray-400">Vehicle *</Label>
+               {validationErrors.vehicle && <p className="text-rose-400 text-xs mt-1">{validationErrors.vehicle}</p>}
                {newVehicleForm !== null ? (
                  <div className="bg-gray-800 border border-sky-500/30 rounded-lg p-2 mt-1 space-y-2">
                    <input value={newVehicleForm.vin} onChange={e => setNewVehicleForm({...newVehicleForm, vin: e.target.value})}
@@ -477,6 +587,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
 
           {/* Labor Items */}
           <div>
+            {validationErrors.lineItems && <p className="text-rose-400 text-xs mb-2">{validationErrors.lineItems}</p>}
             <div className="flex items-center justify-between mb-2">
               <Label className="text-gray-300 font-semibold">Labor</Label>
               <Button size="sm" variant="ghost" onClick={addLabor} className="text-sky-400 hover:text-sky-300 h-7 px-2">
@@ -633,7 +744,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
         {/* Footer */}
         <div className="flex-shrink-0 bg-gray-900 px-6 py-4 border-t border-gray-800 flex gap-3">
           <Button variant="outline" onClick={onClose} className="flex-1 border-gray-700 text-gray-300">Cancel</Button>
-          <Button onClick={handleSave} disabled={saving || !canSave} className="flex-1 bg-sky-500 hover:bg-sky-600">
+          <Button onClick={handleSave} disabled={saving} className="flex-1 bg-sky-500 hover:bg-sky-600">
             {saving ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Saving...</> : "Save Estimate"}
           </Button>
         </div>
