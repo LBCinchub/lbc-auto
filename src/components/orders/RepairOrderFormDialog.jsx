@@ -760,9 +760,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                   <span className={form.apply_tax ? "" : "line-through opacity-50"}>{form.apply_tax ? `$${taxAmount.toFixed(2)}` : "Not applied"}</span>
                 </div>
               </>
-            ) : (
-              <p className="text-xs text-gray-500 italic">Cost locked (will not recalculate)</p>
-            )}
+            ) : null}
             <div className="flex justify-between font-bold text-base border-t border-gray-700 pt-2 mt-2">
               <span className="text-white">Total</span>
               <span className="text-emerald-400">${totalCost.toFixed(2)}</span>
