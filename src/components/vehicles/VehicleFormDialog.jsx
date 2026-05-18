@@ -79,7 +79,7 @@ export default function VehicleFormDialog({ open, onClose, vehicle, onSaved, cus
   const handleSave = async () => {
     setSaving(true);
     const data = { ...form, year: Number(form.year), mileage: Number(form.mileage) || 0 };
-    if (vehicle) {
+    if (vehicle?.id) {
       await base44.entities.Vehicle.update(vehicle.id, data);
     } else {
       await base44.entities.Vehicle.create(data);
