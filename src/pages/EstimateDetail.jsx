@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, CheckCircle2, Plus, Trash2, Save, Loader2 } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,6 +13,7 @@ export default function EstimateDetail() {
   const { estimateId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [user, setUser] = useState(null);
   const [saving, setSaving] = useState(false);
   
@@ -111,14 +113,62 @@ export default function EstimateDetail() {
 
   const handleSave = async () => {
     setSaving(true);
+    const updatedLaborItems = laborItems.map(r => ({ description: r.description, hours: parseFloat(r.hours) || 0, rate: parseFloat(r.rate) || 0, total: (parseFloat(r.hours) || 0) * (parseFloat(r.rate) || 0) }));
+    const updatedPartsItems = partsItems.map(r => ({ name: r.name, part_number: r.part_number || "", quantity: parseFloat(r.quantity) || 0, unit_price: parseFloat(r.unit_price) || 0, total: (parseFloat(r.quantity) || 0) * (parseFloat(r.unit_price) || 0) }));
+
     await base44.entities.Estimate.update(estimateId, {
-      labor_items: laborItems.map(r => ({ description: r.description, hours: parseFloat(r.hours) || 0, rate: parseFloat(r.rate) || 0, total: (parseFloat(r.hours) || 0) * (parseFloat(r.rate) || 0) })),
-      parts_items: partsItems.map(r => ({ name: r.name, part_number: r.part_number || "", quantity: parseFloat(r.quantity) || 0, unit_price: parseFloat(r.unit_price) || 0, total: (parseFloat(r.quantity) || 0) * (parseFloat(r.unit_price) || 0) })),
+      labor_items: updatedLaborItems,
+      parts_items: updatedPartsItems,
       labor_total: laborTotal,
       parts_total: partsTotal,
       tax_amount: taxAmount,
       grand_total: grandTotal,
     });
+
+    // FIX 1: Sync to linked Repair Orders (by estimate_id)
+    try {
+      const linkedROs = await base44.entities.RepairOrder.filter({ estimate_id: estimateId });
+      for (const ro of linkedROs) {
+        const roLaborCost = updatedLaborItems.reduce((s, l) => s + l.total, 0);
+        const roPartsCost = updatedPartsItems.reduce((s, p) => s + p.total, 0);
+        await base44.entities.RepairOrder.update(ro.id, {
+          customer_name: estimate.customer_name,
+          vehicle_info: estimate.vehicle_info,
+          labor_items: updatedLaborItems,
+          labor_cost: roLaborCost,
+          labor_hours: updatedLaborItems.reduce((s, l) => s + l.hours, 0),
+          parts_used: updatedPartsItems.map(p => ({ name: p.name, part_number: p.part_number || "", quantity: p.quantity, unit_price: p.unit_price, total: p.total })),
+          parts_cost: roPartsCost,
+          total_cost: roLaborCost + roPartsCost,
+        });
+      }
+      if (linkedROs.length > 0) toast({ title: "Repair Order also updated" });
+    } catch (e) { console.warn("Estimate→RO sync failed:", e); }
+
+    // FIX 3: Sync to linked Invoices (by estimate_id)
+    try {
+      const linkedInvoices = await base44.entities.Invoice.filter({ estimate_id: estimateId });
+      const lineItems = [
+        ...updatedPartsItems.filter(p => p.name).map(p => ({ description: p.name, type: "part", quantity: p.quantity, unit_price: p.unit_price, total: p.total })),
+        ...updatedLaborItems.filter(l => l.description).map(l => ({ description: l.description, type: "labor", quantity: l.hours, unit_price: l.rate, total: l.total })),
+      ];
+      for (const inv of linkedInvoices) {
+        const newTotal = grandTotal;
+        const newBalanceDue = newTotal - (inv.amount_paid || 0);
+        await base44.entities.Invoice.update(inv.id, {
+          customer_name: estimate.customer_name,
+          vehicle_info: estimate.vehicle_info,
+          line_items: lineItems,
+          labor_total: laborTotal,
+          parts_total: partsTotal,
+          tax_amount: taxAmount,
+          total: newTotal,
+          balance_due: newBalanceDue > 0 ? newBalanceDue : 0,
+        });
+      }
+      if (linkedInvoices.length > 0) toast({ title: "Invoice also updated" });
+    } catch (e) { console.warn("Estimate→Invoice sync failed:", e); }
+
     queryClient.invalidateQueries({ queryKey: ["estimate", estimateId] });
     setSaving(false);
   };
@@ -168,6 +218,7 @@ export default function EstimateDetail() {
     if (!window.confirm("Convert this estimate to a repair order?")) return;
     try {
       await base44.entities.RepairOrder.create({
+        estimate_id: estimate.id,
         customer_id: estimate.customer_id,
         customer_name: estimate.customer_name,
         vehicle_id: estimate.vehicle_id,
@@ -176,9 +227,10 @@ export default function EstimateDetail() {
         status: "waiting",
         labor_hours: estimate.labor_items?.reduce((sum, item) => sum + (parseFloat(item.hours) || 0), 0) || 0,
         labor_cost: estimate.labor_total || 0,
+        labor_items: estimate.labor_items || [],
         parts_used: estimate.parts_items?.map(item => ({
           name: item.name,
-          part_number: item.part_number,
+          part_number: item.part_number || "",
           quantity: item.quantity,
           unit_price: item.unit_price,
           total: item.total

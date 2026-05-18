@@ -6,6 +6,10 @@
       "type": "string",
       "description": "Auto-generated order number"
     },
+    "estimate_id": {
+      "type": "string",
+      "description": "Linked estimate ID (if created from an estimate)"
+    },
     "customer_id": {
       "type": "string",
       "description": "Customer ID"

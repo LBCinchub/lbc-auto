@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Store, Plus, Trash2, Save, Loader2, CreditCard, X } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 import { formatPhone } from "@/utils/formatPhone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,7 @@ export default function InvoiceDetail() {
   const { invoiceId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [user, setUser] = useState(null);
   const [saving, setSaving] = useState(false);
   const [savedOk, setSavedOk] = useState(false);
@@ -125,6 +127,22 @@ export default function InvoiceDetail() {
     });
     queryClient.invalidateQueries({ queryKey: ["invoice", invoiceId] });
     queryClient.invalidateQueries({ queryKey: ["invoices"] });
+
+    // FIX 5: When invoice is paid, sync status to linked Estimate and Repair Order
+    if (newStatus === "paid") {
+      try {
+        if (invoice.estimate_id) {
+          await base44.entities.Estimate.update(invoice.estimate_id, { status: "approved" });
+        }
+        if (invoice.repair_order_id) {
+          await base44.entities.RepairOrder.update(invoice.repair_order_id, { status: "completed" });
+        }
+        if (invoice.estimate_id || invoice.repair_order_id) {
+          toast({ title: "Invoice paid — linked records updated" });
+        }
+      } catch (e) { console.warn("Status sync on payment failed:", e); }
+    }
+
     setPayAmount("");
     setPayNote("");
     setShowPayment(false);

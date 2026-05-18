@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { base44 } from "@/api/base44Client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, X, Loader2 } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 import CustomerSearchInput from "@/components/shared/CustomerSearchInput";
 
@@ -34,6 +35,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
   const [saving, setSaving] = useState(false);
   const [newCustomerForm, setNewCustomerForm] = useState(null);
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [newVehicleForm, setNewVehicleForm] = useState(null);
   const [decodingVin, setDecodingVin] = useState(false);
   const [userTaxRate, setUserTaxRate] = useState(0);
@@ -298,7 +300,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         data.history = [...(order.history || []), historyEntry];
         await base44.entities.RepairOrder.update(order.id, data);
 
-        // Sync to linked Invoice(s) — update all financials
+        // FIX 2: Sync to linked Invoice(s) — update all financials
         try {
           const linkedInvoices = await base44.entities.Invoice.filter({ repair_order_id: order.id });
           for (const inv of linkedInvoices) {
@@ -321,6 +323,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
               customer_note: inv.customer_note,
             });
           }
+          if (linkedInvoices.length > 0) toast({ title: "Invoice also updated" });
         } catch (e) { console.warn("Sync to invoice failed:", e); }
 
         // Sync to linked Estimate(s) — update all financials
