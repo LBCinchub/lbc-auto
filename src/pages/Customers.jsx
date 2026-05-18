@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { Users, Phone, Mail, Car, Pencil, Trash2 } from "lucide-react";
+import { Users, Phone, Mail, Car, Pencil, Trash2, DollarSign } from "lucide-react";
 import CustomerProfileDialog from "../components/customers/CustomerProfileDialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -85,11 +85,43 @@ export default function Customers() {
   });
 
   // Build a lookup map: customerId -> vehicles[]
-  const vehiclesByCustomer = vehicles.reduce((map, v) => {
+  const vehiclesByCustomer = useMemo(() => vehicles.reduce((map, v) => {
     if (!map[v.customer_id]) map[v.customer_id] = [];
     map[v.customer_id].push(v);
     return map;
-  }, {});
+  }, {}), [vehicles]);
+
+  // Build invoice stats per customer
+  const invoiceStatsByCustomer = useMemo(() => {
+    const map = {};
+    for (const inv of invoices) {
+      if (!inv.customer_id) continue;
+      if (!map[inv.customer_id]) map[inv.customer_id] = { lastPaidDate: null, outstandingBalance: 0 };
+      const entry = map[inv.customer_id];
+      if (inv.status === "paid" && inv.paid_date) {
+        const d = new Date(inv.paid_date);
+        if (!entry.lastPaidDate || d > new Date(entry.lastPaidDate)) {
+          entry.lastPaidDate = inv.paid_date;
+        }
+      }
+      if (inv.status !== "paid") {
+        entry.outstandingBalance += parseFloat(inv.balance_due) || 0;
+      }
+    }
+    return map;
+  }, [invoices]);
+
+  function getActivityStatus(customerId) {
+    const stats = invoiceStatsByCustomer[customerId];
+    if (!stats?.lastPaidDate) return "inactive";
+    const days = Math.floor((new Date() - new Date(stats.lastPaidDate)) / (1000 * 60 * 60 * 24));
+    if (days <= 90) return "active";
+    if (days <= 180) return "idle";
+    return "inactive";
+  }
+
+  const statusDot = { active: "bg-emerald-400", idle: "bg-amber-400", inactive: "bg-rose-500" };
+  const statusLabel = { active: "Active", idle: "Idle", inactive: "Inactive" };
 
   const filtered = applyDateFilter(
     customers.filter(c => {
@@ -169,19 +201,27 @@ export default function Customers() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {paginated.map(customer => {
               const cv = vehiclesByCustomer[customer.id] || [];
+              const stats = invoiceStatsByCustomer[customer.id];
+              const activity = getActivityStatus(customer.id);
+              const outstanding = stats?.outstandingBalance || 0;
+              const lastService = stats?.lastPaidDate ? new Date(stats.lastPaidDate).toLocaleDateString("en-CA") : null;
+
               return (
                 <div key={customer.id}
                   onClick={() => navigate(`/CustomerDetails?id=${customer.id}`)}
                   className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5 hover:border-sky-500/50 hover:shadow-lg hover:shadow-sky-500/5 hover:-translate-y-0.5 transition-all duration-200 flex flex-col gap-3 cursor-pointer">
 
-                  {/* Top row: avatar + name + actions */}
+                  {/* Top row: avatar + name + status + actions */}
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
                       <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${getAvatarColor(customer.full_name)}`}>
                         <span className="text-white font-bold text-sm">{getInitials(customer.full_name)}</span>
                       </div>
                       <div>
-                        <h3 className="text-white font-bold capitalize leading-tight">{customer.full_name}</h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-white font-bold capitalize leading-tight">{customer.full_name}</h3>
+                          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${statusDot[activity]}`} title={statusLabel[activity]} />
+                        </div>
                         {customer.address && (
                           <p className="text-xs text-gray-500 truncate max-w-[160px]">{customer.address}</p>
                         )}
@@ -216,35 +256,51 @@ export default function Customers() {
                     )}
                   </div>
 
+                  {/* Stats row */}
+                  <div className="flex items-center gap-3 text-xs flex-wrap">
+                    <span className="flex items-center gap-1 text-gray-400">
+                      <Car className="w-3 h-3" />
+                      {cv.length} vehicle{cv.length !== 1 ? "s" : ""}
+                    </span>
+                    {lastService && (
+                      <span className="text-gray-500">Last: {lastService}</span>
+                    )}
+                    {outstanding > 0 && (
+                      <span className="flex items-center gap-1 text-rose-400 font-medium">
+                        <DollarSign className="w-3 h-3" />
+                        {outstanding.toFixed(2)} due
+                      </span>
+                    )}
+                  </div>
+
                   {/* Divider */}
                   <div className="border-t border-gray-800/60" />
 
-                  {/* Vehicles */}
-                  <div className="space-y-2">
+                  {/* Vehicles (compact) */}
+                  <div className="space-y-1">
                     {cv.length === 0 ? (
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <Car className="w-3.5 h-3.5" />
                         <span>No vehicle linked</span>
                       </div>
-                    ) : cv.map(v => (
+                    ) : cv.slice(0, 2).map(v => (
                       <div key={v.id}
                         className="cursor-pointer group"
-                        onClick={() => navigate(`/VehicleTimeline/${v.id}`)}>
+                        onClick={e => { e.stopPropagation(); navigate(`/VehicleTimeline/${v.id}`); }}>
                         <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-md bg-sky-500/20 flex items-center justify-center flex-shrink-0">
-                            <Car className="w-3.5 h-3.5 text-sky-400" />
+                          <div className="w-6 h-6 rounded-md bg-sky-500/20 flex items-center justify-center flex-shrink-0">
+                            <Car className="w-3 h-3 text-sky-400" />
                           </div>
-                          <div className="min-w-0">
-                            <p className="text-sm text-green-400 font-medium group-hover:text-green-300 capitalize leading-tight">
-                              {[v.year, v.make, v.model].filter(Boolean).join(" ")}
-                            </p>
-                            {v.vin && (
-                              <p className="text-xs text-gray-600 font-mono truncate">VIN: {v.vin}</p>
-                            )}
-                          </div>
+                          <p className="text-sm text-green-400 font-medium group-hover:text-green-300 capitalize leading-tight">
+                            {[v.year, v.make, v.model].filter(Boolean).join(" ")}
+                            {v.license_plate ? ` — ${v.license_plate}` : ""}
+                          </p>
                         </div>
                       </div>
                     ))}
+                    {cv.length > 2 && (
+                      <p className="text-xs text-gray-600 pl-8">+{cv.length - 2} more</p>
+                    )}
                   </div>
                 </div>
               );

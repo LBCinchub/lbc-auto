@@ -374,6 +374,9 @@ export default function CustomerDetails() {
               <TabsTrigger value="appointments" className="gap-1.5 data-[state=active]:bg-gray-800">
                 <Calendar className="w-3.5 h-3.5" /> Appointments ({appointments.length})
               </TabsTrigger>
+              <TabsTrigger value="repairorders" className="gap-1.5 data-[state=active]:bg-gray-800">
+                <Wrench className="w-3.5 h-3.5" /> Repair Orders ({repairOrders.length})
+              </TabsTrigger>
               <TabsTrigger value="notes" className="gap-1.5 data-[state=active]:bg-gray-800">
                 <StickyNote className="w-3.5 h-3.5" /> Notes
               </TabsTrigger>
@@ -487,6 +490,38 @@ export default function CustomerDetails() {
               )}
             </TabsContent>
 
+            {/* Repair Orders */}
+            <TabsContent value="repairorders" className="mt-4">
+              <div className="flex justify-end mb-3">
+                <Button size="sm" variant="outline"
+                  className="border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 hover:text-amber-300 gap-1.5"
+                  onClick={() => setRoOpen(true)}>
+                  <Plus className="w-3.5 h-3.5" /> New Repair Order
+                </Button>
+              </div>
+              {repairOrders.length === 0 ? (
+                <div className="text-gray-500 text-sm py-8 text-center">No repair orders found.</div>
+              ) : (
+                <div className="space-y-2">
+                  {repairOrders.map(ro => (
+                    <div key={ro.id}
+                      onClick={() => navigate(`/RepairOrderDetail/${ro.id}`)}
+                      className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 flex items-center justify-between cursor-pointer hover:border-sky-500/30 hover:bg-gray-800/50 transition-all">
+                      <div>
+                        <div className="font-semibold text-white">{ro.order_number || ro.id.slice(0,8)}</div>
+                        <div className="text-xs text-gray-400 mt-0.5">{fmtDate(ro.created_date)} · {ro.description?.slice(0, 50) || "—"}</div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="font-bold text-white">{fmt(ro.total_cost)}</span>
+                        <Badge className={statusColors[ro.status] || "bg-gray-700 text-gray-300"}>{ro.status?.replace(/_/g, " ")}</Badge>
+                        <ChevronRight className="w-4 h-4 text-gray-600" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
             {/* Notes */}
             <TabsContent value="notes" className="mt-4 space-y-4">
               <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-5 space-y-4">
@@ -580,7 +615,12 @@ export default function CustomerDetails() {
         <AppointmentFormDialog
           open={apptOpen}
           onClose={() => setApptOpen(false)}
-          appointment={{ _prefillCustomerId: customer.id, _prefillCustomerName: customer.full_name }}
+          appointment={{
+            customer_id: customer.id,
+            _prefillCustomerId: customer.id,
+            _prefillCustomerName: customer.full_name,
+            customer_name: customer.full_name,
+          }}
           onSaved={() => { setApptOpen(false); reload(); }}
           customers={[customer]}
           vehicles={vehicles}
