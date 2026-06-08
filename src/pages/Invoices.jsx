@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { FileText, Pencil, Trash2, Printer, Download, DollarSign, MessageSquare, ShieldCheck, Calendar, AlertCircle, Phone, Mail, Hash, Sheet } from "lucide-react";
+import { FileText, Pencil, Trash2, Printer, Download, DollarSign, MessageSquare, ShieldCheck, Calendar, AlertCircle, Phone, Mail, Hash, Sheet, Send, Loader2 } from "lucide-react";
+import { useEmailSend } from "@/hooks/useEmailSend";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -126,6 +127,19 @@ export default function Invoices() {
       await base44.entities.Invoice.delete(id);
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
     }
+  };
+
+  const { sending: sendingEmail, sendEmail } = useEmailSend();
+
+  const sendInvoiceEmail = (e, inv) => {
+    e.stopPropagation();
+    const customer = customers.find(c => c.id === inv.customer_id);
+    const to = customer?.email;
+    const subject = `Your Invoice #${inv.invoice_number}`;
+    const lineItems = (inv.line_items || []).filter(l => l.description).map(l => `  - ${l.description}: ${l.quantity} x $${parseFloat(l.unit_price||0).toFixed(2)} = $${parseFloat(l.total||0).toFixed(2)}`).join("\n");
+    const statusLabel = { unpaid: "Unpaid", partial: "Partially Paid", paid: "Paid", overdue: "Overdue" }[inv.status] || inv.status;
+    const body = `Hello ${inv.customer_name},\n\nPlease find your invoice details below.\n\nInvoice #: ${inv.invoice_number}\nVehicle: ${inv.vehicle_info}\nDate: ${new Date(inv.created_date).toLocaleDateString()}\nStatus: ${statusLabel}\n${inv.due_date ? `Due Date: ${inv.due_date}\n` : ""}${inv.paid_date ? `Paid Date: ${inv.paid_date}\n` : ""}\n--- LINE ITEMS ---\n${lineItems || "  (See invoice for details)"}\n\n--- SUMMARY ---\nLabor:         $${(inv.labor_total||0).toFixed(2)}\nParts:         $${(inv.parts_total||0).toFixed(2)}\nTax:           $${(inv.tax_amount||0).toFixed(2)}\nTotal:         $${(inv.total||0).toFixed(2)}\nAmount Paid:   $${(inv.amount_paid||0).toFixed(2)}\nBalance Due:   $${(inv.balance_due||0).toFixed(2)}\n${inv.customer_note ? `\nNote: ${inv.customer_note}` : ""}\n\nThank you for your business!\nPlease contact us if you have any questions about this invoice.`;
+    sendEmail(inv.id, to, subject, body);
   };
 
   const markPaid = async (inv) => {
@@ -415,6 +429,9 @@ export default function Invoices() {
                     </div>
                   )}
                   <div className="flex gap-1" onClick={e => e.stopPropagation()}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-sky-400" title="Send Invoice to Customer" onClick={e => sendInvoiceEmail(e, inv)} disabled={sendingEmail === inv.id}>
+                      {sendingEmail === inv.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    </Button>
                     {(inv.status === "unpaid" || inv.status === "partial") && (
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-emerald-500 hover:text-emerald-400"
                         onClick={() => setPaymentInvoice(inv)} title="Record Payment">

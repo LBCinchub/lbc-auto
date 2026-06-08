@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { ClipboardList, Pencil, Trash2, CheckCircle2, FileText, Phone, Mail, Hash, Sheet } from "lucide-react";
+import { ClipboardList, Pencil, Trash2, CheckCircle2, FileText, Phone, Mail, Hash, Sheet, Send, Loader2 } from "lucide-react";
+import { useEmailSend } from "@/hooks/useEmailSend";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { fuzzyMatch } from "@/utils/fuzzySearch";
 import { formatPhone } from "@/utils/formatPhone";
@@ -152,6 +153,19 @@ export default function Estimates() {
     URL.revokeObjectURL(url);
   };
 
+  const { sending: sendingEmail, sendEmail } = useEmailSend();
+
+  const sendEstimateEmail = (e, est) => {
+    e.stopPropagation();
+    const customer = customers.find(c => c.id === est.customer_id);
+    const to = customer?.email;
+    const subject = `Your Estimate #${est.estimate_number}`;
+    const laborLines = (est.labor_items || []).filter(l => l.description).map(l => `  - ${l.description}: ${l.hours}h @ $${parseFloat(l.rate||0).toFixed(2)}/hr = $${((parseFloat(l.hours)||0)*(parseFloat(l.rate)||0)).toFixed(2)}`).join("\n");
+    const partsLines = (est.parts_items || []).filter(p => p.name).map(p => `  - ${p.name}${p.part_number ? ` (${p.part_number})` : ""} x${p.quantity} @ $${parseFloat(p.unit_price||0).toFixed(2)} = $${((parseFloat(p.quantity)||0)*(parseFloat(p.unit_price)||0)).toFixed(2)}`).join("\n");
+    const body = `Hello ${est.customer_name},\n\nPlease find your estimate details below.\n\nEstimate #: ${est.estimate_number}\nVehicle: ${est.vehicle_info}\nDate: ${new Date(est.created_date).toLocaleDateString()}\nStatus: ${est.status}\n${est.valid_until ? `Valid Until: ${est.valid_until}\n` : ""}\n--- LABOR ---\n${laborLines || "  None"}\n\n--- PARTS ---\n${partsLines || "  None"}\n\n--- SUMMARY ---\nLabor Total:  $${(est.labor_total||0).toFixed(2)}\nParts Total:  $${(est.parts_total||0).toFixed(2)}\nTax:          $${(est.tax_amount||0).toFixed(2)}\nGrand Total:  $${(est.grand_total||0).toFixed(2)}\n${est.notes ? `\nNotes: ${est.notes}` : ""}\n\nThank you for your business!\nPlease contact us if you have any questions.`;
+    sendEmail(est.id, to, subject, body);
+  };
+
   const openNew = () => { setEditing(null); setDialogOpen(true); };
   const openEdit = (e) => { setEditing(e); setDialogOpen(true); };
   const openInvoiceFromEstimate = (est) => { setInvoiceFromEstimate(est); setInvoiceDialogOpen(true); };
@@ -271,6 +285,9 @@ export default function Estimates() {
                   <p className="text-lg font-bold text-sky-400">${(est.grand_total || 0).toFixed(2)}</p>
                 </div>
                 <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-sky-400" title="Send to Customer" onClick={e => sendEstimateEmail(e, est)} disabled={sendingEmail === est.id}>
+                    {sendingEmail === est.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                  </Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-sky-400" title="Convert to Invoice" onClick={() => openInvoiceFromEstimate(est)}>
                     <FileText className="w-3.5 h-3.5" />
                   </Button>

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Calendar, Pencil, Trash2, User, Car, Wrench } from "lucide-react";
+import { Calendar, Pencil, Trash2, User, Car, Wrench, Send, Loader2 } from "lucide-react";
+import { useEmailSend } from "@/hooks/useEmailSend";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { fuzzyMatch } from "@/utils/fuzzySearch";
@@ -96,6 +97,17 @@ export default function Appointments() {
     if (newStatus === "in_progress" || newStatus === "completed") {
       setRoPrompt(appt);
     }
+  };
+
+  const { sending: sendingEmail, sendEmail } = useEmailSend();
+
+  const sendAppointmentEmail = (e, a) => {
+    e.stopPropagation();
+    const customer = customers.find(c => c.id === a.customer_id);
+    const to = customer?.email;
+    const subject = `Appointment Confirmation — ${a.date} at ${a.time_slot}`;
+    const body = `Hello ${a.customer_name},\n\nThis is a confirmation of your upcoming appointment.\n\n--- APPOINTMENT DETAILS ---\nDate:         ${new Date(a.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}\nTime:         ${a.time_slot}\nService:      ${a.service_type}\nVehicle:      ${a.vehicle_info}\n${a.mechanic_name ? `Technician:   ${a.mechanic_name}\n` : ""}Status:       ${a.status}\n${a.notes ? `\nNotes: ${a.notes}` : ""}\n\nPlease arrive on time. If you need to reschedule, contact us as soon as possible.\n\nSee you soon!`;
+    sendEmail(a.id, to, subject, body);
   };
 
   const refresh = () => {
@@ -195,6 +207,9 @@ export default function Appointments() {
                        </div>
                      </button>
                      <div className="flex gap-1 flex-shrink-0 items-center">
+                       <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-sky-400" title="Send Confirmation Email" onClick={e => sendAppointmentEmail(e, a)} disabled={sendingEmail === a.id}>
+                         {sendingEmail === a.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                       </Button>
                        <select
                          value={a.status}
                          onChange={e => handleStatusChange(a, e.target.value)}

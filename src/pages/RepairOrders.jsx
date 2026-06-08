@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Wrench, Pencil, Trash2, DollarSign, Clock, History, FileText, Phone } from "lucide-react";
+import { Wrench, Pencil, Trash2, DollarSign, Clock, History, FileText, Phone, Send, Loader2 } from "lucide-react";
+import { useEmailSend } from "@/hooks/useEmailSend";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -119,6 +120,20 @@ export default function RepairOrders() {
     if (savedStatus) setStatusFilter(savedStatus);
   };
 
+  const { sending: sendingEmail, sendEmail } = useEmailSend();
+
+  const sendRepairOrderEmail = (e, order) => {
+    e.stopPropagation();
+    const customer = customers.find(c => c.id === order.customer_id);
+    const to = customer?.email;
+    const subject = `Repair Order Update — ${order.order_number}`;
+    const statusLabels = { waiting: "Waiting", in_progress: "In Progress", waiting_for_parts: "Waiting for Parts", completed: "Completed", delivered: "Delivered" };
+    const partsLines = (order.parts_used || []).filter(p => p.name).map(p => `  - ${p.name} x${p.quantity} @ $${parseFloat(p.unit_price||0).toFixed(2)}`).join("\n");
+    const laborLines = (order.labor_items || []).filter(l => l.description).map(l => `  - ${l.description}: ${l.hours}h`).join("\n");
+    const body = `Hello ${order.customer_name},\n\nHere is an update on your vehicle repair.\n\n--- REPAIR ORDER DETAILS ---\nOrder #:      ${order.order_number}\nVehicle:      ${order.vehicle_info}\nStatus:       ${statusLabels[order.status] || order.status}\n${order.mechanic_name ? `Technician:   ${order.mechanic_name}\n` : ""}${order.estimated_completion ? `Est. Completion: ${order.estimated_completion}\n` : ""}\nDescription:  ${order.description}\n${laborLines ? `\n--- LABOR ---\n${laborLines}` : ""}${partsLines ? `\n\n--- PARTS ---\n${partsLines}` : ""}\n\n--- COST SUMMARY ---\nLabor:    $${(order.labor_cost||0).toFixed(2)}\nParts:    $${(order.parts_cost||0).toFixed(2)}\nTotal:    $${(order.total_cost||0).toFixed(2)}\n${order.notes ? `\nTechnician Notes: ${order.notes}` : ""}\n\nPlease contact us if you have any questions.\nThank you for choosing us!`;
+    sendEmail(order.id, to, subject, body);
+  };
+
   const refreshParts = () => {
     queryClient.invalidateQueries({ queryKey: ["parts"] });
   };
@@ -224,6 +239,9 @@ export default function RepairOrders() {
                   <p className="text-lg font-bold text-sky-400">${(order.total_cost || 0).toFixed(2)}</p>
                 </div>
                 <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-sky-400" title="Send Status Update to Customer" onClick={e => sendRepairOrderEmail(e, order)} disabled={sendingEmail === order.id}>
+                    {sendingEmail === order.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                  </Button>
                   {order.history && order.history.length > 0 && (
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-sky-400" title="View History"
                       onClick={() => setHistoryOrder(order)}>
