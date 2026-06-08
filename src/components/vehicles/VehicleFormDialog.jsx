@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { base44 } from "@/api/base44Client";
 import { Loader2, Camera } from "lucide-react";
+import { base44 } from "@/api/base44Client";
+import { useNhtsaVinDecode } from "@/hooks/useNhtsaVinDecode";
 import CustomerSearchInput from "@/components/shared/CustomerSearchInput";
 import VinScanner from "./VinScanner";
 
@@ -19,8 +20,8 @@ const emptyForm = {
 export default function VehicleFormDialog({ open, onClose, vehicle, onSaved, customers = [] }) {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
-  const [decoding, setDecoding] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const { decoding, vinError, decodeVin: nhtsaDecode, setVinError } = useNhtsaVinDecode();
 
   const handleVinScanned = ({ vin }) => {
     setForm(prev => ({
@@ -50,29 +51,15 @@ export default function VehicleFormDialog({ open, onClose, vehicle, onSaved, cus
   }, [vehicle, open]);
 
   const decodeVin = async () => {
-    if (!form.vin || form.vin.length < 11) {
-      alert("Please enter a VIN with at least 11 characters.");
-      return;
-    }
-    setDecoding(true);
-    try {
-      const response = await base44.functions.invoke('decodeVin', { vin: form.vin });
-      const result = response.data;
-      if (result && result.make) {
-        setForm(prev => ({
-          ...prev,
-          make: result.make || prev.make,
-          model: result.model || prev.model,
-          year: result.year || prev.year,
-          engine_type: result.engine_type || prev.engine_type,
-        }));
-      } else {
-        alert(result?.error || "Could not decode VIN. Please enter manually.");
-      }
-    } catch (err) {
-      alert("Error decoding VIN: " + (err?.message || "Please try again."));
-    } finally {
-      setDecoding(false);
+    const result = await nhtsaDecode(form.vin);
+    if (result) {
+      setForm(prev => ({
+        ...prev,
+        make: result.make || prev.make,
+        model: result.model || prev.model,
+        year: result.year || prev.year,
+        engine_type: result.engine_type || prev.engine_type,
+      }));
     }
   };
 
@@ -109,7 +96,7 @@ export default function VehicleFormDialog({ open, onClose, vehicle, onSaved, cus
           <div className="flex gap-2">
             <div className="flex-1">
               <Label className="text-gray-400">VIN</Label>
-              <Input value={form.vin} onChange={e => setForm({...form, vin: e.target.value})}
+              <Input value={form.vin} onChange={e => { setForm({...form, vin: e.target.value}); setVinError(""); }}
                 className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="17-character VIN" />
             </div>
             <Button onClick={() => setScanning(true)} title="Scan VIN with camera"
@@ -121,6 +108,7 @@ export default function VehicleFormDialog({ open, onClose, vehicle, onSaved, cus
               {decoding ? <Loader2 className="w-4 h-4 animate-spin" /> : "Decode"}
             </Button>
           </div>
+          {vinError && <p className="text-rose-400 text-xs mt-1">{vinError}</p>}
 
           <div>
             <Label className="text-gray-400">License Plate</Label>

@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { base44 } from "@/api/base44Client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, Loader2, X, Search, CheckCircle2 } from "lucide-react";
+import { useNhtsaVinDecode } from "@/hooks/useNhtsaVinDecode";
 import { useToast } from "@/components/ui/use-toast";
 
 const emptyLaborRow = () => ({ description: "", hours: "", rate: "120", total: 0 });
@@ -28,7 +29,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
   const [newCustomerForm, setNewCustomerForm] = useState(null);
   const queryClient = useQueryClient();
   const [newVehicleForm, setNewVehicleForm] = useState(null);
-  const [decodingVin, setDecodingVin] = useState(false);
+  const { decoding: decodingVin, vinError: vinDecodeError, decodeVin: nhtsaDecode, setVinError: setVinDecodeError } = useNhtsaVinDecode();
   const [customerSearch, setCustomerSearch] = useState("");
   const [customerDropdown, setCustomerDropdown] = useState([]);
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
@@ -255,29 +256,15 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
   };
 
   const decodeVinForNewVehicle = async () => {
-    if (!newVehicleForm?.vin || newVehicleForm.vin.length < 11) {
-      alert("Please enter a VIN with at least 11 characters.");
-      return;
-    }
-    setDecodingVin(true);
-    try {
-      const response = await base44.functions.invoke('decodeVin', { vin: newVehicleForm.vin });
-      const result = response.data;
-      if (result?.make) {
-        setNewVehicleForm(prev => ({
-          ...prev,
-          make: result.make || prev.make,
-          model: result.model || prev.model,
-          year: result.year || prev.year,
-          engine_type: result.engine_type || prev.engine_type,
-        }));
-      } else {
-        alert(result?.error || "Could not decode VIN. Please enter manually.");
-      }
-    } catch (err) {
-      alert("Error decoding VIN: " + (err?.message || "Please try again."));
-    } finally {
-      setDecodingVin(false);
+    const result = await nhtsaDecode(newVehicleForm?.vin);
+    if (result) {
+      setNewVehicleForm(prev => ({
+        ...prev,
+        make: result.make || prev.make,
+        model: result.model || prev.model,
+        year: result.year || prev.year,
+        engine_type: result.engine_type || prev.engine_type,
+      }));
     }
   };
 
@@ -496,13 +483,14 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
                {validationErrors.vehicle && <p className="text-rose-400 text-xs mt-1">{validationErrors.vehicle}</p>}
                {newVehicleForm !== null ? (
                  <div className="bg-gray-800 border border-sky-500/30 rounded-lg p-2 mt-1 space-y-2">
-                   <input value={newVehicleForm.vin} onChange={e => setNewVehicleForm({...newVehicleForm, vin: e.target.value})}
-                     className="w-full px-2 py-1 bg-gray-700 border-gray-600 text-white rounded text-xs" placeholder="VIN (optional)" />
+                   <input value={newVehicleForm.vin} onChange={e => { setNewVehicleForm({...newVehicleForm, vin: e.target.value}); setVinDecodeError(""); }}
+                     className="w-full px-2 py-1 bg-gray-700 border-gray-600 text-white rounded text-xs" placeholder="VIN (17 characters, optional)" />
                    {newVehicleForm.vin && (
-                     <Button size="sm" onClick={decodeVinForNewVehicle} disabled={decodingVin || newVehicleForm.vin.length < 11} className="w-full bg-purple-600 hover:bg-purple-700 text-white text-xs">
-                       {decodingVin ? <><Loader2 className="w-3 h-3 animate-spin" /> Decoding...</> : "Decode VIN"}
+                     <Button size="sm" onClick={decodeVinForNewVehicle} disabled={decodingVin} className="w-full bg-purple-600 hover:bg-purple-700 text-white text-xs">
+                       {decodingVin ? <><Loader2 className="w-3 h-3 animate-spin mr-1" /> Decoding...</> : "Decode VIN"}
                      </Button>
                    )}
+                   {vinDecodeError && <p className="text-rose-400 text-xs">{vinDecodeError}</p>}
                    <input value={newVehicleForm.year} onChange={e => setNewVehicleForm({...newVehicleForm, year: e.target.value})}
                      className="w-full px-2 py-1 bg-gray-700 border-gray-600 text-white rounded text-xs" placeholder="Year *" />
                    <input value={newVehicleForm.make} onChange={e => setNewVehicleForm({...newVehicleForm, make: e.target.value})}

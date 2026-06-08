@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { base44 } from "@/api/base44Client";
 import { Textarea } from "@/components/ui/textarea";
 import { Search, X, Plus, Trash2, Store, Loader2 } from "lucide-react";
+import { useNhtsaVinDecode } from "@/hooks/useNhtsaVinDecode";
 import { fuzzyMatch } from "@/utils/fuzzySearch";
 import TechnicianNotes from "@/components/invoices/TechnicianNotes";
 
@@ -27,6 +28,8 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
   const [saving, setSaving] = useState(false);
   const [fetchedVehicles, setFetchedVehicles] = useState([]);
   const [loadingVehicles, setLoadingVehicles] = useState(false);
+  const { decoding: decodingVin, vinError: vinDecodeError, decodeVin: nhtsaDecode, setVinError: setVinDecodeError } = useNhtsaVinDecode();
+  const [vinInput, setVinInput] = useState("");
   const [orderSearch, setOrderSearch] = useState("");
   const [invoiceSearch, setInvoiceSearch] = useState("");
   const [estimateSearch, setEstimateSearch] = useState("");
@@ -380,7 +383,28 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
                     </SelectContent>
                   </Select>
                 ) : (
-                  <Input value={form.vehicle_info} onChange={e => !form.repair_order_id && !sourceEstimate && setForm({ ...form, vehicle_info: e.target.value })} className="bg-gray-800 border-gray-700 text-white" placeholder={form.customer_name ? "e.g. 2020 Honda Civic" : "Select customer first..."} readOnly={!!form.repair_order_id || !!sourceEstimate} />
+                  <div className="space-y-2">
+                    <Input value={form.vehicle_info} onChange={e => !form.repair_order_id && !sourceEstimate && setForm({ ...form, vehicle_info: e.target.value })} className="bg-gray-800 border-gray-700 text-white" placeholder={form.customer_name ? "e.g. 2020 Honda Civic" : "Select customer first..."} readOnly={!!form.repair_order_id || !!sourceEstimate} />
+                    {!form.repair_order_id && !sourceEstimate && (
+                      <div className="flex gap-2">
+                        <Input
+                          value={vinInput}
+                          onChange={e => { setVinInput(e.target.value); setVinDecodeError(""); }}
+                          placeholder="Paste VIN to decode..."
+                          className="bg-gray-800 border-gray-700 text-white text-xs h-8"
+                        />
+                        <Button size="sm" disabled={decodingVin || !vinInput} onClick={async () => {
+                          const result = await nhtsaDecode(vinInput);
+                          if (result) {
+                            setForm(f => ({ ...f, vehicle_info: `${result.year} ${result.make} ${result.model}` }));
+                          }
+                        }} className="bg-purple-600 hover:bg-purple-700 text-white h-8 px-3 text-xs whitespace-nowrap">
+                          {decodingVin ? <Loader2 className="w-3 h-3 animate-spin" /> : "Decode VIN"}
+                        </Button>
+                      </div>
+                    )}
+                    {vinDecodeError && <p className="text-rose-400 text-xs">{vinDecodeError}</p>}
+                  </div>
                 )}
               </div>
             </div>
