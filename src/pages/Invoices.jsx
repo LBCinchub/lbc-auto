@@ -133,13 +133,12 @@ export default function Invoices() {
 
   const sendInvoiceEmail = (e, inv) => {
     e.stopPropagation();
-    const customer = customers.find(c => c.id === inv.customer_id);
-    const to = customer?.email;
+    const cachedEmail = customers.find(c => c.id === inv.customer_id)?.email || null;
     const subject = `Your Invoice #${inv.invoice_number}`;
     const lineItems = (inv.line_items || []).filter(l => l.description).map(l => `  - ${l.description}: ${l.quantity} x $${parseFloat(l.unit_price||0).toFixed(2)} = $${parseFloat(l.total||0).toFixed(2)}`).join("\n");
     const statusLabel = { unpaid: "Unpaid", partial: "Partially Paid", paid: "Paid", overdue: "Overdue" }[inv.status] || inv.status;
     const body = `Hello ${inv.customer_name},\n\nPlease find your invoice details below.\n\nInvoice #: ${inv.invoice_number}\nVehicle: ${inv.vehicle_info}\nDate: ${new Date(inv.created_date).toLocaleDateString()}\nStatus: ${statusLabel}\n${inv.due_date ? `Due Date: ${inv.due_date}\n` : ""}${inv.paid_date ? `Paid Date: ${inv.paid_date}\n` : ""}\n--- LINE ITEMS ---\n${lineItems || "  (See invoice for details)"}\n\n--- SUMMARY ---\nLabor:         $${(inv.labor_total||0).toFixed(2)}\nParts:         $${(inv.parts_total||0).toFixed(2)}\nTax:           $${(inv.tax_amount||0).toFixed(2)}\nTotal:         $${(inv.total||0).toFixed(2)}\nAmount Paid:   $${(inv.amount_paid||0).toFixed(2)}\nBalance Due:   $${(inv.balance_due||0).toFixed(2)}\n${inv.customer_note ? `\nNote: ${inv.customer_note}` : ""}\n\nThank you for your business!\nPlease contact us if you have any questions about this invoice.`;
-    sendEmail(inv.id, to, subject, body);
+    sendEmail(inv.id, inv.customer_id, cachedEmail, subject, body);
   };
 
   const markPaid = async (inv) => {
