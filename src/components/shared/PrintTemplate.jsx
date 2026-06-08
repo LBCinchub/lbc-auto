@@ -98,6 +98,7 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
           <div style={{ fontSize: 10, color: "#475569", lineHeight: 1.6 }}>
             {customer?.phone && <div>{formatPhone(customer.phone)}</div>}
             {customer?.email && <div>{customer.email}</div>}
+            {customer?.address && <div>{customer.address}</div>}
           </div>
         </div>
         {vehicle?.info && (
@@ -105,9 +106,10 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
             <div style={{ fontSize: 8.5, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 2 }}>Vehicle</div>
             <div style={{ fontSize: 12, fontWeight: 700, color: "#0f172a", marginBottom: 1 }}>{vehicle.info}</div>
             <div style={{ fontSize: 10, color: "#475569", lineHeight: 1.6 }}>
+              {vehicle?.color && <div>Color: {vehicle.color}</div>}
               {vehicle?.vin && <div>VIN: {vehicle.vin}</div>}
-              {vehicle?.mileage && <div>Mileage: {vehicle.mileage.toLocaleString()} km</div>}
               {vehicle?.license_plate && <div>Plate: {vehicle.license_plate}</div>}
+              {vehicle?.mileage && <div>Mileage: {vehicle.mileage.toLocaleString()} km</div>}
             </div>
           </div>
         )}

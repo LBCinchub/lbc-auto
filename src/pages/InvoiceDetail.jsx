@@ -52,6 +52,19 @@ export default function InvoiceDetail() {
     enabled: !!invoice?.customer_id,
   });
 
+  const { data: repairOrder } = useQuery({
+    queryKey: ["repairOrder", invoice?.repair_order_id],
+    queryFn: () => base44.entities.RepairOrder.get(invoice.repair_order_id),
+    enabled: !!invoice?.repair_order_id,
+  });
+
+  const vehicleId = repairOrder?.vehicle_id || invoice?.vehicle_id;
+  const { data: vehicleRecord } = useQuery({
+    queryKey: ["vehicle", vehicleId],
+    queryFn: () => base44.entities.Vehicle.get(vehicleId),
+    enabled: !!vehicleId,
+  });
+
   // Initialize editable state from invoice data once loaded
   useEffect(() => {
     if (invoice && !initialized) {
@@ -247,8 +260,8 @@ export default function InvoiceDetail() {
           docNumber={invoice.invoice_number}
           createdDate={new Date(invoice.created_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           user={user}
-          customer={{ name: invoice.customer_name || customer?.full_name || "—", phone: customer?.phone, email: customer?.email }}
-          vehicle={{ info: invoice.vehicle_info }}
+          customer={{ name: invoice.customer_name || customer?.full_name || "—", phone: customer?.phone, email: customer?.email, address: customer?.address }}
+          vehicle={{ info: invoice.vehicle_info, vin: vehicleRecord?.vin, license_plate: vehicleRecord?.license_plate, color: vehicleRecord?.color, mileage: vehicleRecord?.mileage }}
           lineItems={[
             ...(laborItems.map(r => ({
               name: r.description || "Labor",

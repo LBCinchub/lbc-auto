@@ -43,6 +43,12 @@ export default function EstimateDetail() {
     enabled: !!estimate?.customer_id,
   });
 
+  const { data: vehicleRecord } = useQuery({
+    queryKey: ["vehicle", estimate?.vehicle_id],
+    queryFn: () => base44.entities.Vehicle.get(estimate.vehicle_id),
+    enabled: !!estimate?.vehicle_id,
+  });
+
   // Initialize editable state from estimate data once loaded
   useEffect(() => {
     if (estimate && !initialized) {
@@ -316,8 +322,8 @@ export default function EstimateDetail() {
           docNumber={estimate.estimate_number}
           createdDate={new Date(estimate.created_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           user={user}
-          customer={{ name: estimate.customer_name || customer?.full_name || "—", phone: customer?.phone, email: customer?.email }}
-          vehicle={{ info: estimate.vehicle_info }}
+          customer={{ name: estimate.customer_name || customer?.full_name || "—", phone: customer?.phone, email: customer?.email, address: customer?.address }}
+          vehicle={{ info: estimate.vehicle_info, vin: vehicleRecord?.vin, license_plate: vehicleRecord?.license_plate, color: vehicleRecord?.color, mileage: vehicleRecord?.mileage }}
           lineItems={[
             ...laborItems.map(l => ({ name: l.description || "Labor", description: `${parseFloat(l.hours)||0}h @ $${parseFloat(l.rate)||0}/hr`, qty: parseFloat(l.hours) || 1, unit_price: parseFloat(l.rate) || 0 })),
             ...partsItems.map(p => ({ name: p.name || "Part", description: p.part_number ? `Part #: ${p.part_number}` : "", qty: parseFloat(p.quantity) || 1, unit_price: parseFloat(p.unit_price) || 0 }))
