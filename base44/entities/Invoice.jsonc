@@ -38,6 +38,17 @@
       "type": "number",
       "description": "Tax rate percentage"
     },
+    "tax_applies_to": {
+      "type": "string",
+      "enum": [
+        "labor",
+        "parts",
+        "both",
+        "none"
+      ],
+      "default": "both",
+      "description": "Which totals tax applies to"
+    },
     "tax_amount": {
       "type": "number",
       "description": "Tax amount"

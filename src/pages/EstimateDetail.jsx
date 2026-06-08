@@ -20,6 +20,7 @@ export default function EstimateDetail() {
   // Editable line items state
   const [laborItems, setLaborItems] = useState([]);
   const [partsItems, setPartsItems] = useState([]);
+  const [taxAppliesTo, setTaxAppliesTo] = useState("both");
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
@@ -62,6 +63,7 @@ export default function EstimateDetail() {
           total: i.total || 0
         }))
       );
+      setTaxAppliesTo(estimate.tax_applies_to || "both");
       setInitialized(true);
     }
   }, [estimate, initialized]);
@@ -90,7 +92,11 @@ export default function EstimateDetail() {
   const partsTotal = partsItems.reduce((s, r) => s + (parseFloat(r.quantity) || 0) * (parseFloat(r.unit_price) || 0), 0);
   const subtotal = laborTotal + partsTotal;
   const taxRate = estimate?.tax_rate ?? (user?.tax_rate ?? 0);
-  const taxAmount = subtotal * (taxRate / 100);
+  const taxableBase = taxAppliesTo === "labor" ? laborTotal
+    : taxAppliesTo === "parts" ? partsTotal
+    : taxAppliesTo === "none" ? 0
+    : laborTotal + partsTotal; // "both"
+  const taxAmount = taxableBase * (taxRate / 100);
   const grandTotal = subtotal + taxAmount;
 
   const updateLabor = (idx, field, value) => {
@@ -122,6 +128,7 @@ export default function EstimateDetail() {
       labor_total: laborTotal,
       parts_total: partsTotal,
       tax_amount: taxAmount,
+      tax_applies_to: taxAppliesTo,
       grand_total: grandTotal,
     });
 
@@ -468,7 +475,32 @@ export default function EstimateDetail() {
             </div>
           ))}
           {taxRate > 0 && (
-            <div className="flex justify-between text-gray-400 border-t border-gray-700/50 pt-2"><span>Tax ({taxRate}%)</span><span>${taxAmount.toFixed(2)}</span></div>
+            <div className="flex items-center justify-between border-t border-gray-700/50 pt-2 gap-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-gray-400 text-xs whitespace-nowrap">Tax ({taxRate}%) applies to:</span>
+                <div className="flex gap-1">
+                  {[
+                    { value: "both", label: "Both" },
+                    { value: "labor", label: "Labor Only" },
+                    { value: "parts", label: "Parts Only" },
+                    { value: "none", label: "No Tax" },
+                  ].map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setTaxAppliesTo(opt.value)}
+                      className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
+                        taxAppliesTo === opt.value
+                          ? "bg-sky-500 text-white"
+                          : "bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-gray-200"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <span className="text-gray-400 whitespace-nowrap">${taxAmount.toFixed(2)}</span>
+            </div>
           )}
           <div className="flex justify-between text-white font-bold text-base border-t border-gray-700 pt-2">
             <span>Grand Total</span>
