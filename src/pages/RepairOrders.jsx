@@ -125,12 +125,7 @@ export default function RepairOrders() {
   const sendRepairOrderEmail = (e, order) => {
     e.stopPropagation();
     const cachedEmail = customers.find(c => c.id === order.customer_id)?.email || null;
-    const subject = `Repair Order Update — ${order.order_number}`;
-    const statusLabels = { waiting: "Waiting", in_progress: "In Progress", waiting_for_parts: "Waiting for Parts", completed: "Completed", delivered: "Delivered" };
-    const partsLines = (order.parts_used || []).filter(p => p.name).map(p => `  - ${p.name} x${p.quantity} @ $${parseFloat(p.unit_price||0).toFixed(2)}`).join("\n");
-    const laborLines = (order.labor_items || []).filter(l => l.description).map(l => `  - ${l.description}: ${l.hours}h`).join("\n");
-    const body = `Hello ${order.customer_name},\n\nHere is an update on your vehicle repair.\n\n--- REPAIR ORDER DETAILS ---\nOrder #:      ${order.order_number}\nVehicle:      ${order.vehicle_info}\nStatus:       ${statusLabels[order.status] || order.status}\n${order.mechanic_name ? `Technician:   ${order.mechanic_name}\n` : ""}${order.estimated_completion ? `Est. Completion: ${order.estimated_completion}\n` : ""}\nDescription:  ${order.description}\n${laborLines ? `\n--- LABOR ---\n${laborLines}` : ""}${partsLines ? `\n\n--- PARTS ---\n${partsLines}` : ""}\n\n--- COST SUMMARY ---\nLabor:    $${(order.labor_cost||0).toFixed(2)}\nParts:    $${(order.parts_cost||0).toFixed(2)}\nTotal:    $${(order.total_cost||0).toFixed(2)}\n${order.notes ? `\nTechnician Notes: ${order.notes}` : ""}\n\nPlease contact us if you have any questions.\nThank you for choosing us!`;
-    sendEmail(order.id, order.customer_id, cachedEmail, subject, body);
+    sendEmail(order.id, "repair_order", cachedEmail, order.customer_id, order.customer_name, order);
   };
 
   const refreshParts = () => {

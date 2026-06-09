@@ -104,9 +104,7 @@ export default function Appointments() {
   const sendAppointmentEmail = (e, a) => {
     e.stopPropagation();
     const cachedEmail = customers.find(c => c.id === a.customer_id)?.email || null;
-    const subject = `Appointment Confirmation — ${a.date} at ${a.time_slot}`;
-    const body = `Hello ${a.customer_name},\n\nThis is a confirmation of your upcoming appointment.\n\n--- APPOINTMENT DETAILS ---\nDate:         ${new Date(a.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}\nTime:         ${a.time_slot}\nService:      ${a.service_type}\nVehicle:      ${a.vehicle_info}\n${a.mechanic_name ? `Technician:   ${a.mechanic_name}\n` : ""}Status:       ${a.status}\n${a.notes ? `\nNotes: ${a.notes}` : ""}\n\nPlease arrive on time. If you need to reschedule, contact us as soon as possible.\n\nSee you soon!`;
-    sendEmail(a.id, a.customer_id, cachedEmail, subject, body);
+    sendEmail(a.id, "appointment", cachedEmail, a.customer_id, a.customer_name, a);
   };
 
   const refresh = () => {

@@ -158,11 +158,7 @@ export default function Estimates() {
   const sendEstimateEmail = (e, est) => {
     e.stopPropagation();
     const cachedEmail = customers.find(c => c.id === est.customer_id)?.email || null;
-    const subject = `Your Estimate #${est.estimate_number}`;
-    const laborLines = (est.labor_items || []).filter(l => l.description).map(l => `  - ${l.description}: ${l.hours}h @ $${parseFloat(l.rate||0).toFixed(2)}/hr = $${((parseFloat(l.hours)||0)*(parseFloat(l.rate)||0)).toFixed(2)}`).join("\n");
-    const partsLines = (est.parts_items || []).filter(p => p.name).map(p => `  - ${p.name}${p.part_number ? ` (${p.part_number})` : ""} x${p.quantity} @ $${parseFloat(p.unit_price||0).toFixed(2)} = $${((parseFloat(p.quantity)||0)*(parseFloat(p.unit_price)||0)).toFixed(2)}`).join("\n");
-    const body = `Hello ${est.customer_name},\n\nPlease find your estimate details below.\n\nEstimate #: ${est.estimate_number}\nVehicle: ${est.vehicle_info}\nDate: ${new Date(est.created_date).toLocaleDateString()}\nStatus: ${est.status}\n${est.valid_until ? `Valid Until: ${est.valid_until}\n` : ""}\n--- LABOR ---\n${laborLines || "  None"}\n\n--- PARTS ---\n${partsLines || "  None"}\n\n--- SUMMARY ---\nLabor Total:  $${(est.labor_total||0).toFixed(2)}\nParts Total:  $${(est.parts_total||0).toFixed(2)}\nTax:          $${(est.tax_amount||0).toFixed(2)}\nGrand Total:  $${(est.grand_total||0).toFixed(2)}\n${est.notes ? `\nNotes: ${est.notes}` : ""}\n\nThank you for your business!\nPlease contact us if you have any questions.`;
-    sendEmail(est.id, est.customer_id, cachedEmail, subject, body);
+    sendEmail(est.id, "estimate", cachedEmail, est.customer_id, est.customer_name, est);
   };
 
   const openNew = () => { setEditing(null); setDialogOpen(true); };
