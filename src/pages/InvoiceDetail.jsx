@@ -283,6 +283,7 @@ export default function InvoiceDetail() {
             partsTotal,
             laborTotal,
             subtotal: laborTotal + partsTotal,
+            discount: invoice.discount || 0,
             taxRate,
             taxAmount,
             grandTotal,

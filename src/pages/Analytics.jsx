@@ -1364,7 +1364,7 @@ export default function Analytics() {
         </>
       )}
 
-      {/* Payment Method Invoices Modal — uses amount_paid per invoice, never payment_history */}
+      {/* Payment Method Invoices Modal — uses amount_paid per invoice, grouped by method */}
       <Dialog open={!!paymentMethodModal} onOpenChange={() => setPaymentMethodModal(null)}>
         <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
@@ -1373,52 +1373,80 @@ export default function Analytics() {
             </DialogTitle>
           </DialogHeader>
           {(() => {
+            // All paid/partial invoices for the selected day
             const dayInvoices = invoices.filter(inv => {
               if (inv.status !== "paid" && inv.status !== "partial") return false;
               const day = inv.paid_date || inv.created_date?.substring(0, 10);
-              if (day !== selectedDay) return false;
-              if (paymentMethodModal === "all") return true;
-              const method = inv.payment_method?.toLowerCase() || "";
-              if (paymentMethodModal === "etransfer") return method === "e-transfer" || method === "etransfer";
-              if (paymentMethodModal === "card") return method === "card" || !!inv.card_last4;
-              if (paymentMethodModal === "cash") return !(method === "card" || inv.card_last4 || method === "e-transfer" || method === "etransfer");
-              return false;
+              return day === selectedDay;
             });
 
-            if (dayInvoices.length === 0) {
+            // Classify each invoice into a method bucket
+            const classify = (inv) => {
+              const m = inv.payment_method?.toLowerCase() || "";
+              if (m === "e-transfer" || m === "etransfer") return "etransfer";
+              if (m === "card" || inv.card_last4) return "card";
+              return "cash";
+            };
+
+            // Filter by selected method (or show all grouped)
+            const filtered = paymentMethodModal === "all"
+              ? dayInvoices
+              : dayInvoices.filter(inv => classify(inv) === paymentMethodModal);
+
+            if (filtered.length === 0) {
               return <p className="text-gray-400 text-sm py-4 text-center">No invoices found for this date / method.</p>;
             }
 
-            const grandTotal = dayInvoices.reduce((s, i) => s + (i.amount_paid || 0), 0);
+            // Group by method for "all" view; single group otherwise
+            const groups = paymentMethodModal === "all"
+              ? [
+                  { key: "cash",      label: "Cash 💵",       invoices: filtered.filter(i => classify(i) === "cash") },
+                  { key: "card",      label: "Card 💳",       invoices: filtered.filter(i => classify(i) === "card") },
+                  { key: "etransfer", label: "E-Transfer 📧", invoices: filtered.filter(i => classify(i) === "etransfer") },
+                ].filter(g => g.invoices.length > 0)
+              : [{ key: paymentMethodModal, label: paymentMethodModal === "etransfer" ? "E-Transfer 📧" : paymentMethodModal === "card" ? "Card 💳" : "Cash 💵", invoices: filtered }];
+
+            const grandTotal = filtered.reduce((s, i) => s + (i.amount_paid || 0), 0);
 
             return (
-              <table className="w-full text-sm mt-2">
-                <thead>
-                  <tr className="border-b border-gray-700">
-                    <th className="text-left text-xs text-gray-400 px-3 py-2">Invoice #</th>
-                    <th className="text-left text-xs text-gray-400 px-3 py-2">Customer</th>
-                    <th className="text-left text-xs text-gray-400 px-3 py-2">Vehicle</th>
-                    <th className="text-left text-xs text-gray-400 px-3 py-2">Method</th>
-                    <th className="text-right text-xs text-gray-400 px-3 py-2">Amount Paid</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dayInvoices.map(inv => (
-                    <tr key={inv.id} className="border-b border-gray-800/50 hover:bg-gray-800/30 cursor-pointer"
-                      onClick={() => { setPaymentMethodModal(null); window.location.href = `/InvoiceDetail/${inv.id}`; }}>
-                      <td className="px-3 py-2 text-sky-400 font-mono font-semibold">{inv.invoice_number || inv.id.slice(0, 8)}</td>
-                      <td className="px-3 py-2 text-gray-200">{inv.customer_name}</td>
-                      <td className="px-3 py-2 text-gray-400 text-xs">{inv.vehicle_info || "—"}</td>
-                      <td className="px-3 py-2 text-gray-300 capitalize text-xs">{inv.payment_method || "cash"}</td>
-                      <td className="px-3 py-2 text-right text-emerald-400 font-semibold">${(inv.amount_paid || 0).toFixed(2)}</td>
-                    </tr>
-                  ))}
-                  <tr className="border-t-2 border-gray-600 bg-gray-900/50">
-                    <td colSpan={4} className="px-3 py-2 text-gray-300 font-bold text-sm">Total</td>
-                    <td className="px-3 py-2 text-right text-emerald-400 font-bold text-base">${grandTotal.toFixed(2)}</td>
-                  </tr>
-                </tbody>
-              </table>
+              <div className="space-y-4 mt-2">
+                {groups.map(group => (
+                  <div key={group.key}>
+                    <div className="text-xs font-bold text-gray-300 uppercase tracking-wider px-1 mb-1">{group.label}</div>
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-700">
+                          <th className="text-left text-xs text-gray-500 px-3 py-1.5">Invoice #</th>
+                          <th className="text-left text-xs text-gray-500 px-3 py-1.5">Customer</th>
+                          <th className="text-left text-xs text-gray-500 px-3 py-1.5">Vehicle</th>
+                          <th className="text-right text-xs text-gray-500 px-3 py-1.5">Amount Paid</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {group.invoices.map(inv => (
+                          <tr key={inv.id} className="border-b border-gray-800/40 hover:bg-gray-800/30 cursor-pointer"
+                            onClick={() => { setPaymentMethodModal(null); window.location.href = `/InvoiceDetail/${inv.id}`; }}>
+                            <td className="px-3 py-2 text-sky-400 font-mono font-semibold">{inv.invoice_number || inv.id.slice(0, 8)}</td>
+                            <td className="px-3 py-2 text-gray-200">{inv.customer_name}</td>
+                            <td className="px-3 py-2 text-gray-400 text-xs">{inv.vehicle_info || "—"}</td>
+                            <td className="px-3 py-2 text-right text-emerald-400 font-semibold">${(inv.amount_paid || 0).toFixed(2)}</td>
+                          </tr>
+                        ))}
+                        <tr className="bg-gray-800/40">
+                          <td colSpan={3} className="px-3 py-1.5 text-gray-400 text-xs font-semibold">Subtotal</td>
+                          <td className="px-3 py-1.5 text-right text-emerald-300 font-semibold text-xs">
+                            ${group.invoices.reduce((s, i) => s + (i.amount_paid || 0), 0).toFixed(2)}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                ))}
+                <div className="flex justify-between items-center border-t-2 border-gray-600 pt-3 px-1">
+                  <span className="text-gray-300 font-bold text-sm">Grand Total</span>
+                  <span className="text-emerald-400 font-bold text-lg">${grandTotal.toFixed(2)}</span>
+                </div>
+              </div>
             );
           })()}
         </DialogContent>

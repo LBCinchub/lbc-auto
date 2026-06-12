@@ -1,4 +1,4 @@
-export function generateInvoiceHTML({ invoice, laborItems, partsItems, laborTotal, partsTotal, taxRate, taxAmount, grandTotal, shopInfo = {} }) {
+export function generateInvoiceHTML({ invoice, laborItems, partsItems, laborTotal, partsTotal, taxRate, taxAmount, grandTotal, discount, shopInfo = {} }) {
   const fmt = (n) => `$${(parseFloat(n) || 0).toFixed(2)}`;
 
   const isPaid = invoice.status === "paid";
@@ -196,6 +196,7 @@ export function generateInvoiceHTML({ invoice, laborItems, partsItems, laborTota
         <div style="display:flex;justify-content:space-between;padding:9px 14px;border-bottom:1px solid #f1f5f9;"><span>Labor</span><span>${fmt(laborTotal)}</span></div>
         <div style="display:flex;justify-content:space-between;padding:9px 14px;border-bottom:1px solid #f1f5f9;"><span>Parts</span><span>${fmt(partsTotal)}</span></div>
         <div style="display:flex;justify-content:space-between;padding:9px 14px;border-bottom:1px solid #e2e8f0;"><span>Subtotal</span><span>${fmt(laborTotal + partsTotal)}</span></div>
+        ${(parseFloat(discount) > 0) ? `<div style="display:flex;justify-content:space-between;padding:9px 14px;border-bottom:1px solid #f1f5f9;color:#dc2626;"><span>Discount</span><span>-${fmt(discount)}</span></div>` : ""}
         <div style="display:flex;justify-content:space-between;padding:9px 14px;border-bottom:1px solid #f1f5f9;"><span>Tax (${taxRate}%)</span><span>${fmt(taxAmount)}</span></div>
         <div style="display:flex;justify-content:space-between;padding:11px 14px;background:#1e40af;color:#fff;font-weight:700;font-size:1.15rem;"><span>TOTAL</span><span>${fmt(grandTotal)}</span></div>
         ${(invoice.amount_paid > 0) ? `<div style="display:flex;justify-content:space-between;padding:9px 14px;background:#f0fdf4;color:#16a34a;font-weight:600;border-bottom:1px solid #dcfce7;"><span>Amount Paid</span><span>– ${fmt(invoice.amount_paid)}</span></div>` : ""}

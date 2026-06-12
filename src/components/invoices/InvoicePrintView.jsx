@@ -74,6 +74,7 @@ export default function InvoicePrintView({ invoice, onClose }) {
     partsTotal: invoice.parts_total || 0,
     laborTotal: invoice.labor_total || 0,
     subtotal,
+    discount: invoice.discount || 0,
     taxRate: TAX_RATE,
     taxAmount: invoice.tax_amount || 0,
     taxAppliesTo: invoice.tax_applies_to || "both",
