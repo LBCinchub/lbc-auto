@@ -86,9 +86,15 @@ export default function InvoiceDetail() {
     }
   }, [invoice, initialized]);
 
-  // Calculations
-  const laborTotal = laborItems.reduce((s, r) => s + (parseFloat(r.hours) || 0) * (parseFloat(r.rate) || 0), 0);
-  const partsTotal = partsItems.reduce((s, r) => s + (parseFloat(r.quantity) || 0) * (parseFloat(r.unit_price) || 0), 0);
+  // Calculations — zero-qty items are "Recommended" and excluded from all totals
+  const laborTotal = laborItems.reduce((s, r) => {
+    const qty = parseFloat(r.hours) || 0;
+    return qty > 0 ? s + qty * (parseFloat(r.rate) || 0) : s;
+  }, 0);
+  const partsTotal = partsItems.reduce((s, r) => {
+    const qty = parseFloat(r.quantity) || 0;
+    return qty > 0 ? s + qty * (parseFloat(r.unit_price) || 0) : s;
+  }, 0);
   const subtotal = laborTotal + partsTotal;
   const taxRate = invoice?.tax_rate ?? (user?.tax_rate ?? 0);
   const taxableBase = taxAppliesTo === "labor" ? laborTotal
@@ -274,8 +280,8 @@ export default function InvoiceDetail() {
               name: r.name || "Part",
               description: "",
               unit_price: parseFloat(r.unit_price) || 0,
-              qty: parseFloat(r.quantity) || 1,
-              amount: (parseFloat(r.quantity) || 1) * (parseFloat(r.unit_price) || 0),
+              qty: parseFloat(r.quantity) || 0,
+              amount: (parseFloat(r.quantity) || 0) * (parseFloat(r.unit_price) || 0),
             }))),
           ]}
           paymentHistory={invoice.payment_history || []}

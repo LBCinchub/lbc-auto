@@ -93,9 +93,15 @@ export default function EstimateDetail() {
     );
   }
 
-  // Calculations
-  const laborTotal = laborItems.reduce((s, r) => s + (parseFloat(r.hours) || 0) * (parseFloat(r.rate) || 0), 0);
-  const partsTotal = partsItems.reduce((s, r) => s + (parseFloat(r.quantity) || 0) * (parseFloat(r.unit_price) || 0), 0);
+  // Calculations — zero-qty items are "Recommended" and excluded from all totals
+  const laborTotal = laborItems.reduce((s, r) => {
+    const qty = parseFloat(r.hours) || 0;
+    return qty > 0 ? s + qty * (parseFloat(r.rate) || 0) : s;
+  }, 0);
+  const partsTotal = partsItems.reduce((s, r) => {
+    const qty = parseFloat(r.quantity) || 0;
+    return qty > 0 ? s + qty * (parseFloat(r.unit_price) || 0) : s;
+  }, 0);
   const subtotal = laborTotal + partsTotal;
   const taxRate = estimate?.tax_rate ?? (user?.tax_rate ?? 0);
   const taxableBase = taxAppliesTo === "labor" ? laborTotal
@@ -325,8 +331,8 @@ export default function EstimateDetail() {
           customer={{ name: estimate.customer_name || customer?.full_name || "—", phone: customer?.phone, email: customer?.email, address: customer?.address }}
           vehicle={{ info: estimate.vehicle_info, vin: vehicleRecord?.vin, license_plate: vehicleRecord?.license_plate, color: vehicleRecord?.color, mileage: vehicleRecord?.mileage }}
           lineItems={[
-            ...laborItems.map(l => ({ name: l.description || "Labor", description: `${parseFloat(l.hours)||0}h @ $${parseFloat(l.rate)||0}/hr`, qty: parseFloat(l.hours) || 1, unit_price: parseFloat(l.rate) || 0 })),
-            ...partsItems.map(p => ({ name: p.name || "Part", description: p.part_number ? `Part #: ${p.part_number}` : "", qty: parseFloat(p.quantity) || 1, unit_price: parseFloat(p.unit_price) || 0 }))
+            ...laborItems.map(l => ({ name: l.description || "Labor", description: `${parseFloat(l.hours)||0}h @ $${parseFloat(l.rate)||0}/hr`, qty: parseFloat(l.hours) || 0, unit_price: parseFloat(l.rate) || 0 })),
+            ...partsItems.map(p => ({ name: p.name || "Part", description: p.part_number ? `Part #: ${p.part_number}` : "", qty: parseFloat(p.quantity) || 0, unit_price: parseFloat(p.unit_price) || 0 }))
           ]}
           paymentHistory={[]}
           financials={{ laborTotal, partsTotal, taxRate, taxAmount, grandTotal }}
