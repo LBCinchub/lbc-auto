@@ -147,6 +147,9 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
       <div style={{ textAlign: "center", marginTop: 5, fontSize: 9, color: "#cbd5e1", fontStyle: "italic" }}>
         Thank you for choosing {bizName} — we appreciate your trust and business.
       </div>
+      <div style={{ marginTop: 6, fontSize: 9, color: "#94a3b8", fontStyle: "italic", lineHeight: 1.5 }}>
+        * Items marked as <em>Recommended</em> are future services identified during inspection. They are not included in today's charges.
+      </div>
       <div style={{ textAlign: "center", marginTop: 5, paddingTop: 5, borderTop: "1px solid #f1f5f9", fontSize: 8, color: "#94a3b8", letterSpacing: 1.5, textTransform: "uppercase" }}>
         Powered by <span style={{ fontWeight: 700, color: "#0ea5e9" }}>LBC.NETWORK</span>
       </div>
@@ -183,19 +186,26 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
           </thead>
           <tbody>
             {lineItems.map((item, i) => {
-              const qty = parseFloat(item.qty ?? item.quantity) || 1;
+              const rawQty = parseFloat(item.qty ?? item.quantity);
+              const isRecommended = !rawQty || rawQty === 0;
+              const qty = isRecommended ? 0 : rawQty;
               const unitPrice = parseFloat(item.unit_price) || 0;
-              const total = unitPrice * qty;
+              const total = isRecommended ? 0 : unitPrice * qty;
               const displayName = item.name || item.description || "—";
               const displayDesc = item.name ? item.description : "";
               return (
                 <tr key={i} style={{ background: i % 2 === 1 ? "#fafbff" : "white", borderBottom: "1px solid #f1f5f9" }}>
                   <td style={{ padding: "4px 7px", fontSize: 9, fontWeight: 600, color: "#94a3b8" }}>{i + 1}</td>
-                  <td style={{ padding: "4px 7px", fontSize: 10, fontWeight: 700, color: "#0f172a" }}>{displayName}</td>
+                  <td style={{ padding: "4px 7px", fontSize: 10, fontWeight: 700, color: "#0f172a" }}>
+                    {displayName}
+                    {isRecommended && (
+                      <span style={{ marginLeft: 6, fontSize: 8, fontStyle: "italic", color: "#94a3b8", fontWeight: 400 }}>Recommended</span>
+                    )}
+                  </td>
                   <td style={{ padding: "4px 7px", fontSize: 9, color: "#64748b" }}>{displayDesc}</td>
                   <td style={{ padding: "4px 7px", fontSize: 9, color: "#334155", textAlign: "right" }}>${unitPrice.toFixed(2)}</td>
-                  <td style={{ padding: "4px 7px", fontSize: 9, color: "#334155", textAlign: "center" }}>{qty}</td>
-                  <td style={{ padding: "4px 7px", fontSize: 10, fontWeight: 700, color: "#0f172a", textAlign: "right" }}>${total.toFixed(2)}</td>
+                  <td style={{ padding: "4px 7px", fontSize: 9, color: isRecommended ? "#94a3b8" : "#334155", textAlign: "center" }}>{isRecommended ? "—" : qty}</td>
+                  <td style={{ padding: "4px 7px", fontSize: 10, fontWeight: 700, color: isRecommended ? "#94a3b8" : "#0f172a", textAlign: "right" }}>{isRecommended ? "$0.00" : `$${total.toFixed(2)}`}</td>
                 </tr>
               );
             })}
@@ -289,15 +299,22 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
           </thead>
           <tbody>
             {lineItems.map((item, i) => {
-              const qty = parseFloat(item.qty ?? item.quantity) || 1;
+              const rawQty = parseFloat(item.qty ?? item.quantity);
+              const isRecommended = !rawQty || rawQty === 0;
+              const qty = isRecommended ? 0 : rawQty;
               const displayName = item.name || item.description || "—";
               const displayDesc = item.name ? item.description : "";
               return (
                 <tr key={i} style={{ background: i % 2 === 1 ? "#fafbff" : "white", borderBottom: "1px solid #f1f5f9" }}>
                   <td style={{ padding: "6px 8px", fontSize: 9, fontWeight: 600, color: "#94a3b8" }}>{i + 1}</td>
-                  <td style={{ padding: "6px 8px", fontSize: 10, fontWeight: 700, color: "#0f172a" }}>{displayName}</td>
+                  <td style={{ padding: "6px 8px", fontSize: 10, fontWeight: 700, color: "#0f172a" }}>
+                    {displayName}
+                    {isRecommended && (
+                      <span style={{ marginLeft: 6, fontSize: 8, fontStyle: "italic", color: "#94a3b8", fontWeight: 400 }}>Recommended</span>
+                    )}
+                  </td>
                   <td style={{ padding: "6px 8px", fontSize: 9, color: "#64748b" }}>{displayDesc}</td>
-                  <td style={{ padding: "6px 8px", fontSize: 9, color: "#334155", textAlign: "center" }}>{qty}</td>
+                  <td style={{ padding: "6px 8px", fontSize: 9, color: isRecommended ? "#94a3b8" : "#334155", textAlign: "center" }}>{isRecommended ? "—" : qty}</td>
                 </tr>
               );
             })}
