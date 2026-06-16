@@ -96,6 +96,7 @@ export default function Settings() {
       await base44.auth.updateMe({ business_name: businessName, phone: shopPhone, address: shopAddress, gst_number: gstNumber, hst_number: hstNumber, tax_rate: taxRate !== "" ? parseFloat(taxRate) : 0, business_logo: logoUrl, ...notifData });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
+      window.dispatchEvent(new Event("lbc:settings-saved"));
     } catch (err) {
       alert("Error saving details: " + err.message);
     } finally {

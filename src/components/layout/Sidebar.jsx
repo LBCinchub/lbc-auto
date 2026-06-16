@@ -62,7 +62,10 @@ export default function Sidebar({ currentPage }) {
       const currentUser = await base44.auth.me();
       setUser(currentUser);
     };
+
     loadUser();
+    window.addEventListener("lbc:settings-saved", loadUser);
+    return () => window.removeEventListener("lbc:settings-saved", loadUser);
   }, []);
 
   return (
