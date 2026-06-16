@@ -107,13 +107,25 @@ export default function Settings() {
     setNotifPrefs(prev => ({ ...prev, [key]: value }));
   };
 
-  const handleLogoUpload = async (e) => {
+  const handleLogoUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Enforce a reasonable size limit (2MB) to keep the data URL storable
+    if (file.size > 2 * 1024 * 1024) {
+      alert("Please choose an image smaller than 2MB.");
+      return;
+    }
     setUploadingLogo(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    setLogoUrl(file_url);
-    setUploadingLogo(false);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setLogoUrl(ev.target.result); // base64 data URL — no credits needed
+      setUploadingLogo(false);
+    };
+    reader.onerror = () => {
+      alert("Failed to read file. Please try again.");
+      setUploadingLogo(false);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleGenerateLogo = async () => {
