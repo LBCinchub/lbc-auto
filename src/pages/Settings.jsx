@@ -110,16 +110,33 @@ export default function Settings() {
   const handleLogoUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    // Enforce a reasonable size limit (2MB) to keep the data URL storable
-    if (file.size > 2 * 1024 * 1024) {
-      alert("Please choose an image smaller than 2MB.");
+    if (!["image/png", "image/jpg", "image/jpeg"].includes(file.type)) {
+      alert("Please upload a PNG, JPG, or JPEG image.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Please choose an image smaller than 5MB.");
       return;
     }
     setUploadingLogo(true);
     const reader = new FileReader();
     reader.onload = (ev) => {
-      setLogoUrl(ev.target.result); // base64 data URL — no credits needed
-      setUploadingLogo(false);
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = 400;
+        canvas.height = 400;
+        const ctx = canvas.getContext("2d");
+        // Do NOT fill background — preserve transparency for PNG
+        const scale = Math.min(400 / img.width, 400 / img.height);
+        const x = (400 - img.width * scale) / 2;
+        const y = (400 - img.height * scale) / 2;
+        ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+        const isPng = file.type === "image/png";
+        setLogoUrl(canvas.toDataURL(isPng ? "image/png" : "image/jpeg", 0.92));
+        setUploadingLogo(false);
+      };
+      img.src = ev.target.result;
     };
     reader.onerror = () => {
       alert("Failed to read file. Please try again.");
@@ -223,7 +240,7 @@ export default function Settings() {
                 </div>
               )}
               <div className="flex gap-2 flex-wrap">
-                <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+                <input ref={fileInputRef} type="file" accept="image/png,image/jpg,image/jpeg" className="hidden" onChange={handleLogoUpload} />
                 <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}
                   disabled={uploadingLogo} className={`${theme === "light" ? "border-gray-300 text-gray-700 hover:text-gray-900" : "border-gray-700 text-gray-300 hover:text-white"} gap-2`}>
                   {uploadingLogo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
@@ -236,6 +253,7 @@ export default function Settings() {
                 </Button>
               </div>
               <p className={`${theme === "light" ? "text-gray-600" : "text-gray-500"} text-sm`}>Logo will appear on all your invoices and estimates</p>
+              <p className={`${theme === "light" ? "text-gray-400" : "text-gray-600"} text-xs`}>Best size: 400×400px, PNG with transparent background</p>
             </div>
           </div>
 
