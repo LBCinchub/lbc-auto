@@ -216,6 +216,7 @@ export default function RepairOrders() {
           onAction={() => { setEditingOrder(null); setDialogOpen(true); }}
           actionLabel="New Order" />
       ) : (
+        <>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {paginated.map(order => {
             const customer = customers.find(c => c.id === order.customer_id);
@@ -366,6 +367,7 @@ export default function RepairOrders() {
             </div>
           </div>
         )}
+        </>
       )}
 
       <RepairOrderFormDialog

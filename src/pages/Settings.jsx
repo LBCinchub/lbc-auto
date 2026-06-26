@@ -56,6 +56,8 @@ export default function Settings() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [logoUrl, setLogoUrl] = useState("");
+  const [shopEmail, setShopEmail] = useState("");
+  const [googleReviewLink, setGoogleReviewLink] = useState("");
   const [generatingLogo, setGeneratingLogo] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const fileInputRef = useRef(null);
@@ -72,6 +74,8 @@ export default function Settings() {
       setTaxRate(currentUser?.tax_rate != null ? String(currentUser.tax_rate) : "");
       setTaxAppliesTo(currentUser?.tax_applies_to || "both");
       setLogoUrl(currentUser?.business_logo || "");
+      setShopEmail(currentUser?.email || "");
+      setGoogleReviewLink(currentUser?.google_review_link || "");
       // Load notification prefs (default SMS on, email off)
       const prefs = {};
       NOTIF_SETTINGS.forEach(({ key }) => {
@@ -95,7 +99,7 @@ export default function Settings() {
         notifData[`notif_sms_${key}`] = notifPrefs[`sms_${key}`] !== false;
         notifData[`notif_email_${key}`] = notifPrefs[`email_${key}`] === true;
       });
-      await base44.auth.updateMe({ business_name: businessName, phone: shopPhone, address: shopAddress, gst_number: gstNumber, hst_number: hstNumber, tax_rate: taxRate !== "" ? parseFloat(taxRate) : 0, tax_applies_to: taxAppliesTo, business_logo: logoUrl, ...notifData });
+      await base44.auth.updateMe({ business_name: businessName, phone: shopPhone, address: shopAddress, gst_number: gstNumber, hst_number: hstNumber, tax_rate: taxRate !== "" ? parseFloat(taxRate) : 0, tax_applies_to: taxAppliesTo, business_logo: logoUrl, email: shopEmail, google_review_link: googleReviewLink, ...notifData });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
       window.dispatchEvent(new Event("lbc:settings-saved"));
