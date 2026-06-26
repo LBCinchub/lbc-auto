@@ -118,6 +118,40 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
       } catch (e) {
         console.error("Failed to sync Invoice from RepairOrder payment:", e);
       }
+    } else if (entityName === "Estimate") {
+      // Auto-create or update a linked Invoice, mark estimate as approved+paid
+      const invoiceNum = invoice.linked_invoice_number || `INV-EST-${invoice.id.slice(-6).toUpperCase()}`;
+      let invId = invoice.linked_invoice_id;
+      if (invId) {
+        await base44.entities.Invoice.update(invId, {
+          ...paymentFields,
+          invoice_number: invoiceNum,
+          total: invoice.total || 0,
+          estimate_id: invoice.id,
+        });
+      } else {
+        const created = await base44.entities.Invoice.create({
+          invoice_number: invoiceNum,
+          customer_id: invoice.customer_id || "",
+          customer_name: invoice.customer_name || "",
+          vehicle_info: invoice.vehicle_info || "",
+          estimate_id: invoice.id,
+          total: invoice.total || 0,
+          labor_total: invoice.labor_cost || 0,
+          parts_total: invoice.parts_cost || 0,
+          tax_amount: invoice.tax_amount || 0,
+          ...paymentFields,
+        });
+        invId = created.id;
+      }
+      // Mark estimate as approved and record payment reference
+      await base44.entities.Estimate.update(invoice.id, {
+        status: "approved",
+        amount_paid: newAmountPaid,
+        linked_invoice_id: invId,
+        linked_invoice_number: invoiceNum,
+        payment_history: [...(invoice.payment_history || []), ...newPaymentHistory],
+      });
     } else {
       // Standard Invoice update
       await base44.entities.Invoice.update(invoice.id, paymentFields);
@@ -142,7 +176,7 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
           {/* Invoice summary */}
           <div className="rounded-lg bg-gray-800/60 p-3 text-sm space-y-1">
             <div className="flex justify-between">
-              <span className="text-gray-400">{entityName === "RepairOrder" ? "Order" : "Invoice"}</span>
+              <span className="text-gray-400">{entityName === "RepairOrder" ? "Order" : entityName === "Estimate" ? "Estimate" : "Invoice"}</span>
               <span className="text-white font-medium">{invoice.invoice_number || invoice.order_number || "—"}</span>
             </div>
             <div className="flex justify-between">
