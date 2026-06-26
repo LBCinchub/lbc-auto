@@ -68,6 +68,61 @@ export default function VehicleFormDialog({ open, onClose, vehicle, onSaved, cus
     const data = { ...form, year: Number(form.year), mileage: Number(form.mileage) || 0 };
     if (vehicle?.id) {
       await base44.entities.Vehicle.update(vehicle.id, data);
+
+      // ── CENTER CONTROL: vehicle info changed → propagate to all linked records ──
+      const newVehicleInfo = [data.year, data.make, data.model].filter(Boolean).join(" ");
+      const prevVehicleInfo = [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ");
+      const vehicleChanged =
+        vehicle.make  !== data.make  ||
+        vehicle.model !== data.model ||
+        vehicle.year  !== data.year  ||
+        vehicle.license_plate !== data.license_plate ||
+        vehicle.color !== data.color;
+
+      if (vehicleChanged && newVehicleInfo) {
+        const vehicleUpdate = {
+          vehicle_info:    newVehicleInfo,
+          vehicle_id:      vehicle.id,
+        };
+        // Repair Orders
+        try {
+          const orders = await base44.entities.RepairOrder.filter({ vehicle_id: vehicle.id });
+          await Promise.all(orders.map(o =>
+            base44.entities.RepairOrder.update(o.id, { vehicle_info: newVehicleInfo })
+          ));
+        } catch(e) { console.warn("RO vehicle sync failed", e); }
+
+        // Estimates
+        try {
+          const estimates = await base44.entities.Estimate.filter({ vehicle_id: vehicle.id });
+          await Promise.all(estimates.map(e =>
+            base44.entities.Estimate.update(e.id, { vehicle_info: newVehicleInfo })
+          ));
+        } catch(e) { console.warn("Estimate vehicle sync failed", e); }
+
+        // Invoices
+        try {
+          const invoices = await base44.entities.Invoice.filter({ vehicle_id: vehicle.id });
+          await Promise.all(invoices.map(inv =>
+            base44.entities.Invoice.update(inv.id, { vehicle_info: newVehicleInfo })
+          ));
+        } catch(e) { console.warn("Invoice vehicle sync failed", e); }
+
+        // Appointments
+        try {
+          const appts = await base44.entities.Appointment.filter({ vehicle_id: vehicle.id });
+          await Promise.all(appts.map(appt =>
+            base44.entities.Appointment.update(appt.id, { vehicle_info: newVehicleInfo })
+          ));
+        } catch(e) { console.warn("Appointment vehicle sync failed", e); }
+
+        // Customer — update last_vehicle_info snapshot
+        if (data.customer_id) {
+          await base44.entities.Customer.update(data.customer_id, {
+            last_vehicle_info: newVehicleInfo
+          }).catch(() => {});
+        }
+      }
     } else {
       await base44.entities.Vehicle.create(data);
     }
