@@ -36,10 +36,10 @@ function getDateRange(key) {
 
 // dateField: function (record) => string (ISO date string to compare)
 // onChange: function ({ from, to } | null)
-export default function DateFilter({ onChange }) {
-  const [active, setActive] = useState("all");
-  const [customFrom, setCustomFrom] = useState("");
-  const [customTo, setCustomTo] = useState("");
+export default function DateFilter({ onChange, initialActive, initialFrom, initialTo }) {
+  const [active, setActive] = useState(initialActive || "all");
+  const [customFrom, setCustomFrom] = useState(initialFrom || "");
+  const [customTo, setCustomTo] = useState(initialTo || "");
 
   const handlePill = (key) => {
     setActive(key);
