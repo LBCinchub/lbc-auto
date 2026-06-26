@@ -135,7 +135,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         apply_tax: true, tax_applies_to: "both"
       });
     }
-  }, [order, open]);
+  }, [order?.id, open]);
 
   const customerVehicles = React.useMemo(() => {
     const ids = new Set(fetchedVehicles.map(v => v.id));
@@ -244,6 +244,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
   };
 
   const handleSave = async () => {
+    if (saving) return; // prevent double-submit
     if (!form.customer_id || !form.vehicle_id || !form.description) {
       alert('Please fill in Customer, Vehicle, and Description fields');
       return;
