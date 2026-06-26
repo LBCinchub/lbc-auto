@@ -48,9 +48,9 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
 
     base44.auth.me().then(u => {
       const userTaxRate    = u?.tax_rate     != null ? u.tax_rate     : 0;
-  const userTaxApplies = u?.tax_applies_to || "both";
-  const _defTaxParts   = userTaxApplies === "both" || userTaxApplies === "parts";
-  const _defTaxLabor   = userTaxApplies === "both" || userTaxApplies === "labor";
+      const userTaxApplies = u?.tax_applies_to || "both";
+      const _defTaxParts   = userTaxApplies === "both" || userTaxApplies === "parts";
+      const _defTaxLabor   = userTaxApplies === "both" || userTaxApplies === "labor";
       
       if (invoice && invoice.id) {
         setForm({
@@ -63,7 +63,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
           vehicle_info: invoice.vehicle_info || "",
           parts_total: invoice.parts_total || 0,
           labor_total: invoice.labor_total || 0,
-          tax_rate: userTaxRate,
+          tax_rate: invoice.tax_rate != null ? invoice.tax_rate : userTaxRate,
           status: invoice.status || "unpaid",
           due_date: invoice.due_date || "",
           payment_method: invoice.payment_method || "",
@@ -95,6 +95,8 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
           labor_total: sourceEstimate.labor_total || 0,
           customer_note: sourceEstimate.notes || "",
           tax_rate: userTaxRate,
+          apply_tax_parts: _defTaxParts,
+          apply_tax_labor: _defTaxLabor,
         }));
         setLaborItems(sourceEstimate.labor_items?.length ? sourceEstimate.labor_items.map(i => ({ description: i.description, hours: i.hours || 1, rate: i.rate || 0, total: i.total || 0 })) : [emptyLaborRow()]);
         setPartsItems(sourceEstimate.parts_items?.length ? sourceEstimate.parts_items.map(p => ({ name: p.name, quantity: p.quantity || 1, unit_price: p.unit_price || 0, total: p.total || 0 })) : [emptyPartRow()]);
@@ -116,7 +118,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
           setPartsItems(order.parts_used?.length ? order.parts_used.map(p => ({ name: p.name, quantity: p.quantity || 1, unit_price: p.unit_price || 0, total: p.total || 0 })) : [emptyPartRow()]);
         }
       } else if (invoice && !invoice.id) {
-        setForm(f => ({ ...f, customer_id: invoice.customer_id || "", customer_name: invoice.customer_name || "", vehicle_info: invoice.vehicle_info || "", tax_rate: userTaxRate }));
+        setForm(f => ({ ...f, customer_id: invoice.customer_id || "", customer_name: invoice.customer_name || "", vehicle_info: invoice.vehicle_info || "", tax_rate: userTaxRate, apply_tax_parts: _defTaxParts, apply_tax_labor: _defTaxLabor }));
         setLaborItems([emptyLaborRow()]);
         setPartsItems([emptyPartRow()]);
       } else {
