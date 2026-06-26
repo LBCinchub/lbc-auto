@@ -36,6 +36,7 @@ export default function InvoiceDetail() {
   const [dueDate, setDueDate] = useState("");
   const [customerNote, setCustomerNote] = useState("");
   const [serviceReason, setServiceReason] = useState("");
+  const [discount, setDiscount] = useState(0);
   const [showPayment, setShowPayment] = useState(false);
   const [payAmount, setPayAmount] = useState("");
   const [payMethod, setPayMethod] = useState("cash");
@@ -108,13 +109,14 @@ export default function InvoiceDetail() {
     return qty > 0 ? s + qty * (parseFloat(r.unit_price) || 0) : s;
   }, 0);
   const subtotal = laborTotal + partsTotal;
+  const discountAmount = parseFloat(discount) || 0;
   const taxRate = invoice?.tax_rate ?? (user?.tax_rate ?? 0);
   const taxableBase = taxAppliesTo === "labor" ? laborTotal
     : taxAppliesTo === "parts" ? partsTotal
     : taxAppliesTo === "none" ? 0
-    : laborTotal + partsTotal; // "both"
+    : Math.max(0, (laborTotal + partsTotal) - discountAmount); // "both" after discount
   const taxAmount = taxableBase * (taxRate / 100);
-  const grandTotal = subtotal + taxAmount;
+  const grandTotal = Math.max(0, subtotal - discountAmount + taxAmount);
 
   // ── Share / Print / Save as PDF ──────────────────────────────────────────
   const handlePrint = () => {
@@ -230,7 +232,7 @@ export default function InvoiceDetail() {
       })),
     ];
     const newTax = taxableBase * (taxRate / 100);
-    const newTotal = subtotal + newTax;
+    const newTotal = Math.max(0, subtotal - discountAmount + newTax);
     const amountPaid = invoice.amount_paid || 0;
     await base44.entities.Invoice.update(invoiceId, {
       line_items,
@@ -238,6 +240,7 @@ export default function InvoiceDetail() {
       parts_total: partsTotal,
       tax_amount: newTax,
       tax_applies_to: taxAppliesTo,
+      discount: discountAmount,
       total: newTotal,
       balance_due: Math.max(0, newTotal - amountPaid),
       parts_used: partsUsed,
@@ -380,7 +383,7 @@ export default function InvoiceDetail() {
             partsTotal,
             laborTotal,
             subtotal: laborTotal + partsTotal,
-            discount: invoice.discount || 0,
+            discount: discountAmount,
             taxRate,
             taxAmount,
             grandTotal,
@@ -610,6 +613,25 @@ export default function InvoiceDetail() {
               <span>${((parseFloat(row.quantity) || 0) * (parseFloat(row.unit_price) || 0)).toFixed(2)}</span>
             </div>
           ))}
+          {/* Discount — always visible, always editable */}
+          <div className="flex items-center justify-between border-t border-gray-700/50 pt-2 gap-3">
+            <span className="text-gray-400 text-sm">Discount ($)</span>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={discount}
+                onChange={e => setDiscount(e.target.value)}
+                onFocus={e => e.target.select()}
+                placeholder="0.00"
+                className="w-28 rounded-md bg-gray-800 border border-gray-700 text-rose-400 font-semibold text-sm text-right px-2 py-1 focus:border-sky-500 focus:outline-none"
+              />
+              {discountAmount > 0 && (
+                <span className="text-rose-400 text-sm font-semibold whitespace-nowrap">-${discountAmount.toFixed(2)}</span>
+              )}
+            </div>
+          </div>
           {taxRate > 0 && (
             <div className="flex items-center justify-between border-t border-gray-700/50 pt-2 gap-3">
               <div className="flex items-center gap-2 flex-wrap">
