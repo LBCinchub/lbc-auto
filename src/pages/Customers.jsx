@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation} from 'react-router-dom';
 import { Users, Phone, Mail, Car, Pencil, Trash2, DollarSign } from "lucide-react";
 import CustomerProfileDialog from "../components/customers/CustomerProfileDialog";
 import { Button } from "@/components/ui/button";
@@ -32,7 +32,14 @@ function getInitials(name = "") {
 
 export default function Customers() {
   const navigate = useNavigate();
-  const [search, setSearch] = useState("");
+  const _location = useLocation();
+  const _urlQ = new URLSearchParams(_location.search).get("q") || "";
+  const [search, setSearch] = useState(_urlQ);
+  // Sync search if URL param changes (e.g. navigating from GlobalSearch)
+  React.useEffect(() => {
+    const q = new URLSearchParams(_location.search).get("q") || "";
+    if (q) setSearch(q);
+  }, [_location.search]);
   const [searchField, setSearchField] = useState("all");
   const [page, setPage] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
