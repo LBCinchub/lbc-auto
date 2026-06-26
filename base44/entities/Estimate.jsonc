@@ -115,6 +115,15 @@
       "type": "number",
       "description": "Tax amount"
     },
+    "discount": {
+      "type": "number",
+      "description": "Discount value — dollar amount or percentage depending on discount_type"
+    },
+    "discount_type": {
+      "type": "string",
+      "description": "Discount type — $ for fixed dollar, % for percentage",
+      "enum": ["$", "%"]
+    },
     "grand_total": {
       "type": "number",
       "description": "Grand total"
