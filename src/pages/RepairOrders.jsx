@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Wrench, Pencil, Trash2, DollarSign, Clock, History, FileText, Phone, Send, Loader2 } from "lucide-react";
+import { Wrench, Pencil, Trash2, DollarSign, Clock, History, FileText, Phone, Send, Loader2, CreditCard } from "lucide-react";
 import { useEmailSend } from "@/hooks/useEmailSend";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -16,6 +16,7 @@ import EmptyState from "../components/shared/EmptyState";
 import StatusBadge from "../components/shared/StatusBadge";
 import RepairOrderFormDialog from "../components/orders/RepairOrderFormDialog";
 import InvoiceFormDialog from "../components/invoices/InvoiceFormDialog";
+import PaymentReceiptDialog from "../components/invoices/PaymentReceiptDialog";
 import DateFilter, { applyDateFilter } from "../components/shared/DateFilter";
 
 const statusFilters = [
@@ -36,6 +37,7 @@ export default function RepairOrders() {
   const [page, setPage] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
+  const [paymentOrder, setPaymentOrder] = useState(null);
   const [historyOrder, setHistoryOrder] = useState(null);
   const [invoiceOrder, setInvoiceOrder] = useState(null);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
@@ -242,6 +244,19 @@ export default function RepairOrders() {
                       <History className="w-3.5 h-3.5" />
                     </Button>
                   )}
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-emerald-400" title="Record Payment"
+                    onClick={() => setPaymentOrder({
+                      id: order.id,
+                      customer_name: order.customer_name,
+                      vehicle_info: order.vehicle_info,
+                      total: order.total_cost || 0,
+                      amount_paid: order.amount_paid || 0,
+                      balance_due: (order.total_cost || 0) - (order.amount_paid || 0),
+                      payment_history: order.payment_history || [],
+                      _sourceEntity: "RepairOrder",
+                    })}>
+                    <CreditCard className="w-3.5 h-3.5" />
+                  </Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-emerald-400" title="Create Invoice"
                     onClick={() => { setInvoiceOrder(order); setInvoiceDialogOpen(true); }}>
                     <FileText className="w-3.5 h-3.5" />
@@ -329,6 +344,17 @@ export default function RepairOrders() {
           </DialogContent>
         </Dialog>
       )}
+
+      <PaymentReceiptDialog
+        open={!!paymentOrder}
+        onClose={() => setPaymentOrder(null)}
+        invoice={paymentOrder}
+        entityName="RepairOrder"
+        onSaved={() => {
+          queryClient.invalidateQueries({ queryKey: ["repairOrders"] });
+          setPaymentOrder(null);
+        }}
+      />
     </div>
   );
 }
