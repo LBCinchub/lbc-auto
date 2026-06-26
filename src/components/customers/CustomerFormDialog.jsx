@@ -264,7 +264,7 @@ export default function CustomerFormDialog({ open, onClose, customer, onSaved, o
                     <div className="flex gap-2 mt-1">
                       <Input
                         value={vehicleForm.vin}
-                        onChange={e => { setVehicleForm({...vehicleForm, vin: e.target.value}); setVinError(""); }}
+                        onChange={e => { setVehicleForm({...vehicleForm, vin: e.target.value.toUpperCase()}); setVinError(""); }}
                         className="bg-gray-800 border-gray-700 text-white flex-1"
                         placeholder="Enter 17-character VIN"
                         maxLength={17}
