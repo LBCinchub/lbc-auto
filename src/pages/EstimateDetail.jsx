@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, CheckCircle2, Plus, Trash2, Save, Loader2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Plus, Trash2, Save, Loader2, Printer, Share2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -116,6 +116,18 @@ export default function EstimateDetail() {
     : laborTotal + partsTotal; // "both"
   const taxAmount = taxableBase * (taxRate / 100);
   const grandTotal = subtotal + taxAmount;
+
+  // ── Share / Print ────────────────────────────────────────────────────────
+  const handleShare = async () => {
+    const title = `Estimate #${estimate?.estimate_number} — ${estimate?.customer_name || ""}`;
+    const text  = `Estimate #${estimate?.estimate_number}\nVehicle: ${estimate?.vehicle_info || ""}\nTotal: $${(estimate?.grand_total || 0).toFixed(2)}\n${estimate?.service_reason ? "Reason: " + estimate.service_reason + "\n" : ""}\nThank you for choosing us!`;
+    if (navigator.share) {
+      try { await navigator.share({ title, text }); } catch (_) {}
+    } else {
+      await navigator.clipboard.writeText(text);
+      toast({ title: "Copied to clipboard ✓", description: "Estimate summary copied — paste anywhere to share." });
+    }
+  };
 
   const updateLabor = (idx, field, value) => {
     setLaborItems(prev => prev.map((r, i) => {
@@ -309,29 +321,53 @@ export default function EstimateDetail() {
 
   return (
     <div className="space-y-6">
+      {/* Header + Action Bar */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <Button variant="ghost" onClick={() => navigate(-1)} className="text-gray-400 hover:text-white gap-2">
           <ArrowLeft className="w-4 h-4" /> Back
         </Button>
-        <div className="flex gap-2">
-           <Button onClick={handleSave} disabled={saving} className="bg-sky-500 hover:bg-sky-600 gap-2">
-             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-             {saving ? "Saving..." : "Save Changes"}
-           </Button>
-           {estimate.status === "approved" && (
-             <Button onClick={handleConvertToInvoice} className="bg-emerald-500 hover:bg-emerald-600 text-white gap-2">
-               <CheckCircle2 className="w-4 h-4" /> Convert to Invoice
-             </Button>
-           )}
-           {estimate.status !== "approved" && (
-             <Button onClick={handleConvertToRepairOrder} className="bg-green-500/20 text-green-400 hover:bg-green-500/30 gap-2">
-               <CheckCircle2 className="w-4 h-4" /> Convert to Repair Order
-             </Button>
-           )}
-         </div>
+        <div className="flex flex-wrap gap-2">
+          {/* Print / Save PDF */}
+          <Button variant="outline" size="sm" onClick={() => window.print()}
+            className="border-gray-700 text-gray-300 h-9 gap-1.5 text-xs hover:border-sky-500 hover:text-sky-400">
+            <Printer className="w-3.5 h-3.5" /> Print / Save PDF
+          </Button>
+          {/* Share */}
+          <Button variant="outline" size="sm" onClick={handleShare}
+            className="border-gray-700 text-gray-300 h-9 gap-1.5 text-xs hover:border-violet-500 hover:text-violet-400">
+            <Share2 className="w-3.5 h-3.5" /> Share
+          </Button>
+          {/* Save */}
+          <Button size="sm" onClick={handleSave} disabled={saving}
+            className="bg-sky-500 hover:bg-sky-600 gap-1.5 h-9 text-xs">
+            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+            {saving ? "Saving..." : "Save Changes"}
+          </Button>
+          {estimate.status === "approved" && (
+            <Button size="sm" onClick={handleConvertToInvoice}
+              className="bg-emerald-500 hover:bg-emerald-600 text-white gap-1.5 h-9 text-xs">
+              <CheckCircle2 className="w-3.5 h-3.5" /> Convert to Invoice
+            </Button>
+          )}
+          {estimate.status !== "approved" && (
+            <Button size="sm" onClick={handleConvertToRepairOrder}
+              className="bg-green-500/20 text-green-400 hover:bg-green-500/30 gap-1.5 h-9 text-xs">
+              <CheckCircle2 className="w-3.5 h-3.5" /> Convert to Repair Order
+            </Button>
+          )}
+        </div>
       </div>
 
-      <div className="rounded-xl border border-gray-800/50 bg-white p-8">
+      {/* Print styles */}
+      <style>{`
+        @media print {
+          body > * { display: none !important; }
+          #estimate-print-area { display: block !important; position: fixed; top: 0; left: 0; width: 100%; z-index: 9999; background: white; }
+          #estimate-print-area * { display: revert !important; }
+          @page { margin: 10mm; size: A4 portrait; }
+        }
+      `}</style>
+      <div id="estimate-print-area" className="rounded-xl border border-gray-800/50 bg-white p-8">
         <PrintTemplate
           type="Estimate"
           docNumber={estimate.estimate_number}
