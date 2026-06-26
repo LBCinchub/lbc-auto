@@ -103,6 +103,10 @@
       "type": "string",
       "description": "Name or ID of cashier who processed payment"
     },
+    "service_reason": {
+      "type": "string",
+      "description": "Reason for visit / customer complaint / what the car came in for"
+    },
     "customer_note": {
       "type": "string",
       "description": "Note for the customer shown on the invoice"
