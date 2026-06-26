@@ -247,13 +247,18 @@ export default function RepairOrders() {
                   <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-emerald-400" title="Record Payment"
                     onClick={() => setPaymentOrder({
                       id: order.id,
+                      customer_id: order.customer_id || "",
                       customer_name: order.customer_name,
                       vehicle_info: order.vehicle_info,
                       total: order.total_cost || 0,
+                      labor_cost: order.labor_cost || 0,
+                      parts_cost: order.parts_cost || 0,
+                      tax_amount: order.tax_amount || 0,
                       amount_paid: order.amount_paid || 0,
                       balance_due: (order.total_cost || 0) - (order.amount_paid || 0),
                       payment_history: order.payment_history || [],
-                      _sourceEntity: "RepairOrder",
+                      linked_invoice_id: order.linked_invoice_id || null,
+                      linked_invoice_number: order.linked_invoice_number || null,
                     })}>
                     <CreditCard className="w-3.5 h-3.5" />
                   </Button>
