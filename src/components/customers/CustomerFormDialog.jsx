@@ -57,38 +57,50 @@ export default function CustomerFormDialog({ open, onClose, customer, onSaved, o
       await base44.entities.Customer.update(customer.id, form);
       newCustomer = { id: customer.id, ...form };
 
-      // Propagate name/phone changes to all related entities
-      if (customer.full_name !== form.full_name || customer.phone !== form.phone) {
-        const nameUpdate = { customer_name: form.full_name };
+      // ── CENTER CONTROL: propagate ALL customer field changes outward ──────
+      const customerChanged =
+        customer.full_name !== form.full_name ||
+        customer.phone     !== form.phone ||
+        customer.email     !== form.email;
 
-        // Update Vehicles
+      if (customerChanged) {
+        const recordUpdate = {
+          customer_name:  form.full_name,
+          customer_phone: form.phone  || "",
+          customer_email: form.email  || "",
+        };
+
+        // Vehicles — keep customer_name + phone in sync
         const vehicles = await base44.entities.Vehicle.filter({ customer_id: customer.id });
         await Promise.all(vehicles.map(v =>
-          base44.entities.Vehicle.update(v.id, { customer_name: form.full_name, phone: form.phone })
+          base44.entities.Vehicle.update(v.id, {
+            customer_name: form.full_name,
+            phone: form.phone || "",
+          })
         ));
 
-        // Update RepairOrders
+        // Repair Orders
         const orders = await base44.entities.RepairOrder.filter({ customer_id: customer.id });
         await Promise.all(orders.map(o =>
-          base44.entities.RepairOrder.update(o.id, nameUpdate)
+          base44.entities.RepairOrder.update(o.id, recordUpdate)
         ));
 
-        // Update Estimates
+        // Estimates
         const estimates = await base44.entities.Estimate.filter({ customer_id: customer.id });
         await Promise.all(estimates.map(e =>
-          base44.entities.Estimate.update(e.id, nameUpdate)
+          base44.entities.Estimate.update(e.id, recordUpdate)
         ));
 
-        // Update Invoices
+        // Invoices
         const invoices = await base44.entities.Invoice.filter({ customer_id: customer.id });
         await Promise.all(invoices.map(inv =>
-          base44.entities.Invoice.update(inv.id, nameUpdate)
+          base44.entities.Invoice.update(inv.id, recordUpdate)
         ));
 
-        // Update Appointments
-        const appointments = await base44.entities.Appointment.filter({ customer_id: customer.id });
-        await Promise.all(appointments.map(appt =>
-          base44.entities.Appointment.update(appt.id, nameUpdate)
+        // Appointments
+        const appts = await base44.entities.Appointment.filter({ customer_id: customer.id });
+        await Promise.all(appts.map(appt =>
+          base44.entities.Appointment.update(appt.id, recordUpdate)
         ));
       }
     } else {
