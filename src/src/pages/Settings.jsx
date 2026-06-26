@@ -1,0 +1,397 @@
+import React, { useState, useEffect, useRef } from "react";
+import { base44 } from "@/api/base44Client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import PageHeader from "@/components/shared/PageHeader";
+import { MessageSquare, Mail, Bell, Upload, Sparkles, X, Loader2 } from "lucide-react";
+import { useTheme } from "@/lib/ThemeContext";
+
+const NOTIF_SETTINGS = [
+  {
+    key: "repair_status",
+    label: "Repair Order Status Changes",
+    desc: "Notify customers when repair status updates (In Progress, Ready, etc.)",
+  },
+  {
+    key: "appointment_reminder",
+    label: "Appointment Reminders",
+    desc: "Send reminders 1 day before scheduled appointments",
+  },
+  {
+    key: "invoice_ready",
+    label: "Invoice Ready / Paid",
+    desc: "Notify when invoice is created or payment is received",
+  },
+  {
+    key: "overdue_invoice",
+    label: "Overdue Invoice Reminders",
+    desc: "Daily reminders for unpaid overdue invoices",
+  },
+];
+
+function Toggle({ checked, onChange }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!checked)}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${checked ? "bg-sky-500" : "bg-gray-700"}`}
+    >
+      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${checked ? "translate-x-6" : "translate-x-1"}`} />
+    </button>
+  );
+}
+
+export default function Settings() {
+  const { theme } = useTheme();
+  const [user, setUser] = useState(null);
+  const [businessName, setBusinessName] = useState("");
+  const [shopPhone, setShopPhone] = useState("");
+  const [shopAddress, setShopAddress] = useState("");
+  const [gstNumber, setGstNumber] = useState("");
+  const [hstNumber, setHstNumber] = useState("");
+  const [taxRate, setTaxRate] = useState("");
+  const [laborRate, setLaborRate] = useState("");
+  const [taxAppliesTo, setTaxAppliesTo] = useState("both");
+  const [notifPrefs, setNotifPrefs] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [logoUrl, setLogoUrl] = useState("");
+  const [shopEmail, setShopEmail] = useState("");
+  const [googleReviewLink, setGoogleReviewLink] = useState("");
+  const [generatingLogo, setGeneratingLogo] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const currentUser = await base44.auth.me();
+      setUser(currentUser);
+      setBusinessName(currentUser?.business_name || "");
+      setShopPhone(currentUser?.phone || "");
+      setShopAddress(currentUser?.address || "");
+      setGstNumber(currentUser?.gst_number || "");
+      setHstNumber(currentUser?.hst_number || "");
+      setTaxRate(currentUser?.tax_rate != null ? String(currentUser.tax_rate) : "");
+      setLaborRate(currentUser?.labor_rate != null ? String(currentUser.labor_rate) : "");
+      setTaxAppliesTo(currentUser?.tax_applies_to || "both");
+      setLogoUrl(currentUser?.business_logo || "");
+      setShopEmail(currentUser?.email || "");
+      setGoogleReviewLink(currentUser?.google_review_link || "");
+      // Load notification prefs (default SMS on, email off)
+      const prefs = {};
+      NOTIF_SETTINGS.forEach(({ key }) => {
+        prefs[`sms_${key}`] = currentUser?.[`notif_sms_${key}`] !== false;
+        prefs[`email_${key}`] = currentUser?.[`notif_email_${key}`] === true;
+      });
+      setNotifPrefs(prefs);
+    };
+    loadUser();
+  }, []);
+
+  const handleSave = async () => {
+    if (!businessName.trim()) {
+      alert("Please enter your business name");
+      return;
+    }
+    setSaving(true);
+    try {
+      const notifData = {};
+      NOTIF_SETTINGS.forEach(({ key }) => {
+        notifData[`notif_sms_${key}`] = notifPrefs[`sms_${key}`] !== false;
+        notifData[`notif_email_${key}`] = notifPrefs[`email_${key}`] === true;
+      });
+      await base44.auth.updateMe({ labor_rate: parseFloat(laborRate) || 0, business_name: businessName, phone: shopPhone, address: shopAddress, gst_number: gstNumber, hst_number: hstNumber, tax_rate: taxRate !== "" ? parseFloat(taxRate) : 0, tax_applies_to: taxAppliesTo, business_logo: logoUrl, email: shopEmail, google_review_link: googleReviewLink, ...notifData });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+      window.dispatchEvent(new Event("lbc:settings-saved"));
+    } catch (err) {
+      alert("Error saving details: " + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const setNotif = (key, value) => {
+    setNotifPrefs(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleLogoUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!["image/png", "image/jpg", "image/jpeg"].includes(file.type)) {
+      alert("Please upload a PNG, JPG, or JPEG image.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Please choose an image smaller than 5MB.");
+      return;
+    }
+    setUploadingLogo(true);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = 400;
+        canvas.height = 400;
+        const ctx = canvas.getContext("2d");
+        // Do NOT fill background — preserve transparency for PNG
+        const scale = Math.min(400 / img.width, 400 / img.height);
+        const x = (400 - img.width * scale) / 2;
+        const y = (400 - img.height * scale) / 2;
+        ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+        const isPng = file.type === "image/png";
+        setLogoUrl(canvas.toDataURL(isPng ? "image/png" : "image/jpeg", 0.92));
+        setUploadingLogo(false);
+      };
+      img.src = ev.target.result;
+    };
+    reader.onerror = () => {
+      alert("Failed to read file. Please try again.");
+      setUploadingLogo(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleGenerateLogo = async () => {
+    if (!businessName.trim()) { alert("Enter your business name first so we can generate a relevant logo."); return; }
+    setGeneratingLogo(true);
+    const result = await base44.integrations.Core.GenerateImage({
+      prompt: `Professional auto shop logo for "${businessName}". Clean, modern, bold design suitable for invoices and business cards. Use automotive/mechanic theme with wrench, gear, or car silhouette. White or transparent background, high contrast, minimal.`,
+    });
+    setLogoUrl(result.url);
+    setGeneratingLogo(false);
+  };
+
+  return (
+    <div className={`min-h-screen ${theme === "light" ? "bg-gray-100" : "bg-gray-950"}`}>
+      <PageHeader title="Settings" />
+      <div className="max-w-2xl mx-auto p-6 space-y-6">
+
+        {/* Business Info */}
+        <div className={`${theme === "light" ? "bg-white border-gray-200" : "bg-gray-900 border-gray-800"} border rounded-lg p-6 space-y-4`}>
+          <h2 className={`text-xl font-semibold ${theme === "light" ? "text-gray-900" : "text-white"} mb-2`}>Business Information</h2>
+          <div>
+            <Label className={`${theme === "light" ? "text-gray-700" : "text-gray-400"} mb-2 block`}>Business Name *</Label>
+            <Input
+              value={businessName}
+              onChange={(e) => setBusinessName(e.target.value)}
+              placeholder="Enter your auto shop name"
+              className={`${theme === "light" ? "bg-gray-50 border-gray-300 text-gray-900" : "bg-gray-800 border-gray-700 text-white"}`}
+            />
+            <p className={`${theme === "light" ? "text-gray-600" : "text-gray-500"} text-sm mt-2`}>This will appear as your shop's name throughout the app</p>
+          </div>
+          <div>
+            <Label className={`${theme === "light" ? "text-gray-700" : "text-gray-400"} mb-2 block`}>Shop Phone Number</Label>
+            <Input
+              value={shopPhone}
+              onChange={(e) => setShopPhone(e.target.value)}
+              placeholder="Enter your shop phone number"
+              className={`${theme === "light" ? "bg-gray-50 border-gray-300 text-gray-900" : "bg-gray-800 border-gray-700 text-white"}`}
+            />
+            <p className={`${theme === "light" ? "text-gray-600" : "text-gray-500"} text-sm mt-2`}>This will appear on invoices</p>
+          </div>
+          <div>
+            <Label className={`${theme === "light" ? "text-gray-700" : "text-gray-400"} mb-2 block`}>Shop Address</Label>
+            <Input
+              value={shopAddress}
+              onChange={(e) => setShopAddress(e.target.value)}
+              placeholder="Enter your shop address"
+              className={`${theme === "light" ? "bg-gray-50 border-gray-300 text-gray-900" : "bg-gray-800 border-gray-700 text-white"}`}
+            />
+            <p className={`${theme === "light" ? "text-gray-600" : "text-gray-500"} text-sm mt-2`}>This will appear on invoices and estimates</p>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label className={`${theme === "light" ? "text-gray-700" : "text-gray-400"} mb-2 block`}>GST Number</Label>
+              <Input
+                value={gstNumber}
+                onChange={(e) => setGstNumber(e.target.value)}
+                placeholder="e.g. 123456789RT0001"
+                className={`${theme === "light" ? "bg-gray-50 border-gray-300 text-gray-900" : "bg-gray-800 border-gray-700 text-white"}`}
+              />
+            </div>
+            <div>
+              <Label className={`${theme === "light" ? "text-gray-700" : "text-gray-400"} mb-2 block`}>HST Number</Label>
+              <Input
+                value={hstNumber}
+                onChange={(e) => setHstNumber(e.target.value)}
+                placeholder="e.g. 123456789RT0001"
+                className={`${theme === "light" ? "bg-gray-50 border-gray-300 text-gray-900" : "bg-gray-800 border-gray-700 text-white"}`}
+              />
+            </div>
+          </div>
+          {/* ── Default Labor Rate ── */}
+          <div>
+            <Label className={`${theme === "light" ? "text-gray-700" : "text-gray-400"} mb-2 block`}>
+              Default Labor Rate ($/hr)
+            </Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-semibold">$</span>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={laborRate}
+                onChange={(e) => setLaborRate(e.target.value)}
+                onFocus={e => e.target.select()}
+                placeholder="e.g. 120"
+                className={`pl-7 ${theme === "light" ? "bg-gray-50 border-gray-300 text-gray-900" : "bg-gray-800 border-gray-700 text-white"}`}
+              />
+            </div>
+            <p className={`${theme === "light" ? "text-gray-600" : "text-gray-500"} text-sm mt-2`}>
+              Auto-fills the hourly rate on new labor rows in Estimates, Repair Orders &amp; Invoices.
+            </p>
+          </div>
+
+          <div>
+            <Label className={`${theme === "light" ? "text-gray-700" : "text-gray-400"} mb-2 block`}>Default Tax Rate (%)</Label>
+            <Input
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              value={taxRate}
+              onChange={(e) => setTaxRate(e.target.value)}
+              placeholder="e.g. 13 for 13%"
+              className={`${theme === "light" ? "bg-gray-50 border-gray-300 text-gray-900" : "bg-gray-800 border-gray-700 text-white"}`}
+            />
+            <p className={`${theme === "light" ? "text-gray-600" : "text-gray-500"} text-sm mt-2`}>This rate will be pre-filled on all new invoices and estimates</p>
+          </div>
+          <div>
+            <Label className={`${theme === "light" ? "text-gray-700" : "text-gray-400"} mb-2 block`}>Default Tax Applies To</Label>
+            <div className="flex gap-2 flex-wrap">
+              {[
+                { value: "both",   label: "Labor + Parts" },
+                { value: "labor",  label: "Labor Only"    },
+                { value: "parts",  label: "Parts Only"    },
+                { value: "none",   label: "No Tax"        },
+              ].map(opt => (
+                <button key={opt.value} type="button"
+                  onClick={() => setTaxAppliesTo(opt.value)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-all ${
+                    taxAppliesTo === opt.value
+                      ? "bg-sky-500 border-sky-500 text-white"
+                      : theme === "light"
+                        ? "bg-gray-50 border-gray-300 text-gray-700 hover:border-sky-400"
+                        : "bg-gray-800 border-gray-700 text-gray-400 hover:border-sky-500/50 hover:text-white"
+                  }`}>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            <p className={`${theme === "light" ? "text-gray-600" : "text-gray-500"} text-sm mt-2`}>This default will be applied on all new invoices and estimates</p>
+          </div>
+          {/* Business Logo */}
+          <div>
+            <Label className={`${theme === "light" ? "text-gray-700" : "text-gray-400"} mb-2 block`}>Business Logo</Label>
+            <div className="flex flex-col gap-3">
+              {logoUrl && (
+                <div className={`relative w-40 h-24 rounded-lg border ${theme === "light" ? "border-gray-300 bg-gray-50" : "border-gray-700 bg-gray-800"} flex items-center justify-center overflow-hidden`}>
+                  <img src={logoUrl} alt="Business Logo" className="max-w-full max-h-full object-contain p-2" />
+                  <button onClick={() => setLogoUrl("")} className={`absolute top-1 right-1 ${theme === "light" ? "bg-white/80" : "bg-gray-900/80"} rounded-full p-0.5 ${theme === "light" ? "text-gray-600 hover:text-rose-600" : "text-gray-400 hover:text-rose-400"}`}>
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+              <div className="flex gap-2 flex-wrap">
+                <input ref={fileInputRef} type="file" accept="image/png,image/jpg,image/jpeg" className="hidden" onChange={handleLogoUpload} />
+                <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingLogo} className={`${theme === "light" ? "border-gray-300 text-gray-700 hover:text-gray-900" : "border-gray-700 text-gray-300 hover:text-white"} gap-2`}>
+                  {uploadingLogo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                  {uploadingLogo ? "Uploading..." : "Upload Logo"}
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={handleGenerateLogo}
+                  disabled={generatingLogo} className={`${theme === "light" ? "border-purple-400 text-purple-600 hover:text-purple-700" : "border-purple-700 text-purple-400 hover:text-purple-300"} gap-2`}>
+                  {generatingLogo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                  {generatingLogo ? "Generating..." : "Generate with Lumina AI"}
+                </Button>
+              </div>
+              <p className={`${theme === "light" ? "text-gray-600" : "text-gray-500"} text-sm`}>Logo will appear on all your invoices and estimates</p>
+              <p className={`${theme === "light" ? "text-gray-400" : "text-gray-600"} text-xs`}>Best size: 400×400px, PNG with transparent background</p>
+            </div>
+          </div>
+
+          <p className={`${theme === "light" ? "text-gray-600" : "text-gray-500"} text-sm -mt-2`}>GST/HST numbers will appear on invoices and estimates</p>
+          <div className={`${theme === "light" ? "bg-gray-50 border-gray-300" : "bg-gray-800 border-gray-700"} border rounded p-4`}>
+            <p className={`${theme === "light" ? "text-gray-700" : "text-gray-400"} text-sm`}><strong>Email:</strong> {user?.email}</p>
+          </div>
+        </div>
+
+        {/* Notification Preferences */}
+        <div className={`${theme === "light" ? "bg-white border-gray-200" : "bg-gray-900 border-gray-800"} border rounded-lg p-6`}>
+          <div className="flex items-center gap-2 mb-1">
+            <Bell className="w-5 h-5 text-sky-400" />
+            <h2 className={`text-xl font-semibold ${theme === "light" ? "text-gray-900" : "text-white"}`}>Notification Preferences</h2>
+          </div>
+          <p className={`${theme === "light" ? "text-gray-600" : "text-gray-500"} text-sm mb-6`}>Choose how customers are notified for each event type.</p>
+
+          {/* Header row */}
+          <div className="grid grid-cols-3 gap-2 mb-3 px-1">
+            <div className={`text-xs ${theme === "light" ? "text-gray-600" : "text-gray-500"} uppercase tracking-wider col-span-1`}>Event</div>
+            <div className={`flex items-center justify-center gap-1 text-xs ${theme === "light" ? "text-gray-600" : "text-gray-500"} uppercase tracking-wider`}>
+              <MessageSquare className="w-3 h-3" /> SMS
+            </div>
+            <div className={`flex items-center justify-center gap-1 text-xs ${theme === "light" ? "text-gray-600" : "text-gray-500"} uppercase tracking-wider`}>
+              <Mail className="w-3 h-3" /> Email
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {NOTIF_SETTINGS.map(({ key, label, desc }) => (
+              <div key={key} className={`grid grid-cols-3 gap-2 items-center ${theme === "light" ? "bg-gray-50 border-gray-200" : "bg-gray-800/50 border-gray-700/50"} rounded-lg px-4 py-3 border`}>
+                <div className="col-span-1">
+                  <p className={`${theme === "light" ? "text-gray-900" : "text-white"} text-sm font-medium`}>{label}</p>
+                  <p className={`${theme === "light" ? "text-gray-600" : "text-gray-500"} text-xs mt-0.5`}>{desc}</p>
+                </div>
+                <div className="flex justify-center">
+                  <Toggle
+                    checked={notifPrefs[`sms_${key}`] !== false}
+                    onChange={(val) => setNotif(`sms_${key}`, val)}
+                  />
+                </div>
+                <div className="flex justify-center">
+                  <Toggle
+                    checked={notifPrefs[`email_${key}`] === true}
+                    onChange={(val) => setNotif(`email_${key}`, val)}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <p className={`${theme === "light" ? "text-gray-600" : "text-gray-600"} text-xs mt-4`}>
+            SMS uses Twilio. Email uses the built-in email service. Customer contact info must be saved on their profile.
+          </p>
+        </div>
+
+        {/* Email + Google Review */}
+        <div className="space-y-3 pt-2 border-t border-gray-800">
+          <h3 className="text-sky-400 font-semibold text-sm uppercase tracking-wider">📧 Email & Reviews</h3>
+          <div>
+            <label className="text-xs text-gray-500 uppercase tracking-wider">Shop Email (shown on emails)</label>
+            <Input value={shopEmail} onChange={e => setShopEmail(e.target.value)}
+              placeholder="shop@example.com"
+              className="bg-gray-800 border-gray-700 text-white mt-1" />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 uppercase tracking-wider">Google Review Link</label>
+            <Input value={googleReviewLink} onChange={e => setGoogleReviewLink(e.target.value)}
+              placeholder="https://g.page/r/YOUR_ID/review"
+              className="bg-gray-800 border-gray-700 text-white mt-1" />
+            <p className="text-xs text-gray-600 mt-1">Paste your Google Maps review link — it will appear as a button at the bottom of every customer email.</p>
+          </div>
+        </div>
+
+        <Button
+          onClick={handleSave}
+          disabled={saving || !businessName.trim()}
+          className="bg-sky-500 hover:bg-sky-600 w-full"
+        >
+          {saving ? "Saving..." : saved ? "Saved ✓" : "Save Settings"}
+        </Button>
+      </div>
+    </div>
+  );
+}
