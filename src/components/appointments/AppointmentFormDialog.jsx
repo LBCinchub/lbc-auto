@@ -193,13 +193,14 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
       await base44.entities.Appointment.create(form);
     }
     setSaving(false);
-      // ── Unified sync: Customer.last_visit + Vehicle.customer_id ──
+      // ── Unified sync: link vehicle → customer, but don't mark as visited yet ──
       await syncCustomerActivity({
         customerId: form.customer_id,
         vehicleId: form.vehicle_id,
         vehicleInfo: form.vehicle_info,
         customerName: form.customer_name,
         customerPhone: form.customer_phone || "",
+        isNewVisit: false,
       });
     onSaved();
     onClose();
