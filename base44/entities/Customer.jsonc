@@ -36,6 +36,18 @@
           }
         }
       }
+    },
+    "last_visit": {
+      "type": "string",
+      "description": "Date of last visit (YYYY-MM-DD) — auto-updated on every save"
+    },
+    "last_vehicle_info": {
+      "type": "string",
+      "description": "Most recent vehicle worked on — e.g. '2018 Toyota Camry'"
+    },
+    "total_visits": {
+      "type": "number",
+      "description": "Total number of visits (incremented on each new RO/Invoice)"
     }
   },
   "required": [
