@@ -500,7 +500,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
                {validationErrors.vehicle && <p className="text-rose-400 text-xs mt-1">{validationErrors.vehicle}</p>}
                {newVehicleForm !== null ? (
                  <div className="bg-gray-800 border border-sky-500/30 rounded-lg p-2 mt-1 space-y-2">
-                   <input value={newVehicleForm.vin} onChange={e => { setNewVehicleForm({...newVehicleForm, vin: e.target.value}); setVinDecodeError(""); }}
+                   <input value={newVehicleForm.vin} onChange={e => { setNewVehicleForm({...newVehicleForm, vin: e.target.value.toUpperCase()}); setVinDecodeError(""); }}
                      className="w-full px-2 py-1 bg-gray-700 border-gray-600 text-white rounded text-xs" placeholder="VIN (17 characters, optional)" />
                    {newVehicleForm.vin && (
                      <Button size="sm" onClick={decodeVinForNewVehicle} disabled={decodingVin} className="w-full bg-purple-600 hover:bg-purple-700 text-white text-xs">
