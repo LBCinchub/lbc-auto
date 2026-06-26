@@ -94,33 +94,6 @@ export default function Dashboard() {
           onClick={() => openModal("Today's Appointments", todayAppts, "appt")} />
       </div>
 
-      {/* Active Cars In Shop — always on top */}
-      {activeInShop.length > 0 && (
-        <div className="rounded-xl border border-sky-500/30 bg-sky-500/5">
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-sky-500/20">
-            <Wrench className="w-4 h-4 text-sky-400" />
-            <h3 className="text-sky-300 font-semibold text-sm">Cars In Shop — {activeInShop.length} Active</h3>
-          </div>
-          <div className="divide-y divide-gray-800/60">
-            {activeInShop.map(o => (
-              <button key={o.id} onClick={() => navigate(`/RepairOrderDetail/${o.id}`)}
-                className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-sky-500/5 transition-colors text-left">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${o.status === "in_progress" ? "bg-sky-400" : o.status === "waiting_for_parts" ? "bg-amber-400" : "bg-yellow-400"}`} />
-                  <div className="min-w-0">
-                    <p className="text-white text-sm font-medium truncate">{o.vehicle_info || "Unknown Vehicle"}</p>
-                    <p className="text-gray-400 text-xs truncate">{o.customer_name} {o.order_number ? `· #${o.order_number}` : ""}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <StatusBadge status={o.status} />
-                  <ChevronRight className="w-3.5 h-3.5 text-gray-600" />
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Low Stock Alert */}
       {lowStockParts.length > 0 && (
