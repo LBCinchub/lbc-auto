@@ -489,7 +489,7 @@ export default function InvoiceDetail() {
         <div>
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-white font-semibold">Labor</h2>
-            <Button size="sm" variant="ghost" onClick={() => setLaborItems(p => [...p, { description: "", hours: 0, rate: 0, total: 0 }])}
+            <Button size="sm" variant="ghost" onClick={() => setLaborItems(p => [...p, { description: "", hours: 0, rate: parseFloat(user?.labor_rate) || 0, total: 0 }])}
               className="text-sky-400 hover:text-sky-300 h-7 px-2">
               <Plus className="w-4 h-4 mr-1" /> Add Labor
             </Button>
