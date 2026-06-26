@@ -24,7 +24,7 @@ export default function Appointments() {
     const q = new URLSearchParams(_location.search).get("q") || "";
     if (q) setSearch(q);
   }, [_location.search]);
-  const [view, setView] = useState("upcoming");
+  const [view, setView] = useState(() => new URLSearchParams(window.location.search).get("view") || "upcoming");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [roPrompt, setRoPrompt] = useState(null); // appointment to create RO from
@@ -128,6 +128,28 @@ export default function Appointments() {
     return acc;
   }, {});
 
+
+  // URL persistence — keeps filters in sync so Back/Forward restores layout
+  const _location = useLocation();
+  const _navigate = useNavigate();
+  const _pushParams = React.useCallback((updates) => {
+    const p = new URLSearchParams(window.location.search);
+    Object.entries(updates).forEach(([k, v]) => {
+      if (!v || v === 'all' || v === 1) p.delete(k);
+      else p.set(k, String(v));
+    });
+    const qs = p.toString();
+    _navigate({ search: qs ? '?' + qs : '' }, { replace: true });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  React.useEffect(() => {
+    const _p = new URLSearchParams(_location.search);
+    const _q = _p.get('q') || '';
+    setSearch(prev => prev !== _q ? _q : prev);
+    const _view = _p.get('view') || 'upcoming';
+    setView(prev => prev !== _view ? _view : prev);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [_location.search]);
   return (
     <div className="space-y-6">
       <PageHeader title="Appointments" subtitle={dateRange ? `${filtered.length} appointments found` : `${appointments.length} total`}
@@ -135,7 +157,7 @@ export default function Appointments() {
 
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex-1">
-          <SearchBar value={search} onChange={setSearch} placeholder="Search by customer or service..." />
+          <SearchBar value={search} onChange={(v) => { setSearch(v); _pushParams({ q: v }); }} placeholder="Search by customer or service..." />
         </div>
         <Tabs value={view} onValueChange={setView}>
           <TabsList className="bg-gray-800/50">
