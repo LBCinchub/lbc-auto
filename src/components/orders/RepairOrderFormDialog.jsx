@@ -443,7 +443,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                <Label className="text-gray-400">Vehicle *</Label>
                {newVehicleForm !== null ? (
                  <div className="bg-gray-800 border border-sky-500/30 rounded-lg p-2 mt-1 space-y-2">
-                   <input value={newVehicleForm.vin} onChange={e => { setNewVehicleForm({...newVehicleForm, vin: e.target.value}); setVinDecodeError(""); }}
+                   <input value={newVehicleForm.vin} onChange={e => { setNewVehicleForm({...newVehicleForm, vin: e.target.value.toUpperCase()}); setVinDecodeError(""); }}
                      className="w-full px-2 py-1 bg-gray-700 border-gray-600 text-white rounded text-xs" placeholder="VIN (17 characters, optional)" />
                    {newVehicleForm.vin && (
                      <Button size="sm" onClick={decodeVinForNewVehicle} disabled={decodingVin} className="w-full bg-purple-600 hover:bg-purple-700 text-white text-xs">
