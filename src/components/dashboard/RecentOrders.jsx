@@ -15,11 +15,10 @@ const statusConfig = {
 
 export default function RecentOrders({ orders, customers = [] }) {
   const navigate = useNavigate();
-  const sorted = [...orders].sort((a, b) => {
-    const isDeliveredA = a.status === "delivered" ? 1 : 0;
-    const isDeliveredB = b.status === "delivered" ? 1 : 0;
-    return isDeliveredA - isDeliveredB;
-  });
+  const priority = { in_progress: 0, waiting: 1, waiting_for_parts: 2, completed: 3, delivered: 4 };
+  const sorted = [...orders]
+    .sort((a, b) => (priority[a.status] ?? 5) - (priority[b.status] ?? 5) || new Date(b.created_date) - new Date(a.created_date))
+    .slice(0, 15);
 
   return (
     <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5">
