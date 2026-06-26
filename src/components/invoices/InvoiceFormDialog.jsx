@@ -642,6 +642,12 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
           {/* Info Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-4 border-y border-gray-800">
             <div>
+              <p className="text-gray-500 text-xs uppercase mb-1">Invoice Date</p>
+              <Input type="date" value={form.invoice_date || ""}
+                onChange={e => setForm({ ...form, invoice_date: e.target.value })}
+                className="bg-gray-800 border-gray-700 text-white h-7 text-xs" />
+            </div>
+            <div>
               <p className="text-gray-500 text-xs uppercase mb-1">Due Date</p>
               <Input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} className="bg-gray-800 border-gray-700 text-white h-7 text-xs" />
             </div>
