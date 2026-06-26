@@ -34,20 +34,20 @@ import { useTheme } from "@/lib/ThemeContext";
 import GlobalSearch from "@/components/shared/GlobalSearch";
 
 const navItems = [
-  { name: "Dashboard",     icon: LayoutDashboard, page: "Dashboard",       color: "from-sky-500 to-blue-600",      light: "bg-sky-50 text-sky-700 border-sky-200",      dark: "bg-sky-500/15 text-sky-400 border-sky-500/30" },
-  { name: "Customers",     icon: Users,           page: "Customers",        color: "from-violet-500 to-purple-600", light: "bg-violet-50 text-violet-700 border-violet-200", dark: "bg-violet-500/15 text-violet-400 border-violet-500/30" },
-  { name: "Vehicles",      icon: Car,             page: "Vehicles",         color: "from-blue-500 to-cyan-600",     light: "bg-blue-50 text-blue-700 border-blue-200",    dark: "bg-blue-500/15 text-blue-400 border-blue-500/30" },
-  { name: "Appointments",  icon: Calendar,        page: "Appointments",     color: "from-amber-500 to-orange-500",  light: "bg-amber-50 text-amber-700 border-amber-200",  dark: "bg-amber-500/15 text-amber-400 border-amber-500/30" },
-  { name: "Estimates",     icon: ClipboardList,   page: "Estimates",        color: "from-teal-500 to-emerald-600",  light: "bg-teal-50 text-teal-700 border-teal-200",    dark: "bg-teal-500/15 text-teal-400 border-teal-500/30" },
-  { name: "Repair Orders", icon: Wrench,          page: "RepairOrders",     color: "from-orange-500 to-red-500",    light: "bg-orange-50 text-orange-700 border-orange-200", dark: "bg-orange-500/15 text-orange-400 border-orange-500/30" },
-  { name: "Invoices",      icon: FileText,        page: "Invoices",         color: "from-emerald-500 to-green-600", light: "bg-emerald-50 text-emerald-700 border-emerald-200", dark: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" },
-  { name: "Parts",         icon: Package,         page: "Parts",            color: "from-indigo-500 to-blue-600",   light: "bg-indigo-50 text-indigo-700 border-indigo-200", dark: "bg-indigo-500/15 text-indigo-400 border-indigo-500/30" },
-  { name: "Parts Lookup",  icon: Search,          page: "PartsLookup",      color: "from-cyan-500 to-sky-600",      light: "bg-cyan-50 text-cyan-700 border-cyan-200",    dark: "bg-cyan-500/15 text-cyan-400 border-cyan-500/30" },
-  { name: "Mechanics",     icon: HardHat,         page: "Mechanics",        color: "from-rose-500 to-pink-600",     light: "bg-rose-50 text-rose-700 border-rose-200",    dark: "bg-rose-500/15 text-rose-400 border-rose-500/30" },
-  { name: "Time Tracking", icon: Clock,           page: "TimeTracking",     color: "from-yellow-500 to-amber-500",  light: "bg-yellow-50 text-yellow-700 border-yellow-200", dark: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30" },
-  { name: "Payroll",       icon: Banknote,        page: "Payroll",          color: "from-green-500 to-teal-500",    light: "bg-green-50 text-green-700 border-green-200",  dark: "bg-green-500/15 text-green-400 border-green-500/30" },
-  { name: "Analytics",     icon: BarChart3,       page: "Analytics",        color: "from-purple-500 to-violet-600", light: "bg-purple-50 text-purple-700 border-purple-200", dark: "bg-purple-500/15 text-purple-400 border-purple-500/30" },
-  { name: "Import",        icon: FileUp,          page: "ImportCustomers",  color: "from-gray-500 to-slate-600",    light: "bg-gray-50 text-gray-700 border-gray-200",    dark: "bg-gray-500/15 text-gray-400 border-gray-500/30", path: "/ImportCustomers" },
+  { name: "Dashboard",     icon: LayoutDashboard, page: "Dashboard",       color: "from-sky-500 to-blue-600",      light: "bg-sky-50 text-sky-700 border-sky-200",           dark: "bg-sky-500/15 text-sky-400 border-sky-500/30",       label: "text-sky-400" },
+  { name: "Customers",     icon: Users,           page: "Customers",        color: "from-violet-500 to-purple-600", light: "bg-violet-50 text-violet-700 border-violet-200",  dark: "bg-violet-500/15 text-violet-400 border-violet-500/30", label: "text-violet-400" },
+  { name: "Vehicles",      icon: Car,             page: "Vehicles",         color: "from-blue-500 to-cyan-600",     light: "bg-blue-50 text-blue-700 border-blue-200",        dark: "bg-blue-500/15 text-blue-400 border-blue-500/30",    label: "text-blue-400" },
+  { name: "Appointments",  icon: Calendar,        page: "Appointments",     color: "from-amber-500 to-orange-500",  light: "bg-amber-50 text-amber-700 border-amber-200",     dark: "bg-amber-500/15 text-amber-400 border-amber-500/30", label: "text-amber-400" },
+  { name: "Estimates",     icon: ClipboardList,   page: "Estimates",        color: "from-teal-500 to-emerald-600",  light: "bg-teal-50 text-teal-700 border-teal-200",        dark: "bg-teal-500/15 text-teal-400 border-teal-500/30",    label: "text-teal-400" },
+  { name: "Repair Orders", icon: Wrench,          page: "RepairOrders",     color: "from-orange-500 to-red-500",    light: "bg-orange-50 text-orange-700 border-orange-200",  dark: "bg-orange-500/15 text-orange-400 border-orange-500/30", label: "text-orange-400" },
+  { name: "Invoices",      icon: FileText,        page: "Invoices",         color: "from-emerald-500 to-green-600", light: "bg-emerald-50 text-emerald-700 border-emerald-200", dark: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30", label: "text-emerald-400" },
+  { name: "Parts",         icon: Package,         page: "Parts",            color: "from-indigo-500 to-blue-600",   light: "bg-indigo-50 text-indigo-700 border-indigo-200",  dark: "bg-indigo-500/15 text-indigo-400 border-indigo-500/30", label: "text-indigo-400" },
+  { name: "Parts Lookup",  icon: Search,          page: "PartsLookup",      color: "from-cyan-500 to-sky-600",      light: "bg-cyan-50 text-cyan-700 border-cyan-200",        dark: "bg-cyan-500/15 text-cyan-400 border-cyan-500/30",    label: "text-cyan-400" },
+  { name: "Mechanics",     icon: HardHat,         page: "Mechanics",        color: "from-rose-500 to-pink-600",     light: "bg-rose-50 text-rose-700 border-rose-200",        dark: "bg-rose-500/15 text-rose-400 border-rose-500/30",    label: "text-rose-400" },
+  { name: "Time Tracking", icon: Clock,           page: "TimeTracking",     color: "from-yellow-500 to-amber-500",  light: "bg-yellow-50 text-yellow-700 border-yellow-200",  dark: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30", label: "text-yellow-500" },
+  { name: "Payroll",       icon: Banknote,        page: "Payroll",          color: "from-green-500 to-teal-500",    light: "bg-green-50 text-green-700 border-green-200",     dark: "bg-green-500/15 text-green-400 border-green-500/30", label: "text-green-400" },
+  { name: "Analytics",     icon: BarChart3,       page: "Analytics",        color: "from-purple-500 to-violet-600", light: "bg-purple-50 text-purple-700 border-purple-200",  dark: "bg-purple-500/15 text-purple-400 border-purple-500/30", label: "text-purple-400" },
+  { name: "Import",        icon: FileUp,          page: "ImportCustomers",  color: "from-gray-500 to-slate-600",    light: "bg-gray-50 text-gray-700 border-gray-200",        dark: "bg-gray-500/15 text-gray-400 border-gray-500/30",    label: "text-slate-400", path: "/ImportCustomers" },
 ];
 
 export default function Sidebar({ currentPage }) {
@@ -143,10 +143,20 @@ export default function Sidebar({ currentPage }) {
                       ? `bg-gradient-to-br ${item.color}`
                       : isLight ? "bg-gray-100" : "bg-gray-800"
                   )}>
-                    <item.icon className={cn("w-4 h-4", isActive ? "text-white" : isLight ? "text-gray-500" : "text-gray-400")} />
+                    <item.icon className={cn(
+                      "w-4 h-4",
+                      isActive ? "text-white" : isLight ? "text-gray-500" : item.label
+                    )} />
                   </div>
                   {!collapsed && (
-                    <span className="truncate">{item.name}</span>
+                    <span className={cn(
+                      "truncate font-medium",
+                      isActive
+                        ? "text-white"
+                        : isLight
+                          ? "text-gray-600 hover:text-gray-900"
+                          : item.label
+                    )}>{item.name}</span>
                   )}
                   {isActive && !collapsed && (
                     <div className={cn("ml-auto w-1.5 h-1.5 rounded-full bg-gradient-to-br flex-shrink-0", item.color.replace("from-", "bg-").split(" ")[0])} />
