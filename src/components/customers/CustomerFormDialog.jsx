@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
 import { FileText, Wrench, Receipt, CheckCircle2, CalendarDays } from "lucide-react";
+import { useNhtsaVinDecode } from "@/hooks/useNhtsaVinDecode";
 
 export default function CustomerFormDialog({ open, onClose, customer, onSaved, onQuickAction }) {
   const navigate = useNavigate();
@@ -21,11 +22,11 @@ export default function CustomerFormDialog({ open, onClose, customer, onSaved, o
   });
   const [addVehicle, setAddVehicle] = useState(false);
   const [vehicleForm, setVehicleForm] = useState({ vin: "", make: "", model: "", year: "", license_plate: "" });
-  const [decodingVin, setDecodingVin] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedCustomer, setSavedCustomer] = useState(null);
   const [savedVehicle, setSavedVehicle] = useState(null);
   const fullNameRef = useRef(null);
+  const { decoding: decodingVin, vinError, decodeVin, setVinError } = useNhtsaVinDecode();
 
   useEffect(() => {
     if (customer) {
@@ -108,6 +109,20 @@ export default function CustomerFormDialog({ open, onClose, customer, onSaved, o
       setSavedCustomer(newCustomer);
     } else {
       onClose();
+    }
+  };
+
+  const handleVinDecode = async () => {
+    if (!vehicleForm.vin) return;
+    const result = await decodeVin(vehicleForm.vin);
+    if (result) {
+      setVehicleForm(prev => ({
+        ...prev,
+        make: result.make || prev.make,
+        model: result.model || prev.model,
+        year: result.year?.toString() || prev.year,
+        engine_type: result.engine_type || prev.engine_type || "",
+      }));
     }
   };
 
@@ -246,33 +261,22 @@ export default function CustomerFormDialog({ open, onClose, customer, onSaved, o
                   <div>
                     <Label className="text-gray-400 text-xs">VIN</Label>
                     <div className="flex gap-2 mt-1">
-                      <Input value={vehicleForm.vin} onChange={e => setVehicleForm({...vehicleForm, vin: e.target.value})}
-                        className="bg-gray-800 border-gray-700 text-white flex-1" placeholder="Enter VIN" />
-                      <Button onClick={async () => {
-                        if (!vehicleForm.vin) return;
-                        setDecodingVin(true);
-                        try {
-                          const result = await base44.integrations.Core.InvokeLLM({
-                            prompt: `Decode this VIN and extract the make, model, and year: ${vehicleForm.vin}. Return only JSON with keys: make, model, year (as number).`,
-                            response_json_schema: {
-                              type: "object",
-                              properties: { make: {type: "string"}, model: {type: "string"}, year: {type: "number"} }
-                            }
-                          });
-                          setVehicleForm(prev => ({
-                            ...prev,
-                            make: result.make || prev.make,
-                            model: result.model || prev.model,
-                            year: result.year?.toString() || prev.year
-                          }));
-                        } catch (e) {
-                          console.error("Error decoding VIN:", e);
-                        }
-                        setDecodingVin(false);
-                      }} disabled={decodingVin || !vehicleForm.vin} className="bg-gray-700 hover:bg-gray-600 text-xs">
+                      <Input
+                        value={vehicleForm.vin}
+                        onChange={e => { setVehicleForm({...vehicleForm, vin: e.target.value}); setVinError(""); }}
+                        className="bg-gray-800 border-gray-700 text-white flex-1"
+                        placeholder="Enter 17-character VIN"
+                        maxLength={17}
+                      />
+                      <Button
+                        onClick={handleVinDecode}
+                        disabled={decodingVin || !vehicleForm.vin}
+                        className="bg-gray-700 hover:bg-gray-600 text-xs"
+                      >
                         {decodingVin ? "Decoding..." : "Decode"}
                       </Button>
                     </div>
+                    {vinError && <p className="text-red-400 text-xs mt-1">{vinError}</p>}
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -298,7 +302,6 @@ export default function CustomerFormDialog({ open, onClose, customer, onSaved, o
                         className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="ABC 123" />
                     </div>
                   </div>
-
                 </div>
               )}
             </div>
