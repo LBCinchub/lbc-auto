@@ -216,113 +216,156 @@ export default function RepairOrders() {
           onAction={() => { setEditingOrder(null); setDialogOpen(true); }}
           actionLabel="New Order" />
       ) : (
-        <div className="space-y-3">
-          {paginated.map(order => (
-            <div key={order.id} onClick={() => navigate(`/RepairOrderDetail/${order.id}`)} className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5 flex flex-col sm:flex-row sm:items-center gap-4 hover:border-sky-500/30 transition-colors cursor-pointer">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3 flex-wrap">
-                  <h3 className="text-white font-semibold">{order.order_number}</h3>
-                  <span className="text-xs text-blue-400 font-mono capitalize">{order.customer_name}</span>
-                  <StatusBadge status={order.status} />
-                </div>
-                <p className="text-sm text-green-400 mt-0.5 capitalize">{order.vehicle_info}</p>
-                {(() => {
-                  const customer = customers.find(c => c.id === order.customer_id);
-                  return customer?.phone ? (
-                    <a href={`tel:${customer.phone}`} onClick={e => e.stopPropagation()} className="inline-flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 font-medium mt-0.5">
-                      <Phone className="w-3 h-3" />{formatPhone(customer.phone)}
-                    </a>
-                  ) : null;
-                })()}
-                {(() => {
-                  const v = vehicles.find(veh => veh.id === order.vehicle_id);
-                  return (v?.vin || v?.license_plate) ? (
-                    <p className="text-xs text-gray-600 font-mono mt-0.5">
-                      {v.vin && <span>VIN: {v.vin}</span>}
-                      {v.vin && v.license_plate && <span className="mx-1">·</span>}
-                      {v.license_plate && <span>{v.license_plate}</span>}
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          {paginated.map(order => {
+            const customer = customers.find(c => c.id === order.customer_id);
+            const vehicle  = vehicles.find(v => v.id === order.vehicle_id);
+            const statusColor = {
+              in_progress:        "border-sky-500/60  bg-sky-500/5",
+              waiting:            "border-amber-500/50 bg-amber-500/5",
+              waiting_for_parts:  "border-orange-500/50 bg-orange-500/5",
+              completed:          "border-emerald-500/50 bg-emerald-500/5",
+              delivered:          "border-gray-600/50 bg-gray-800/20",
+            }[order.status] || "border-gray-700/50 bg-gray-900/30";
+            const dotColor = {
+              in_progress:       "bg-sky-400",
+              waiting:           "bg-amber-400",
+              waiting_for_parts: "bg-orange-400",
+              completed:         "bg-emerald-400",
+              delivered:         "bg-gray-500",
+            }[order.status] || "bg-gray-500";
+
+            return (
+              <div key={order.id}
+                onClick={() => navigate(`/RepairOrderDetail/${order.id}`)}
+                className={`relative rounded-2xl border ${statusColor} cursor-pointer transition-all hover:scale-[1.01] hover:shadow-lg hover:shadow-black/30 active:scale-[0.99]`}
+              >
+                {/* Status strip on left edge */}
+                <div className={`absolute left-0 top-4 bottom-4 w-1 rounded-full ${dotColor} opacity-80`} />
+
+                <div className="px-5 py-4 pl-6 space-y-3">
+                  {/* Top row: order # + status */}
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-gray-500 font-mono">#{order.order_number}</span>
+                    <StatusBadge status={order.status} />
+                  </div>
+
+                  {/* Vehicle — most prominent */}
+                  <div>
+                    <p className="text-white font-bold text-base leading-tight truncate">
+                      {order.vehicle_info || "Unknown Vehicle"}
                     </p>
-                  ) : null;
-                })()}
-                {order.description && <p className="text-xs text-gray-600 mt-1 truncate">{order.description}</p>}
-                <p className="text-xs text-gray-600 mt-0.5">
-                  Created {new Date(order.created_date).toLocaleString()}
-                  {order.updated_date && order.updated_date !== order.created_date && (
-                    <> · Updated {new Date(order.updated_date).toLocaleString()}</>
+                    {(vehicle?.license_plate || vehicle?.vin) && (
+                      <p className="text-gray-500 text-xs font-mono mt-0.5">
+                        {vehicle.license_plate && (
+                          <span className="bg-gray-800 px-1.5 py-0.5 rounded mr-1.5 text-gray-300 font-bold tracking-widest">
+                            {vehicle.license_plate.toUpperCase()}
+                          </span>
+                        )}
+                        {vehicle.vin && <span>VIN: {vehicle.vin}</span>}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Customer + phone */}
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sky-400 text-sm font-semibold truncate">{order.customer_name || "—"}</span>
+                    {customer?.phone && (
+                      <a href={`tel:${customer.phone}`} onClick={e => e.stopPropagation()}
+                        className="text-xs text-gray-400 hover:text-sky-400 flex items-center gap-1 flex-shrink-0">
+                        <Phone className="w-3 h-3" />{formatPhone(customer.phone)}
+                      </a>
+                    )}
+                  </div>
+
+                  {/* Reason / description */}
+                  {(order.description || order.service_reason) && (
+                    <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">
+                      {order.service_reason || order.description}
+                    </p>
                   )}
-                </p>
-              </div>
-              <div className="flex items-center gap-6">
-                <div className="text-right">
-                  <p className="text-xs text-gray-500">Labor</p>
-                  <p className="text-sm text-gray-300">${(order.labor_cost || 0).toFixed(2)}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-gray-500">Parts</p>
-                  <p className="text-sm text-gray-300">${(order.parts_cost || 0).toFixed(2)}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-gray-500">Total</p>
-                  <p className="text-lg font-bold text-sky-400">${(order.total_cost || 0).toFixed(2)}</p>
-                </div>
-                <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-sky-400" title="Send Status Update to Customer" onClick={e => sendRepairOrderEmail(e, order)} disabled={sendingEmail === order.id}>
-                    {sendingEmail === order.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                  </Button>
-                  {order.history && order.history.length > 0 && (
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-sky-400" title="View History"
-                      onClick={() => setHistoryOrder(order)}>
-                      <History className="w-3.5 h-3.5" />
+
+                  {/* Totals row */}
+                  <div className="flex items-center justify-between pt-1 border-t border-gray-800/60">
+                    <div className="flex gap-4">
+                      {order.labor_cost > 0 && (
+                        <div>
+                          <p className="text-xs text-gray-600">Labor</p>
+                          <p className="text-xs text-gray-300 font-medium">${(order.labor_cost||0).toFixed(2)}</p>
+                        </div>
+                      )}
+                      {order.parts_cost > 0 && (
+                        <div>
+                          <p className="text-xs text-gray-600">Parts</p>
+                          <p className="text-xs text-gray-300 font-medium">${(order.parts_cost||0).toFixed(2)}</p>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-lg font-bold text-sky-400">${(order.total_cost||0).toFixed(2)}</p>
+                  </div>
+
+                  {/* Action buttons row */}
+                  <div className="flex items-center gap-1 pt-0.5" onClick={e => e.stopPropagation()}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-sky-400" title="Send Email"
+                      onClick={e => sendRepairOrderEmail(e, order)}>
+                      {sendingEmail === order.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                     </Button>
-                  )}
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-emerald-400" title="Record Payment"
-                    onClick={() => setPaymentOrder({
-                      id: order.id,
-                      customer_id: order.customer_id || "",
-                      customer_name: order.customer_name,
-                      vehicle_info: order.vehicle_info,
-                      total: order.total_cost || 0,
-                      labor_cost: order.labor_cost || 0,
-                      parts_cost: order.parts_cost || 0,
-                      tax_amount: order.tax_amount || 0,
-                      amount_paid: order.amount_paid || 0,
-                      balance_due: (order.total_cost || 0) - (order.amount_paid || 0),
-                      payment_history: order.payment_history || [],
-                      linked_invoice_id: order.linked_invoice_id || null,
-                      linked_invoice_number: order.linked_invoice_number || null,
-                    })}>
-                    <CreditCard className="w-3.5 h-3.5" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-emerald-400" title="Create Invoice"
-                    onClick={() => { setInvoiceOrder(order); setInvoiceDialogOpen(true); }}>
-                    <FileText className="w-3.5 h-3.5" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-white"
-                    onClick={() => { setEditingOrder(order); setDialogOpen(true); }}>
-                    <Pencil className="w-3.5 h-3.5" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-rose-400"
-                    onClick={() => handleDelete(order.id)}>
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
+                    {order.history?.length > 0 && (
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-sky-400" title="History"
+                        onClick={() => setHistoryOrder(order)}>
+                        <History className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-emerald-400" title="Cashout"
+                      onClick={() => setPaymentOrder({
+                        id: order.id,
+                        customer_id: order.customer_id || "",
+                        customer_name: order.customer_name,
+                        vehicle_info: order.vehicle_info,
+                        total: order.total_cost || 0,
+                        labor_cost: order.labor_cost || 0,
+                        parts_cost: order.parts_cost || 0,
+                        tax_amount: order.tax_amount || 0,
+                        amount_paid: order.amount_paid || 0,
+                        balance_due: (order.total_cost || 0) - (order.amount_paid || 0),
+                        payment_history: order.payment_history || [],
+                        linked_invoice_id: order.linked_invoice_id || null,
+                        linked_invoice_number: order.linked_invoice_number || null,
+                      })}>
+                      <CreditCard className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-emerald-400" title="Create Invoice"
+                      onClick={() => { setInvoiceOrder(order); setInvoiceDialogOpen(true); }}>
+                      <FileText className="w-3.5 h-3.5" />
+                    </Button>
+                    <div className="flex-1" />
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-white" title="Edit"
+                      onClick={() => { setEditingOrder(order); setDialogOpen(true); }}>
+                      <Pencil className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-rose-400" title="Delete"
+                      onClick={() => handleDelete(order.id)}>
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between pt-2">
-              <span className="text-sm text-gray-500">
-                Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
-              </span>
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage(p => p - 1)}
-                  className="border-gray-700 text-gray-300">Previous</Button>
-                <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}
-                  className="border-gray-700 text-gray-300">Next</Button>
-              </div>
-            </div>
-          )}
+            );
+          })}
         </div>
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between pt-2">
+            <span className="text-sm text-gray-500">
+              Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
+            </span>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage(p => p - 1)}
+                className="border-gray-700 text-gray-300">Previous</Button>
+              <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}
+                className="border-gray-700 text-gray-300">Next</Button>
+            </div>
+          </div>
+        )}
       )}
 
       <RepairOrderFormDialog
