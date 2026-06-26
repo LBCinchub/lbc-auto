@@ -98,37 +98,85 @@ export default function Customers() {
     return map;
   }, {}), [vehicles]);
 
-  // Build invoice stats per customer
+  // Build invoice stats + last visit date per customer (invoices + repair orders + appointments)
   const invoiceStatsByCustomer = useMemo(() => {
     const map = {};
+
+    // Track last visit from invoices
     for (const inv of invoices) {
       if (!inv.customer_id) continue;
-      if (!map[inv.customer_id]) map[inv.customer_id] = { lastPaidDate: null, outstandingBalance: 0 };
+      if (!map[inv.customer_id]) map[inv.customer_id] = { lastPaidDate: null, lastVisitDate: null, outstandingBalance: 0 };
       const entry = map[inv.customer_id];
+      // Last paid invoice date
       if (inv.status === "paid" && inv.paid_date) {
         const d = new Date(inv.paid_date);
-        if (!entry.lastPaidDate || d > new Date(entry.lastPaidDate)) {
-          entry.lastPaidDate = inv.paid_date;
-        }
+        if (!entry.lastPaidDate || d > new Date(entry.lastPaidDate)) entry.lastPaidDate = inv.paid_date;
+      }
+      // Any invoice updated = a visit
+      const invDate = inv.updated_date || inv.created_date;
+      if (invDate) {
+        const d = new Date(invDate);
+        if (!entry.lastVisitDate || d > new Date(entry.lastVisitDate)) entry.lastVisitDate = invDate;
       }
       if (inv.status !== "paid") {
         entry.outstandingBalance += parseFloat(inv.balance_due) || 0;
       }
     }
+
+    // Track last visit from repair orders
+    for (const ro of repairOrders) {
+      if (!ro.customer_id) continue;
+      if (!map[ro.customer_id]) map[ro.customer_id] = { lastPaidDate: null, lastVisitDate: null, outstandingBalance: 0 };
+      const entry = map[ro.customer_id];
+      const roDate = ro.updated_date || ro.created_date;
+      if (roDate) {
+        const d = new Date(roDate);
+        if (!entry.lastVisitDate || d > new Date(entry.lastVisitDate)) entry.lastVisitDate = roDate;
+      }
+    }
+
+    // Track last visit from appointments
+    for (const appt of appointments) {
+      if (!appt.customer_id) continue;
+      if (!map[appt.customer_id]) map[appt.customer_id] = { lastPaidDate: null, lastVisitDate: null, outstandingBalance: 0 };
+      const entry = map[appt.customer_id];
+      const apptDate = appt.appointment_date || appt.updated_date || appt.created_date;
+      if (apptDate) {
+        const d = new Date(apptDate);
+        if (!entry.lastVisitDate || d > new Date(entry.lastVisitDate)) entry.lastVisitDate = apptDate;
+      }
+    }
+
     return map;
-  }, [invoices]);
+  }, [invoices, repairOrders, appointments]);
 
   function getActivityStatus(customerId) {
     const stats = invoiceStatsByCustomer[customerId];
-    if (!stats?.lastPaidDate) return "inactive";
-    const days = Math.floor((new Date() - new Date(stats.lastPaidDate)) / (1000 * 60 * 60 * 24));
-    if (days <= 90) return "active";
-    if (days <= 180) return "idle";
-    return "inactive";
+    const lastDate = stats?.lastVisitDate || stats?.lastPaidDate;
+    if (!lastDate) return "inactive";
+    const days = Math.floor((new Date() - new Date(lastDate)) / (1000 * 60 * 60 * 24));
+    if (days < 30)  return "active";   // green  — visited within 1 month
+    if (days < 90)  return "idle";     // orange — visited within 3 months
+    return "inactive";                  // red    — over 3 months or never
   }
 
-  const statusDot = { active: "bg-emerald-400", idle: "bg-amber-400", inactive: "bg-rose-500" };
-  const statusLabel = { active: "Active", idle: "Idle", inactive: "Inactive" };
+  function getLastVisitLabel(customerId) {
+    const stats = invoiceStatsByCustomer[customerId];
+    const lastDate = stats?.lastVisitDate || stats?.lastPaidDate;
+    if (!lastDate) return null;
+    const days = Math.floor((new Date() - new Date(lastDate)) / (1000 * 60 * 60 * 24));
+    if (days === 0) return "Today";
+    if (days === 1) return "Yesterday";
+    if (days < 30)  return `${days}d ago`;
+    if (days < 365) return `${Math.floor(days / 30)}mo ago`;
+    return `${Math.floor(days / 365)}yr ago`;
+  }
+
+  const statusDot   = { active: "bg-emerald-400", idle: "bg-amber-500", inactive: "bg-rose-500" };
+  const statusLabel = { active: "< 1 month", idle: "1–3 months", inactive: "> 3 months" };
+  const statusBorder = { active: "border-emerald-500/40", idle: "border-amber-500/40", inactive: "border-rose-500/30" };
+  const statusBg    = { active: "bg-emerald-500/5", idle: "bg-amber-500/5", inactive: "bg-rose-500/5" };
+  const statusText  = { active: "text-emerald-400", idle: "text-amber-400", inactive: "text-rose-400" };
 
   const filtered = applyDateFilter(
     customers.filter(c => {
@@ -238,7 +286,7 @@ export default function Customers() {
               return (
                 <div key={customer.id}
                   onClick={() => navigate(`/CustomerDetails?id=${customer.id}`)}
-                  className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5 hover:border-sky-500/50 hover:shadow-lg hover:shadow-sky-500/5 hover:-translate-y-0.5 transition-all duration-200 flex flex-col gap-3 cursor-pointer">
+                  className={`rounded-xl border p-5 hover:opacity-90 hover:shadow-lg transition-all cursor-pointer flex flex-col gap-3 ${statusBorder[activity]} ${statusBg[activity]}`}over:shadow-lg hover:shadow-sky-500/5 hover:-translate-y-0.5 transition-all duration-200 flex flex-col gap-3 cursor-pointer">
 
                   {/* Top row: avatar + name + status + actions */}
                   <div className="flex items-start justify-between">
