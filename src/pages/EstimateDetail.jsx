@@ -369,6 +369,30 @@ export default function EstimateDetail() {
           </span>
         </div>
 
+        {/* Editable Date / Reason / Notes */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <p className="text-gray-500 text-xs uppercase mb-1">Estimate Date</p>
+            <input type="date" value={estimateDate}
+              onChange={e => setEstimateDate(e.target.value)}
+              className="w-full rounded-md bg-gray-800 border border-gray-700 text-white px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500" />
+          </div>
+          <div>
+            <p className="text-gray-500 text-xs uppercase mb-1">Reason for Visit</p>
+            <input type="text" value={estimateServiceReason}
+              onChange={e => setEstimateServiceReason(e.target.value)}
+              placeholder="e.g. Engine light on, oil change..."
+              className="w-full rounded-md bg-gray-800 border border-gray-700 text-white px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500 placeholder-gray-600" />
+          </div>
+          <div className="sm:col-span-2">
+            <p className="text-gray-500 text-xs uppercase mb-1">Notes (shown on print)</p>
+            <textarea value={estimateNotes} rows={2}
+              onChange={e => setEstimateNotes(e.target.value)}
+              placeholder="Additional notes for the customer..."
+              className="w-full rounded-md bg-gray-800 border border-gray-700 text-white px-2 py-1.5 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-sky-500 placeholder-gray-600" />
+          </div>
+        </div>
+
         {/* Labor Table */}
         <div>
           <div className="flex items-center justify-between mb-2">
