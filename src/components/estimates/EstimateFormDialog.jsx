@@ -47,7 +47,8 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
   useEffect(() => {
     // Load user's saved tax rate
     base44.auth.me().then(u => {
-      const userTaxRate = u?.tax_rate != null ? u.tax_rate : 0;
+      const userTaxRate     = u?.tax_rate     != null ? u.tax_rate     : 0;
+  const userTaxApplies  = u?.tax_applies_to || "both";
       
       if (estimate && estimate.id) {
         // Editing an existing estimate — use user's tax rate
@@ -56,7 +57,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
           ...estimate,
           apply_tax: estimate.apply_tax !== false,
           tax_rate: String(userTaxRate),
-          tax_applies_to: estimate.tax_applies_to || "both",
+          tax_applies_to: estimate.tax_applies_to || userTaxApplies,
           labor_items: estimate.labor_items?.length ? estimate.labor_items.map(i => ({ ...i, hours: String(i.hours), rate: String(i.rate ?? 120) })) : [emptyLaborRow()],
           parts_items: estimate.parts_items?.length ? estimate.parts_items.map(i => ({ ...i, quantity: String(i.quantity), unit_price: String(i.unit_price) })) : [emptyPartRow()],
         });
