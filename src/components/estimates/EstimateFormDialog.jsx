@@ -15,7 +15,7 @@ const emptyPartRow  = () => ({ name: "", part_number: "", quantity: "", unit_pri
 
 const emptyForm = {
   customer_id: "", customer_name: "", vehicle_id: "", vehicle_info: "",
-  status: "draft", notes: "", tax_rate: "0", apply_tax: true, tax_applies_to: "both", valid_until: "",
+  status: "draft", notes: "", service_reason: "", tax_rate: "0", apply_tax: true, tax_applies_to: "both", valid_until: "",
   discount_type: "none", discount_value: 0,
   labor_items: [emptyLaborRow()],
   parts_items: [emptyPartRow()],
@@ -61,6 +61,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
           tax_applies_to: estimate.tax_applies_to || userTaxApplies,
           discount_type: estimate.discount_type || "none",
           discount_value: estimate.discount_value || 0,
+          service_reason: estimate.service_reason || "",
           labor_items: estimate.labor_items?.length ? estimate.labor_items.map(i => ({ ...i, hours: String(i.hours), rate: String(i.rate ?? 120) })) : [emptyLaborRow()],
           parts_items: estimate.parts_items?.length ? estimate.parts_items.map(i => ({ ...i, quantity: String(i.quantity), unit_price: String(i.unit_price) })) : [emptyPartRow()],
         });
@@ -637,6 +638,18 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
                   className="bg-gray-800 border-gray-700 text-white mt-1" />
               </div>
             )}
+          </div>
+
+          {/* Reason for Visit */}
+          <div>
+            <Label className="text-gray-400">Reason for Visit / Customer Complaint</Label>
+            <textarea
+              value={form.service_reason || ""}
+              onChange={e => setForm(f => ({ ...f, service_reason: e.target.value }))}
+              rows={2}
+              placeholder="e.g. Engine light on, grinding noise when braking, oil change due..."
+              className="w-full mt-1 rounded-md bg-gray-800 border border-gray-700 text-white px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-sky-500 placeholder-gray-600"
+            />
           </div>
 
           {/* Labor Items */}
