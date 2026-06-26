@@ -129,7 +129,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         setPartsItems([emptyPartRow()]);
       }
       });
-      }, [open, invoice, initialOrderId, sourceEstimate, orders]);
+      }, [open, invoice?.id, initialOrderId, sourceEstimate?.id, orders]);
 
   // Reactive vehicle fetch whenever customer changes (only when not linked to a repair order or estimate)
   useEffect(() => {
