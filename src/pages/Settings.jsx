@@ -51,6 +51,7 @@ export default function Settings() {
   const [gstNumber, setGstNumber] = useState("");
   const [hstNumber, setHstNumber] = useState("");
   const [taxRate, setTaxRate] = useState("");
+  const [laborRate, setLaborRate] = useState("");
   const [taxAppliesTo, setTaxAppliesTo] = useState("both");
   const [notifPrefs, setNotifPrefs] = useState({});
   const [saving, setSaving] = useState(false);
@@ -72,6 +73,7 @@ export default function Settings() {
       setGstNumber(currentUser?.gst_number || "");
       setHstNumber(currentUser?.hst_number || "");
       setTaxRate(currentUser?.tax_rate != null ? String(currentUser.tax_rate) : "");
+      setLaborRate(currentUser?.labor_rate != null ? String(currentUser.labor_rate) : "");
       setTaxAppliesTo(currentUser?.tax_applies_to || "both");
       setLogoUrl(currentUser?.business_logo || "");
       setShopEmail(currentUser?.email || "");
@@ -99,7 +101,7 @@ export default function Settings() {
         notifData[`notif_sms_${key}`] = notifPrefs[`sms_${key}`] !== false;
         notifData[`notif_email_${key}`] = notifPrefs[`email_${key}`] === true;
       });
-      await base44.auth.updateMe({ business_name: businessName, phone: shopPhone, address: shopAddress, gst_number: gstNumber, hst_number: hstNumber, tax_rate: taxRate !== "" ? parseFloat(taxRate) : 0, tax_applies_to: taxAppliesTo, business_logo: logoUrl, email: shopEmail, google_review_link: googleReviewLink, ...notifData });
+      await base44.auth.updateMe({ labor_rate: parseFloat(laborRate) || 0, business_name: businessName, phone: shopPhone, address: shopAddress, gst_number: gstNumber, hst_number: hstNumber, tax_rate: taxRate !== "" ? parseFloat(taxRate) : 0, tax_applies_to: taxAppliesTo, business_logo: logoUrl, email: shopEmail, google_review_link: googleReviewLink, ...notifData });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
       window.dispatchEvent(new Event("lbc:settings-saved"));
@@ -220,6 +222,29 @@ export default function Settings() {
               />
             </div>
           </div>
+          {/* ── Default Labor Rate ── */}
+          <div>
+            <Label className={`${theme === "light" ? "text-gray-700" : "text-gray-400"} mb-2 block`}>
+              Default Labor Rate ($/hr)
+            </Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-semibold">$</span>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={laborRate}
+                onChange={(e) => setLaborRate(e.target.value)}
+                onFocus={e => e.target.select()}
+                placeholder="e.g. 120"
+                className={`pl-7 ${theme === "light" ? "bg-gray-50 border-gray-300 text-gray-900" : "bg-gray-800 border-gray-700 text-white"}`}
+              />
+            </div>
+            <p className={`${theme === "light" ? "text-gray-600" : "text-gray-500"} text-sm mt-2`}>
+              Auto-fills the hourly rate on new labor rows in Estimates, Repair Orders &amp; Invoices.
+            </p>
+          </div>
+
           <div>
             <Label className={`${theme === "light" ? "text-gray-700" : "text-gray-400"} mb-2 block`}>Default Tax Rate (%)</Label>
             <Input
