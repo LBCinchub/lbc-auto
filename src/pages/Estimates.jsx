@@ -3,7 +3,7 @@ import { useNavigate, useLocation} from 'react-router-dom';
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { ClipboardList, Pencil, Trash2, CheckCircle2, FileText, Phone, Mail, Hash, Sheet, Send, Loader2 } from "lucide-react";
+import { ClipboardList, Pencil, Trash2, CheckCircle2, FileText, Phone, Mail, Hash, Sheet, Send, Loader2, ThumbsUp, Wrench, ChevronRight } from "lucide-react";
 import { useEmailSend } from "@/hooks/useEmailSend";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { fuzzyMatch } from "@/utils/fuzzySearch";
@@ -39,6 +39,8 @@ export default function Estimates() {
   const [invoiceFromEstimate, setInvoiceFromEstimate] = useState(null);
   const [dateRange, setDateRange] = useState(null);
   const [user, setUser] = useState(null);
+  const [approvingId, setApprovingId] = useState(null);
+  const [convertingId, setConvertingId] = useState(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -103,8 +105,24 @@ export default function Estimates() {
     }
   };
 
-  const handleConvertToRepairOrder = async (estimate) => {
-    if (!window.confirm("Convert this estimate to a repair order?")) return;
+  const handleApprove = async (e, estimate) => {
+    e.stopPropagation();
+    if (estimate.status === "approved") return;
+    setApprovingId(estimate.id);
+    try {
+      await base44.entities.Estimate.update(estimate.id, { status: "approved" });
+      queryClient.invalidateQueries({ queryKey: ["estimates"] });
+    } catch (err) {
+      console.error("Error approving estimate:", err);
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
+  const handleConvertToRepairOrder = async (e, estimate) => {
+    e.stopPropagation();
+
+    setConvertingId(estimate.id);
     try {
       const description = estimate.notes || estimate.labor_items?.map(i => i.description).filter(Boolean).join(", ") || "Created from estimate #" + estimate.estimate_number;
       await base44.entities.RepairOrder.create({
@@ -132,6 +150,8 @@ export default function Estimates() {
       queryClient.invalidateQueries({ queryKey: ["estimates", "repairOrders"] });
     } catch (error) {
       console.error("Error converting estimate:", error);
+    } finally {
+      setConvertingId(null);
     }
   };
 
@@ -310,25 +330,53 @@ export default function Estimates() {
                   <p className="text-xs text-gray-500">Total</p>
                   <p className="text-lg font-bold text-sky-400">${(est.grand_total || 0).toFixed(2)}</p>
                 </div>
-                <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-sky-400" title="Send to Customer" onClick={e => sendEstimateEmail(e, est)} disabled={sendingEmail === est.id}>
-                    {sendingEmail === est.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-sky-400" title="Convert to Invoice" onClick={() => openInvoiceFromEstimate(est)}>
-                    <FileText className="w-3.5 h-3.5" />
-                  </Button>
-                  {est.status === "approved" && (
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-green-400" title="Convert to Repair Order" onClick={() => handleConvertToRepairOrder(est)}>
-                      <CheckCircle2 className="w-3.5 h-3.5" />
+                <div className="flex flex-col gap-2 items-end" onClick={(e) => e.stopPropagation()}>
+                  {/* Primary action buttons — always visible */}
+                  <div className="flex gap-2">
+                    {est.status !== "approved" && est.status !== "declined" && (
+                      <button
+                        onClick={e => handleApprove(e, est)}
+                        disabled={approvingId === est.id}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25 transition-all disabled:opacity-50"
+                        title="Mark as Approved">
+                        {approvingId === est.id
+                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : <ThumbsUp className="w-3.5 h-3.5" />}
+                        Approve
+                      </button>
+                    )}
+                    {est.status === "approved" && (
+                      <span className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Approved
+                      </span>
+                    )}
+                    <button
+                      onClick={e => handleConvertToRepairOrder(e, est)}
+                      disabled={convertingId === est.id}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-500/15 text-sky-400 border border-sky-500/30 hover:bg-sky-500/25 transition-all disabled:opacity-50"
+                      title="Send to Repair Order">
+                      {convertingId === est.id
+                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        : <Wrench className="w-3.5 h-3.5" />}
+                      → Repair Order
+                    </button>
+                  </div>
+                  {/* Secondary icon actions */}
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-500 hover:text-sky-400" title="Send to Customer" onClick={e => sendEstimateEmail(e, est)} disabled={sendingEmail === est.id}>
+                      {sendingEmail === est.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
                     </Button>
-                  )}
-                   <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-white" onClick={() => openEdit(est)}>
-                     <Pencil className="w-3.5 h-3.5" />
-                   </Button>
-                   <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-rose-400" onClick={() => handleDelete(est.id)}>
-                     <Trash2 className="w-3.5 h-3.5" />
-                   </Button>
-                 </div>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-500 hover:text-sky-400" title="Convert to Invoice" onClick={e => { e.stopPropagation(); openInvoiceFromEstimate(est); }}>
+                      <FileText className="w-3 h-3" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-500 hover:text-white" onClick={e => { e.stopPropagation(); openEdit(est); }}>
+                      <Pencil className="w-3 h-3" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-500 hover:text-rose-400" onClick={e => { e.stopPropagation(); handleDelete(est.id); }}>
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
           ))}
