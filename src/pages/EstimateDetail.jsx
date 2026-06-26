@@ -617,7 +617,34 @@ export default function EstimateDetail() {
             <span className="text-sky-400">${grandTotal.toFixed(2)}</span>
           </div>
         </div>
-      </div>{/* end editable section */}
       </div>
-      );
-      }
+      {/* Cashout Dialog */}
+      {showCashoutDialog && estimate && (
+        <PaymentReceiptDialog
+          open={showCashoutDialog}
+          onClose={() => setShowCashoutDialog(false)}
+          invoice={{
+            id: estimate.id,
+            invoice_number: estimate.estimate_number,
+            customer_id: estimate.customer_id || "",
+            customer_name: estimate.customer_name,
+            vehicle_info: estimate.vehicle_info,
+            total: estimate.total || estimate.grand_total || grandTotal,
+            labor_cost: laborTotal,
+            parts_cost: partsTotal,
+            tax_amount: taxAmount,
+            amount_paid: 0,
+            balance_due: estimate.total || estimate.grand_total || grandTotal,
+            payment_history: [],
+          }}
+          entityName="Estimate"
+          onSaved={() => {
+            setShowCashoutDialog(false);
+            queryClient.invalidateQueries({ queryKey: ["estimate", estimateId] });
+            queryClient.invalidateQueries({ queryKey: ["estimates"] });
+          }}
+        />
+      )}
+    </div>
+  );
+}
