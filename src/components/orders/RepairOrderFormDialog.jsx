@@ -30,7 +30,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
   const [form, setForm] = useState({
     customer_id: "", customer_name: "", vehicle_id: "", vehicle_info: "",
     mechanic_id: "", mechanic_name: "", description: "", status: "waiting",
-    labor_hours: "", labor_items: [{ description: "", hours: "", rate: "120", total: 0 }],
+    labor_hours: "", labor_items: [{ description: "", hours: "", rate: "120", total: 0 }], // rate overridden at load
     notes: "", parts_used: [], estimated_completion: "",
     discount_type: "none", discount_value: 0, total_cost: 0, custom_total: false,
     apply_tax: true, tax_applies_to: "both"
@@ -42,6 +42,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
   const [newVehicleForm, setNewVehicleForm] = useState(null);
   const { decoding: decodingVin, vinError: vinDecodeError, decodeVin: nhtsaDecode, setVinError: setVinDecodeError } = useNhtsaVinDecode();
   const [userTaxRate, setUserTaxRate] = useState(0);
+  const [userLaborRate, setUserLaborRate] = useState(120);
   const [localVehicles, setLocalVehicles] = useState([]);
   const [fetchedVehicles, setFetchedVehicles] = useState([]);
   const [loadingVehicles, setLoadingVehicles] = useState(false);
@@ -73,7 +74,8 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
 
   useEffect(() => {
     base44.auth.me().then(u => {
-      setUserTaxRate(u?.tax_rate != null ? u.tax_rate : 0);
+      setUserLaborRate(parseFloat(user?.labor_rate) || 120);
+        setUserTaxRate(u?.tax_rate != null ? u.tax_rate : 0);
     });
   }, []);
 
@@ -131,7 +133,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         vehicle_id: order?._prefillVehicleId || order?.vehicle_id || "",
         vehicle_info: order?._prefillVehicleInfo || order?.vehicle_info || "",
         mechanic_id: "", mechanic_name: "", description: "", status: "waiting",
-        labor_hours: "", labor_items: [{ description: "", hours: "", rate: "120", total: 0 }],
+        labor_hours: "", labor_items: [{ description: "", hours: "", rate: "120", total: 0 }], // rate overridden at load
         notes: "", parts_used: [], estimated_completion: "",
         discount_type: order?.discount_type || "none", discount_value: order?.discount_value || 0, total_cost: 0, custom_total: false,
         apply_tax: true, tax_applies_to: "both"
@@ -538,7 +540,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
           <div>
             <div className="flex items-center justify-between mb-2">
               <Label className="text-gray-300 font-semibold">Labor</Label>
-              <Button size="sm" variant="ghost" onClick={() => setForm(f => ({ ...f, labor_items: [...(f.labor_items || []), { description: "", hours: "", rate: "120", total: 0 }] }))}
+              <Button size="sm" variant="ghost" onClick={() => setForm(f => ({ ...f, labor_items: [...(f.labor_items || []), { description: "", hours: "", rate: String(userLaborRate), total: 0 }] }))}
                 className="text-sky-400 hover:text-sky-300 h-7 px-2">
                 <Plus className="w-4 h-4 mr-1" /> Add Labor
               </Button>
