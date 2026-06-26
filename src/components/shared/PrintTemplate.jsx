@@ -197,6 +197,7 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
       <div id="print-full-body" style={{ fontFamily: "'Inter', Arial, sans-serif", fontSize: 12, color: "#1a1a2e", background: "white", maxWidth: "900px", margin: "0 auto", padding: "16px" }}>
         {headerBlock}
 
+        {serviceReasonBlock}
         {/* Line Items Table — full */}
         <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 6 }}>
           <thead>
@@ -312,6 +313,7 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
       <div id="print-worker-body" style={{ position: "absolute", left: -9999, top: 0, fontFamily: "'Inter', Arial, sans-serif", fontSize: 12, color: "#1a1a2e", background: "white", width: 900 }}>
         {headerBlock}
 
+        {serviceReasonBlock}
         {/* Line Items Table — NO prices */}
         <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 10 }}>
           <thead>
