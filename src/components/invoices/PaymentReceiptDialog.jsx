@@ -49,13 +49,14 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
     if (payments.length === 0) return alert("Please add at least one payment entry.");
 
     setSaving(true);
+    const today = new Date().toISOString().split("T")[0];
     const newAmountPaid = (invoice.amount_paid || 0) + totalFromPayments;
     const newBalance = (invoice.total || 0) - newAmountPaid;
     const newStatus = newBalance <= 0.01 ? "paid" : "partial";
 
-    // Create payment history entries for each payment
+    // Build payment history entries
     const newPaymentHistory = payments.map(p => ({
-      date: new Date().toISOString().split("T")[0],
+      date: today,
       amount: p.amount,
       method: p.payment_method,
       note: [
@@ -65,22 +66,62 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
       ].filter(Boolean).join(" · "),
     }));
 
-    // Determine combined payment method label
     const existingMethods = (invoice.payment_history || []).map(p => p.method).filter(Boolean);
     const allNewMethods = payments.map(p => p.payment_method);
     const allMethods = [...new Set([...existingMethods, ...allNewMethods])];
     const combinedMethod = allMethods.length > 1 ? allMethods.join("+") : allMethods[0] || "cash";
 
-    const entity = base44.entities[entityName] || base44.entities.Invoice;
-    await entity.update(invoice.id, {
+    const paymentFields = {
       amount_paid: newAmountPaid,
       balance_due: Math.max(0, newBalance),
       status: newStatus,
       payment_method: combinedMethod,
       card_last4: payments.find(p => p.card_last4)?.card_last4 || invoice.card_last4 || undefined,
-      paid_date: newStatus === "paid" ? new Date().toISOString().split("T")[0] : undefined,
+      paid_date: newStatus === "paid" ? today : undefined,
       payment_history: [...(invoice.payment_history || []), ...newPaymentHistory],
-    });
+    };
+
+    if (entityName === "RepairOrder") {
+      // Step 1: Save payment fields to RepairOrder
+      await base44.entities.RepairOrder.update(invoice.id, paymentFields);
+
+      // Step 2: Auto-create or update a linked Invoice so Analytics always has one source of truth
+      const invoiceNum = invoice.linked_invoice_number || `INV-RO-${invoice.id.slice(-6).toUpperCase()}`;
+      try {
+        if (invoice.linked_invoice_id) {
+          // Update the already-linked invoice
+          await base44.entities.Invoice.update(invoice.linked_invoice_id, {
+            ...paymentFields,
+            invoice_number: invoiceNum,
+            total: invoice.total || 0,
+            labor_total: invoice.labor_cost || 0,
+            parts_total: invoice.parts_cost || 0,
+            repair_order_id: invoice.id,
+          });
+        } else {
+          // Create a new linked invoice
+          const created = await base44.entities.Invoice.create({
+            invoice_number: invoiceNum,
+            customer_id: invoice.customer_id || "",
+            customer_name: invoice.customer_name || "",
+            vehicle_info: invoice.vehicle_info || "",
+            repair_order_id: invoice.id,
+            total: invoice.total || 0,
+            labor_total: invoice.labor_cost || 0,
+            parts_total: invoice.parts_cost || 0,
+            tax_amount: invoice.tax_amount || 0,
+            ...paymentFields,
+          });
+          // Save linked invoice ID back to RepairOrder for future syncs
+          await base44.entities.RepairOrder.update(invoice.id, { linked_invoice_id: created.id, linked_invoice_number: invoiceNum });
+        }
+      } catch (e) {
+        console.error("Failed to sync Invoice from RepairOrder payment:", e);
+      }
+    } else {
+      // Standard Invoice update
+      await base44.entities.Invoice.update(invoice.id, paymentFields);
+    }
 
     setSaving(false);
     onSaved();
