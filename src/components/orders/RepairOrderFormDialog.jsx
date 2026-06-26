@@ -131,7 +131,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         mechanic_id: "", mechanic_name: "", description: "", status: "waiting",
         labor_hours: "", labor_items: [{ description: "", hours: "", rate: "120", total: 0 }],
         notes: "", parts_used: [], estimated_completion: "",
-        discount_type: "none", discount_value: 0, total_cost: 0, custom_total: false,
+        discount_type: order?.discount_type || "none", discount_value: order?.discount_value || 0, total_cost: 0, custom_total: false,
         apply_tax: true, tax_applies_to: "both"
       });
     }
