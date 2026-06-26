@@ -134,6 +134,15 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
     </>
   );
 
+  const serviceReasonBlock = serviceReason && (
+    <div style={{ marginTop: 6, marginBottom: 6, background: "#eff6ff", borderRadius: 6, borderLeft: "4px solid #3b82f6", padding: "7px 12px" }}>
+      <div style={{ fontSize: 8.5, fontWeight: 700, color: "#1d4ed8", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 3 }}>
+        🔧 Reason for Visit / Customer Complaint
+      </div>
+      <div style={{ fontSize: 10.5, color: "#1e3a5f", lineHeight: 1.6, fontStyle: "italic" }}>{serviceReason}</div>
+    </div>
+  );
+
   const notesBlock = notes && (
     <div style={{ marginTop: 5, background: "#fffbeb", borderRadius: 6, borderLeft: "3px solid #f59e0b", padding: "6px 10px" }}>
       <div style={{ fontSize: 9, fontWeight: 700, color: "#92400e", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 2 }}>Note</div>
