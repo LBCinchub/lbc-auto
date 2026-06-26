@@ -40,6 +40,7 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
     laborTotal = 0,
     subtotal = 0,
     discount = 0,
+    discountType = "$",
     taxRate = 0,
     taxAmount = 0,
     taxAppliesTo = null,
@@ -280,7 +281,7 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
               </div>
               {/* Discount — always shown on record */}
               <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 10, color: discount > 0 ? "#ef4444" : "#94a3b8", fontWeight: discount > 0 ? 600 : 400 }}>
-                <span>Discount</span>
+                <span>Discount{discountType === "%" && discount > 0 ? ` (${parseFloat(discount).toFixed(0)}%)` : ""}</span>
                 <span>{discount > 0 ? `-$${parseFloat(discount).toFixed(2)}` : "$0.00"}</span>
               </div>
               {taxRate > 0 && (
