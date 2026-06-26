@@ -107,6 +107,7 @@ export default function InvoicePrintView({ invoice, onClose }) {
           paymentHistory={paymentHistory}
           financials={financials}
           notes={invoice.customer_note}
+          serviceReason={invoice.service_reason}
         />
       </DialogContent>
     </Dialog>
