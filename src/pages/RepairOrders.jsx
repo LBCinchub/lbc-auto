@@ -105,8 +105,17 @@ export default function RepairOrders() {
     r => r.created_date
   );
 
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  // Active statuses always float to top; within same group sort by most recently updated
+  const STATUS_PRIORITY = { in_progress: 0, waiting: 1, waiting_for_parts: 2, completed: 3, delivered: 4 };
+  const sortedFiltered = [...filtered].sort((a, b) => {
+    const pa = STATUS_PRIORITY[a.status] ?? 9;
+    const pb = STATUS_PRIORITY[b.status] ?? 9;
+    if (pa !== pb) return pa - pb;
+    return (b.updated_date || b.created_date || "").localeCompare(a.updated_date || a.created_date || "");
+  });
+
+  const totalPages = Math.ceil(sortedFiltered.length / PAGE_SIZE);
+  const paginated = sortedFiltered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   useEffect(() => { setPage(1); }, [search, searchField, statusFilter, dateRange]);
 
@@ -136,7 +145,7 @@ export default function RepairOrders() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Repair Orders" subtitle={dateRange ? `${filtered.length} orders found` : `${orders.length} total orders`}
+      <PageHeader title="Repair Orders" subtitle={dateRange ? `${sortedFiltered.length} orders found` : `${orders.length} total orders`}
         onAdd={() => { setEditingOrder(null); setDialogOpen(true); }} addLabel="New Order" />
 
       <div className="flex gap-2 items-center">
@@ -179,7 +188,7 @@ export default function RepairOrders() {
         <div className="space-y-3">
           {[1,2,3].map(i => <div key={i} className="h-24 rounded-xl bg-gray-800/30 animate-pulse" />)}
         </div>
-      ) : filtered.length === 0 ? (
+      ) : sortedFiltered.length === 0 ? (
         <EmptyState icon={Wrench} title="No repair orders found"
           description="Create your first repair order."
           onAction={() => { setEditingOrder(null); setDialogOpen(true); }}
@@ -281,7 +290,7 @@ export default function RepairOrders() {
           {totalPages > 1 && (
             <div className="flex items-center justify-between pt-2">
               <span className="text-sm text-gray-500">
-                Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
+                Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, sortedFiltered.length)} of {sortedFiltered.length}
               </span>
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage(p => p - 1)}
