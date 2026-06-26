@@ -16,7 +16,7 @@ const emptyForm = {
   repair_order_id: "", estimate_id: "", customer_id: "", customer_name: "", customer_phone: "", vehicle_info: "",
   parts_total: 0, labor_total: 0, tax_rate: 0, apply_tax_parts: true, apply_tax_labor: true, status: "unpaid",
   due_date: "", payment_method: "", amount_paid: 0, payment_history: [],
-  receipt_number: "", card_last4: "", cashier_name: "", parts_used: [], labor_items: [], customer_note: "",
+  receipt_number: "", card_last4: "", cashier_name: "", parts_used: [], labor_items: [], customer_note: "", service_reason: "",
   discount_type: "none", discount_value: 0, technician_notes: "",
 };
 
@@ -75,6 +75,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
           parts_used: invoice.parts_used || [],
           labor_items: invoice.labor_items || [],
           customer_note: invoice.customer_note || "",
+          service_reason: invoice.service_reason || "",
           discount_type: invoice.discount_type || "none",
           discount_value: invoice.discount_value || 0,
           apply_tax_parts: invoice.apply_tax_parts !== false,
@@ -94,6 +95,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
           parts_total: sourceEstimate.parts_total || 0,
           labor_total: sourceEstimate.labor_total || 0,
           customer_note: sourceEstimate.notes || "",
+          service_reason: sourceEstimate.service_reason || "",
           tax_rate: userTaxRate,
           apply_tax_parts: _defTaxParts,
           apply_tax_labor: _defTaxLabor,
@@ -114,6 +116,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
             parts_total: order.parts_cost || 0,
             labor_total: order.labor_cost || 0,
             customer_note: order.notes || "",
+          service_reason: order.service_reason || order.description || "",
             tax_rate: userTaxRate,
             apply_tax_parts: _defTaxParts,
             apply_tax_labor: _defTaxLabor,
@@ -810,6 +813,12 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
           {/* Note */}
           <div>
             <Label className="text-gray-400 text-xs uppercase tracking-wider">Note for Customer</Label>
+            <div className="mb-4">
+              <label className="text-gray-400 text-xs uppercase tracking-wider font-semibold block mb-1">Reason for Visit / Customer Complaint</label>
+              <Textarea value={form.service_reason || ""} onChange={e => setForm({ ...form, service_reason: e.target.value })}
+                rows={2} placeholder="e.g. Engine light on, grinding noise when braking, oil change due..."
+                className="bg-gray-800 border-gray-700 text-white placeholder-gray-600 resize-none" />
+            </div>
             <Textarea value={form.customer_note || ""} onChange={e => setForm({ ...form, customer_note: e.target.value })} className="bg-gray-800 border-gray-700 text-white mt-2" placeholder="e.g. Please come back for a follow-up..." rows={2} />
           </div>
 
