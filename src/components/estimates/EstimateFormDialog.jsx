@@ -77,7 +77,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
         });
       }
     });
-  }, [estimate, open, repairOrderId]);
+  }, [estimate?.id, open, repairOrderId]);
 
   // Reactive vehicle fetch whenever customer changes
   useEffect(() => {
@@ -184,26 +184,30 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
 
   // ---- Labor helpers ----
   const updateLabor = (idx, field, value) => {
-    const items = form.labor_items.map((row, i) => {
-      if (i !== idx) return row;
-      const updated = { ...row, [field]: value };
-      updated.total = (parseFloat(updated.hours) || 0) * (parseFloat(updated.rate) || 0);
-      return updated;
+    setForm(f => {
+      const items = f.labor_items.map((row, i) => {
+        if (i !== idx) return row;
+        const updated = { ...row, [field]: value };
+        updated.total = (parseFloat(updated.hours) || 0) * (parseFloat(updated.rate) || 0);
+        return updated;
+      });
+      return { ...f, labor_items: items };
     });
-    setForm(f => ({ ...f, labor_items: items }));
   };
   const addLabor = () => setForm(f => ({ ...f, labor_items: [...f.labor_items, emptyLaborRow()] }));
   const removeLabor = (idx) => setForm(f => ({ ...f, labor_items: f.labor_items.filter((_, i) => i !== idx) }));
 
   // ---- Parts helpers ----
   const updatePart = (idx, field, value) => {
-    const items = form.parts_items.map((row, i) => {
-      if (i !== idx) return row;
-      const updated = { ...row, [field]: value };
-      updated.total = (parseFloat(updated.quantity) || 0) * (parseFloat(updated.unit_price) || 0);
-      return updated;
+    setForm(f => {
+      const items = f.parts_items.map((row, i) => {
+        if (i !== idx) return row;
+        const updated = { ...row, [field]: value };
+        updated.total = (parseFloat(updated.quantity) || 0) * (parseFloat(updated.unit_price) || 0);
+        return updated;
+      });
+      return { ...f, parts_items: items };
     });
-    setForm(f => ({ ...f, parts_items: items }));
   };
   const addPart = () => setForm(f => ({ ...f, parts_items: [...f.parts_items, emptyPartRow()] }));
   const removePart = (idx) => setForm(f => ({ ...f, parts_items: f.parts_items.filter((_, i) => i !== idx) }));
@@ -291,6 +295,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
   };
 
   const handleSave = async () => {
+    if (saving) return; // prevent double-submit
     const errors = {};
     if (!form.customer_id) errors.customer = "Please select a customer";
     if (!form.vehicle_id) errors.vehicle = "Please select a vehicle";
