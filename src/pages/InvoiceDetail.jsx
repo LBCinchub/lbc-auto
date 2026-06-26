@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Store, Plus, Trash2, Save, Loader2, CreditCard, X } from "lucide-react";
+import { ArrowLeft, Store, Plus, Trash2, Save, Loader2, CreditCard, X, Printer, Download, Share2, Mail } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { formatPhone } from "@/utils/formatPhone";
 import { Button } from "@/components/ui/button";
@@ -111,6 +111,29 @@ export default function InvoiceDetail() {
     : laborTotal + partsTotal; // "both"
   const taxAmount = taxableBase * (taxRate / 100);
   const grandTotal = subtotal + taxAmount;
+
+  // ── Share / Print / Save as PDF ──────────────────────────────────────────
+  const handlePrint = () => {
+    // Hide everything except the print preview, then trigger browser print
+    const printEl = document.getElementById("invoice-print-area");
+    if (!printEl) { window.print(); return; }
+    const original = document.body.innerHTML;
+    document.body.innerHTML = printEl.outerHTML;
+    window.print();
+    document.body.innerHTML = original;
+    window.location.reload();
+  };
+
+  const handleShare = async () => {
+    const title = `Invoice #${invoice?.invoice_number} — ${invoice?.customer_name || ""}`;
+    const text  = `Invoice #${invoice?.invoice_number}\nVehicle: ${invoice?.vehicle_info || ""}\nTotal: $${(invoice?.total || 0).toFixed(2)}\nBalance Due: $${(invoice?.balance_due || 0).toFixed(2)}\n\nThank you for your business!`;
+    if (navigator.share) {
+      try { await navigator.share({ title, text }); } catch (_) {}
+    } else {
+      await navigator.clipboard.writeText(text);
+      toast({ title: "Copied to clipboard ✓", description: "Invoice summary copied — paste anywhere to share." });
+    }
+  };
 
   const updateLabor = (idx, field, value) => {
     setLaborItems(prev => prev.map((r, i) => {
@@ -272,7 +295,7 @@ export default function InvoiceDetail() {
       </div>
 
       {/* Print Preview — same style as Estimates */}
-      <div className="rounded-xl border border-gray-800/50 bg-white p-8">
+      <div id="invoice-print-area" className="rounded-xl border border-gray-800/50 bg-white p-8">
         <PrintTemplate
           type="Invoice"
           docNumber={invoice.invoice_number}
