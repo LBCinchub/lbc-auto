@@ -435,8 +435,8 @@ export default function Estimates() {
         <PaymentReceiptDialog
           open={!!cashoutEstimate}
           onClose={() => setCashoutEstimate(null)}
-          record={cashoutEstimate}
-          entityType="Invoice"
+          invoice={cashoutEstimate}
+          entityName="Estimate"
           onSaved={() => {
             setCashoutEstimate(null);
             queryClient.invalidateQueries({ queryKey: ["estimates"] });
