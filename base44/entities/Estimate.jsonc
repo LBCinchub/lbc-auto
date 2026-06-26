@@ -123,6 +123,11 @@
       "type": "string",
       "format": "date",
       "description": "Estimate expiry date"
+    },
+    "estimate_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Editable estimate date shown on the document (defaults to created_date)"
     }
   },
   "required": [
