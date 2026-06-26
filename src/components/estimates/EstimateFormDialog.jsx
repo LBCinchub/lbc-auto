@@ -48,7 +48,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
     // Load user's saved tax rate
     base44.auth.me().then(u => {
       const userTaxRate     = u?.tax_rate     != null ? u.tax_rate     : 0;
-  const userTaxApplies  = u?.tax_applies_to || "both";
+      const userTaxApplies  = u?.tax_applies_to || "both";
       
       if (estimate && estimate.id) {
         // Editing an existing estimate — use user's tax rate
@@ -73,6 +73,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
           vehicle_id: prefillVehicleId,
           vehicle_info: prefillVehicleInfo,
           tax_rate: String(userTaxRate),
+          tax_applies_to: userTaxApplies,
         });
       }
     });
