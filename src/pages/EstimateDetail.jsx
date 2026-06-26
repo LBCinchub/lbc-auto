@@ -2,12 +2,13 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, CheckCircle2, Plus, Trash2, Save, Loader2, Printer, Share2 } from "lucide-react";
+import { ArrowLeft, CreditCard, CheckCircle2, Plus, Trash2, Save, Loader2, Printer, Share2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import PrintTemplate from "@/components/shared/PrintTemplate";
+import PaymentReceiptDialog from "@/components/invoices/PaymentReceiptDialog";
 
 export default function EstimateDetail() {
   const { estimateId } = useParams();
@@ -16,6 +17,7 @@ export default function EstimateDetail() {
   const { toast } = useToast();
   const [user, setUser] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [showCashoutDialog, setShowCashoutDialog] = useState(false);
   
   // Editable line items state
   const [laborItems, setLaborItems] = useState([]);
@@ -384,6 +386,32 @@ export default function EstimateDetail() {
           notes={estimateNotes}
           serviceReason={estimateServiceReason}
         />
+      </div>
+
+      {/* ── Action Strip: below print preview, above edit section ── */}
+      <div className="flex flex-wrap items-center justify-between gap-3 px-1 print:hidden">
+        <p className="text-xs text-gray-500 italic">↑ Print preview above · Edit details below</p>
+        <div className="flex flex-wrap gap-2">
+          {estimate?.status !== "approved" && (
+            <button
+              onClick={() => setShowCashoutDialog(true)}
+              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-lg shadow-emerald-900/30"
+            >
+              <CreditCard className="w-4 h-4" />
+              Cashout — Record Payment
+            </button>
+          )}
+          {estimate?.status === "approved" && (
+            <span className="flex items-center gap-2 text-emerald-400 text-sm font-semibold bg-emerald-500/10 border border-emerald-500/30 px-4 py-2 rounded-lg">
+              ✓ Approved & Paid
+            </span>
+          )}
+          {estimate?.total > 0 && estimate?.status !== "approved" && (
+            <span className="text-sky-400 text-sm font-medium bg-sky-500/10 border border-sky-500/30 px-3 py-2 rounded-lg">
+              Total: ${(estimate.total || estimate.grand_total || 0).toFixed(2)}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Editable Line Items */}
