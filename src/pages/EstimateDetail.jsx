@@ -27,6 +27,7 @@ export default function EstimateDetail() {
   const [estimateDate, setEstimateDate] = useState("");
   const [estimateNotes, setEstimateNotes] = useState("");
   const [estimateServiceReason, setEstimateServiceReason] = useState("");
+  const [discount, setDiscount] = useState(0);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -117,7 +118,8 @@ export default function EstimateDetail() {
     : taxAppliesTo === "none" ? 0
     : laborTotal + partsTotal; // "both"
   const taxAmount = taxableBase * (taxRate / 100);
-  const grandTotal = subtotal + taxAmount;
+  const discountAmount = parseFloat(discount) || 0;
+  const grandTotal = Math.max(0, subtotal - discountAmount + taxAmount);
 
   // ── Share / Print ────────────────────────────────────────────────────────
   const handleShare = async () => {
@@ -382,7 +384,7 @@ export default function EstimateDetail() {
             ...partsItems.map(p => ({ name: p.name || "Part", description: p.part_number ? `Part #: ${p.part_number}` : "", qty: parseFloat(p.quantity) || 0, unit_price: parseFloat(p.unit_price) || 0 }))
           ]}
           paymentHistory={[]}
-          financials={{ laborTotal, partsTotal, taxRate, taxAmount, grandTotal }}
+          financials={{ laborTotal, partsTotal, subtotal, discount: discountAmount, taxRate, taxAmount, grandTotal }}
           notes={estimateNotes}
           serviceReason={estimateServiceReason}
         />
@@ -584,6 +586,25 @@ export default function EstimateDetail() {
               <span>${((parseFloat(row.quantity) || 0) * (parseFloat(row.unit_price) || 0)).toFixed(2)}</span>
             </div>
           ))}
+          {/* Discount — always visible, always editable */}
+          <div className="flex items-center justify-between border-t border-gray-700/50 pt-2 gap-3">
+            <span className="text-gray-400 text-sm">Discount ($)</span>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={discount}
+                onChange={e => setDiscount(e.target.value)}
+                onFocus={e => e.target.select()}
+                placeholder="0.00"
+                className="w-28 rounded-md bg-gray-800 border border-gray-700 text-rose-400 font-semibold text-sm text-right px-2 py-1 focus:border-sky-500 focus:outline-none"
+              />
+              {discountAmount > 0 && (
+                <span className="text-rose-400 text-sm font-semibold whitespace-nowrap">-${discountAmount.toFixed(2)}</span>
+              )}
+            </div>
+          </div>
           {taxRate > 0 && (
             <div className="flex items-center justify-between border-t border-gray-700/50 pt-2 gap-3">
               <div className="flex items-center gap-2 flex-wrap">
