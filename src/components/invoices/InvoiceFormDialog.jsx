@@ -281,6 +281,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
 
 
   const handleSave = async () => {
+    if (saving) return; // prevent double-submit
     setSaving(true);
     let resolvedCustomerId = form.customer_id;
     if (!form.repair_order_id && !form.customer_id && form.customer_name) {
