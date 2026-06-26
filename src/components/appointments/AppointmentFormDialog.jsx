@@ -12,6 +12,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Search, User, Plus, Loader2, X, ClipboardList, Wrench, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useNhtsaVinDecode } from "@/hooks/useNhtsaVinDecode";
+import { capWords } from "@/utils/capitalize";
 
 const timeSlots = [
   "8:00 AM", "8:30 AM", "9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM",
@@ -214,7 +215,7 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
-                <Input value={newCustomerForm.full_name} onChange={e => setNewCustomerForm({...newCustomerForm, full_name: e.target.value})}
+                <Input value={newCustomerForm.full_name} autoCapitalize="words" onChange={e => setNewCustomerForm(p => ({...p, full_name: e.target.value.replace(/(^|\s)(\S)/g,(_,s,c)=>s+c.toUpperCase())}))}
                   className="bg-gray-700 border-gray-600 text-white" placeholder="Full name *" />
                 <Input value={newCustomerForm.phone} onChange={e => setNewCustomerForm({...newCustomerForm, phone: e.target.value})}
                   className="bg-gray-700 border-gray-600 text-white" placeholder="Phone number *" />
