@@ -386,7 +386,7 @@ export default function EstimateDetail() {
             ...partsItems.map(p => ({ name: p.name || "Part", description: p.part_number ? `Part #: ${p.part_number}` : "", qty: parseFloat(p.quantity) || 0, unit_price: parseFloat(p.unit_price) || 0 }))
           ]}
           paymentHistory={[]}
-          financials={{ laborTotal, partsTotal, subtotal, discount: discountAmount, taxRate, taxAmount, grandTotal }}
+          financials={{ laborTotal, partsTotal, subtotal, discount: discountAmount, discountType, taxRate, taxAmount, grandTotal }}
           notes={estimateNotes}
           serviceReason={estimateServiceReason}
         />
