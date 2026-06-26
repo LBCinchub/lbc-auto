@@ -64,10 +64,14 @@ export default function Dashboard() {
 
   const today = new Date().toISOString().split("T")[0];
 
+  const STATUS_PRIORITY = { in_progress: 0, waiting: 1, waiting_for_parts: 2, completed: 3, delivered: 4 };
+  const sortByStatus = (arr) => [...arr].sort((a, b) => (STATUS_PRIORITY[a.status] ?? 9) - (STATUS_PRIORITY[b.status] ?? 9));
+
   const waiting = orders.filter(o => o.status === "waiting");
   const inProgress = orders.filter(o => o.status === "in_progress");
   const completed = orders.filter(o => o.status === "completed" || o.status === "delivered");
   const todayAppts = appointments.filter(a => a.date === today);
+  const activeInShop = sortByStatus(orders.filter(o => ["in_progress","waiting","waiting_for_parts"].includes(o.status)));
 
   const openModal = (title, items, type) => setModal({ title, items, type });
 
@@ -89,6 +93,34 @@ export default function Dashboard() {
         <StatCard title="Today's Appts" value={todayAppts.length} icon={Calendar} color="purple"
           onClick={() => openModal("Today's Appointments", todayAppts, "appt")} />
       </div>
+
+      {/* Active Cars In Shop — always on top */}
+      {activeInShop.length > 0 && (
+        <div className="rounded-xl border border-sky-500/30 bg-sky-500/5">
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-sky-500/20">
+            <Wrench className="w-4 h-4 text-sky-400" />
+            <h3 className="text-sky-300 font-semibold text-sm">Cars In Shop — {activeInShop.length} Active</h3>
+          </div>
+          <div className="divide-y divide-gray-800/60">
+            {activeInShop.map(o => (
+              <button key={o.id} onClick={() => navigate(`/RepairOrderDetail/${o.id}`)}
+                className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-sky-500/5 transition-colors text-left">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${o.status === "in_progress" ? "bg-sky-400" : o.status === "waiting_for_parts" ? "bg-amber-400" : "bg-yellow-400"}`} />
+                  <div className="min-w-0">
+                    <p className="text-white text-sm font-medium truncate">{o.vehicle_info || "Unknown Vehicle"}</p>
+                    <p className="text-gray-400 text-xs truncate">{o.customer_name} {o.order_number ? `· #${o.order_number}` : ""}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <StatusBadge status={o.status} />
+                  <ChevronRight className="w-3.5 h-3.5 text-gray-600" />
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Low Stock Alert */}
       {lowStockParts.length > 0 && (
@@ -146,7 +178,7 @@ export default function Dashboard() {
             {modal?.items?.length === 0 && (
               <p className="text-gray-500 text-center py-6">No items found.</p>
             )}
-            {modal?.type === "order" && modal?.items?.map(o => (
+            {modal?.type === "order" && sortByStatus(modal?.items || []).map(o => (
               <button key={o.id} onClick={() => { setModal(null); navigate(`/RepairOrderDetail/${o.id}`); }}
                 className="w-full bg-gray-800 rounded-lg p-3 flex items-center justify-between gap-3 hover:bg-gray-700 transition-colors text-left">
                 <div className="flex items-center gap-3">
