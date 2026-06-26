@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
+import { syncCustomerActivity } from "@/utils/syncCustomerActivity";
 import { useQueryClient } from "@tanstack/react-query";
 import { Search, User, Plus, Loader2, X, ClipboardList, Wrench, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -192,6 +193,14 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
       await base44.entities.Appointment.create(form);
     }
     setSaving(false);
+      // ── Unified sync: Customer.last_visit + Vehicle.customer_id ──
+      await syncCustomerActivity({
+        customerId: form.customer_id,
+        vehicleId: form.vehicle_id,
+        vehicleInfo: form.vehicle_info,
+        customerName: form.customer_name,
+        customerPhone: form.customer_phone || "",
+      });
     onSaved();
     onClose();
   };
