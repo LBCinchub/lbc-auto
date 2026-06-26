@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Store, Plus, Trash2, Save, Loader2, CreditCard, X, Printer, Download, Share2, Mail } from "lucide-react";
+import { ArrowLeft, Store, Plus, Trash2, Save, Loader2, CreditCard, X, Printer, Download, Share2, Mail, Send } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { formatPhone } from "@/utils/formatPhone";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 import PrintTemplate from "@/components/shared/PrintTemplate";
 import TechnicianNotes from "@/components/invoices/TechnicianNotes";
+import PaymentReceiptDialog from "@/components/invoices/PaymentReceiptDialog";
+import { useEmailSend } from "@/hooks/useEmailSend";
 
 
 
@@ -39,6 +41,8 @@ export default function InvoiceDetail() {
   const [payMethod, setPayMethod] = useState("cash");
   const [payNote, setPayNote] = useState("");
   const [payingSaving, setPayingSaving] = useState(false);
+  const [showCashoutDialog, setShowCashoutDialog] = useState(false);
+  const { sendEmail, sending: sendingEmail } = useEmailSend();
 
   useEffect(() => {
     base44.auth.me().then(setUser);
@@ -250,6 +254,21 @@ export default function InvoiceDetail() {
     setTimeout(() => setSavedOk(false), 3000);
   };
 
+  const handleSendEmail = async () => {
+    if (!invoice) return;
+    try {
+      await sendEmail({
+        to: invoice.customer_email || customer?.email,
+        subject: `Invoice #${invoice.invoice_number}`,
+        invoiceId: invoice.id,
+        invoiceNumber: invoice.invoice_number,
+        customerName: invoice.customer_name,
+        vehicleInfo: invoice.vehicle_info,
+        total: grandTotal,
+      });
+    } catch(e) { console.error("Email error", e); }
+  };
+
 
 
   if (isLoading) {
@@ -277,30 +296,43 @@ export default function InvoiceDetail() {
 
       {/* Header */}
       {/* Header + Action Bar */}
+      {/* Header + Action Bar */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <Button variant="ghost" onClick={() => navigate("/Invoices")} className="text-gray-400 hover:text-white gap-2">
           <ArrowLeft className="w-4 h-4" /> Back to Invoices
         </Button>
         <div className="flex flex-wrap gap-2">
+          {/* Repair Order link if exists */
           {invoice?.repair_order_id && (
             <Button variant="outline" size="sm" onClick={() => navigate(`/RepairOrderDetail/${invoice.repair_order_id}`)}
-              className="border-gray-700 text-gray-300 h-9 gap-1.5 text-xs">
+              className="border-gray-700 text-gray-300 h-9 gap-1.5 text-xs hover:border-gray-500">
               View Repair Order
             </Button>
           )}
-          {/* Print / Save PDF */}
-          <Button variant="outline" size="sm"
-            onClick={() => { window.print(); }}
+          {/* Email */
+          <Button variant="outline" size="sm" onClick={handleSendEmail} disabled={sendingEmail}
+            className="border-gray-700 text-gray-300 h-9 gap-1.5 text-xs hover:border-sky-500 hover:text-sky-400">
+            {sendingEmail ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+            Email
+          </Button>
+          {/* Cashout — full PaymentReceiptDialog */
+          {invoice?.status !== "paid" && (
+            <Button size="sm" onClick={() => setShowCashoutDialog(true)}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 h-9 text-xs">
+              <CreditCard className="w-3.5 h-3.5" /> Cashout
+            </Button>
+          )}
+          {/* Print / Save PDF */
+          <Button variant="outline" size="sm" onClick={() => window.print()}
             className="border-gray-700 text-gray-300 h-9 gap-1.5 text-xs hover:border-sky-500 hover:text-sky-400">
             <Printer className="w-3.5 h-3.5" /> Print / Save PDF
           </Button>
-          {/* Share */}
-          <Button variant="outline" size="sm"
-            onClick={handleShare}
+          {/* Share */
+          <Button variant="outline" size="sm" onClick={handleShare}
             className="border-gray-700 text-gray-300 h-9 gap-1.5 text-xs hover:border-violet-500 hover:text-violet-400">
             <Share2 className="w-3.5 h-3.5" /> Share
           </Button>
-          {/* Save Changes */}
+          {/* Save Changes */
           <Button size="sm" onClick={handleSave} disabled={saving}
             className={`gap-1.5 h-9 text-xs ${savedOk ? "bg-emerald-600 hover:bg-emerald-700" : "bg-sky-500 hover:bg-sky-600"}`}>
             {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
@@ -704,6 +736,33 @@ export default function InvoiceDetail() {
           </div>
         )}
       </div>{/* end editable section */}
+      {/* Full Cashout Dialog — matches Invoice/RepairOrder flow */}
+      {showCashoutDialog && invoice && (
+        <PaymentReceiptDialog
+          open={showCashoutDialog}
+          onClose={() => setShowCashoutDialog(false)}
+          invoice={{
+            id: invoice.id,
+            invoice_number: invoice.invoice_number,
+            customer_id: invoice.customer_id || "",
+            customer_name: invoice.customer_name,
+            vehicle_info: invoice.vehicle_info,
+            total: grandTotal,
+            labor_cost: laborTotal,
+            parts_cost: partsTotal,
+            tax_amount: taxAmount,
+            amount_paid: invoice.amount_paid || 0,
+            balance_due: invoice.balance_due || 0,
+            payment_history: invoice.payment_history || [],
+          }}
+          entityName="Invoice"
+          onSaved={() => {
+            setShowCashoutDialog(false);
+            queryClient.invalidateQueries({ queryKey: ["invoice", invoiceId] });
+            queryClient.invalidateQueries({ queryKey: ["invoices"] });
+          }}
+        />
+      )}
     </div>
   );
 }
