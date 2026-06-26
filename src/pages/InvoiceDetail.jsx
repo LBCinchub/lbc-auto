@@ -30,6 +30,10 @@ export default function InvoiceDetail() {
   const [taxAppliesTo, setTaxAppliesTo] = useState("both");
   const [initialized, setInitialized] = useState(false);
   const [techNotes, setTechNotes] = useState("");
+  const [invoiceDate, setInvoiceDate] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [customerNote, setCustomerNote] = useState("");
+  const [serviceReason, setServiceReason] = useState("");
   const [showPayment, setShowPayment] = useState(false);
   const [payAmount, setPayAmount] = useState("");
   const [payMethod, setPayMethod] = useState("cash");
@@ -81,6 +85,10 @@ export default function InvoiceDetail() {
       );
       setPartsUsed(invoice.parts_used || []);
       setTechNotes(invoice.technician_notes || "");
+    setInvoiceDate(invoice.invoice_date || invoice.created_date?.split("T")[0] || "");
+    setDueDate(invoice.due_date || "");
+    setCustomerNote(invoice.customer_note || "");
+    setServiceReason(invoice.service_reason || "");
       setTaxAppliesTo(invoice.tax_applies_to || "both");
       setInitialized(true);
     }
@@ -207,6 +215,10 @@ export default function InvoiceDetail() {
       balance_due: Math.max(0, newTotal - amountPaid),
       parts_used: partsUsed,
       technician_notes: techNotes,
+      invoice_date: invoiceDate,
+      due_date: dueDate,
+      customer_note: customerNote,
+      service_reason: serviceReason,
     });
     queryClient.invalidateQueries({ queryKey: ["invoice", invoiceId] });
     queryClient.invalidateQueries({ queryKey: ["invoices"] });
