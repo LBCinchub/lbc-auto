@@ -47,7 +47,10 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
     setEstimateSearch("");
 
     base44.auth.me().then(u => {
-      const userTaxRate = u?.tax_rate != null ? u.tax_rate : 0;
+      const userTaxRate    = u?.tax_rate     != null ? u.tax_rate     : 0;
+  const userTaxApplies = u?.tax_applies_to || "both";
+  const _defTaxParts   = userTaxApplies === "both" || userTaxApplies === "parts";
+  const _defTaxLabor   = userTaxApplies === "both" || userTaxApplies === "labor";
       
       if (invoice && invoice.id) {
         setForm({
@@ -117,7 +120,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         setLaborItems([emptyLaborRow()]);
         setPartsItems([emptyPartRow()]);
       } else {
-        setForm({ ...emptyForm, tax_rate: userTaxRate });
+        setForm({ ...emptyForm, tax_rate: userTaxRate, apply_tax_parts: _defTaxParts, apply_tax_labor: _defTaxLabor });
         setLaborItems([emptyLaborRow()]);
         setPartsItems([emptyPartRow()]);
       }
