@@ -96,6 +96,18 @@
       "type": "boolean",
       "default": false,
       "description": "Email for overdue invoices"
+    },
+    "google_review_link": {
+      "type": "string",
+      "description": "Google Maps review link for the shop \u2014 shown in emails to encourage reviews"
+    },
+    "logo_url": {
+      "type": "string",
+      "description": "Shop logo URL displayed in email header"
+    },
+    "email": {
+      "type": "string",
+      "description": "Shop contact email shown on documents and emails"
     }
   },
   "required": [
