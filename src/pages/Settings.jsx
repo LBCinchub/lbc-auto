@@ -51,6 +51,7 @@ export default function Settings() {
   const [gstNumber, setGstNumber] = useState("");
   const [hstNumber, setHstNumber] = useState("");
   const [taxRate, setTaxRate] = useState("");
+  const [taxAppliesTo, setTaxAppliesTo] = useState("both");
   const [notifPrefs, setNotifPrefs] = useState({});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -69,6 +70,7 @@ export default function Settings() {
       setGstNumber(currentUser?.gst_number || "");
       setHstNumber(currentUser?.hst_number || "");
       setTaxRate(currentUser?.tax_rate != null ? String(currentUser.tax_rate) : "");
+      setTaxAppliesTo(currentUser?.tax_applies_to || "both");
       setLogoUrl(currentUser?.business_logo || "");
       // Load notification prefs (default SMS on, email off)
       const prefs = {};
@@ -93,7 +95,7 @@ export default function Settings() {
         notifData[`notif_sms_${key}`] = notifPrefs[`sms_${key}`] !== false;
         notifData[`notif_email_${key}`] = notifPrefs[`email_${key}`] === true;
       });
-      await base44.auth.updateMe({ business_name: businessName, phone: shopPhone, address: shopAddress, gst_number: gstNumber, hst_number: hstNumber, tax_rate: taxRate !== "" ? parseFloat(taxRate) : 0, business_logo: logoUrl, ...notifData });
+      await base44.auth.updateMe({ business_name: businessName, phone: shopPhone, address: shopAddress, gst_number: gstNumber, hst_number: hstNumber, tax_rate: taxRate !== "" ? parseFloat(taxRate) : 0, tax_applies_to: taxAppliesTo, business_logo: logoUrl, ...notifData });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
       window.dispatchEvent(new Event("lbc:settings-saved"));
@@ -227,6 +229,30 @@ export default function Settings() {
               className={`${theme === "light" ? "bg-gray-50 border-gray-300 text-gray-900" : "bg-gray-800 border-gray-700 text-white"}`}
             />
             <p className={`${theme === "light" ? "text-gray-600" : "text-gray-500"} text-sm mt-2`}>This rate will be pre-filled on all new invoices and estimates</p>
+          </div>
+          <div>
+            <Label className={`${theme === "light" ? "text-gray-700" : "text-gray-400"} mb-2 block`}>Default Tax Applies To</Label>
+            <div className="flex gap-2 flex-wrap">
+              {[
+                { value: "both",   label: "Labor + Parts" },
+                { value: "labor",  label: "Labor Only"    },
+                { value: "parts",  label: "Parts Only"    },
+                { value: "none",   label: "No Tax"        },
+              ].map(opt => (
+                <button key={opt.value} type="button"
+                  onClick={() => setTaxAppliesTo(opt.value)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-all ${
+                    taxAppliesTo === opt.value
+                      ? "bg-sky-500 border-sky-500 text-white"
+                      : theme === "light"
+                        ? "bg-gray-50 border-gray-300 text-gray-700 hover:border-sky-400"
+                        : "bg-gray-800 border-gray-700 text-gray-400 hover:border-sky-500/50 hover:text-white"
+                  }`}>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            <p className={`${theme === "light" ? "text-gray-600" : "text-gray-500"} text-sm mt-2`}>This default will be applied on all new invoices and estimates</p>
           </div>
           {/* Business Logo */}
           <div>
