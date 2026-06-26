@@ -1,36 +1,50 @@
 import { base44 } from "@/api/base44Client";
 
 /**
- * After any save (Estimate, Invoice, RepairOrder, Appointment),
- * call this to keep the Customer record perfectly up-to-date.
- * 
- * - Updates last_visit to today
- * - Stores last_vehicle_info for quick reference
- * - Ensures Vehicle.customer_id is correctly set
- * - Updates vehicle_info string on the Vehicle record
+ * syncCustomerActivity — call after ANY save (Estimate, Invoice, RepairOrder, Appointment)
+ *
+ * Keeps the Customer record perfectly in sync:
+ *   - last_visit      → today's date
+ *   - last_vehicle_info → e.g. "2018 Toyota Camry"
+ *   - full_name / phone / email → kept up to date
+ *
+ * Keeps the Vehicle record in sync:
+ *   - customer_id     → always linked
+ *   - customer_name   → denormalized copy for fast display
  */
-export async function syncCustomerActivity({ customerId, vehicleId, vehicleInfo, customerName, customerPhone, customerEmail } = {}) {
+export async function syncCustomerActivity({
+  customerId,
+  vehicleId,
+  vehicleInfo,
+  customerName,
+  customerPhone,
+  customerEmail,
+  isNewVisit = true,   // set false for Appointment (upcoming, not yet a visit)
+} = {}) {
   if (!customerId) return;
 
   try {
     const today = new Date().toISOString().split("T")[0];
 
-    // Update customer last_visit + snapshot info
-    const customerUpdate = { last_visit: today };
+    // ── Update Customer ─────────────────────────────────────────────────
+    const customerUpdate = {};
+    if (isNewVisit) customerUpdate.last_visit = today;
     if (vehicleInfo) customerUpdate.last_vehicle_info = vehicleInfo;
-    if (customerName) customerUpdate.full_name = customerName; // title-case already applied
+    if (customerName) customerUpdate.full_name = customerName;
     if (customerPhone) customerUpdate.phone = customerPhone;
     if (customerEmail) customerUpdate.email = customerEmail;
-    await base44.entities.Customer.update(customerId, customerUpdate);
 
-    // Ensure vehicle has the right customer_id + info string
+    if (Object.keys(customerUpdate).length > 0) {
+      await base44.entities.Customer.update(customerId, customerUpdate);
+    }
+
+    // ── Update Vehicle ──────────────────────────────────────────────────
     if (vehicleId) {
-      await base44.entities.Vehicle.update(vehicleId, {
-        customer_id: customerId,
-        customer_name: customerName || undefined,
-      }).catch(() => {}); // silent — vehicle may not exist yet in some edge cases
+      const vehicleUpdate = { customer_id: customerId };
+      if (customerName) vehicleUpdate.customer_name = customerName;
+      await base44.entities.Vehicle.update(vehicleId, vehicleUpdate).catch(() => {});
     }
   } catch (e) {
-    console.warn("syncCustomerActivity failed (non-fatal):", e);
+    console.warn("[syncCustomerActivity] non-fatal error:", e?.message || e);
   }
 }
