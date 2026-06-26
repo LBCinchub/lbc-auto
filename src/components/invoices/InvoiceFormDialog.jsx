@@ -97,6 +97,8 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
           tax_rate: userTaxRate,
           apply_tax_parts: _defTaxParts,
           apply_tax_labor: _defTaxLabor,
+          discount_type: sourceEstimate.discount_type || "none",
+          discount_value: sourceEstimate.discount_value || 0,
         }));
         setLaborItems(sourceEstimate.labor_items?.length ? sourceEstimate.labor_items.map(i => ({ description: i.description, hours: i.hours || 1, rate: i.rate || 0, total: i.total || 0 })) : [emptyLaborRow()]);
         setPartsItems(sourceEstimate.parts_items?.length ? sourceEstimate.parts_items.map(p => ({ name: p.name, quantity: p.quantity || 1, unit_price: p.unit_price || 0, total: p.total || 0 })) : [emptyPartRow()]);
