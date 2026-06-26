@@ -282,12 +282,12 @@ export default function CustomerFormDialog({ open, onClose, customer, onSaved, o
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <Label className="text-gray-400 text-xs">Make *</Label>
-                      <Input value={vehicleForm.make} onChange={e => setVehicleForm({...vehicleForm, make: e.target.value})}
+                      <Input value={vehicleForm.make} autoCapitalize="words" onChange={e => setVehicleForm(p => ({...p, make: e.target.value.replace(/(^|\s)(\S)/g,(_,s,c)=>s+c.toUpperCase())}))}
                         className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="Toyota" />
                     </div>
                     <div>
                       <Label className="text-gray-400 text-xs">Model *</Label>
-                      <Input value={vehicleForm.model} onChange={e => setVehicleForm({...vehicleForm, model: e.target.value})}
+                      <Input value={vehicleForm.model} autoCapitalize="words" onChange={e => setVehicleForm(p => ({...p, model: e.target.value.replace(/(^|\s)(\S)/g,(_,s,c)=>s+c.toUpperCase())}))}
                         className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="Camry" />
                     </div>
                   </div>
