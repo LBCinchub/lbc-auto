@@ -11,6 +11,7 @@ import RecentEstimates from "../components/dashboard/RecentEstimates";
 import TodayAppointments from "../components/dashboard/TodayAppointments";
 import KpiCards from "../components/dashboard/KpiCards";
 import RecentActivity from "../components/dashboard/RecentActivity";
+import RecentInvoices from "../components/dashboard/RecentInvoices";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import StatusBadge from "../components/shared/StatusBadge";
 
