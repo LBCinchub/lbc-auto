@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
+import { syncCustomerActivity } from "@/utils/syncCustomerActivity";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, Loader2, X, Search, CheckCircle2 } from "lucide-react";
 import { useNhtsaVinDecode } from "@/hooks/useNhtsaVinDecode";
@@ -391,6 +392,14 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
       }
 
       setSaving(false);
+      // ── Unified sync: Customer.last_visit + Vehicle.customer_id ──
+      await syncCustomerActivity({
+        customerId: form.customer_id,
+        vehicleId: form.vehicle_id,
+        vehicleInfo: form.vehicle_info,
+        customerName: form.customer_name,
+        customerPhone: form.customer_phone || "",
+      });
       onSaved();
       onClose();
     } catch (err) {
