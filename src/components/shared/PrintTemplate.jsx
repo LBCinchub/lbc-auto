@@ -278,11 +278,11 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
               <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", fontSize: 10, color: "#475569", borderTop: "1px solid #e2e8f0", marginTop: 4 }}>
                 <span>Subtotal</span><span>${subtotal.toFixed(2)}</span>
               </div>
-              {discount > 0 && (
-                <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 10, color: "#dc2626" }}>
-                  <span>Discount</span><span>-${parseFloat(discount).toFixed(2)}</span>
-                </div>
-              )}
+              {/* Discount — always shown on record */}
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 10, color: discount > 0 ? "#ef4444" : "#94a3b8", fontWeight: discount > 0 ? 600 : 400 }}>
+                <span>Discount</span>
+                <span>{discount > 0 ? `-$${parseFloat(discount).toFixed(2)}` : "$0.00"}</span>
+              </div>
               {taxRate > 0 && (
                 <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 10, color: "#475569" }}>
                   <span>Tax ({taxRate}%{taxAppliesTo && taxAppliesTo !== "both" ? ` · ${taxAppliesTo === "labor" ? "Labor only" : "Parts only"}` : ""})</span><span>${taxAmount.toFixed(2)}</span>
