@@ -392,6 +392,32 @@ export default function InvoiceDetail() {
         />
       </div>
 
+      {/* ── Action Strip: below print preview, above edit section ── */}
+      <div className="flex flex-wrap items-center justify-between gap-3 px-1 print:hidden">
+        <p className="text-xs text-gray-500 italic">↑ Print preview above · Edit details below</p>
+        <div className="flex flex-wrap gap-2">
+          {invoice?.status !== "paid" && (
+            <button
+              onClick={() => setShowCashoutDialog(true)}
+              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-lg shadow-emerald-900/30"
+            >
+              <CreditCard className="w-4 h-4" />
+              Cashout — Record Payment
+            </button>
+          )}
+          {invoice?.status === "paid" && (
+            <span className="flex items-center gap-2 text-emerald-400 text-sm font-semibold bg-emerald-500/10 border border-emerald-500/30 px-4 py-2 rounded-lg">
+              ✓ Paid in Full
+            </span>
+          )}
+          {invoice?.balance_due > 0 && invoice?.status !== "paid" && (
+            <span className="text-yellow-400 text-sm font-medium bg-yellow-500/10 border border-yellow-500/30 px-3 py-2 rounded-lg">
+              Balance Due: ${(invoice.balance_due || 0).toFixed(2)}
+            </span>
+          )}
+        </div>
+      </div>
+
       {/* Editable Line Items */}
       <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-6 space-y-6">
         {/* Invoice Header — matches screenshot layout */}
