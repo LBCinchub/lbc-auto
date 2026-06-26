@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate, useLocation} from 'react-router-dom';
 import { Calendar, Pencil, Trash2, User, Car, Wrench, Send, Loader2 } from "lucide-react";
 import { useEmailSend } from "@/hooks/useEmailSend";
 import { Button } from "@/components/ui/button";
@@ -130,7 +131,6 @@ export default function Appointments() {
 
 
   // URL persistence — keeps filters in sync so Back/Forward restores layout
-  const _location = useLocation();
   const _navigate = useNavigate();
   const _pushParams = React.useCallback((updates) => {
     const p = new URLSearchParams(window.location.search);
@@ -141,7 +141,7 @@ export default function Appointments() {
     const qs = p.toString();
     _navigate({ search: qs ? '?' + qs : '' }, { replace: true });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [_navigate]);
   React.useEffect(() => {
     const _p = new URLSearchParams(_location.search);
     const _q = _p.get('q') || '';

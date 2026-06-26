@@ -143,8 +143,6 @@ export default function RepairOrders() {
 
 
   // URL persistence — keeps filters in sync so Back/Forward restores layout
-  const _location = useLocation();
-  const _navigate = useNavigate();
   const _pushParams = React.useCallback((updates) => {
     const p = new URLSearchParams(window.location.search);
     Object.entries(updates).forEach(([k, v]) => {
@@ -152,9 +150,9 @@ export default function RepairOrders() {
       else p.set(k, String(v));
     });
     const qs = p.toString();
-    _navigate({ search: qs ? '?' + qs : '' }, { replace: true });
+    navigate({ search: qs ? '?' + qs : '' }, { replace: true });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [navigate]);
   React.useEffect(() => {
     const _p = new URLSearchParams(_location.search);
     const _q = _p.get('q') || '';

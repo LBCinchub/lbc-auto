@@ -90,8 +90,6 @@ export default function Vehicles() {
 
 
   // URL persistence — keeps filters in sync so Back/Forward restores layout
-  const _location = useLocation();
-  const _navigate = useNavigate();
   const _pushParams = React.useCallback((updates) => {
     const p = new URLSearchParams(window.location.search);
     Object.entries(updates).forEach(([k, v]) => {
@@ -99,17 +97,15 @@ export default function Vehicles() {
       else p.set(k, String(v));
     });
     const qs = p.toString();
-    _navigate({ search: qs ? '?' + qs : '' }, { replace: true });
+    navigate({ search: qs ? '?' + qs : '' }, { replace: true });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [navigate]);
   React.useEffect(() => {
     const _p = new URLSearchParams(_location.search);
     const _q = _p.get('q') || '';
     setSearch(prev => prev !== _q ? _q : prev);
     const _sf = _p.get('sf') || 'all';
     setSearchField(prev => prev !== _sf ? _sf : prev);
-    const _pg = parseInt(_p.get('pg') || '1', 10);
-    setPage(prev => prev !== _pg ? _pg : prev);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [_location.search]);
   return (

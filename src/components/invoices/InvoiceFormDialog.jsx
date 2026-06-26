@@ -431,6 +431,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
               <Label className="text-gray-400 text-xs uppercase tracking-wider">Vehicle</Label>
               <div className="mt-1">
                 {form.customer_id && !form.repair_order_id && !sourceEstimate ? (
+                  <>
                   <Select value={form.vehicle_id || ""} onValueChange={vid => {
                     const v = fetchedVehicles.find(v => v.id === vid);
                     setForm(f => ({ ...f, vehicle_id: vid, vehicle_info: v ? `${v.year} ${v.make} ${v.model}` : "" }));
@@ -476,6 +477,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
                       <Plus className="w-3 h-3" /> Add new vehicle
                     </button>
                   )}
+                  </>
                 ) : (
                   <div className="space-y-2">
                     <Input value={form.vehicle_info} onChange={e => !form.repair_order_id && !sourceEstimate && setForm({ ...form, vehicle_info: e.target.value })} className="bg-gray-800 border-gray-700 text-white" placeholder={form.customer_name ? "e.g. 2020 Honda Civic" : "Select customer first..."} readOnly={!!form.repair_order_id || !!sourceEstimate} />
