@@ -35,6 +35,8 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
   const [estimateSearch, setEstimateSearch] = useState("");
   const [linkMode, setLinkMode] = useState("order"); // "order" | "invoice" | "estimate"
   const [customerSearch, setCustomerSearch] = useState("");
+  const [newCustomerForm, setNewCustomerForm] = useState(null);
+  const [newVehicleForm, setNewVehicleForm] = useState(null);
   const [laborItems, setLaborItems] = useState([emptyLaborRow()]);
   const [partsItems, setPartsItems] = useState([emptyPartRow()]);
 
@@ -240,6 +242,37 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
     }));
   };
 
+  const saveNewCustomer = async () => {
+    if (!newCustomerForm?.full_name || !newCustomerForm?.phone) return;
+    const created = await base44.entities.Customer.create({
+      full_name: newCustomerForm.full_name,
+      phone: newCustomerForm.phone,
+      email: newCustomerForm.email || "",
+    });
+    setForm(f => ({ ...f, customer_id: created.id, customer_name: created.full_name, customer_phone: created.phone || "" }));
+    setNewCustomerForm(null);
+    setCustomerSearch("");
+  };
+
+  const saveNewVehicle = async () => {
+    if (!newVehicleForm?.make || !newVehicleForm?.model || !newVehicleForm?.year) return;
+    const created = await base44.entities.Vehicle.create({
+      customer_id: form.customer_id,
+      customer_name: form.customer_name,
+      vin: newVehicleForm.vin || "",
+      make: newVehicleForm.make,
+      model: newVehicleForm.model,
+      year: Number(newVehicleForm.year),
+      license_plate: newVehicleForm.license_plate || "",
+      color: newVehicleForm.color || "",
+      engine_type: newVehicleForm.engine_type || "",
+    });
+    setFetchedVehicles(prev => [...prev, created]);
+    setForm(f => ({ ...f, vehicle_id: created.id, vehicle_info: `${created.year} ${created.make} ${created.model}` }));
+    setNewVehicleForm(null);
+  };
+
+
   const handleSave = async () => {
     setSaving(true);
     let resolvedCustomerId = form.customer_id;
@@ -358,6 +391,31 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
                   </button>
                 )}
               </div>
+              {/* Inline add-new-customer */}
+              {!form.repair_order_id && !sourceEstimate && (
+                newCustomerForm !== null ? (
+                  <div className="bg-gray-800 border border-sky-500/30 rounded-lg p-3 space-y-2 mt-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-sky-400 font-medium">New Customer</p>
+                      <button onClick={() => setNewCustomerForm(null)} className="text-gray-500 hover:text-gray-300"><X className="w-3.5 h-3.5" /></button>
+                    </div>
+                    <Input value={newCustomerForm.full_name} onChange={e => setNewCustomerForm({...newCustomerForm, full_name: e.target.value})}
+                      className="bg-gray-700 border-gray-600 text-white" placeholder="Full name *" />
+                    <Input value={newCustomerForm.phone} onChange={e => setNewCustomerForm({...newCustomerForm, phone: e.target.value})}
+                      className="bg-gray-700 border-gray-600 text-white" placeholder="Phone number *" />
+                    <Input value={newCustomerForm.email} onChange={e => setNewCustomerForm({...newCustomerForm, email: e.target.value})}
+                      className="bg-gray-700 border-gray-600 text-white" placeholder="Email" />
+                    <Button size="sm" onClick={saveNewCustomer} disabled={!newCustomerForm.full_name || !newCustomerForm.phone} className="bg-sky-500 hover:bg-sky-600 text-white w-full">Save Customer</Button>
+                  </div>
+                ) : (
+                  !form.customer_id && (
+                    <button onClick={() => setNewCustomerForm({ full_name: "", phone: "", email: "" })}
+                      className="mt-2 w-full px-3 py-1 rounded text-xs bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/40 text-sky-400 flex items-center justify-center gap-2">
+                      <Plus className="w-3 h-3" /> New customer
+                    </button>
+                  )
+                )
+              )}
             </div>
 
             {/* Vehicle */}
@@ -382,6 +440,34 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
                       )}
                     </SelectContent>
                   </Select>
+                  {/* Add new vehicle inline */}
+                  {newVehicleForm !== null ? (
+                    <div className="bg-gray-800 border border-sky-500/30 rounded-lg p-2 mt-2 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-sky-400 font-medium">New Vehicle</p>
+                        <button onClick={() => setNewVehicleForm(null)} className="text-gray-500 hover:text-gray-300"><X className="w-3.5 h-3.5" /></button>
+                      </div>
+                      <Input value={newVehicleForm.vin || ""} onChange={e => setNewVehicleForm({...newVehicleForm, vin: e.target.value})}
+                        className="bg-gray-700 border-gray-600 text-white text-xs" placeholder="VIN (optional)" />
+                      <div className="grid grid-cols-3 gap-1">
+                        <Input value={newVehicleForm.year || ""} onChange={e => setNewVehicleForm({...newVehicleForm, year: e.target.value})}
+                          className="bg-gray-700 border-gray-600 text-white text-xs" placeholder="Year *" />
+                        <Input value={newVehicleForm.make || ""} onChange={e => setNewVehicleForm({...newVehicleForm, make: e.target.value})}
+                          className="bg-gray-700 border-gray-600 text-white text-xs" placeholder="Make *" />
+                        <Input value={newVehicleForm.model || ""} onChange={e => setNewVehicleForm({...newVehicleForm, model: e.target.value})}
+                          className="bg-gray-700 border-gray-600 text-white text-xs" placeholder="Model *" />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={saveNewVehicle} disabled={!newVehicleForm.year || !newVehicleForm.make || !newVehicleForm.model} className="bg-sky-500 hover:bg-sky-600 text-white flex-1">Save</Button>
+                        <Button size="sm" variant="ghost" onClick={() => setNewVehicleForm(null)} className="text-gray-400 flex-1">Cancel</Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button onClick={() => setNewVehicleForm({ vin: "", year: "", make: "", model: "", license_plate: "" })}
+                      className="mt-1 w-full px-3 py-1 rounded text-xs bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/40 text-sky-400 flex items-center justify-center gap-2">
+                      <Plus className="w-3 h-3" /> Add new vehicle
+                    </button>
+                  )}
                 ) : (
                   <div className="space-y-2">
                     <Input value={form.vehicle_info} onChange={e => !form.repair_order_id && !sourceEstimate && setForm({ ...form, vehicle_info: e.target.value })} className="bg-gray-800 border-gray-700 text-white" placeholder={form.customer_name ? "e.g. 2020 Honda Civic" : "Select customer first..."} readOnly={!!form.repair_order_id || !!sourceEstimate} />
