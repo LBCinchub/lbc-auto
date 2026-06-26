@@ -480,7 +480,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
                      <p className="text-xs text-sky-400 font-medium">New Customer</p>
                      <button onClick={() => setNewCustomerForm(null)} className="text-gray-500 hover:text-gray-300"><X className="w-3.5 h-3.5" /></button>
                    </div>
-                   <Input value={newCustomerForm.full_name} onChange={e => setNewCustomerForm({...newCustomerForm, full_name: e.target.value})}
+                   <Input value={newCustomerForm.full_name} autoCapitalize="words" onChange={e => setNewCustomerForm(p => ({...p, full_name: e.target.value.replace(/(^|\s)(\S)/g,(_,s,c)=>s+c.toUpperCase())}))}
                      className="bg-gray-700 border-gray-600 text-white" placeholder="Full name *" />
                    <Input value={newCustomerForm.phone} onChange={e => setNewCustomerForm({...newCustomerForm, phone: e.target.value})}
                      className="bg-gray-700 border-gray-600 text-white" placeholder="Phone number *" />
