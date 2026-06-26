@@ -34,7 +34,7 @@ function buildPrintHTML(contentHTML, title, isWorker) {
   `;
 }
 
-export default function PrintTemplate({ type = "Invoice", docNumber, createdDate, user, customer, vehicle, lineItems = [], paymentHistory = [], financials = {}, notes }) {
+export default function PrintTemplate({ type = "Invoice", docNumber, createdDate, user, customer, vehicle, lineItems = [], paymentHistory = [], financials = {}, notes, serviceReason }) {
   const {
     partsTotal = 0,
     laborTotal = 0,

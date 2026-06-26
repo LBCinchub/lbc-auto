@@ -91,6 +91,12 @@ export default function Customers() {
     enabled: !!user,
   });
 
+  const { data: appointments = [] } = useQuery({
+    queryKey: ["appointments", user?.email],
+    queryFn: () => user ? base44.entities.Appointment.filter({ created_by: user.email }, "-created_date", 10000) : Promise.resolve([]),
+    enabled: !!user,
+  });
+
   // Build a lookup map: customerId -> vehicles[]
   const vehiclesByCustomer = useMemo(() => vehicles.reduce((map, v) => {
     if (!map[v.customer_id]) map[v.customer_id] = [];
@@ -124,7 +130,7 @@ export default function Customers() {
     }
 
     // Track last visit from repair orders
-    for (const ro of repairOrders) {
+    for (const ro of orders) {
       if (!ro.customer_id) continue;
       if (!map[ro.customer_id]) map[ro.customer_id] = { lastPaidDate: null, lastVisitDate: null, outstandingBalance: 0 };
       const entry = map[ro.customer_id];
@@ -148,7 +154,7 @@ export default function Customers() {
     }
 
     return map;
-  }, [invoices, repairOrders, appointments]);
+  }, [invoices, orders, appointments]);
 
   function getActivityStatus(customerId) {
     const stats = invoiceStatsByCustomer[customerId];
@@ -286,7 +292,7 @@ export default function Customers() {
               return (
                 <div key={customer.id}
                   onClick={() => navigate(`/CustomerDetails?id=${customer.id}`)}
-                  className={`rounded-xl border p-5 hover:opacity-90 hover:shadow-lg transition-all cursor-pointer flex flex-col gap-3 ${statusBorder[activity]} ${statusBg[activity]}`}over:shadow-lg hover:shadow-sky-500/5 hover:-translate-y-0.5 transition-all duration-200 flex flex-col gap-3 cursor-pointer">
+                  className={`rounded-xl border p-5 hover:opacity-90 hover:shadow-lg hover:shadow-sky-500/5 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer flex flex-col gap-3 ${statusBorder[activity]} ${statusBg[activity]}`}>
 
                   {/* Top row: avatar + name + status + actions */}
                   <div className="flex items-start justify-between">
