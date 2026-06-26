@@ -337,6 +337,7 @@ export default function EstimateDetail() {
           paymentHistory={[]}
           financials={{ laborTotal, partsTotal, taxRate, taxAmount, grandTotal }}
           notes={estimate.notes}
+          serviceReason={estimate.service_reason}
         />
       </div>
 
