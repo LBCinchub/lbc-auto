@@ -59,6 +59,8 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
           apply_tax: estimate.apply_tax !== false,
           tax_rate: estimate.tax_rate != null ? String(estimate.tax_rate) : String(userTaxRate),
           tax_applies_to: estimate.tax_applies_to || userTaxApplies,
+          discount_type: estimate.discount_type || "none",
+          discount_value: estimate.discount_value || 0,
           labor_items: estimate.labor_items?.length ? estimate.labor_items.map(i => ({ ...i, hours: String(i.hours), rate: String(i.rate ?? 120) })) : [emptyLaborRow()],
           parts_items: estimate.parts_items?.length ? estimate.parts_items.map(i => ({ ...i, quantity: String(i.quantity), unit_price: String(i.unit_price) })) : [emptyPartRow()],
         });
