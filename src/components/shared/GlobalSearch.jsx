@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import { Search, X, Wrench, Users, Car, FileText, Package, ChevronRight, ClipboardList, CalendarDays, HardHat, Clock, Banknote } from "lucide-react";
+import { Search, X, Wrench, Users, Car, FileText, Package, ChevronRight, ClipboardList, CalendarDays } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
@@ -107,21 +107,6 @@ export default function GlobalSearch() {
     queryFn: () => base44.entities.Appointment.filter({ created_by: user.email }, "-created_date", 200),
     enabled: !!user,
   });
-  const { data: mechanics = [] } = useQuery({
-    queryKey: ["mechanics", user?.email],
-    queryFn: () => base44.entities.Mechanic.filter({ created_by: user.email }, "-created_date", 100),
-    enabled: !!user,
-  });
-  const { data: timeEntries = [] } = useQuery({
-    queryKey: ["timeEntries_search", user?.email],
-    queryFn: () => base44.entities.TimeEntry.filter({ created_by: user.email }, "-created_date", 500),
-    enabled: !!user,
-  });
-  const { data: paymentRecords = [] } = useQuery({
-    queryKey: ["paymentRecords_search"],
-    queryFn: () => base44.entities.PaymentRecord.list("-payment_date", 500),
-    enabled: !!user,
-  });
 
   const results = useMemo(() => {
     if (!enabled) return [];
@@ -131,14 +116,14 @@ export default function GlobalSearch() {
 
     // Orders
     orders.forEach(o => {
-      const h = [o.order_number, o.customer_name, o.vehicle_info, o.description, o.mechanic_name, o.status, o.notes, o.complaint].filter(Boolean).join(" ");
+      const h = [o.order_number, o.customer_name, o.vehicle_info, o.description, o.mechanic_name].filter(Boolean).join(" ");
       const score = scoreMatch(h, tokens);
       if (score >= 0) all.push({ type: "order", score, item: o });
     });
 
     // Customers
     customers.forEach(c => {
-      const h = [c.full_name, c.phone, c.email, c.address, c.notes, c.city].filter(Boolean).join(" ");
+      const h = [c.full_name, c.phone, c.email, c.address].filter(Boolean).join(" ");
       const score = scoreMatch(h, tokens);
       if (score >= 0) all.push({ type: "customer", score, item: c });
     });
@@ -152,7 +137,7 @@ export default function GlobalSearch() {
 
     // Invoices
     invoices.forEach(i => {
-      const h = [i.invoice_number, i.customer_name, i.vehicle_info, i.status, i.payment_method, String(i.total || ""), i.technician_notes].filter(Boolean).join(" ");
+      const h = [i.invoice_number, i.customer_name, i.vehicle_info].filter(Boolean).join(" ");
       const score = scoreMatch(h, tokens);
       if (score >= 0) all.push({ type: "invoice", score, item: i });
     });
@@ -166,53 +151,29 @@ export default function GlobalSearch() {
 
     // Estimates
     estimates.forEach(e => {
-      const h = [e.estimate_number, e.customer_name, e.vehicle_info, e.status, e.notes, String(e.grand_total || "")].filter(Boolean).join(" ");
+      const h = [e.estimate_number, e.customer_name, e.vehicle_info, e.status].filter(Boolean).join(" ");
       const score = scoreMatch(h, tokens);
       if (score >= 0) all.push({ type: "estimate", score, item: e });
     });
 
     // Appointments
     appointments.forEach(a => {
-      const h = [a.customer_name, a.vehicle_info, a.service_type, a.date, a.notes, a.time_slot, a.mechanic_name, a.status].filter(Boolean).join(" ");
+      const h = [a.customer_name, a.vehicle_info, a.service_type, a.date, a.notes, a.time_slot].filter(Boolean).join(" ");
       const score = scoreMatch(h, tokens);
       if (score >= 0) all.push({ type: "appointment", score, item: a });
     });
 
-    // Mechanics
-    mechanics.forEach(m => {
-      const h = [m.name, m.phone, m.email, m.specialty, m.status].filter(Boolean).join(" ");
-      const score = scoreMatch(h, tokens);
-      if (score >= 0) all.push({ type: "mechanic", score, item: m });
-    });
-
-    // Time Entries
-    timeEntries.forEach(t => {
-      const h = [t.mechanic_name, t.date, t.notes, t.status, String(t.hours || "")].filter(Boolean).join(" ");
-      const score = scoreMatch(h, tokens);
-      if (score >= 0) all.push({ type: "timeentry", score, item: t });
-    });
-
-    // Payroll Records
-    paymentRecords.forEach(p => {
-      const h = [p.mechanic_name, p.period, p.notes, p.payment_date, String(p.amount || "")].filter(Boolean).join(" ");
-      const score = scoreMatch(h, tokens);
-      if (score >= 0) all.push({ type: "payroll", score, item: p });
-    });
-
-    return all.sort((a, b) => b.score - a.score).slice(0, 25);
-  }, [query, orders, customers, vehicles, invoices, parts, estimates, appointments, mechanics, timeEntries, paymentRecords, enabled]);
+    return all.sort((a, b) => b.score - a.score).slice(0, 20);
+  }, [query, orders, customers, vehicles, invoices, parts, estimates, appointments, enabled]);
 
   const typeConfig = {
-    order:       { icon: Wrench,        label: "Repair Order", color: "text-sky-400",    bg: "bg-sky-500/10",    nav: (item) => navigate(`/RepairOrderDetail/${item.id}`) },
-    customer:    { icon: Users,         label: "Customer",     color: "text-emerald-400", bg: "bg-emerald-500/10", nav: (item) => navigate(`/CustomerDetails?id=${item.id}`) },
-    vehicle:     { icon: Car,           label: "Vehicle",      color: "text-amber-400",  bg: "bg-amber-500/10",  nav: (item) => navigate(`/Vehicles?vehicleId=${item.id}`) },
-    invoice:     { icon: FileText,      label: "Invoice",      color: "text-purple-400", bg: "bg-purple-500/10", nav: (item) => navigate(`/InvoiceDetail/${item.id}`) },
+    order:       { icon: Wrench,        label: "Repair Order", color: "text-sky-400",    bg: "bg-sky-500/10",    nav: (item) => navigate(`/RepairOrderDetail/${item.id}`), listNav: (q) => navigate(`/RepairOrders?q=${encodeURIComponent(q)}`) },
+    customer:    { icon: Users,         label: "Customer",     color: "text-emerald-400", bg: "bg-emerald-500/10", nav: (item) => navigate(`/CustomerDetails?id=${item.id}`), listNav: (q) => navigate(`/Customers?q=${encodeURIComponent(q)}`) },
+    vehicle:     { icon: Car,           label: "Vehicle",      color: "text-amber-400",  bg: "bg-amber-500/10",  nav: (item) => navigate(`/Vehicles?vehicleId=${item.id}`), listNav: (q) => navigate(`/Vehicles?q=${encodeURIComponent(q)}`) },
+    invoice:     { icon: FileText,      label: "Invoice",      color: "text-purple-400", bg: "bg-purple-500/10", nav: (item) => navigate(`/InvoiceDetail/${item.id}`), listNav: (q) => navigate(`/Invoices?q=${encodeURIComponent(q)}`) },
     part:        { icon: Package,       label: "Part",         color: "text-rose-400",   bg: "bg-rose-500/10",   nav: () => navigate(`/Parts`) },
-    estimate:    { icon: ClipboardList, label: "Estimate",     color: "text-violet-400", bg: "bg-violet-500/10", nav: (item) => navigate(`/EstimateDetail/${item.id}`) },
+    estimate:    { icon: ClipboardList, label: "Estimate",     color: "text-violet-400", bg: "bg-violet-500/10", nav: (item) => navigate(`/EstimateDetail/${item.id}`), listNav: (q) => navigate(`/Estimates?q=${encodeURIComponent(q)}`) },
     appointment: { icon: CalendarDays,  label: "Appointment",  color: "text-orange-400", bg: "bg-orange-500/10", nav: (item) => navigate(`/Appointments?appointmentId=${item.id}`) },
-    mechanic:    { icon: HardHat,       label: "Mechanic",     color: "text-rose-400",   bg: "bg-rose-500/10",   nav: () => navigate(`/Mechanics`) },
-    timeentry:   { icon: Clock,         label: "Time Entry",   color: "text-yellow-400", bg: "bg-yellow-500/10", nav: () => navigate(`/TimeTracking`) },
-    payroll:     { icon: Banknote,      label: "Payroll",      color: "text-green-400",  bg: "bg-green-500/10",  nav: () => navigate(`/Payroll`) },
   };
 
   const handleSelect = (result) => {
@@ -230,9 +191,6 @@ export default function GlobalSearch() {
     if (type === "part") return item.name;
     if (type === "estimate") return `${item.estimate_number} — ${item.customer_name}`;
     if (type === "appointment") return `${item.customer_name} — ${item.service_type}`;
-    if (type === "mechanic") return item.name;
-    if (type === "timeentry") return `${item.mechanic_name} — ${item.date}`;
-    if (type === "payroll") return `${item.mechanic_name} — $${(item.amount || 0).toFixed(2)}`;
     return "";
   };
 
@@ -244,10 +202,7 @@ export default function GlobalSearch() {
     if (type === "invoice") return `$${(item.total || 0).toFixed(2)} · ${item.status}`;
     if (type === "part") return [item.part_number && `#${item.part_number}`, item.supplier].filter(Boolean).join(" · ");
     if (type === "estimate") return `$${(item.grand_total || 0).toFixed(2)} · ${item.status}`;
-    if (type === "appointment") return `${item.date} ${item.time_slot || ""} · ${item.status}`;
-    if (type === "mechanic") return [item.specialty, item.phone, item.status].filter(Boolean).join(" · ");
-    if (type === "timeentry") return `${item.hours || "?"} hrs · ${item.status || ""}`;
-    if (type === "payroll") return `${item.period || ""} · ${item.payment_date || ""}`;
+    if (type === "appointment") return `${item.date} ${item.time_slot} · ${item.status}`;
     return "";
   };
 
@@ -277,6 +232,14 @@ export default function GlobalSearch() {
           value={query}
           onChange={e => { setQuery(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
+          onKeyDown={e => {
+            if (e.key === "Enter" && query.trim() && results.length > 0) {
+              const topType = results[0].type;
+              const cfg = typeConfig[topType];
+              if (cfg?.listNav) { cfg.listNav(query.trim()); setQuery(""); setOpen(false); }
+              else { cfg?.nav(results[0].item); setQuery(""); setOpen(false); }
+            }
+          }}
           placeholder="Search everything... (⌘K)"
           className="w-full pl-10 pr-8 py-2 bg-gray-800/60 border border-gray-700/60 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-sky-500/70 focus:border-sky-500/50 transition-all"
         />
@@ -348,6 +311,30 @@ export default function GlobalSearch() {
               </div>
             </div>
           )}
+          {/* Jump-to-page footer */}
+          {results.length > 0 && (() => {
+            const typeCounts = {};
+            results.forEach(r => { typeCounts[r.type] = (typeCounts[r.type] || 0) + 1; });
+            const jumpLinks = Object.entries(typeCounts)
+              .filter(([type]) => typeConfig[type]?.listNav)
+              .slice(0, 4);
+            if (jumpLinks.length === 0) return null;
+            return (
+              <div className="border-t border-gray-800/60 px-3 py-2 flex flex-wrap gap-2">
+                {jumpLinks.map(([type, count]) => {
+                  const cfg = typeConfig[type];
+                  return (
+                    <button key={type}
+                      onClick={() => { cfg.listNav(query.trim()); setQuery(""); setOpen(false); }}
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${cfg.bg} ${cfg.color} hover:opacity-80`}>
+                      <cfg.icon className="w-3 h-3" />
+                      See all {count} {cfg.label}{count !== 1 ? "s" : ""} →
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
       )}
     </div>
