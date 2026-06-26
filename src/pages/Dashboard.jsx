@@ -132,9 +132,11 @@ export default function Dashboard() {
 
       <RecentActivity orders={orders} invoices={invoices} customers={customers} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <TodayAppointments appointments={appointments} customers={customers} onApptClick={(appt) => { setModal({ title: "Today's Appointments", items: todayAppts, type: "appt" }); setSelectedAppt(appt); }} />
+      {/* 3-column scrollable widget row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <RecentOrders orders={orders} customers={customers} />
         <RecentEstimates estimates={estimates} customers={customers} />
+        <RecentInvoices invoices={invoices} customers={customers} />
       </div>
 
       {/* Modal */}
