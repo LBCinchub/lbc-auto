@@ -3,7 +3,7 @@ import { useNavigate, useLocation} from 'react-router-dom';
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { ClipboardList, Pencil, Trash2, CheckCircle2, FileText, Phone, Mail, Hash, Sheet, Send, Loader2, ThumbsUp, Wrench, ChevronRight } from "lucide-react";
+import { ClipboardList, Pencil, Trash2, CheckCircle2, FileText, Phone, Mail, Hash, Sheet, Send, Loader2, ThumbsUp, Wrench, ChevronRight, CreditCard } from "lucide-react";
 import { useEmailSend } from "@/hooks/useEmailSend";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { fuzzyMatch } from "@/utils/fuzzySearch";
@@ -13,6 +13,7 @@ import SearchBar from "../components/shared/SearchBar";
 import EmptyState from "../components/shared/EmptyState";
 import EstimateFormDialog from "../components/estimates/EstimateFormDialog";
 import InvoiceFormDialog from "../components/invoices/InvoiceFormDialog";
+import PaymentReceiptDialog from "../components/invoices/PaymentReceiptDialog";
 import DateFilter, { applyDateFilter } from "../components/shared/DateFilter";
 
 const STATUS_STYLES = {
@@ -37,6 +38,7 @@ export default function Estimates() {
   const [editing, setEditing] = useState(null);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [invoiceFromEstimate, setInvoiceFromEstimate] = useState(null);
+  const [cashoutEstimate, setCashoutEstimate] = useState(null);
   const [dateRange, setDateRange] = useState(null);
   const [user, setUser] = useState(null);
   const [approvingId, setApprovingId] = useState(null);
@@ -357,13 +359,40 @@ export default function Estimates() {
                       → Repair Order
                     </button>
                   </div>
-                  {/* Secondary icon actions */}
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-500 hover:text-sky-400" title="Send to Customer" onClick={e => sendEstimateEmail(e, est)} disabled={sendingEmail === est.id}>
+                  {/* Secondary action row */}
+                  <div className="flex gap-1.5 flex-wrap">
+                    {/* → Invoice */}
+                    <button
+                      onClick={e => { e.stopPropagation(); openInvoiceFromEstimate(est); }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/25 transition-colors"
+                      title="Convert to Invoice">
+                      <FileText className="w-3.5 h-3.5" /> → Invoice
+                    </button>
+                    {/* 💳 Cashout */}
+                    <button
+                      onClick={e => { e.stopPropagation(); setCashoutEstimate({
+                        id: est.id,
+                        customer_id: est.customer_id || "",
+                        customer_name: est.customer_name,
+                        vehicle_info: est.vehicle_info,
+                        total: est.grand_total || 0,
+                        labor_cost: est.labor_total || 0,
+                        parts_cost: est.parts_total || 0,
+                        tax_amount: est.tax_amount || 0,
+                        amount_paid: est.amount_paid || 0,
+                        balance_due: (est.grand_total || 0) - (est.amount_paid || 0),
+                        payment_history: est.payment_history || [],
+                        linked_invoice_id: est.linked_invoice_id || null,
+                        linked_invoice_number: est.linked_invoice_number || null,
+                        _source: "estimate",
+                      }); }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25 transition-colors"
+                      title="Cashout this estimate">
+                      <CreditCard className="w-3.5 h-3.5" /> Cashout
+                    </button>
+                    {/* icon-only row */}
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-500 hover:text-sky-400" title="Email" onClick={e => sendEstimateEmail(e, est)} disabled={sendingEmail === est.id}>
                       {sendingEmail === est.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-500 hover:text-sky-400" title="Convert to Invoice" onClick={e => { e.stopPropagation(); openInvoiceFromEstimate(est); }}>
-                      <FileText className="w-3 h-3" />
                     </Button>
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-500 hover:text-white" onClick={e => { e.stopPropagation(); openEdit(est); }}>
                       <Pencil className="w-3 h-3" />
@@ -401,6 +430,20 @@ export default function Estimates() {
           queryClient.invalidateQueries({ queryKey: ["invoices"] });
         }}
       />
+
+      {cashoutEstimate && (
+        <PaymentReceiptDialog
+          open={!!cashoutEstimate}
+          onClose={() => setCashoutEstimate(null)}
+          record={cashoutEstimate}
+          entityType="Invoice"
+          onSaved={() => {
+            setCashoutEstimate(null);
+            queryClient.invalidateQueries({ queryKey: ["estimates"] });
+            queryClient.invalidateQueries({ queryKey: ["invoices"] });
+          }}
+        />
+      )}
     </div>
   );
 }
