@@ -39,9 +39,9 @@ export default function RepairOrders() {
     const q = new URLSearchParams(_location.search).get("q") || "";
     if (q) setSearch(q);
   }, [_location.search]);
-  const [searchField, setSearchField] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [page, setPage] = useState(1);
+  const [searchField, setSearchField] = useState(() => new URLSearchParams(window.location.search).get("sf") || "all");
+  const [statusFilter, setStatusFilter] = useState(() => new URLSearchParams(window.location.search).get("status") || "all");
+  const [page, setPage] = useState(() => parseInt(new URLSearchParams(window.location.search).get("pg") || "1", 10));
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
   const [paymentOrder, setPaymentOrder] = useState(null);
@@ -141,13 +141,39 @@ export default function RepairOrders() {
     queryClient.invalidateQueries({ queryKey: ["parts"] });
   };
 
+
+  // URL persistence — keeps filters in sync so Back/Forward restores layout
+  const _location = useLocation();
+  const _navigate = useNavigate();
+  const _pushParams = React.useCallback((updates) => {
+    const p = new URLSearchParams(window.location.search);
+    Object.entries(updates).forEach(([k, v]) => {
+      if (!v || v === 'all' || v === 1) p.delete(k);
+      else p.set(k, String(v));
+    });
+    const qs = p.toString();
+    _navigate({ search: qs ? '?' + qs : '' }, { replace: true });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  React.useEffect(() => {
+    const _p = new URLSearchParams(_location.search);
+    const _q = _p.get('q') || '';
+    setSearch(prev => prev !== _q ? _q : prev);
+    const _sf = _p.get('sf') || 'all';
+    setSearchField(prev => prev !== _sf ? _sf : prev);
+    const _status = _p.get('status') || 'all';
+    setStatusFilter(prev => prev !== _status ? _status : prev);
+    const _pg = parseInt(_p.get('pg') || '1', 10);
+    setPage(prev => prev !== _pg ? _pg : prev);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [_location.search]);
   return (
     <div className="space-y-6">
       <PageHeader title="Repair Orders" subtitle={dateRange ? `${filtered.length} orders found` : `${orders.length} total orders`}
         onAdd={() => { setEditingOrder(null); setDialogOpen(true); }} addLabel="New Order" />
 
       <div className="flex gap-2 items-center">
-         <Select value={searchField} onValueChange={setSearchField}>
+         <Select value={searchField} onValueChange={(v) => { setSearchField(v); _pushParams({ sf: v }); }}>
            <SelectTrigger className="w-36 bg-gray-900 border-gray-700 text-gray-300">
              <SelectValue />
            </SelectTrigger>
@@ -160,7 +186,7 @@ export default function RepairOrders() {
            </SelectContent>
          </Select>
          <div className="flex-1">
-           <SearchBar value={search} onChange={setSearch} placeholder={
+           <SearchBar value={search} onChange={(v) => { setSearch(v); _pushParams({ q: v }); }} placeholder={
              searchField === "order_number" ? "Search by order #..." :
              searchField === "customer" ? "Search by customer..." :
              searchField === "vehicle" ? "Search by vehicle..." :
@@ -171,7 +197,7 @@ export default function RepairOrders() {
 
        <DateFilter onChange={setDateRange} />
 
-       <Tabs value={statusFilter} onValueChange={setStatusFilter}>
+       <Tabs value={statusFilter} onValueChange={(v) => { setStatusFilter(v); _pushParams({ status: v }); }}>
          <TabsList className="bg-gray-800/50 flex-wrap h-auto">
            {statusFilters.map(s => (
              <TabsTrigger key={s.value} value={s.value}
