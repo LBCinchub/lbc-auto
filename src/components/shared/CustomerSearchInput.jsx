@@ -40,7 +40,6 @@ export default function CustomerSearchInput({ customers = [], value, onChange })
             const v = e.target.value.replace(/(^|\s)(\S)/g, (_, s, c) => s + c.toUpperCase());
             setQuery(v); setOpen(true); if (!v) onChange("", "");
           }}
-          onFocus={() => setOpen(true)}
           className="bg-gray-800 border-gray-700 text-white mt-1 pl-9"
           placeholder="Search customer by name or phone..."
         />
