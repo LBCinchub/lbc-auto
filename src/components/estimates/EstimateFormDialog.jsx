@@ -16,6 +16,7 @@ const emptyPartRow  = () => ({ name: "", part_number: "", quantity: "", unit_pri
 const emptyForm = {
   customer_id: "", customer_name: "", vehicle_id: "", vehicle_info: "",
   status: "draft", notes: "", tax_rate: "0", apply_tax: true, tax_applies_to: "both", valid_until: "",
+  discount_type: "none", discount_value: 0,
   labor_items: [emptyLaborRow()],
   parts_items: [emptyPartRow()],
   repair_order_id: "",
@@ -217,16 +218,20 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
   const laborTotal = form.labor_items.reduce((s, r) => s + (parseFloat(r.hours) || 0) * (parseFloat(r.rate) || 0), 0);
   const partsTotal = form.parts_items.reduce((s, r) => s + (parseFloat(r.quantity) || 0) * (parseFloat(r.unit_price) || 0), 0);
   const subtotal   = laborTotal + partsTotal;
+  const discountAmount = form.discount_type === "percentage"
+    ? subtotal * ((form.discount_value || 0) / 100)
+    : form.discount_type === "fixed" ? (form.discount_value || 0) : 0;
+  const subtotalAfterDiscount = subtotal - discountAmount;
   const taxRate    = form.apply_tax ? (parseFloat(form.tax_rate) || 0) : 0;
 
   const taxAppliesTo = form.tax_applies_to || "both";
   let taxableAmount = 0;
   if (taxAppliesTo === "labor") taxableAmount = laborTotal;
   else if (taxAppliesTo === "parts") taxableAmount = partsTotal;
-  else taxableAmount = subtotal;
+  else taxableAmount = subtotalAfterDiscount;
 
   const taxAmount  = taxableAmount * (taxRate / 100);
-  const grandTotal = subtotal + taxAmount;
+  const grandTotal = subtotalAfterDiscount + taxAmount;
 
   const handleCustomerChange = (cid) => {
     const customer = allCustomers.find(c => c.id === cid);
@@ -318,6 +323,9 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
         apply_tax: form.apply_tax,
         tax_applies_to: form.tax_applies_to || "both",
         tax_rate: taxRate,
+        discount_type: form.discount_type || "none",
+        discount_value: form.discount_value || 0,
+        discount_amount: discountAmount,
         labor_items: form.labor_items.map(r => ({ ...r, hours: parseFloat(r.hours) || 0, rate: parseFloat(r.rate) || 120 })),
         parts_items: form.parts_items.map(r => ({ ...r, quantity: parseFloat(r.quantity) || 0, unit_price: parseFloat(r.unit_price) || 0 })),
         labor_total: laborTotal,
@@ -607,6 +615,28 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
             </div>
           </div>
 
+          {/* Discount */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-gray-400">Discount</Label>
+              <select value={form.discount_type} onChange={e => setForm(f => ({ ...f, discount_type: e.target.value, discount_value: 0 }))}
+                className="w-full mt-1 h-9 rounded-md bg-gray-800 border border-gray-700 text-white px-2 text-sm">
+                <option value="none">No Discount</option>
+                <option value="percentage">Percentage (%)</option>
+                <option value="fixed">Fixed Amount ($)</option>
+              </select>
+            </div>
+            {form.discount_type !== "none" && (
+              <div>
+                <Label className="text-gray-400">{form.discount_type === "percentage" ? "Discount %" : "Discount $"}</Label>
+                <Input type="number" onFocus={e => e.target.select()} step="0.01" min="0"
+                  value={form.discount_value}
+                  onChange={e => setForm(f => ({ ...f, discount_value: Number(e.target.value) }))}
+                  className="bg-gray-800 border-gray-700 text-white mt-1" />
+              </div>
+            )}
+          </div>
+
           {/* Labor Items */}
           <div>
             {validationErrors.lineItems && <p className="text-rose-400 text-xs mb-2">{validationErrors.lineItems}</p>}
@@ -750,6 +780,12 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
           <div className="rounded-xl border border-gray-700 bg-gray-800/40 p-4 space-y-2 text-sm">
             <div className="flex justify-between text-gray-400"><span>Labor Subtotal</span><span>${laborTotal.toFixed(2)}</span></div>
             <div className="flex justify-between text-gray-400"><span>Parts Subtotal</span><span>${partsTotal.toFixed(2)}</span></div>
+            {discountAmount > 0 && (
+              <div className="flex justify-between text-emerald-400">
+                <span>Discount {form.discount_type === "percentage" ? `(${form.discount_value}%)` : ""}</span>
+                <span>-${discountAmount.toFixed(2)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-gray-400 border-t border-gray-700/50 pt-2"><span>Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
             <div className="flex justify-between text-gray-400">
               <span>Tax ({parseFloat(form.tax_rate) || 0}%)</span>
