@@ -35,7 +35,11 @@ export default function CustomerSearchInput({ customers = [], value, onChange })
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <Input
           value={query}
-          onChange={e => { setQuery(e.target.value); setOpen(true); if (!e.target.value) onChange("", ""); }}
+          autoCapitalize="words"
+          onChange={e => {
+            const v = e.target.value.replace(/(^|\s)(\S)/g, (_, s, c) => s + c.toUpperCase());
+            setQuery(v); setOpen(true); if (!v) onChange("", "");
+          }}
           onFocus={() => setOpen(true)}
           className="bg-gray-800 border-gray-700 text-white mt-1 pl-9"
           placeholder="Search customer by name or phone..."
