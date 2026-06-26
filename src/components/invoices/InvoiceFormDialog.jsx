@@ -17,6 +17,7 @@ const emptyForm = {
   parts_total: 0, labor_total: 0, tax_rate: 0, apply_tax_parts: true, apply_tax_labor: true, status: "unpaid",
   due_date: "", payment_method: "", amount_paid: 0, payment_history: [],
   receipt_number: "", card_last4: "", cashier_name: "", parts_used: [], labor_items: [], customer_note: "", service_reason: "",
+  invoice_date: new Date().toISOString().split("T")[0],
   discount_type: "none", discount_value: 0, technician_notes: "",
 };
 
@@ -66,6 +67,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
           tax_rate: invoice.tax_rate != null ? invoice.tax_rate : userTaxRate,
           status: invoice.status || "unpaid",
           due_date: invoice.due_date || "",
+          invoice_date: invoice.invoice_date || invoice.created_date?.split("T")[0] || new Date().toISOString().split("T")[0],
           payment_method: invoice.payment_method || "",
           amount_paid: invoice.amount_paid || 0,
           payment_history: invoice.payment_history || [],
