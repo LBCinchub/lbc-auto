@@ -300,7 +300,7 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
             <Label className="text-gray-400">Vehicle *</Label>
             {newVehicleForm !== null ? (
               <div className="bg-gray-800 border border-sky-500/30 rounded-lg p-2 mt-1 space-y-2">
-                <input value={newVehicleForm.vin} onChange={e => setNewVehicleForm({...newVehicleForm, vin: e.target.value})}
+                <input value={newVehicleForm.vin} onChange={e => setNewVehicleForm({...newVehicleForm, vin: e.target.value.toUpperCase()})}
                   className="w-full px-2 py-1 bg-gray-700 border-gray-600 text-white rounded text-xs" placeholder="VIN (optional)" />
                 {newVehicleForm.vin && (
                   <Button size="sm" onClick={decodeVinForNewVehicle} disabled={decodingVin || newVehicleForm.vin.length < 11} className="w-full bg-purple-600 hover:bg-purple-700 text-white text-xs">
