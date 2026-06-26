@@ -337,6 +337,24 @@ export default function Settings() {
           </p>
         </div>
 
+        {/* Email + Google Review */}
+        <div className="space-y-3 pt-2 border-t border-gray-800">
+          <h3 className="text-sky-400 font-semibold text-sm uppercase tracking-wider">📧 Email & Reviews</h3>
+          <div>
+            <label className="text-xs text-gray-500 uppercase tracking-wider">Shop Email (shown on emails)</label>
+            <Input value={shopEmail} onChange={e => setShopEmail(e.target.value)}
+              placeholder="shop@example.com"
+              className="bg-gray-800 border-gray-700 text-white mt-1" />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 uppercase tracking-wider">Google Review Link</label>
+            <Input value={googleReviewLink} onChange={e => setGoogleReviewLink(e.target.value)}
+              placeholder="https://g.page/r/YOUR_ID/review"
+              className="bg-gray-800 border-gray-700 text-white mt-1" />
+            <p className="text-xs text-gray-600 mt-1">Paste your Google Maps review link — it will appear as a button at the bottom of every customer email.</p>
+          </div>
+        </div>
+
         <Button
           onClick={handleSave}
           disabled={saving || !businessName.trim()}
