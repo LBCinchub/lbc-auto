@@ -302,37 +302,37 @@ export default function InvoiceDetail() {
           <ArrowLeft className="w-4 h-4" /> Back to Invoices
         </Button>
         <div className="flex flex-wrap gap-2">
-          {/* Repair Order link if exists */
+          {/* Repair Order link if exists */}
           {invoice?.repair_order_id && (
             <Button variant="outline" size="sm" onClick={() => navigate(`/RepairOrderDetail/${invoice.repair_order_id}`)}
               className="border-gray-700 text-gray-300 h-9 gap-1.5 text-xs hover:border-gray-500">
               View Repair Order
             </Button>
           )}
-          {/* Email */
+          {/* Email */}
           <Button variant="outline" size="sm" onClick={handleSendEmail} disabled={sendingEmail}
             className="border-gray-700 text-gray-300 h-9 gap-1.5 text-xs hover:border-sky-500 hover:text-sky-400">
             {sendingEmail ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
             Email
           </Button>
-          {/* Cashout — full PaymentReceiptDialog */
+          {/* Cashout — full PaymentReceiptDialog */}
           {invoice?.status !== "paid" && (
             <Button size="sm" onClick={() => setShowCashoutDialog(true)}
               className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 h-9 text-xs">
               <CreditCard className="w-3.5 h-3.5" /> Cashout
             </Button>
           )}
-          {/* Print / Save PDF */
+          {/* Print / Save PDF */}
           <Button variant="outline" size="sm" onClick={() => window.print()}
             className="border-gray-700 text-gray-300 h-9 gap-1.5 text-xs hover:border-sky-500 hover:text-sky-400">
             <Printer className="w-3.5 h-3.5" /> Print / Save PDF
           </Button>
-          {/* Share */
+          {/* Share */}
           <Button variant="outline" size="sm" onClick={handleShare}
             className="border-gray-700 text-gray-300 h-9 gap-1.5 text-xs hover:border-violet-500 hover:text-violet-400">
             <Share2 className="w-3.5 h-3.5" /> Share
           </Button>
-          {/* Save Changes */
+          {/* Save Changes */}
           <Button size="sm" onClick={handleSave} disabled={saving}
             className={`gap-1.5 h-9 text-xs ${savedOk ? "bg-emerald-600 hover:bg-emerald-700" : "bg-sky-500 hover:bg-sky-600"}`}>
             {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
