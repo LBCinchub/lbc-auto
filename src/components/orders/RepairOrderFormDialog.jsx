@@ -15,6 +15,7 @@ import { useNhtsaVinDecode } from "@/hooks/useNhtsaVinDecode";
 import { useToast } from "@/components/ui/use-toast";
 
 import CustomerSearchInput from "@/components/shared/CustomerSearchInput";
+import { capWords } from "@/utils/capitalize";
 
 const statuses = [
   { value: "waiting", label: "Waiting" },
@@ -419,7 +420,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                        <X className="w-3.5 h-3.5" />
                      </button>
                    </div>
-                   <Input value={newCustomerForm.full_name} onChange={e => setNewCustomerForm({...newCustomerForm, full_name: e.target.value})}
+                   <Input value={newCustomerForm.full_name} autoCapitalize="words" onChange={e => setNewCustomerForm(p => ({...p, full_name: e.target.value.replace(/(^|\s)(\S)/g,(_,s,c)=>s+c.toUpperCase())}))}
                      className="bg-gray-700 border-gray-600 text-white" placeholder="Full name *" />
                    <Input value={newCustomerForm.phone} onChange={e => setNewCustomerForm({...newCustomerForm, phone: e.target.value})}
                      className="bg-gray-700 border-gray-600 text-white" placeholder="Phone number *" />
