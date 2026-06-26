@@ -202,6 +202,11 @@
     "auth_signer_name": {
       "type": "string",
       "description": "Name entered by customer when signing"
+    },
+    "invoice_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Editable invoice date shown on the document (defaults to created_date)"
     }
   },
   "required": [
