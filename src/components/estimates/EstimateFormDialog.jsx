@@ -428,7 +428,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
                  <Input
                    value={customerSearch}
                    onChange={e => handleCustomerSearchChange(e.target.value)}
-                   onFocus={() => { if (customerDropdown.length > 0) setShowCustomerDropdown(true); }}
+                   onFocus={() => {}}
                    onBlur={() => setTimeout(() => setShowCustomerDropdown(false), 150)}
                    placeholder="Search customer by name or phone..."
                    className={`bg-gray-800 border-gray-700 text-white pl-8 ${validationErrors.customer ? "border-rose-500" : ""}`}
