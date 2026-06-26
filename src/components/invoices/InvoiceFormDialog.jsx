@@ -460,7 +460,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
                         <p className="text-xs text-sky-400 font-medium">New Vehicle</p>
                         <button onClick={() => setNewVehicleForm(null)} className="text-gray-500 hover:text-gray-300"><X className="w-3.5 h-3.5" /></button>
                       </div>
-                      <Input value={newVehicleForm.vin || ""} onChange={e => setNewVehicleForm({...newVehicleForm, vin: e.target.value})}
+                      <Input value={newVehicleForm.vin || ""} onChange={e => setNewVehicleForm({...newVehicleForm, vin: e.target.value.toUpperCase()})}
                         className="bg-gray-700 border-gray-600 text-white text-xs" placeholder="VIN (optional)" />
                       <div className="grid grid-cols-3 gap-1">
                         <Input value={newVehicleForm.year || ""} onChange={e => setNewVehicleForm({...newVehicleForm, year: e.target.value})}
@@ -489,7 +489,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
                       <div className="flex gap-2">
                         <Input
                           value={vinInput}
-                          onChange={e => { setVinInput(e.target.value); setVinDecodeError(""); }}
+                          onChange={e => { setVinInput(e.target.value.toUpperCase()); setVinDecodeError(""); }}
                           placeholder="Paste VIN to decode..."
                           className="bg-gray-800 border-gray-700 text-white text-xs h-8"
                         />
