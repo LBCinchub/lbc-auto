@@ -149,7 +149,7 @@ export default function Vehicles() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map(v => (
-            <div key={v.id} className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5 hover:border-sky-500/50 hover:shadow-sky-500/10 hover:shadow-lg transition-all duration-200 cursor-pointer" onClick={() => navigate(`/VehicleTimeline/${v.id}`)}>
+            <div key={v.id} onClick={() => navigate(`/VehicleTimeline/${v.id}`)} className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5 hover:border-sky-500 cursor-pointer/50 hover:shadow-sky-500/10 hover:shadow-lg transition-all duration-200 cursor-pointer" onClick={() => navigate(`/VehicleTimeline/${v.id}`)}>
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-sky-500/20 flex items-center justify-center">
@@ -157,7 +157,7 @@ export default function Vehicles() {
                   </div>
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="text-green-400 font-semibold capitalize">{v.year} {v.make} {v.model}</h3>
+                      <h3 className="text-green-400 font-semibold capitalize hover:underline">{v.year} {v.make} {v.model}</h3>
                       {isDueForService(v.id) && (
                         <span className="text-xs bg-orange-500/20 text-orange-400 border border-orange-500/30 px-1.5 py-0.5 rounded-full font-medium">Due for Service</span>
                       )}
@@ -170,7 +170,7 @@ export default function Vehicles() {
                         <p
                           className="text-xs text-blue-400 font-medium capitalize cursor-pointer hover:text-sky-300 hover:underline"
                           onClick={(e) => { e.stopPropagation(); navigate(`/CustomerDetails?id=${customerId}`); }}
-                        >👤 {displayName}</p>
+                        ><span className="underline decoration-dotted">👤 {displayName}</span></p>
                       ) : null;
                     })()}
                     {(() => { const c = customers.find(c => c.id === v.customer_id); return c?.phone ? <p className="text-xs text-amber-400">{formatPhone(c.phone)}</p> : null; })()}
@@ -204,6 +204,17 @@ export default function Vehicles() {
               {v.vin && (
                 <p className="mt-2 text-xs text-gray-600 font-mono">VIN: {v.vin}</p>
               )}
+              <div className="mt-3 pt-3 border-t border-gray-800/50 flex items-center justify-between">
+                <button
+                  onClick={e => { e.stopPropagation(); if (v.customer_id) navigate(`/CustomerDetails?id=${v.customer_id}`); }}
+                  className={`text-xs font-medium flex items-center gap-1 ${v.customer_id ? "text-blue-400 hover:text-sky-300 cursor-pointer" : "text-gray-600 cursor-default"}`}
+                >
+                  👤 {v.customer_name || "No customer"}
+                </button>
+                <span className="text-xs text-sky-400 hover:text-sky-300 flex items-center gap-1">
+                  View History →
+                </span>
+              </div>
             </div>
           ))}
         </div>
