@@ -372,6 +372,14 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         await base44.entities.RepairOrder.create(data);
       }
       
+      // ── Unified sync: Customer.last_visit + Vehicle.customer_id ──
+      await syncCustomerActivity({
+        customerId: form.customer_id,
+        vehicleId: form.vehicle_id,
+        vehicleInfo: form.vehicle_info,
+        customerName: form.customer_name,
+        customerPhone: form.customer_phone,
+      });
       onSaved(data.status);
       onClose();
     } catch (error) {
