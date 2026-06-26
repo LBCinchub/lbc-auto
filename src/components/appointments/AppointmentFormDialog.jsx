@@ -11,6 +11,7 @@ import { base44 } from "@/api/base44Client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Search, User, Plus, Loader2, X, ClipboardList, Wrench, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useNhtsaVinDecode } from "@/hooks/useNhtsaVinDecode";
 
 const timeSlots = [
   "8:00 AM", "8:30 AM", "9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM",
@@ -28,7 +29,6 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
   const [customerSearch, setCustomerSearch] = useState("");
   const [newCustomerForm, setNewCustomerForm] = useState(null);
   const [newVehicleForm, setNewVehicleForm] = useState(null);
-  const [decodingVin, setDecodingVin] = useState(false);
   const [localCustomers, setLocalCustomers] = useState([]);
   const [localVehicles, setLocalVehicles] = useState([]);
   const [fetchedVehicles, setFetchedVehicles] = useState([]);
@@ -41,6 +41,7 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
   const [saving, setSaving] = useState(false);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { decoding: decodingVin, vinError: vinDecodeError, decodeVin: nhtsaDecode, setVinError: setVinDecodeError } = useNhtsaVinDecode();
 
   useEffect(() => {
     if (!open) { setLocalCustomers([]); setLocalVehicles([]); setFetchedVehicles([]); }
@@ -149,29 +150,15 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
   };
 
   const decodeVinForNewVehicle = async () => {
-    if (!newVehicleForm?.vin || newVehicleForm.vin.length < 11) {
-      alert("Please enter a VIN with at least 11 characters.");
-      return;
-    }
-    setDecodingVin(true);
-    try {
-      const response = await base44.functions.invoke('decodeVin', { vin: newVehicleForm.vin });
-      const result = response.data;
-      if (result?.make) {
-        setNewVehicleForm(prev => ({
-          ...prev,
-          make: result.make || prev.make,
-          model: result.model || prev.model,
-          year: result.year || prev.year,
-          engine_type: result.engine_type || prev.engine_type,
-        }));
-      } else {
-        alert(result?.error || "Could not decode VIN. Please enter manually.");
-      }
-    } catch (err) {
-      alert("Error decoding VIN: " + (err?.message || "Please try again."));
-    } finally {
-      setDecodingVin(false);
+    const result = await nhtsaDecode(newVehicleForm?.vin);
+    if (result) {
+      setNewVehicleForm(prev => ({
+        ...prev,
+        make: result.make || prev.make,
+        model: result.model || prev.model,
+        year: result.year || prev.year,
+        engine_type: result.engine_type || prev.engine_type,
+      }));
     }
   };
 
