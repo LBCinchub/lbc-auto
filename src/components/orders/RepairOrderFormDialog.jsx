@@ -385,9 +385,24 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
       <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-2xl flex flex-col p-0" style={{ maxHeight: "90vh", height: "90vh" }}>
         {/* Fixed header */}
         <div className="flex-shrink-0 px-6 pt-6 pb-4 border-b border-gray-800">
-          <DialogHeader>
-            <DialogTitle>{order ? "Edit Repair Order" : "New Repair Order"}</DialogTitle>
-          </DialogHeader>
+          <div className="flex items-start justify-between gap-3">
+            <DialogHeader className="flex-1">
+              <DialogTitle>{order ? "Edit Repair Order" : "New Repair Order"}</DialogTitle>
+            </DialogHeader>
+            {(form.vehicle_info || form.customer_name) && (
+              <div className="flex flex-col items-end gap-1 shrink-0">
+                {form.vehicle_info && (
+                  <div className="flex items-center gap-1.5 bg-sky-500/15 border border-sky-500/30 text-sky-300 px-3 py-1 rounded-full text-xs font-medium">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 17H3a2 2 0 01-2-2V9a2 2 0 012-2h1l2-3h10l2 3h1a2 2 0 012 2v6a2 2 0 01-2 2h-2m-4 0a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                    {form.vehicle_info}
+                  </div>
+                )}
+                {form.customer_name && (
+                  <div className="text-gray-400 text-xs">{form.customer_name}</div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Scrollable body */}
