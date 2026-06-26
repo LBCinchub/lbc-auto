@@ -15,7 +15,7 @@ const emptyPartRow  = () => ({ name: "", part_number: "", quantity: "", unit_pri
 
 const emptyForm = {
   customer_id: "", customer_name: "", vehicle_id: "", vehicle_info: "",
-  status: "draft", notes: "", service_reason: "", tax_rate: "0", apply_tax: true, tax_applies_to: "both", valid_until: "",
+  status: "draft", notes: "", service_reason: "", estimate_date: new Date().toISOString().split("T")[0], tax_rate: "0", apply_tax: true, tax_applies_to: "both", valid_until: "",
   discount_type: "none", discount_value: 0,
   labor_items: [emptyLaborRow()],
   parts_items: [emptyPartRow()],
@@ -59,6 +59,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
           apply_tax: estimate.apply_tax !== false,
           tax_rate: estimate.tax_rate != null ? String(estimate.tax_rate) : String(userTaxRate),
           tax_applies_to: estimate.tax_applies_to || userTaxApplies,
+          estimate_date: estimate.estimate_date || estimate.created_date?.split("T")[0] || new Date().toISOString().split("T")[0],
           discount_type: estimate.discount_type || "none",
           discount_value: estimate.discount_value || 0,
           service_reason: estimate.service_reason || "",
@@ -610,6 +611,12 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
                   </Select>
                 )}
               </div>
+            </div>
+            <div>
+              <Label className="text-gray-400">Estimate Date</Label>
+              <Input type="date" value={form.estimate_date || ""}
+                onChange={e => setForm(f => ({ ...f, estimate_date: e.target.value }))}
+                className="bg-gray-800 border-gray-700 text-white mt-1" />
             </div>
             <div>
               <Label className="text-gray-400">Valid Until</Label>
