@@ -22,6 +22,9 @@ export default function EstimateDetail() {
   const [partsItems, setPartsItems] = useState([]);
   const [taxAppliesTo, setTaxAppliesTo] = useState("both");
   const [initialized, setInitialized] = useState(false);
+  const [estimateDate, setEstimateDate] = useState("");
+  const [estimateNotes, setEstimateNotes] = useState("");
+  const [estimateServiceReason, setEstimateServiceReason] = useState("");
 
   useEffect(() => {
     const loadUser = async () => {
@@ -70,6 +73,9 @@ export default function EstimateDetail() {
         }))
       );
       setTaxAppliesTo(estimate.tax_applies_to || "both");
+      setEstimateDate(estimate.estimate_date || estimate.created_date?.split("T")[0] || "");
+      setEstimateNotes(estimate.notes || "");
+      setEstimateServiceReason(estimate.service_reason || "");
       setInitialized(true);
     }
   }, [estimate, initialized]);
@@ -142,6 +148,9 @@ export default function EstimateDetail() {
       tax_amount: taxAmount,
       tax_applies_to: taxAppliesTo,
       grand_total: grandTotal,
+      estimate_date: estimateDate,
+      notes: estimateNotes,
+      service_reason: estimateServiceReason,
     });
 
     // FIX 1: Sync to linked Repair Orders (by estimate_id)
@@ -326,7 +335,7 @@ export default function EstimateDetail() {
         <PrintTemplate
           type="Estimate"
           docNumber={estimate.estimate_number}
-          createdDate={new Date(estimate.created_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+          createdDate={new Date((estimateDate || estimate.created_date) + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           user={user}
           customer={{ name: estimate.customer_name || customer?.full_name || "—", phone: customer?.phone, email: customer?.email, address: customer?.address }}
           vehicle={{ info: estimate.vehicle_info, vin: vehicleRecord?.vin, license_plate: vehicleRecord?.license_plate, color: vehicleRecord?.color, mileage: vehicleRecord?.mileage }}
@@ -336,8 +345,8 @@ export default function EstimateDetail() {
           ]}
           paymentHistory={[]}
           financials={{ laborTotal, partsTotal, taxRate, taxAmount, grandTotal }}
-          notes={estimate.notes}
-          serviceReason={estimate.service_reason}
+          notes={estimateNotes}
+          serviceReason={estimateServiceReason}
         />
       </div>
 
