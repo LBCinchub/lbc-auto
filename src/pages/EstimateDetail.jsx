@@ -28,6 +28,7 @@ export default function EstimateDetail() {
   const [estimateNotes, setEstimateNotes] = useState("");
   const [estimateServiceReason, setEstimateServiceReason] = useState("");
   const [discount, setDiscount] = useState(0);
+  const [discountType, setDiscountType] = useState("$"); // "$" or "%"
 
   useEffect(() => {
     const loadUser = async () => {
@@ -118,7 +119,8 @@ export default function EstimateDetail() {
     : taxAppliesTo === "none" ? 0
     : laborTotal + partsTotal; // "both"
   const taxAmount = taxableBase * (taxRate / 100);
-  const discountAmount = parseFloat(discount) || 0;
+  const discountValue = parseFloat(discount) || 0;
+  const discountAmount = discountType === "%" ? (subtotal * discountValue / 100) : discountValue;
   const grandTotal = Math.max(0, subtotal - discountAmount + taxAmount);
 
   // ── Share / Print ────────────────────────────────────────────────────────
@@ -586,22 +588,37 @@ export default function EstimateDetail() {
               <span>${((parseFloat(row.quantity) || 0) * (parseFloat(row.unit_price) || 0)).toFixed(2)}</span>
             </div>
           ))}
-          {/* Discount — always visible, always editable */}
+          {/* Discount — $ or % toggle, always visible */}
           <div className="flex items-center justify-between border-t border-gray-700/50 pt-2 gap-3">
-            <span className="text-gray-400 text-sm">Discount ($)</span>
-            <div className="flex items-center gap-2">
+            <span className="text-gray-400 text-sm">Discount</span>
+            <div className="flex items-center gap-1.5">
+              {/* $ / % toggle */}
+              <div className="flex rounded-md overflow-hidden border border-gray-700">
+                {["$", "%"].map(t => (
+                  <button
+                    key={t}
+                    onClick={() => setDiscountType(t)}
+                    className={`px-2.5 py-1 text-xs font-bold transition-colors ${
+                      discountType === t
+                        ? "bg-rose-500 text-white"
+                        : "bg-gray-800 text-gray-400 hover:bg-gray-700"
+                    }`}
+                  >{t}</button>
+                ))}
+              </div>
               <input
                 type="number"
                 min="0"
+                max={discountType === "%" ? 100 : undefined}
                 step="0.01"
                 value={discount}
                 onChange={e => setDiscount(e.target.value)}
                 onFocus={e => e.target.select()}
-                placeholder="0.00"
-                className="w-28 rounded-md bg-gray-800 border border-gray-700 text-rose-400 font-semibold text-sm text-right px-2 py-1 focus:border-sky-500 focus:outline-none"
+                placeholder="0"
+                className="w-24 rounded-md bg-gray-800 border border-gray-700 text-rose-400 font-semibold text-sm text-right px-2 py-1 focus:border-sky-500 focus:outline-none"
               />
               {discountAmount > 0 && (
-                <span className="text-rose-400 text-sm font-semibold whitespace-nowrap">-${discountAmount.toFixed(2)}</span>
+                <span className="text-rose-400 text-sm font-semibold whitespace-nowrap">= -${discountAmount.toFixed(2)}</span>
               )}
             </div>
           </div>
