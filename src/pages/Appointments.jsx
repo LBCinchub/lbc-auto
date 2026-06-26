@@ -16,7 +16,14 @@ import RepairOrderFormDialog from "../components/orders/RepairOrderFormDialog";
 import DateFilter, { applyDateFilter } from "../components/shared/DateFilter";
 
 export default function Appointments() {
-  const [search, setSearch] = useState("");
+  const _location = useLocation();
+  const _urlQ = new URLSearchParams(_location.search).get("q") || "";
+  const [search, setSearch] = useState(_urlQ);
+  // Sync search if URL param changes (e.g. navigating from GlobalSearch)
+  React.useEffect(() => {
+    const q = new URLSearchParams(_location.search).get("q") || "";
+    if (q) setSearch(q);
+  }, [_location.search]);
   const [view, setView] = useState("upcoming");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
