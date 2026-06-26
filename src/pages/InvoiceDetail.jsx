@@ -276,25 +276,49 @@ export default function InvoiceDetail() {
 
 
       {/* Header */}
+      {/* Header + Action Bar */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <Button variant="ghost" onClick={() => navigate("/Invoices")} className="text-gray-400 hover:text-white gap-2">
           <ArrowLeft className="w-4 h-4" /> Back to Invoices
         </Button>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {invoice?.repair_order_id && (
-            <Button variant="outline" onClick={() => navigate(`/RepairOrderDetail/${invoice.repair_order_id}`)}
-              className="border-gray-700 text-gray-300">
+            <Button variant="outline" size="sm" onClick={() => navigate(`/RepairOrderDetail/${invoice.repair_order_id}`)}
+              className="border-gray-700 text-gray-300 h-9 gap-1.5 text-xs">
               View Repair Order
             </Button>
           )}
-          <Button onClick={handleSave} disabled={saving} className={`gap-2 ${savedOk ? "bg-emerald-600 hover:bg-emerald-700" : "bg-sky-500 hover:bg-sky-600"}`}>
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          {/* Print / Save PDF */}
+          <Button variant="outline" size="sm"
+            onClick={() => { window.print(); }}
+            className="border-gray-700 text-gray-300 h-9 gap-1.5 text-xs hover:border-sky-500 hover:text-sky-400">
+            <Printer className="w-3.5 h-3.5" /> Print / Save PDF
+          </Button>
+          {/* Share */}
+          <Button variant="outline" size="sm"
+            onClick={handleShare}
+            className="border-gray-700 text-gray-300 h-9 gap-1.5 text-xs hover:border-violet-500 hover:text-violet-400">
+            <Share2 className="w-3.5 h-3.5" /> Share
+          </Button>
+          {/* Save Changes */}
+          <Button size="sm" onClick={handleSave} disabled={saving}
+            className={`gap-1.5 h-9 text-xs ${savedOk ? "bg-emerald-600 hover:bg-emerald-700" : "bg-sky-500 hover:bg-sky-600"}`}>
+            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
             {saving ? "Saving..." : savedOk ? "Saved ✓" : "Save Changes"}
           </Button>
         </div>
       </div>
 
       {/* Print Preview — same style as Estimates */}
+      {/* Print styles — hides everything except the document */}
+      <style>{`
+        @media print {
+          body > * { display: none !important; }
+          #invoice-print-area { display: block !important; position: fixed; top: 0; left: 0; width: 100%; z-index: 9999; background: white; }
+          #invoice-print-area * { display: revert !important; }
+          @page { margin: 10mm; size: A4 portrait; }
+        }
+      `}</style>
       <div id="invoice-print-area" className="rounded-xl border border-gray-800/50 bg-white p-8">
         <PrintTemplate
           type="Invoice"
