@@ -39,13 +39,15 @@ const UpdateBanner = ({ user }) => {
 
   useEffect(() => {
     if (!user) return;
-    const key = `${UPDATE_KEY}_${user.id || user.email}`;
+    // Use a stable key per user — works for active sessions + fresh logins
+    const key = `${UPDATE_KEY}_${user.id || user.email || "guest"}`;
     const dismissed = localStorage.getItem(key);
-    // Show only if: not dismissed AND labor_rate is not set
     if (!dismissed) {
-      setVisible(true);
+      // Small delay so app finishes loading first
+      const t = setTimeout(() => setVisible(true), 600);
+      return () => clearTimeout(t);
     }
-  }, [user]);
+  }, [user?.id, user?.email]);
 
   const dismiss = () => {
     const key = `${UPDATE_KEY}_${user?.id || user?.email}`;
@@ -117,8 +119,10 @@ const UpdateBanner = ({ user }) => {
         <p style={{
           color: "#94a3b8", fontSize: "13px", marginBottom: "16px", lineHeight: 1.6,
         }}>
-          We added a <strong style={{ color: "#38bdf8" }}>Default Labor Rate</strong> to your shop settings.
-          Set it once and it auto-fills on every new job — no more typing your hourly rate every time.
+          {user?.labor_rate
+            ? <>Your labor rate is set to <strong style={{ color: "#4ade80" }}>${user.labor_rate}/hr</strong> ✓ — it will now auto-fill on every new job.</>
+            : <>We added a <strong style={{ color: "#38bdf8" }}>Default Labor Rate</strong> to your shop settings. Set it once and it auto-fills on every new job — no more typing your hourly rate every time.</>
+          }
         </p>
 
         {/* What's new list */}
@@ -144,18 +148,33 @@ const UpdateBanner = ({ user }) => {
 
         {/* CTA buttons */}
         <div style={{ display: "flex", gap: "10px" }}>
-          <button
-            onClick={goToSettings}
-            style={{
-              flex: 1, padding: "11px 0",
-              background: "linear-gradient(135deg, #3b82f6, #06b6d4)",
-              color: "#fff", fontWeight: 700, fontSize: "14px",
-              border: "none", borderRadius: "10px", cursor: "pointer",
-              boxShadow: "0 4px 15px rgba(59,130,246,0.4)",
-            }}
-          >
-            Set My Labor Rate →
-          </button>
+          {!user?.labor_rate ? (
+            <button
+              onClick={goToSettings}
+              style={{
+                flex: 1, padding: "11px 0",
+                background: "linear-gradient(135deg, #3b82f6, #06b6d4)",
+                color: "#fff", fontWeight: 700, fontSize: "14px",
+                border: "none", borderRadius: "10px", cursor: "pointer",
+                boxShadow: "0 4px 15px rgba(59,130,246,0.4)",
+              }}
+            >
+              Set My Labor Rate →
+            </button>
+          ) : (
+            <button
+              onClick={dismiss}
+              style={{
+                flex: 1, padding: "11px 0",
+                background: "linear-gradient(135deg, #22c55e, #16a34a)",
+                color: "#fff", fontWeight: 700, fontSize: "14px",
+                border: "none", borderRadius: "10px", cursor: "pointer",
+                boxShadow: "0 4px 15px rgba(34,197,94,0.3)",
+              }}
+            >
+              ✓ Got it!
+            </button>
+          )}
           <button
             onClick={dismiss}
             style={{
@@ -166,7 +185,7 @@ const UpdateBanner = ({ user }) => {
               cursor: "pointer",
             }}
           >
-            Later
+            {user?.labor_rate ? "Close" : "Later"}
           </button>
         </div>
 
