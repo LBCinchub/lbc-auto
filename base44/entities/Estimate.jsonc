@@ -34,6 +34,10 @@
       "default": "draft",
       "description": "Estimate status"
     },
+    "service_reason": {
+      "type": "string",
+      "description": "Reason for visit / customer complaint / what the car came in for"
+    },
     "notes": {
       "type": "string",
       "description": "Additional notes"
