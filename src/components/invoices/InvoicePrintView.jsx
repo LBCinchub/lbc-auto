@@ -102,7 +102,7 @@ export default function InvoicePrintView({ invoice, onClose }) {
           createdDate={invoice.created_date ? new Date(invoice.created_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ""}
           user={user}
           customer={{ name: invoice.customer_name, phone: customer?.phone, email: customer?.email }}
-          vehicle={{ info: invoice.vehicle_info, vin: vehicleData?.vin, mileage: vehicleData?.mileage, license_plate: vehicleData?.license_plate }}
+          vehicle={{ info: invoice.vehicle_info, vin: vehicleData?.vin, mileage: vehicleData?.mileage, license_plate: vehicleData?.license_plate, color: vehicleData?.color }}
           lineItems={lineItems}
           paymentHistory={paymentHistory}
           financials={financials}
