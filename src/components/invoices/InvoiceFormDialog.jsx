@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
+import { syncCustomerActivity } from "@/utils/syncCustomerActivity";
 import { Textarea } from "@/components/ui/textarea";
 import { Search, X, Plus, Trash2, Store, Loader2 } from "lucide-react";
 import { useNhtsaVinDecode } from "@/hooks/useNhtsaVinDecode";
@@ -353,6 +354,14 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
       await base44.entities.Invoice.create(data);
     }
     setSaving(false);
+      // ── Unified sync: Customer.last_visit + Vehicle.customer_id ──
+      await syncCustomerActivity({
+        customerId: resolvedCustomerId || form.customer_id,
+        vehicleId: form.vehicle_id,
+        vehicleInfo: form.vehicle_info,
+        customerName: form.customer_name,
+        customerPhone: form.customer_phone || "",
+      });
     onSaved();
     onClose();
   };
