@@ -276,7 +276,7 @@ export default function InvoiceDetail() {
         <PrintTemplate
           type="Invoice"
           docNumber={invoice.invoice_number}
-          createdDate={new Date(invoice.created_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+          createdDate={new Date((invoiceDate || invoice.created_date) + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           user={user}
           customer={{ name: invoice.customer_name || customer?.full_name || "—", phone: customer?.phone, email: customer?.email, address: customer?.address }}
           vehicle={{ info: invoice.vehicle_info, vin: vehicleRecord?.vin, license_plate: vehicleRecord?.license_plate, color: vehicleRecord?.color, mileage: vehicleRecord?.mileage }}
@@ -308,8 +308,8 @@ export default function InvoiceDetail() {
             amountPaid: invoice.amount_paid || 0,
             balanceDue: invoice.balance_due || 0,
           }}
-          notes={[invoice.customer_note, techNotes].filter(Boolean).join("\n\n")}
-          serviceReason={invoice.service_reason}
+          notes={[customerNote, techNotes].filter(Boolean).join("\n\n")}
+          serviceReason={serviceReason}
         />
       </div>
 
@@ -350,8 +350,16 @@ export default function InvoiceDetail() {
             {customer?.phone && <p className="text-sky-400 text-xs">{formatPhone(customer.phone)}</p>}
           </div>
           <div>
+            <p className="text-gray-500 text-xs uppercase mb-1">Invoice Date</p>
+            <input type="date" value={invoiceDate}
+              onChange={e => setInvoiceDate(e.target.value)}
+              className="mt-0.5 w-full rounded-md bg-gray-800 border border-gray-700 text-white px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500" />
+          </div>
+          <div>
             <p className="text-gray-500 text-xs uppercase mb-1">Due Date</p>
-            <p className="text-white text-sm">{invoice.due_date ? new Date(invoice.due_date + "T00:00:00").toLocaleDateString() : "N/A"}</p>
+            <input type="date" value={dueDate}
+              onChange={e => setDueDate(e.target.value)}
+              className="mt-0.5 w-full rounded-md bg-gray-800 border border-gray-700 text-white px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500" />
           </div>
           <div>
             <p className="text-gray-500 text-xs uppercase mb-1">Amount Paid</p>
