@@ -106,10 +106,26 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
           <div style={{ flex: 1, background: "#f8fafc", borderRadius: 6, padding: "6px 10px", borderLeft: "3px solid #6366f1" }}>
             <div style={{ fontSize: 8.5, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 2 }}>Vehicle</div>
             <div style={{ fontSize: 12, fontWeight: 700, color: "#0f172a", marginBottom: 1 }}>{vehicle.info}</div>
-            <div style={{ fontSize: 10, color: "#475569", lineHeight: 1.6 }}>
-              {vehicle?.color && <div>Color: {vehicle.color}</div>}
-              {vehicle?.vin && <div>VIN: {vehicle.vin}</div>}
-              {vehicle?.license_plate && <div>Plate: {vehicle.license_plate}</div>}
+            <div style={{ fontSize: 10, color: "#475569", lineHeight: 1.7 }}>
+              {(vehicle?.license_plate || vehicle?.color) && (
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 2 }}>
+                  {vehicle?.license_plate && (
+                    <span style={{ fontWeight: 700, color: "#0f172a", fontSize: 11, background: "#e0f2fe", borderRadius: 4, padding: "1px 6px", letterSpacing: 1 }}>
+                      🪪 {vehicle.license_plate.toUpperCase()}
+                    </span>
+                  )}
+                  {vehicle?.color && (
+                    <span style={{ fontWeight: 600, color: "#334155", fontSize: 10 }}>
+                      ● {vehicle.color}
+                    </span>
+                  )}
+                </div>
+              )}
+              {vehicle?.vin && (
+                <div style={{ fontFamily: "monospace", fontSize: 9.5, color: "#334155", letterSpacing: 0.5 }}>
+                  VIN: <strong style={{ textTransform: "uppercase" }}>{vehicle.vin.toUpperCase()}</strong>
+                </div>
+              )}
               {vehicle?.mileage && <div>Mileage: {vehicle.mileage.toLocaleString()} km</div>}
             </div>
           </div>
