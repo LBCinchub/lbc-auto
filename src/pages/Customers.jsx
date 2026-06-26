@@ -297,7 +297,7 @@ export default function Customers() {
                       <div>
                         <div className="flex items-center gap-2">
                           <h3 className="text-white font-bold capitalize leading-tight">{customer.full_name}</h3>
-                          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${statusDot[activity]}`} title={statusLabel[activity]} />
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${statusText[activity]} border ${statusBorder[activity]}`} title={statusLabel[activity]} />
                         </div>
                         {customer.address && (
                           <p className="text-xs text-gray-500 truncate max-w-[160px]">{customer.address}</p>
@@ -339,9 +339,16 @@ export default function Customers() {
                       <Car className="w-3 h-3" />
                       {cv.length} vehicle{cv.length !== 1 ? "s" : ""}
                     </span>
-                    {lastService && (
-                      <span className="text-gray-500">Last: {lastService}</span>
-                    )}
+                    {(() => {
+                      const lv = getLastVisitLabel(customer.id);
+                      return lv ? (
+                        <span className={`font-medium ${statusText[activity]}`}>
+                          Last visit: {lv}
+                        </span>
+                      ) : (
+                        <span className="text-gray-600 italic">No visits yet</span>
+                      );
+                    })()}
                     {outstanding > 0 && (
                       <span className="flex items-center gap-1 text-rose-400 font-medium">
                         <DollarSign className="w-3 h-3" />
