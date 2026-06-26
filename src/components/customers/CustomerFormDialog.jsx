@@ -14,6 +14,7 @@ import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
 import { FileText, Wrench, Receipt, CheckCircle2, CalendarDays } from "lucide-react";
 import { useNhtsaVinDecode } from "@/hooks/useNhtsaVinDecode";
+import { capWords } from "@/utils/capitalize";
 
 export default function CustomerFormDialog({ open, onClose, customer, onSaved, onQuickAction }) {
   const navigate = useNavigate();
@@ -227,7 +228,7 @@ export default function CustomerFormDialog({ open, onClose, customer, onSaved, o
         <div className="space-y-4 mt-2">
           <div>
             <Label htmlFor="cf-full-name" className="text-gray-400">Full Name *</Label>
-            <Input id="cf-full-name" ref={fullNameRef} value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value})}
+            <Input id="cf-full-name" ref={fullNameRef} value={form.full_name} autoCapitalize="words" onChange={e => capWords(e, setForm, "full_name")}
               className="bg-gray-800 border-gray-700 text-white mt-1" />
           </div>
           <div>
@@ -242,7 +243,7 @@ export default function CustomerFormDialog({ open, onClose, customer, onSaved, o
           </div>
           <div>
             <Label htmlFor="cf-address" className="text-gray-400">Address</Label>
-            <Input id="cf-address" value={form.address} onChange={e => setForm({...form, address: e.target.value})}
+            <Input id="cf-address" value={form.address} autoCapitalize="words" onChange={e => capWords(e, setForm, "address")}
               className="bg-gray-800 border-gray-700 text-white mt-1" />
           </div>
           <div>
