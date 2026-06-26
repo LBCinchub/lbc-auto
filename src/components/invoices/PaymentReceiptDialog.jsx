@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { base44 } from "@/api/base44Client";
 import { CreditCard, Receipt } from "lucide-react";
 
-export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved }) {
+export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, entityName = "Invoice" }) {
   const [payments, setPayments] = useState([]); // Array of individual payment entries
   const [currentPayment, setCurrentPayment] = useState({
     amount: "",
@@ -71,7 +71,8 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved }
     const allMethods = [...new Set([...existingMethods, ...allNewMethods])];
     const combinedMethod = allMethods.length > 1 ? allMethods.join("+") : allMethods[0] || "cash";
 
-    await base44.entities.Invoice.update(invoice.id, {
+    const entity = base44.entities[entityName] || base44.entities.Invoice;
+    await entity.update(invoice.id, {
       amount_paid: newAmountPaid,
       balance_due: Math.max(0, newBalance),
       status: newStatus,
@@ -100,8 +101,8 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved }
           {/* Invoice summary */}
           <div className="rounded-lg bg-gray-800/60 p-3 text-sm space-y-1">
             <div className="flex justify-between">
-              <span className="text-gray-400">Invoice</span>
-              <span className="text-white font-medium">{invoice.invoice_number}</span>
+              <span className="text-gray-400">{entityName === "RepairOrder" ? "Order" : "Invoice"}</span>
+              <span className="text-white font-medium">{invoice.invoice_number || invoice.order_number || "—"}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-400">Customer</span>
