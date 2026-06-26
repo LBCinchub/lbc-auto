@@ -297,6 +297,7 @@ export default function InvoiceDetail() {
             balanceDue: invoice.balance_due || 0,
           }}
           notes={[invoice.customer_note, techNotes].filter(Boolean).join("\n\n")}
+          serviceReason={invoice.service_reason}
         />
       </div>
 
