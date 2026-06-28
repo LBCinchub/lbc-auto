@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
+import PaymentReceiptDialog from "@/components/invoices/PaymentReceiptDialog";
 import { syncCustomerActivity } from "@/utils/syncCustomerActivity";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, X, Loader2 } from "lucide-react";
@@ -40,6 +41,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
     apply_tax: true, tax_applies_to: "both"
   });
   const [saving, setSaving] = useState(false);
+  const [showCashout, setShowCashout] = useState(false);
   const [newCustomerForm, setNewCustomerForm] = useState(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -810,14 +812,75 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         </div>{/* end space-y-4 */}
         </div>{/* end scrollable body */}
 
-        {/* Footer */}
-        <div className="flex-shrink-0 bg-gray-900 px-6 py-4 border-t border-gray-800 flex gap-3">
-          <Button variant="outline" onClick={onClose} className="flex-1 border-gray-700 text-gray-300">Cancel</Button>
-          <Button onClick={handleSave} disabled={saving || !form.customer_id || !form.vehicle_id || !form.description}
-            className="flex-1 bg-sky-500 hover:bg-sky-600">
-            {saving ? "Saving..." : "Save Order"}
-          </Button>
+        {/* ── Bottom Bar ── */}
+        <div className="flex-shrink-0 border-t border-gray-800"
+          style={{ background: "linear-gradient(135deg,#0f172a 0%,#111827 100%)" }}>
+
+          {/* Row 1 — Status + Totals */}
+          <div className="flex items-center gap-4 px-5 pt-3 pb-2 border-b border-gray-800/60">
+            <div style={{
+              background: form.status === "completed" ? "rgba(74,222,128,0.12)" : form.status === "in_progress" ? "rgba(251,191,36,0.12)" : "rgba(148,163,184,0.08)",
+              border: `1px solid ${form.status === "completed" ? "rgba(74,222,128,0.3)" : form.status === "in_progress" ? "rgba(251,191,36,0.3)" : "rgba(148,163,184,0.15)"}`,
+              borderRadius: "20px", padding: "3px 12px",
+              color: form.status === "completed" ? "#4ade80" : form.status === "in_progress" ? "#fbbf24" : "#94a3b8",
+              fontSize: "11px", fontWeight: 700, textTransform: "capitalize", whiteSpace: "nowrap",
+            }}>{form.status || "pending"}</div>
+            <div className="flex items-center gap-4 text-xs">
+              <span className="text-gray-500">Total <strong className="text-emerald-400">${totalCost.toFixed(2)}</strong></span>
+              <span className="text-gray-500">Labor <strong className="text-purple-400">${laborCost.toFixed(2)}</strong></span>
+              <span className="text-gray-500">Parts <strong className="text-orange-400">${partsCost.toFixed(2)}</strong></span>
+            </div>
+          </div>
+
+          {/* Row 2 — Buttons */}
+          <div className="flex gap-2 px-5 py-3">
+            <Button variant="outline" onClick={onClose}
+              className="border-gray-700 text-gray-300 h-9 text-sm px-4 shrink-0">
+              Cancel
+            </Button>
+            <Button onClick={handleSave}
+              disabled={saving || !form.customer_id || !form.vehicle_id || !form.description}
+              className="flex-1 bg-sky-500 hover:bg-sky-600 text-white gap-2 h-9 text-sm font-semibold">
+              {saving ? "Saving..." : "Save Order"}
+            </Button>
+            {order?.id && (
+              <Button
+                onClick={async () => { await handleSave(); setShowCashout(true); }}
+                disabled={saving}
+                className="flex-1 gap-2 h-9 text-sm font-bold shrink-0"
+                style={{ background: "linear-gradient(135deg,#16a34a,#15803d)", color: "#fff", border: "none", boxShadow: "0 2px 12px rgba(22,163,74,0.45)" }}>
+                <CreditCard className="w-4 h-4" /> Cashout
+              </Button>
+            )}
+          </div>
         </div>
+
+        {/* Unified Cashout Dialog */}
+        {showCashout && order?.id && (
+          <PaymentReceiptDialog
+            open={showCashout}
+            onClose={() => setShowCashout(false)}
+            invoice={{
+              id: order.id,
+              invoice_number: order.order_number,
+              customer_id: order.customer_id || "",
+              customer_name: order.customer_name || form.customer_name,
+              vehicle_info: order.vehicle_info || form.vehicle_info,
+              total: totalCost,
+              labor_cost: laborCost,
+              parts_cost: partsCost,
+              amount_paid: order.amount_paid || 0,
+              balance_due: totalCost - (order.amount_paid || 0),
+              payment_history: order.payment_history || [],
+              linked_invoice_id: order.linked_invoice_id,
+            }}
+            entityName="RepairOrder"
+            onSaved={() => {
+              setShowCashout(false);
+              onSaved?.();
+            }}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );
