@@ -107,16 +107,10 @@ export default function AutoAIBubble({ vehicle, description }) {
     setLoading(true);
 
     try {
-      // Build full prompt with system context
-      const context = buildContext();
-      const fullHistory = [
-        { role: "user", content: SYSTEM_PROMPT + (context ? "\n\nShop context:" + context : "") + "\n\nReady." },
-        { role: "assistant", content: "Ready. Ask me anything about this vehicle or repair." },
-        ...history,
-      ];
-
       const res = await base44.functions.callFunction("lbcAutoAI", {
-        messages: fullHistory,
+        messages: history,
+        vehicle: vehicle || "",
+        description: description || "",
       });
 
       const reply = res?.reply || res?.content || res?.message || "Sorry, no response.";
