@@ -130,7 +130,17 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
           setPartsItems(order.parts_used?.length ? order.parts_used.map(p => ({ name: p.name, quantity: p.quantity || 1, unit_price: p.unit_price || 0, total: p.total || 0 })) : [emptyPartRow()]);
         }
       } else if (invoice && !invoice.id) {
-        setForm(f => ({ ...f, customer_id: invoice.customer_id || "", customer_name: invoice.customer_name || "", vehicle_info: invoice.vehicle_info || "", tax_rate: userTaxRate, apply_tax_parts: _defTaxParts, apply_tax_labor: _defTaxLabor }));
+        setForm(f => ({ ...f,
+          customer_id:   invoice.customer_id   || "",
+          customer_name: invoice.customer_name || "",
+          customer_phone: invoice.customer_phone || invoice.phone || "",
+          // ── Vehicle pre-fill from customer quick-action ──
+          vehicle_id:    invoice._prefillVehicleId   || invoice.vehicle_id   || "",
+          vehicle_info:  invoice._prefillVehicleInfo || invoice.vehicle_info || "",
+          tax_rate: userTaxRate,
+          apply_tax_parts: _defTaxParts,
+          apply_tax_labor: _defTaxLabor,
+        }));
         setLaborItems([emptyLaborRow()]);
         setPartsItems([emptyPartRow()]);
       } else {
