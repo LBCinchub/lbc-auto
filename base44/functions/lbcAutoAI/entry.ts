@@ -115,7 +115,19 @@ Deno.serve(async (req) => {
       return Response.json({ reply: "No messages provided." });
     }
 
+    // Pull shop settings from the user so the AI always knows the shop context
+    const shopInfo = [];
+    if (user.business_name) shopInfo.push("Shop: " + user.business_name);
+    if (user.email) shopInfo.push("Shop email: " + user.email);
+    if (user.phone) shopInfo.push("Shop phone: " + user.phone);
+    if (user.address) shopInfo.push("Shop address: " + user.address);
+    if (user.labor_rate != null) shopInfo.push("Default labor rate: $" + user.labor_rate + "/hr");
+    if (user.tax_rate != null) shopInfo.push("Tax rate: " + user.tax_rate + "%");
+    if (user.tax_applies_to) shopInfo.push("Tax applies to: " + user.tax_applies_to);
+    if (user.google_review_link) shopInfo.push("Google review link: " + user.google_review_link);
+
     let context = "";
+    if (shopInfo.length) context += "\nShop Settings:\n- " + shopInfo.join("\n- ");
     if (vehicle) context += "\nVehicle: " + vehicle;
     if (description) context += "\nJob: " + description;
 
