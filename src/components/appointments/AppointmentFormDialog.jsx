@@ -413,13 +413,11 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
             </Select>
           </div>
 
-            {/* ── LBC Auto AI Bubble ── */}
-            <div className="space-y-2">
-              <AutoAIBubble
-                vehicle={form.vehicle_info || ""}
-                description={form.notes || form.service_type || ""}
-              />
-            </div>
+          {/* ── LBC Auto AI ── */}
+          <AutoAIBubble
+            vehicle={form.vehicle_info || ""}
+            description={form.notes || form.service_type || ""}
+          />
 
           <div>
             <Label className="text-gray-400">Notes</Label>
