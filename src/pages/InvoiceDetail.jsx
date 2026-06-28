@@ -721,6 +721,23 @@ export default function InvoiceDetail() {
         {/* Parts & Suppliers section placeholder */}
       </div>
 
+      {/* ── Payment History Manager ── */}
+      {showHistoryManager && invoice && (
+        <PaymentHistoryManager
+          open={showHistoryManager}
+          onClose={() => setShowHistoryManager(false)}
+          invoice={{
+            ...invoice,
+            id: invoiceId,
+            total: grandTotal,
+          }}
+          onSaved={() => {
+            setShowHistoryManager(false);
+            queryClient.invalidateQueries({ queryKey: ["invoice", invoiceId] });
+          }}
+        />
+      )}
+
       {/* ── Unified Payment Dialog — opened by ALL payment buttons ── */}
       {showCashoutDialog && invoice && (
         <PaymentReceiptDialog
