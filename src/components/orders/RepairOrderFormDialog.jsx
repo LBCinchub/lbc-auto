@@ -718,13 +718,11 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
             </div>
           </div>
 
-          {/* ── LBC Auto AI Bubble — floats above Notes ── */}
-          <div className="space-y-2">
-            <AutoAIBubble
-              vehicle={form.vehicle_info || ""}
-              description={form.description || ""}
-            />
-          </div>
+          {/* ── LBC Auto AI ── */}
+          <AutoAIBubble
+            vehicle={form.vehicle_info || ""}
+            description={form.notes || form.description || ""}
+          />
 
           <div>
             <Label className="text-gray-400">Notes</Label>
