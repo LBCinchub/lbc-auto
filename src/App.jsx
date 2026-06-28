@@ -31,7 +31,7 @@ const mainPageKey = mainPage ?? Object.keys(Pages)[0];
 const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
 
 // ── One-time "New Update" banner ────────────────────────────────────────────
-const UPDATE_KEY = "lbc_auto_update_v20260627_ai_launch";
+const UPDATE_KEY = "lbc_auto_update_v20260628_payment_history";
 
 const UpdateBanner = ({ user }) => {
   const [visible, setVisible] = useState(false);
@@ -123,13 +123,13 @@ const UpdateBanner = ({ user }) => {
                 <span style={{ color:"#00aaff", fontSize:11, fontWeight:700, letterSpacing:"0.06em" }}>NOW LIVE</span>
               </div>
               <h2 style={{ color:"#f1f5f9", fontSize:17, fontWeight:800, margin:0, lineHeight:1.2 }}>
-                Meet LBC Auto AI
+                LBC Auto — New Updates
               </h2>
             </div>
           </div>
 
           <p style={{ color:"#94a3b8", fontSize:13, lineHeight:1.65, margin:0 }}>
-            Your new <strong style={{ color:"#38bdf8" }}>partner AI</strong> — built exclusively for automotive knowledge. Ask it anything about <strong style={{ color:"#e2e8f0" }}>vehicles, diagnostics, repair history, labor hours, OBD-II codes</strong>, and more. It knows cars the way your best mechanic does.
+            <strong style={{ color:"#38bdf8" }}>Payment History Manager</strong> is live — edit or delete individual payments directly on any invoice. Plus <strong style={{ color:"#e2e8f0" }}>Send to Repair Order</strong>, AI assistant upgrades, and Center Control v2 syncing.
           </p>
 
           {/* Feature chips */}
@@ -151,7 +151,7 @@ const UpdateBanner = ({ user }) => {
           }}>
             <span style={{ fontSize:18 }}>💬</span>
             <span style={{ color:"#6ee7b7", fontSize:12, lineHeight:1.5 }}>
-              Look for the <strong>🤖 floating button</strong> at the bottom-right of every page — click it to open your AI assistant anytime.
+              Open any invoice → tap <strong>Edit Payments</strong> to fix, adjust, or remove payment entries. All totals recalculate automatically.
             </span>
           </div>
         </div>
@@ -164,12 +164,12 @@ const UpdateBanner = ({ user }) => {
 
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:18 }}>
             {[
-              ["💲","Discount: $ or %","Choose fixed dollar or percentage on every job"],
+              ["📜","Payment History","Edit or delete individual payments on any invoice"],
+              ["🔁","Send to Repair Order","Convert any invoice to a repair order in one click"],
+              ["🤖","LBC Auto AI","Floating AI assistant on every page — ask it anything"],
+              ["💲","Discount: $ or %","Fixed dollar or percentage discount on every job"],
               ["⚙️","Default Labor Rate","Set once, auto-fills every new labor row"],
-              ["💳","Unified Payments","One payment dialog across all modules"],
-              ["🎨","Colored Sidebar","Each module has its own unique icon color"],
-              ["📄","Discount on Print","Discount always visible on estimates & invoices"],
-              ["👤","Center Control","Customer changes sync across all records"],
+              ["👤","Center Control v2","All record changes sync back to the customer profile"],
             ].map(([icon, title, desc]) => (
               <div key={title} style={{
                 background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.07)",
