@@ -38,11 +38,6 @@ export default function InvoiceDetail() {
   const [serviceReason, setServiceReason] = useState("");
   const [discount, setDiscount] = useState(0);
   const [discountType, setDiscountType] = useState("$"); // "$" or "%"
-  const [showPayment, setShowPayment] = useState(false);
-  const [payAmount, setPayAmount] = useState("");
-  const [payMethod, setPayMethod] = useState("cash");
-  const [payNote, setPayNote] = useState("");
-  const [payingSaving, setPayingSaving] = useState(false);
   const [showCashoutDialog, setShowCashoutDialog] = useState(false);
   const { sendEmail, sending: sendingEmail } = useEmailSend();
 
@@ -168,50 +163,6 @@ export default function InvoiceDetail() {
     }));
   };
 
-  const handleRecordPayment = async () => {
-    const amount = parseFloat(payAmount);
-    if (!amount || amount <= 0) return;
-    setPayingSaving(true);
-    const newAmountPaid = (invoice.amount_paid || 0) + amount;
-    const newBalance = Math.max(0, (invoice.total || grandTotal) - newAmountPaid);
-    const newStatus = newBalance <= 0 ? "paid" : newAmountPaid > 0 ? "partial" : "unpaid";
-    const history = [...(invoice.payment_history || []), {
-      date: new Date().toISOString().substring(0, 10),
-      amount,
-      method: payMethod,
-      note: payNote || "Payment received",
-    }];
-    await base44.entities.Invoice.update(invoiceId, {
-      amount_paid: newAmountPaid,
-      balance_due: newBalance,
-      status: newStatus,
-      payment_method: payMethod,
-      payment_history: history,
-      ...(newStatus === "paid" ? { paid_date: new Date().toISOString().substring(0, 10) } : {}),
-    });
-    queryClient.invalidateQueries({ queryKey: ["invoice", invoiceId] });
-    queryClient.invalidateQueries({ queryKey: ["invoices"] });
-
-    // FIX 5: When invoice is paid, sync status to linked Estimate and Repair Order
-    if (newStatus === "paid") {
-      try {
-        if (invoice.estimate_id) {
-          await base44.entities.Estimate.update(invoice.estimate_id, { status: "approved" });
-        }
-        if (invoice.repair_order_id) {
-          await base44.entities.RepairOrder.update(invoice.repair_order_id, { status: "completed" });
-        }
-        if (invoice.estimate_id || invoice.repair_order_id) {
-          toast({ title: "Invoice paid — linked records updated" });
-        }
-      } catch (e) { console.warn("Status sync on payment failed:", e); }
-    }
-
-    setPayAmount("");
-    setPayNote("");
-    setShowPayment(false);
-    setPayingSaving(false);
-  };
 
   const handleSave = async () => {
     if (saving) return;
@@ -692,7 +643,7 @@ export default function InvoiceDetail() {
               <div className="flex items-center gap-3">
                 <span>${invoice.balance_due.toFixed(2)}</span>
                 {invoice.status !== "paid" && (
-                  <button onClick={() => setShowPayment(v => !v)}
+                  <button onClick={() => setShowCashoutDialog(true)}
                     className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-md flex items-center gap-1 transition-colors">
                     <CreditCard className="w-3 h-3" /> Record Payment
                   </button>
@@ -700,136 +651,3 @@ export default function InvoiceDetail() {
               </div>
             </div>
           )}
-
-          {/* Inline Payment Panel */}
-          {showPayment && (
-            <div className="mt-2 pt-3 border-t border-emerald-700/40 space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <div>
-                  <p className="text-gray-500 text-xs uppercase mb-1">Amount</p>
-                  <Input type="number" step="0.01" value={payAmount} onChange={e => setPayAmount(e.target.value)}
-                    placeholder={`${(invoice.balance_due || 0).toFixed(2)}`}
-                    className="bg-gray-700 border-gray-600 text-white h-8 text-sm" />
-                </div>
-                <div>
-                  <p className="text-gray-500 text-xs uppercase mb-1">Method</p>
-                  <Select value={payMethod} onValueChange={setPayMethod}>
-                    <SelectTrigger className="bg-gray-700 border-gray-600 text-white h-8 text-sm"><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-gray-800 border-gray-700">
-                      {["cash", "card", "e-transfer"].map(m => <SelectItem key={m} value={m} className="capitalize">{m}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <p className="text-gray-500 text-xs uppercase mb-1">Note</p>
-                  <Input value={payNote} onChange={e => setPayNote(e.target.value)} placeholder="Optional" className="bg-gray-700 border-gray-600 text-white h-8 text-sm" />
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <button onClick={() => setShowPayment(false)} className="text-xs text-gray-400 hover:text-gray-200 px-2">Cancel</button>
-                <Button size="sm" onClick={handleRecordPayment} disabled={payingSaving || !payAmount} className="bg-emerald-600 hover:bg-emerald-700 h-7 text-xs gap-1">
-                  {payingSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
-                  Save Payment
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Parts & Suppliers (editable, for warranty) */}
-        <div className="pt-4 border-t border-gray-800">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Store className="w-4 h-4 text-sky-400" />
-              <h3 className="text-white font-semibold">Parts & Suppliers</h3>
-              <span className="text-xs text-gray-500">(warranty tracking)</span>
-            </div>
-            <Button size="sm" variant="ghost" onClick={() => setPartsUsed(p => [...p, { name: "", supplier: "", quantity: 1, total: 0 }])}
-              className="text-sky-400 hover:text-sky-300 h-7 px-2">
-              <Plus className="w-4 h-4 mr-1" /> Add Part
-            </Button>
-          </div>
-          {partsUsed.length === 0 ? (
-            <p className="text-gray-600 text-xs text-center py-4">No parts tracked — click Add Part</p>
-          ) : (
-            <div className="rounded-lg border border-gray-800 overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-800/60 text-gray-500 text-xs">
-                  <tr>
-                    <th className="px-3 py-2 text-left">Part Name</th>
-                    <th className="px-3 py-2 text-right w-20">Qty</th>
-                    <th className="px-3 py-2 text-left flex-1">Supplier</th>
-                    <th className="px-3 py-2 text-right w-24">Total</th>
-                    <th className="w-8" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-800">
-                  {partsUsed.map((row, idx) => (
-                    <tr key={idx} className="bg-gray-900">
-                      <td className="px-2 py-1.5">
-                        <Input value={row.name} onChange={e => updatePartUsed(idx, "name", e.target.value)}
-                          className="bg-gray-800 border-0 text-white h-8 text-sm" placeholder="e.g. Oil Filter" />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <Input type="number" value={row.quantity} onChange={e => updatePartUsed(idx, "quantity", e.target.value)}
-                          className="bg-gray-800 border-0 text-white h-8 text-sm text-right" placeholder="1" />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <Input value={row.supplier} onChange={e => updatePartUsed(idx, "supplier", e.target.value)}
-                          className="bg-gray-800 border-0 text-white h-8 text-sm" placeholder="e.g. AutoZone" />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <Input type="number" value={row.total} onChange={e => updatePartUsed(idx, "total", e.target.value)}
-                          className="bg-gray-800 border-0 text-white h-8 text-sm text-right" placeholder="0.00" />
-                      </td>
-                      <td className="pr-2 py-1.5 text-center">
-                        <button onClick={() => setPartsUsed(p => p.filter((_, i) => i !== idx))}
-                          className="text-gray-600 hover:text-rose-400 transition-colors">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {invoice.customer_note && (
-          <div className="pt-4 border-t border-gray-800">
-            <h3 className="text-white font-semibold mb-2">Customer Note</h3>
-            <p className="text-gray-300 text-sm">{invoice.customer_note}</p>
-          </div>
-        )}
-      </div>{/* end editable section */}
-      {/* Full Cashout Dialog — matches Invoice/RepairOrder flow */}
-      {showCashoutDialog && invoice && (
-        <PaymentReceiptDialog
-          open={showCashoutDialog}
-          onClose={() => setShowCashoutDialog(false)}
-          invoice={{
-            id: invoice.id,
-            invoice_number: invoice.invoice_number,
-            customer_id: invoice.customer_id || "",
-            customer_name: invoice.customer_name,
-            vehicle_info: invoice.vehicle_info,
-            total: grandTotal,
-            labor_cost: laborTotal,
-            parts_cost: partsTotal,
-            tax_amount: taxAmount,
-            amount_paid: invoice.amount_paid || 0,
-            balance_due: invoice.balance_due || 0,
-            payment_history: invoice.payment_history || [],
-          }}
-          entityName="Invoice"
-          onSaved={() => {
-            setShowCashoutDialog(false);
-            queryClient.invalidateQueries({ queryKey: ["invoice", invoiceId] });
-            queryClient.invalidateQueries({ queryKey: ["invoices"] });
-          }}
-        />
-      )}
-    </div>
-  );
-}
