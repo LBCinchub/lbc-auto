@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import EstimateFormDialog from "@/components/estimates/EstimateFormDialog";
 import InvoiceFormDialog from "@/components/invoices/InvoiceFormDialog";
 import SignaturePad from "@/components/orders/SignaturePad";
+import PaymentHistoryManager from "@/components/invoices/PaymentHistoryManager";
 
 export default function RepairOrderDetail() {
   const { orderId } = useParams();
@@ -27,6 +28,7 @@ export default function RepairOrderDetail() {
   const [showSignatureDialog, setShowSignatureDialog] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [showOrderedPartDialog, setShowOrderedPartDialog] = useState(false);
+  const [showHistoryManager, setShowHistoryManager] = useState(false);
   const [newOrderedPart, setNewOrderedPart] = useState({ name: "", part_number: "", supplier: "", quantity: "", unit_price: "", notes: "" });
 
   const { data: order, isLoading } = useQuery({
@@ -188,9 +190,14 @@ export default function RepairOrderDetail() {
               {order.status === "completed" || order.status === "delivered" ? "Create Invoice ✓" : "Create Invoice"}
             </Button>
           ) : (
-            <Button onClick={() => navigate(`/InvoiceDetail/${linkedInvoicesList[0].id}`)} className="bg-purple-600 hover:bg-purple-700 gap-2">
-              <FileText className="w-4 h-4" /> View Invoice
-            </Button>
+            <>
+              <Button onClick={() => navigate(`/InvoiceDetail/${linkedInvoicesList[0].id}`)} className="bg-purple-600 hover:bg-purple-700 gap-2">
+                <FileText className="w-4 h-4" /> View Invoice
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setShowHistoryManager(true)} className="gap-2 border-gray-700 text-gray-300 hover:bg-gray-800">
+                <History className="w-3.5 h-3.5" /> Edit Payments
+              </Button>
+            </>
           )}
           {linkedEstimates.length > 0 && (
             <Button onClick={() => navigate(`/EstimateDetail/${linkedEstimates[0].id}`)} className="bg-sky-500 hover:bg-sky-600 gap-2">

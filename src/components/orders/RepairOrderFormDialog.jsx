@@ -12,7 +12,7 @@ import { base44 } from "@/api/base44Client";
 import PaymentReceiptDialog from "@/components/invoices/PaymentReceiptDialog";
 import { syncCustomerActivity, validateRecord } from "@/utils/syncCustomerActivity";
 import { useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, X, Loader2 } from "lucide-react";
+import { Plus, Trash2, X, Loader2, CreditCard } from "lucide-react";
 import { useNhtsaVinDecode } from "@/hooks/useNhtsaVinDecode";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -324,6 +324,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         order_number: order?.order_number || `RO-${Date.now().toString(36).toUpperCase()}`,
       };
 
+      let savedOrderId = order?.id;
       if (order && order.id) {
         const changes = {};
         if (order.status !== data.status) changes.status = { from: order.status, to: data.status };
@@ -403,7 +404,8 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
           action: 'created',
           changes: {}
         }];
-        await base44.entities.RepairOrder.create(data);
+        const created = await base44.entities.RepairOrder.create(data);
+        savedOrderId = created.id;
       }
       
       // ── Unified sync: Customer.last_visit + Vehicle.customer_id ──
