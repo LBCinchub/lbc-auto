@@ -26,6 +26,15 @@ const statuses = [
   { value: "delivered", label: "Delivered" },
 ];
 
+
+// Auto-capitalise: first letter of every word
+const toTitleCase = (str) => str.replace(/\b\w/g, c => c.toUpperCase());
+const capWords = (e, setter, key) => {
+  const val = toTitleCase(e.target.value);
+  if (key) setter(p => ({ ...p, [key]: val }));
+  else setter(val);
+};
+
 export default function RepairOrderFormDialog({ open, onClose, order, onSaved, onPartAdded, customers, vehicles, mechanics, parts }) {
   const [form, setForm] = useState({
     customer_id: "", customer_name: "", vehicle_id: "", vehicle_info: "",
@@ -431,7 +440,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                        <X className="w-3.5 h-3.5" />
                      </button>
                    </div>
-                   <Input value={newCustomerForm.full_name} autoCapitalize="words" onChange={e => setNewCustomerForm(p => ({...p, full_name: e.target.value.replace(/(^|\s)(\S)/g,(_,s,c)=>s+c.toUpperCase())}))}
+                   <Input value={newCustomerForm.full_name} autoCapitalize="words" autoCapitalize="words" onChange={e => setNewCustomerForm(p => ({...p, full_name: e.target.value.replace(/(^|\s)(\S)/g,(_,s,c)=>s+c.toUpperCase())}))}
                      className="bg-gray-700 border-gray-600 text-white" placeholder="Full name *" />
                    <Input value={newCustomerForm.phone} onChange={e => setNewCustomerForm({...newCustomerForm, phone: e.target.value})}
                      className="bg-gray-700 border-gray-600 text-white" placeholder="Phone number *" />
@@ -560,7 +569,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                   {(form.labor_items || [{ description: "", hours: form.labor_hours || "", total: (Number(form.labor_hours) || 0) * 120 }]).map((row, idx) => (
                     <tr key={idx} className="bg-gray-900">
                       <td className="px-2 py-1.5">
-                        <Input value={row.description} onChange={e => {
+                        <Input autoCapitalize="sentences" onChange={e => {
                           const items = [...(form.labor_items || [])];
                           items[idx] = { ...items[idx], description: e.target.value };
                           setForm(f => ({ ...f, labor_items: items }));
@@ -621,7 +630,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
               <div className="bg-gray-800 border border-amber-500/30 rounded-lg p-3 mb-3 space-y-2">
                 <p className="text-xs text-amber-400 font-medium">New Part — Add to Inventory</p>
                 <div className="grid grid-cols-2 gap-2">
-                  <Input value={newPartForm.name} onChange={e => setNewPartForm(f => ({...f, name: e.target.value}))}
+                  <Input value={newPartForm.name} autoCapitalize="words" onChange={e => setNewPartForm(f => ({...f, name: toTitleCase(e.target.value)}))}
                     className="bg-gray-700 border-gray-600 text-white col-span-2" placeholder="Part name *" />
                   <Input type="number" onFocus={e => e.target.select()} value={newPartForm.cost_price} onChange={e => setNewPartForm(f => ({...f, cost_price: e.target.value}))}
                     className="bg-gray-700 border-gray-600 text-white" placeholder="Cost price" />
@@ -652,7 +661,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                   {form.parts_used.map((pu, idx) => (
                     <tr key={idx} className="bg-gray-900">
                       <td className="px-2 py-1.5">
-                        <Input value={pu.name} onChange={e => updatePart(idx, "name", e.target.value)}
+                        <Input value={pu.name} autoCapitalize="words" onChange={e => updatePart(idx, "name", toTitleCase(e.target.value))}
                           className="bg-gray-800 border-0 text-white h-8 text-sm" placeholder="Part name..." />
                       </td>
                       <td className="px-2 py-1.5">
