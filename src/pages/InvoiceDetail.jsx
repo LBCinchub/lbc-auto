@@ -16,6 +16,15 @@ import { useEmailSend } from "@/hooks/useEmailSend";
 
 
 
+
+// Auto-capitalise: first letter of every word
+const toTitleCase = (str) => str.replace(/\b\w/g, c => c.toUpperCase());
+const capWords = (e, setter, key) => {
+  const val = toTitleCase(e.target.value);
+  if (key) setter(p => ({ ...p, [key]: val }));
+  else setter(val);
+};
+
 export default function InvoiceDetail() {
   const { invoiceId } = useParams();
   const navigate = useNavigate();
@@ -463,7 +472,7 @@ export default function InvoiceDetail() {
                 {laborItems.map((row, idx) => (
                   <tr key={idx} className="bg-gray-900">
                     <td className="px-2 py-1.5">
-                      <Input value={row.description} onChange={e => updateLabor(idx, "description", e.target.value)}
+                      <Input value={row.description} autoCapitalize="sentences" onChange={e => updateLabor(idx, "description", toTitleCase(e.target.value))}
                         className="bg-gray-800 border-0 text-white h-8 text-sm" placeholder="e.g. Engine Diagnosis" />
                     </td>
                     <td className="px-2 py-1.5">
@@ -517,7 +526,7 @@ export default function InvoiceDetail() {
                 {partsItems.map((row, idx) => (
                   <tr key={idx} className="bg-gray-900">
                     <td className="px-2 py-1.5">
-                      <Input value={row.name} onChange={e => updatePart(idx, "name", e.target.value)}
+                      <Input value={row.name} autoCapitalize="words" onChange={e => updatePart(idx, "name", toTitleCase(e.target.value))}
                         className="bg-gray-800 border-0 text-white h-8 text-sm" placeholder="e.g. Oil Filter" />
                     </td>
                     <td className="px-2 py-1.5">
