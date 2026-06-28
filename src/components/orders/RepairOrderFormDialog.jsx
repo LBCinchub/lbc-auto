@@ -29,11 +29,6 @@ const statuses = [
 
 // Auto-capitalise: first letter of every word
 const toTitleCase = (str) => str.replace(/\b\w/g, c => c.toUpperCase());
-const capWords = (e, setter, key) => {
-  const val = toTitleCase(e.target.value);
-  if (key) setter(p => ({ ...p, [key]: val }));
-  else setter(val);
-};
 
 export default function RepairOrderFormDialog({ open, onClose, order, onSaved, onPartAdded, customers, vehicles, mechanics, parts }) {
   const [form, setForm] = useState({
