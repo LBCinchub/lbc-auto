@@ -408,8 +408,13 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
   const statusColor = { unpaid: "bg-gray-500/20 text-gray-300", paid: "bg-green-500/20 text-green-400", partial: "bg-yellow-500/20 text-yellow-400", overdue: "bg-red-500/20 text-red-400" };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-3xl flex flex-col p-0" style={{ maxHeight: "90vh", height: "90vh" }}>
+    <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
+      <DialogContent
+        className="bg-gray-900 border-gray-800 text-white max-w-3xl flex flex-col p-0"
+        style={{ maxHeight: "90vh", height: "90vh" }}
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
         {/* Header */}
         <div className="flex-shrink-0 px-6 pt-6 pb-4 border-b border-gray-800">
           <DialogHeader>
