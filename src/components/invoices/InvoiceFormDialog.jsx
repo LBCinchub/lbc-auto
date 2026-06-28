@@ -143,6 +143,19 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         }));
         setLaborItems([emptyLaborRow()]);
         setPartsItems([emptyPartRow()]);
+        // Seed vehicle dropdown immediately — prevents blank select before fetch
+        const _vid   = invoice._prefillVehicleId   || invoice.vehicle_id   || "";
+        const _vinfo = invoice._prefillVehicleInfo || invoice.vehicle_info || "";
+        if (_vid && _vinfo) {
+          const _parts = _vinfo.trim().split(" ");
+          setFetchedVehicles && setFetchedVehicles([{
+            id: _vid,
+            year: _parts[0] || "",
+            make: _parts[1] || "",
+            model: _parts.slice(2).join(" ") || "",
+            customer_id: invoice.customer_id || "",
+          }]);
+        }
       } else {
         setForm({ ...emptyForm, tax_rate: userTaxRate, apply_tax_parts: _defTaxParts, apply_tax_labor: _defTaxLabor });
         setLaborItems([emptyLaborRow()]);
