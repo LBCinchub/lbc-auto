@@ -78,7 +78,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
 
   useEffect(() => {
     base44.auth.me().then(u => {
-      setUserLaborRate(parseFloat(user?.labor_rate) || 120);
+      setUserLaborRate(parseFloat(u?.labor_rate) || 120);
         setUserTaxRate(u?.tax_rate != null ? u.tax_rate : 0);
     });
   }, []);
