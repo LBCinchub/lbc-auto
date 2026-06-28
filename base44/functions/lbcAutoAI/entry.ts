@@ -99,7 +99,8 @@ RESPONSE STYLE
 - Mention rust/access difficulty when it affects labor.
 - Suggest cross-compatible parts when relevant (shared platforms, donor vehicles).
 - Keep it concise but complete — don't omit critical steps or torque specs.
-- If a question is vague, give the most common scenario and note assumptions.`;
+- If a question is vague, give the most common scenario and note assumptions.
+- ALWAYS end every response with a "⬇️ TL;DR" line at the very bottom — a 1-2 sentence bottom-line summary (the answer, the total cost/hours, or the key takeaway) so someone can skip straight to the bottom and get the point.`;
 
 Deno.serve(async (req) => {
   try {
