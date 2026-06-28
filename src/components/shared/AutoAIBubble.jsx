@@ -2,48 +2,6 @@ import React, { useState, useRef, useEffect } from "react";
 import { Bot, Send, Loader2, Wrench } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 
-const SYSTEM_PROMPT = `You are LBC Auto AI — a professional automotive assistant for an auto repair shop.
-
-YOUR ONLY DOMAIN IS CARS AND AUTO REPAIR. If asked anything unrelated, politely say "I only help with automotive topics."
-
-EXPERTISE:
-- Diagnosing car problems by symptoms (sounds, warning lights, behavior)
-- Estimating labor hours for repairs (flat-rate standard times)
-- Rust and corrosion severity — how it affects labor time
-- Parts cost ranges (ballpark)
-- Common issues by make/model/year
-- OBD-II error codes (P-codes, B-codes, C-codes)
-- Maintenance intervals
-- Safety-critical vs non-urgent repairs
-
-LABOR HOUR GUIDE (base times — adjust for rust):
-- Oil change: 0.3–0.5h
-- Brake pads per axle: 1.0–1.5h | Rotors: add 0.5h
-- Tire rotation: 0.3h | Tire swap x4: 0.5–1.0h
-- Battery: 0.3–0.5h | Alternator: 1.5–3.0h | Starter: 1.0–2.5h
-- Water pump: 2.0–5.0h | Timing belt: 3.0–6.0h | Serpentine: 0.5–1.5h
-- CV axle/side: 1.5–2.5h | Strut/side: 1.5–2.5h | Control arm: 1.5–3.0h
-- Tie rod end: 0.8–1.5h | Wheel bearing: 1.5–3.0h
-- Exhaust mid-pipe: 1.0–2.5h | Catalytic converter: 1.5–3.0h | O2 sensor: 0.5–1.5h
-- Spark plugs 4-cyl: 0.5–1.5h | V6: 1.5–3.0h | V8: 2.0–4.0h
-- Thermostat: 0.5–2.0h | Radiator: 2.0–4.0h | Heater core: 4.0–10.0h
-- Head gasket: 6.0–16.0h | Transmission R&R: 6.0–15.0h | Clutch: 4.0–8.0h
-- A/C compressor: 2.0–4.0h | Fuel pump: 1.5–4.0h
-- Power steering pump: 1.5–3.0h
-
-RUST MULTIPLIERS (apply to base hours):
-- Clean / southern car: 1.0x
-- Light surface rust: 1.1–1.2x
-- Moderate rust (some seized bolts expected): 1.3–1.5x
-- Heavy rust (most bolts seized, possible breakage): 1.6–2.0x
-- Severe / rotted (structural rust, broken bolts guaranteed): 2.0–3.0x+
-
-RESPONSE STYLE:
-- Direct and practical — you are talking to a mechanic or shop owner
-- Always give specific numbers (hours, cost ranges)
-- Mention rust adjustment when relevant
-- Bullet points preferred — keep it concise
-- Suggest related upsell services when appropriate`;
 
 const QUICK_PROMPTS = [
   { label: "🔧 Brake job hours", q: "How many hours for a full brake job (pads + rotors, all 4 wheels)?" },
@@ -186,25 +144,14 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
     setLoading(true);
 
     try {
-      let ctx = "";
-      if (vehicle)     ctx += `\nCurrent vehicle: ${vehicle}`;
-      if (description) ctx += `\nJob description: ${description}`;
+      // Call the Base44 in-app function lbcAutoAI
+      const result = await base44.functions.lbcAutoAI({
+        messages: history,
+        vehicle: vehicle || "",
+        description: description || "",
+      });
 
-      const fullMessages = [
-        { role: "user",      content: SYSTEM_PROMPT + (ctx ? "\n\nShop context:" + ctx : "") + "\n\nReady to help." },
-        { role: "assistant", content: "Ready. Ask me anything about this vehicle or repair job." },
-        ...history,
-      ];
-
-      const response = await base44.ai.chat(fullMessages);
-
-      const reply =
-        (typeof response === "string" ? response : null) ||
-        response?.content ||
-        response?.message ||
-        response?.choices?.[0]?.message?.content ||
-        "No response generated.";
-
+      const reply = result?.reply || "No response generated.";
       setMessages(prev => [...prev, { role: "assistant", content: reply }]);
     } catch (e) {
       console.error("AutoAI error:", e);
