@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
+import AutoAIBubble from "@/components/shared/AutoAIBubble";
 import { syncCustomerActivity } from "@/utils/syncCustomerActivity";
 import { useQueryClient } from "@tanstack/react-query";
 import { Search, User, Plus, Loader2, X, ClipboardList, Wrench, FileText } from "lucide-react";
@@ -411,6 +412,14 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
               </SelectContent>
             </Select>
           </div>
+
+            {/* ── LBC Auto AI Bubble ── */}
+            <div className="space-y-2">
+              <AutoAIBubble
+                vehicle={form.vehicle_info || ""}
+                description={form.notes || form.service_type || ""}
+              />
+            </div>
 
           <div>
             <Label className="text-gray-400">Notes</Label>
