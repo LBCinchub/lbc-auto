@@ -50,46 +50,63 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
     setInvoiceSearch("");
     setEstimateSearch("");
 
-    base44.auth.me().then(u => {
+    base44.auth.me().then(async u => {
       const userTaxRate    = u?.tax_rate     != null ? u.tax_rate     : 0;
       const userTaxApplies = u?.tax_applies_to || "both";
       const _defTaxParts   = userTaxApplies === "both" || userTaxApplies === "parts";
       const _defTaxLabor   = userTaxApplies === "both" || userTaxApplies === "labor";
       
       if (invoice && invoice.id) {
+        // ── Fetch FRESH full record from DB so line_items are never stale ──
+        let fresh = invoice;
+        try {
+          const fetched = await base44.entities.Invoice.get(invoice.id);
+          if (fetched?.id) fresh = fetched;
+        } catch(e) { /* fallback to prop */ }
+
         setForm({
           ...emptyForm,
-          repair_order_id: invoice.repair_order_id || "",
-          estimate_id: invoice.estimate_id || "",
-          customer_id: invoice.customer_id || "",
-          customer_name: invoice.customer_name || "",
-          customer_phone: invoice.customer_phone || "",
-          vehicle_info: invoice.vehicle_info || "",
-          parts_total: invoice.parts_total || 0,
-          labor_total: invoice.labor_total || 0,
-          tax_rate: invoice.tax_rate != null ? invoice.tax_rate : userTaxRate,
-          status: invoice.status || "unpaid",
-          due_date: invoice.due_date || "",
-          invoice_date: invoice.invoice_date || invoice.created_date?.split("T")[0] || new Date().toISOString().split("T")[0],
-          payment_method: invoice.payment_method || "",
-          amount_paid: invoice.amount_paid || 0,
-          payment_history: invoice.payment_history || [],
-          receipt_number: invoice.receipt_number || "",
-          card_last4: invoice.card_last4 || "",
-          cashier_name: invoice.cashier_name || "",
-          parts_used: invoice.parts_used || [],
-          labor_items: invoice.labor_items || [],
-          customer_note: invoice.customer_note || "",
-          service_reason: invoice.service_reason || "",
-          discount_type: invoice.discount_type || "none",
-          discount_value: invoice.discount_value || 0,
-          apply_tax_parts: invoice.apply_tax_parts !== false,
-          apply_tax_labor: invoice.apply_tax_labor !== false,
-          technician_notes: invoice.technician_notes || "",
+          repair_order_id: fresh.repair_order_id || "",
+          estimate_id: fresh.estimate_id || "",
+          customer_id: fresh.customer_id || "",
+          customer_name: fresh.customer_name || "",
+          customer_phone: fresh.customer_phone || "",
+          vehicle_id: fresh.vehicle_id || "",
+          vehicle_info: fresh.vehicle_info || "",
+          parts_total: fresh.parts_total || 0,
+          labor_total: fresh.labor_total || 0,
+          tax_rate: fresh.tax_rate != null ? fresh.tax_rate : userTaxRate,
+          tax_applies_to: fresh.tax_applies_to || userTaxApplies,
+          status: fresh.status || "unpaid",
+          due_date: fresh.due_date || "",
+          invoice_date: fresh.invoice_date || fresh.created_date?.split("T")[0] || new Date().toISOString().split("T")[0],
+          payment_method: fresh.payment_method || "",
+          amount_paid: fresh.amount_paid || 0,
+          payment_history: fresh.payment_history || [],
+          receipt_number: fresh.receipt_number || "",
+          card_last4: fresh.card_last4 || "",
+          cashier_name: fresh.cashier_name || "",
+          parts_used: fresh.parts_used || [],
+          labor_items: fresh.labor_items || [],
+          customer_note: fresh.customer_note || "",
+          service_reason: fresh.service_reason || "",
+          discount_type: fresh.discount_type || "none",
+          discount_value: fresh.discount_value || 0,
+          apply_tax_parts: fresh.apply_tax_parts !== false,
+          apply_tax_labor: fresh.apply_tax_labor !== false,
+          technician_notes: fresh.technician_notes || "",
         });
-        const li = invoice.line_items || [];
-        setLaborItems(li.filter(i => i.type === "labor").map(i => ({ description: i.description || "", hours: i.quantity || 1, rate: i.unit_price || 0, total: i.total || 0 })));
-        setPartsItems(invoice.parts_used?.length ? invoice.parts_used.map(p => ({ name: p.name, quantity: p.quantity || 1, unit_price: p.unit_price || 0, total: p.total || 0, supplier: p.supplier || "" })) : [emptyPartRow()]);
+
+        // Prefer labor_items, fallback to line_items type=labor
+        const laborRows = fresh.labor_items?.length
+          ? fresh.labor_items.map(i => ({ description: i.description || "", hours: i.hours ?? i.quantity ?? 1, rate: i.rate ?? i.unit_price ?? 0, total: i.total || 0 }))
+          : (fresh.line_items || []).filter(i => i.type === "labor").map(i => ({ description: i.description || "", hours: i.quantity || 1, rate: i.unit_price || 0, total: i.total || 0 }));
+        setLaborItems(laborRows.length ? laborRows : [emptyLaborRow()]);
+
+        const partsRows = fresh.parts_used?.length
+          ? fresh.parts_used.map(p => ({ name: p.name || "", quantity: p.quantity || 1, unit_price: p.unit_price || 0, total: p.total || 0, supplier: p.supplier || "" }))
+          : [];
+        setPartsItems(partsRows.length ? partsRows : [emptyPartRow()]);
       } else if (sourceEstimate) {
         setForm(f => ({
           ...f,
