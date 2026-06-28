@@ -81,6 +81,17 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
           tax_rate: String(userTaxRate),
           tax_applies_to: userTaxApplies,
         });
+        // Seed vehicle dropdown immediately so it shows before async fetch
+        if (prefillVehicleId && prefillVehicleInfo) {
+          const parts = prefillVehicleInfo.trim().split(" ");
+          setFetchedVehicles([{
+            id: prefillVehicleId,
+            year: parts[0] || "",
+            make: parts[1] || "",
+            model: parts.slice(2).join(" ") || "",
+            customer_id: estimate?.customer_id || "",
+          }]);
+        }
       }
     });
   }, [estimate?.id, open, repairOrderId]);
