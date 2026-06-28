@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
+import { syncCustomerActivity } from "@/utils/syncCustomerActivity";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, CreditCard, CheckCircle2, Plus, Trash2, Save, Loader2, Printer, Share2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
@@ -26,6 +27,7 @@ export default function EstimateDetail() {
   const { toast } = useToast();
   const [user, setUser] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [savedOk, setSavedOk] = useState(false);
   const [showCashoutDialog, setShowCashoutDialog] = useState(false);
   
   // Editable line items state
@@ -224,8 +226,24 @@ export default function EstimateDetail() {
       if (linkedInvoices.length > 0) toast({ title: "Invoice also updated" });
     } catch (e) { console.warn("Estimate→Invoice sync failed:", e); }
 
+    // ── CENTER CONTROL — sync to Customer record ──────────────────────────────
+    try {
+      await syncCustomerActivity({
+        customerId: estimate.customer_id,
+        vehicleId: estimate.vehicle_id,
+        vehicleInfo: estimate.vehicle_info,
+        customerName: estimate.customer_name,
+        customerPhone: estimate.customer_phone,
+        customerEmail: estimate.customer_email,
+        isNewVisit: false,
+      });
+    } catch(e) { /* non-fatal */ }
+
     queryClient.invalidateQueries({ queryKey: ["estimate", estimateId] });
+    queryClient.invalidateQueries({ queryKey: ["estimates"] });
     setSaving(false);
+    setSavedOk(true);
+    setTimeout(() => setSavedOk(false), 3000);
   };
 
   const handleConvertToInvoice = async () => {
@@ -692,6 +710,76 @@ export default function EstimateDetail() {
           }}
         />
       )}
+
+      {/* ── STICKY BOTTOM SAVE BAR ── */}
+      <div className="no-print fixed bottom-0 left-0 right-0 z-40 px-4 pb-4 pointer-events-none">
+        <div className="max-w-4xl mx-auto pointer-events-auto">
+          <div style={{
+            background: "linear-gradient(135deg,#0f172a 0%,#1e293b 100%)",
+            border: "1px solid rgba(99,179,237,0.2)",
+            borderRadius: "16px",
+            padding: "12px 16px",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(99,179,237,0.08)",
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+          }}>
+            {/* Status pill */}
+            <div style={{
+              background: estimate.status === "approved" ? "rgba(74,222,128,0.1)" : estimate.status === "sent" ? "rgba(99,179,237,0.1)" : "rgba(148,163,184,0.1)",
+              border: `1px solid ${estimate.status === "approved" ? "rgba(74,222,128,0.3)" : estimate.status === "sent" ? "rgba(99,179,237,0.3)" : "rgba(148,163,184,0.2)"}`,
+              borderRadius: "20px", padding: "4px 12px",
+              color: estimate.status === "approved" ? "#4ade80" : estimate.status === "sent" ? "#38bdf8" : "#94a3b8",
+              fontSize: "12px", fontWeight: 700, textTransform: "capitalize", flexShrink: 0,
+            }}>{estimate.status || "draft"}</div>
+
+            {/* Total info */}
+            <div style={{ flex: 1, display: "flex", gap: "16px", alignItems: "center" }}>
+              <span style={{ color: "#64748b", fontSize: "12px" }}>Total <strong style={{ color: "#38bdf8" }}>${grandTotal.toFixed(2)}</strong></span>
+              <span style={{ color: "#64748b", fontSize: "12px" }}>Labor <strong style={{ color: "#a78bfa" }}>${laborTotal.toFixed(2)}</strong></span>
+              <span style={{ color: "#64748b", fontSize: "12px" }}>Parts <strong style={{ color: "#fb923c" }}>${partsTotal.toFixed(2)}</strong></span>
+            </div>
+
+            {/* Cashout */}
+            <button
+              onClick={() => setShowCashoutDialog(true)}
+              style={{
+                background: "linear-gradient(135deg,#16a34a,#15803d)",
+                color: "#fff", border: "none", borderRadius: "10px",
+                padding: "8px 16px", fontSize: "13px", fontWeight: 700,
+                cursor: "pointer", display: "flex", alignItems: "center", gap: "6px",
+                boxShadow: "0 4px 12px rgba(22,163,74,0.4)", flexShrink: 0,
+              }}
+            >
+              <CreditCard style={{ width: 14, height: 14 }} /> Cashout
+            </button>
+
+            {/* Save Changes */}
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              style={{
+                background: savedOk ? "linear-gradient(135deg,#22c55e,#16a34a)" : "linear-gradient(135deg,#3b82f6,#2563eb)",
+                color: "#fff", border: "none", borderRadius: "10px",
+                padding: "8px 20px", fontSize: "13px", fontWeight: 700,
+                cursor: saving ? "not-allowed" : "pointer",
+                display: "flex", alignItems: "center", gap: "6px",
+                boxShadow: savedOk ? "0 4px 12px rgba(34,197,94,0.4)" : "0 4px 12px rgba(59,130,246,0.4)",
+                opacity: saving ? 0.7 : 1, flexShrink: 0,
+                transition: "all 0.3s ease",
+              }}
+            >
+              {saving ? (
+                <><Loader2 style={{ width: 14, height: 14, animation: "spin 1s linear infinite" }} /> Saving...</>
+              ) : savedOk ? (
+                <><CheckCircle2 style={{ width: 14, height: 14 }} /> Saved ✓</>
+              ) : (
+                <><Save style={{ width: 14, height: 14 }} /> Save Changes</>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
