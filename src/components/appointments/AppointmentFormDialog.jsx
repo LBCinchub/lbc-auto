@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
-import { syncCustomerActivity } from "@/utils/syncCustomerActivity";
+import { syncCustomerActivity, validateRecord } from "@/utils/syncCustomerActivity";
 import { useQueryClient } from "@tanstack/react-query";
 import { Search, User, Plus, Loader2, X, ClipboardList, Wrench, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -199,6 +199,18 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
   };
 
   const handleSave = async () => {
+    // ── CENTER CONTROL: Validate ───────────────────────────────────────────
+    if (form.customer_id) {
+      const validation = await validateRecord({
+        customerId: form.customer_id,
+        vehicleId: form.vehicle_id,
+        entityType: "Appointment",
+      });
+      if (!validation.ok) {
+        alert("⚠️ Cannot save:\n\n" + validation.errors.join("\n"));
+        return;
+      }
+    }
     setSaving(true);
     if (appointment && appointment.id && !appointment._prefillCustomerId) {
       await base44.entities.Appointment.update(appointment.id, form);
@@ -212,6 +224,8 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
         vehicleId: form.vehicle_id,
         vehicleInfo: form.vehicle_info,
         customerName: form.customer_name,
+        entityType: "Appointment",
+        propagate: true,
         customerPhone: form.customer_phone || "",
         isNewVisit: false,
       });
