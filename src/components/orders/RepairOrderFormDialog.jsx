@@ -142,6 +142,21 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         discount_type: order?.discount_type || "none", discount_value: order?.discount_value || 0, total_cost: 0, custom_total: false,
         apply_tax: true, tax_applies_to: "both"
       });
+      // Seed vehicle dropdown immediately — prevents blank select before fetch resolves
+      if (order?._prefillVehicleId || order?.vehicle_id) {
+        const vid   = order._prefillVehicleId   || order.vehicle_id   || "";
+        const vinfo = order._prefillVehicleInfo  || order.vehicle_info || "";
+        if (vid && vinfo) {
+          const parts = vinfo.trim().split(" ");
+          setFetchedVehicles([{
+            id: vid,
+            year: parts[0] || "",
+            make: parts[1] || "",
+            model: parts.slice(2).join(" ") || "",
+            customer_id: order?.customer_id || "",
+          }]);
+        }
+      }
     }
   }, [order?.id, open]);
 
