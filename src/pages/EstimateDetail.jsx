@@ -420,11 +420,9 @@ export default function EstimateDetail() {
       </div>
 
       {/* ── Section divider ── */}
-      <div className="flex items-center gap-3 px-1 print:hidden">
+      <div className="flex items-center gap-3 px-1 mb-2 print:hidden">
         <p className="text-xs text-gray-500 italic">↑ Print preview above · Edit details below</p>
         <div className="flex-1 border-t border-gray-800" />
-        <div className="flex flex-wrap gap-2">
-        </div>
       </div>
 
       {/* Editable Line Items */}
