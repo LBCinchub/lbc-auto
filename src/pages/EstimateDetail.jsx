@@ -691,15 +691,14 @@ export default function EstimateDetail() {
         />
       )}
 
-      {/* ── STICKY BOTTOM SAVE BAR ── */}
-      <div className="no-print fixed bottom-0 left-0 right-0 z-40 px-4 pb-4 pointer-events-none">
-        <div className="max-w-4xl mx-auto pointer-events-auto">
+      {/* ── BOTTOM SAVE BAR ── */}
+      <div className="no-print mt-6 mb-2">
+        <div>
           <div style={{
             background: "linear-gradient(135deg,#0f172a 0%,#1e293b 100%)",
-            border: "1px solid rgba(99,179,237,0.2)",
-            borderRadius: "16px",
-            padding: "12px 16px",
-            boxShadow: "0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(99,179,237,0.08)",
+            border: "1px solid rgba(99,179,237,0.15)",
+            borderRadius: "12px",
+            padding: "10px 16px",
             display: "flex",
             alignItems: "center",
             gap: "12px",
