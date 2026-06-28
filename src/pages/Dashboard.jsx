@@ -12,9 +12,11 @@ import TodayAppointments from "../components/dashboard/TodayAppointments";
 import KpiCards from "../components/dashboard/KpiCards";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import StatusBadge from "../components/shared/StatusBadge";
+import AutoAIBubble from "../components/shared/AutoAIBubble";
 
 export default function Dashboard() {
   const [modal, setModal] = useState(null);
+  const [aiOpen, setAiOpen] = useState(false);
   const [selectedAppt, setSelectedAppt] = useState(null);
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
@@ -219,6 +221,64 @@ export default function Dashboard() {
           </div>
         </DialogContent>
       </Dialog>
+      {/* ══ LBC Auto AI — Fixed Floating Widget ══ */}
+      <div style={{
+        position: "fixed",
+        bottom: 24,
+        right: 24,
+        zIndex: 9999,
+        width: aiOpen ? 380 : "auto",
+        maxWidth: "calc(100vw - 48px)",
+        fontFamily: "inherit",
+      }}>
+        {aiOpen && (
+          <div style={{ marginBottom: 8 }}>
+            <AutoAIBubble vehicle="" description="" />
+          </div>
+        )}
+        {/* LED Trigger Button */}
+        <button
+          onClick={() => setAiOpen(v => !v)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "12px 18px",
+            borderRadius: 40,
+            border: "2px solid #00aaff",
+            background: aiOpen
+              ? "linear-gradient(135deg,#002b55,#004080)"
+              : "linear-gradient(135deg,#001f3f,#003366)",
+            boxShadow: "0 0 16px #00aaff80, 0 4px 24px #00000088",
+            cursor: "pointer",
+            color: "#fff",
+            fontSize: 13,
+            fontWeight: 700,
+            letterSpacing: 0.4,
+            animation: !aiOpen ? "lbc-led-pulse 2.2s ease-in-out infinite" : "none",
+            width: "100%",
+            justifyContent: aiOpen ? "center" : "flex-start",
+          }}
+        >
+          <div style={{
+            width: 32, height: 32, borderRadius: "50%",
+            background: "#00aaff",
+            boxShadow: "0 0 10px #00aaff",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            flexShrink: 0,
+          }}>
+            <span style={{ fontSize: 16 }}>🤖</span>
+          </div>
+          {!aiOpen && (
+            <>
+              <span>LBC Auto AI</span>
+              <div style={{ width:8, height:8, borderRadius:"50%", background:"#00ff88", boxShadow:"0 0 6px #00ff88", marginLeft:4 }} />
+            </>
+          )}
+          {aiOpen && <span>✕ Close AI</span>}
+        </button>
+      </div>
+
     </div>
   );
 }
