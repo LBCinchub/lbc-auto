@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
 import PaymentReceiptDialog from "@/components/invoices/PaymentReceiptDialog";
-import { syncCustomerActivity } from "@/utils/syncCustomerActivity";
+import { syncCustomerActivity, validateRecord } from "@/utils/syncCustomerActivity";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, X, Loader2 } from "lucide-react";
 import { useNhtsaVinDecode } from "@/hooks/useNhtsaVinDecode";
@@ -275,6 +275,17 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
       return;
     }
 
+    // ── CENTER CONTROL: Validate before any DB write ──────────────────────
+    const validation = await validateRecord({
+      customerId: form.customer_id,
+      vehicleId: form.vehicle_id,
+      entityType: "RepairOrder",
+    });
+    if (!validation.ok) {
+      alert("⚠️ Cannot save:\n\n" + validation.errors.join("\n"));
+      return;
+    }
+
     setSaving(true);
     try {
       const laborHours = Number(form.labor_hours) || 0;
@@ -401,6 +412,9 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         vehicleId: form.vehicle_id,
         vehicleInfo: form.vehicle_info,
         customerName: form.customer_name,
+        entityType: "RepairOrder",
+        entityId: savedOrderId,
+        propagate: true,
         customerPhone: form.customer_phone,
       });
       onSaved(data.status);
