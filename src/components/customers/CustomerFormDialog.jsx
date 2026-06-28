@@ -26,6 +26,7 @@ export default function CustomerFormDialog({ open, onClose, customer, onSaved, o
   const [saving, setSaving] = useState(false);
   const [savedCustomer, setSavedCustomer] = useState(null);
   const [savedVehicle, setSavedVehicle] = useState(null);
+  const _latestVehicle = useRef(null); // immediate access, no state lag
   const fullNameRef = useRef(null);
   const { decoding: decodingVin, vinError, decodeVin, setVinError } = useNhtsaVinDecode();
 
@@ -106,23 +107,31 @@ export default function CustomerFormDialog({ open, onClose, customer, onSaved, o
     } else {
       newCustomer = await base44.entities.Customer.create(form);
     }
+    let createdVehicleData = null;
     if (!customer && addVehicle && vehicleForm.make && vehicleForm.model && vehicleForm.year) {
-      const createdVehicle = await base44.entities.Vehicle.create({
+      createdVehicleData = await base44.entities.Vehicle.create({
         ...vehicleForm,
         year: Number(vehicleForm.year),
         customer_id: newCustomer.id,
         customer_name: form.full_name,
       });
-      setSavedVehicle(createdVehicle);
+      // Store in both state AND a ref so handleQuickAction can read it instantly
+      setSavedVehicle(createdVehicleData);
     }
     setSaving(false);
     onSaved();
     // For new customers, show quick-action step instead of closing
     if (!customer) {
       setSavedCustomer(newCustomer);
+      // Keep vehicle data in ref for immediate use in handleQuickAction
+      if (createdVehicleData) {
+        setSavedVehicle(createdVehicleData);
+      }
     } else {
       onClose();
     }
+    // Store vehicle outside of state for immediate access
+    _latestVehicle.current = createdVehicleData;
   };
 
   const handleVinDecode = async () => {
@@ -145,12 +154,12 @@ export default function CustomerFormDialog({ open, onClose, customer, onSaved, o
       onQuickAction(page, { 
         _prefillCustomerId: savedCustomer.id, 
         _prefillCustomerName: savedCustomer.full_name,
-        _prefillVehicleId: savedVehicle?.id || null,
+        _prefillVehicleId: (_latestVehicle.current || savedVehicle)?.id || null,
         _prefillVehicleInfo: savedVehicle ? `${savedVehicle.year} ${savedVehicle.make} ${savedVehicle.model}` : null,
         customer_id: savedCustomer.id,
         customer_name: savedCustomer.full_name,
-        vehicle_id: savedVehicle?.id || "",
-        vehicle_info: savedVehicle ? `${savedVehicle.year} ${savedVehicle.make} ${savedVehicle.model}` : "",
+        vehicle_id: (_latestVehicle.current || savedVehicle)?.id || "",
+        vehicle_info: (_latestVehicle.current || savedVehicle) ? `${savedVehicle.year} ${savedVehicle.make} ${savedVehicle.model}` : "",
       });
     } else {
       onClose();
