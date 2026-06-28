@@ -332,6 +332,18 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
     }
     setValidationErrors({});
     setSaveError("");
+
+    // ── CENTER CONTROL: Validate DB integrity before any write ───────────
+    const dbValidation = await validateRecord({
+      customerId: form.customer_id,
+      vehicleId: form.vehicle_id,
+      entityType: "Estimate",
+    });
+    if (!dbValidation.ok) {
+      setValidationErrors({ customer: dbValidation.errors.join(" ") });
+      return;
+    }
+
     setSaving(true);
     try {
       const estNum = estimate?.estimate_number || `EST-${Date.now().toString().slice(-6)}`;
