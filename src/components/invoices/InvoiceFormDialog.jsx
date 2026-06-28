@@ -849,15 +849,13 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
                 )}
               </div>
             </div>
-          {/* ── LBC Auto AI Bubble ── */}
-          <div className="space-y-2">
-            <AutoAIBubble
-              vehicle={form.vehicle_info || ""}
-              description={form.service_reason || form.customer_note || ""}
-            />
           </div>
 
-          </div>
+          {/* ── LBC Auto AI ── */}
+          <AutoAIBubble
+            vehicle={form.vehicle_info || ""}
+            description={form.service_reason || form.customer_note || ""}
+          />
 
           {/* Note */}
           <div>
