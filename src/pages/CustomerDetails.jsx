@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  ArrowLeft, Phone, Mail, MapPin, FileText, Car, Calendar,
+  ArrowLeft, Phone, Mail, MapPin, FileText, Car, Calendar, ChevronDown, ChevronRight,
   ClipboardList, Pencil, Wrench, ChevronRight, DollarSign,
   Clock, Plus, StickyNote, CalendarPlus, Trash2, Lock
 } from "lucide-react";
