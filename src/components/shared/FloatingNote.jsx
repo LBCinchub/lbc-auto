@@ -59,7 +59,7 @@ export default function FloatingNote() {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2">
+    <div className="fixed bottom-6 left-6 z-50 flex flex-col items-start gap-2">
       {open && (
         <div className="bg-gradient-to-b from-yellow-50 to-yellow-100 border border-yellow-300 rounded-xl shadow-2xl w-80 flex flex-col overflow-hidden max-h-[80vh]">
           {/* Input Section */}
