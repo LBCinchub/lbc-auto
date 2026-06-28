@@ -3,8 +3,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { syncCustomerActivity } from "@/utils/syncCustomerActivity";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, CreditCard, CheckCircle2, Plus, Trash2, Save, Loader2, Printer, Share2 } from "lucide-react";
+import { ArrowLeft, CreditCard, CheckCircle2, Plus, Trash2, Save, Loader2, Printer, Share2, History } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import PaymentHistoryManager from "@/components/invoices/PaymentHistoryManager";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -29,6 +30,7 @@ export default function EstimateDetail() {
   const [saving, setSaving] = useState(false);
   const [savedOk, setSavedOk] = useState(false);
   const [showCashoutDialog, setShowCashoutDialog] = useState(false);
+  const [showHistoryManager, setShowHistoryManager] = useState(false);
   
   // Editable line items state
   const [laborItems, setLaborItems] = useState([]);
@@ -663,6 +665,19 @@ export default function EstimateDetail() {
           </div>
         </div>
       </div>
+      {/* Payment History Manager */}
+      {showHistoryManager && estimate?.linked_invoice_id && (
+        <PaymentHistoryManager
+          open={showHistoryManager}
+          onClose={() => setShowHistoryManager(false)}
+          invoice={{ ...estimate, id: estimate.linked_invoice_id, total: estimate.total || grandTotal }}
+          onSaved={() => {
+            setShowHistoryManager(false);
+            queryClient.invalidateQueries({ queryKey: ["estimate", estimateId] });
+          }}
+        />
+      )}
+
       {/* Cashout Dialog */}
       {showCashoutDialog && estimate && (
         <PaymentReceiptDialog
@@ -718,6 +733,22 @@ export default function EstimateDetail() {
               <span style={{ color: "#64748b", fontSize: "12px" }}>Labor <strong style={{ color: "#a78bfa" }}>${laborTotal.toFixed(2)}</strong></span>
               <span style={{ color: "#64748b", fontSize: "12px" }}>Parts <strong style={{ color: "#fb923c" }}>${partsTotal.toFixed(2)}</strong></span>
             </div>
+
+            {/* Edit Payment History — only if payments exist */}
+            {(estimate?.payment_history?.length > 0 || estimate?.amount_paid > 0) && (
+              <button
+                onClick={() => setShowHistoryManager(true)}
+                style={{
+                  background: "linear-gradient(135deg,#854d0e,#713f12)",
+                  border: "1px solid rgba(234,179,8,0.3)",
+                  color: "#fbbf24", borderRadius: "10px",
+                  padding: "8px 14px", fontSize: "13px", fontWeight: 700,
+                  cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", flexShrink: 0,
+                }}
+              >
+                <History style={{ width: 14, height: 14 }} /> Edit Payments
+              </button>
+            )}
 
             {/* Cashout */}
             <button
