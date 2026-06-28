@@ -31,7 +31,7 @@ const mainPageKey = mainPage ?? Object.keys(Pages)[0];
 const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
 
 // ── One-time "New Update" banner ────────────────────────────────────────────
-const UPDATE_KEY = "lbc_auto_update_v20260626_labor_rate";
+const UPDATE_KEY = "lbc_auto_update_v20260627_ai_launch";
 
 const UpdateBanner = ({ user }) => {
   const [visible, setVisible] = useState(false);
@@ -39,12 +39,9 @@ const UpdateBanner = ({ user }) => {
 
   useEffect(() => {
     if (!user) return;
-    // Use a stable key per user — works for active sessions + fresh logins
     const key = `${UPDATE_KEY}_${user.id || user.email || "guest"}`;
-    const dismissed = localStorage.getItem(key);
-    if (!dismissed) {
-      // Small delay so app finishes loading first
-      const t = setTimeout(() => setVisible(true), 600);
+    if (!localStorage.getItem(key)) {
+      const t = setTimeout(() => setVisible(true), 700);
       return () => clearTimeout(t);
     }
   }, [user?.id, user?.email]);
@@ -55,144 +52,168 @@ const UpdateBanner = ({ user }) => {
     setVisible(false);
   };
 
-  const goToSettings = () => {
-    dismiss();
-    navigate("/Settings");
-  };
+  const goToSettings = () => { dismiss(); navigate("/Settings"); };
 
   if (!visible) return null;
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: "rgba(0,0,0,0.65)",
-        backdropFilter: "blur(4px)",
-        zIndex: 9999,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "16px",
-      }}
-    >
-      <div
-        style={{
-          background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
-          border: "1px solid rgba(99,179,237,0.3)",
-          borderRadius: "16px",
-          padding: "28px 28px 24px",
-          maxWidth: "420px",
-          width: "100%",
-          boxShadow: "0 25px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(99,179,237,0.1)",
-          position: "relative",
-        }}
-      >
-        {/* Close X */}
-        <button
-          onClick={dismiss}
-          style={{
-            position: "absolute", top: "14px", right: "16px",
-            background: "none", border: "none", cursor: "pointer",
-            color: "#64748b", fontSize: "20px", lineHeight: 1,
-          }}
-        >×</button>
+    <div style={{
+      position:"fixed", inset:0,
+      background:"rgba(0,0,0,0.72)",
+      backdropFilter:"blur(6px)",
+      zIndex:99999,
+      display:"flex", alignItems:"center", justifyContent:"center",
+      padding:"16px",
+    }}>
+      <div style={{
+        background:"linear-gradient(160deg,#0a0f1e 0%,#0f1e35 60%,#0a1628 100%)",
+        border:"1px solid rgba(0,170,255,0.25)",
+        borderRadius:"20px",
+        padding:"0",
+        maxWidth:"460px",
+        width:"100%",
+        boxShadow:"0 30px 80px rgba(0,0,0,0.6), 0 0 40px rgba(0,170,255,0.08)",
+        overflow:"hidden",
+        position:"relative",
+      }}>
 
-        {/* Icon */}
+        {/* ── AI Hero Header ── */}
         <div style={{
-          width: "48px", height: "48px", borderRadius: "12px",
-          background: "linear-gradient(135deg, #3b82f6, #06b6d4)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: "22px", marginBottom: "16px",
-        }}>⚡</div>
-
-        {/* Title */}
-        <h2 style={{
-          color: "#f1f5f9", fontSize: "18px", fontWeight: 700,
-          marginBottom: "6px", lineHeight: 1.3,
-        }}>New Update — June 2026</h2>
-
-        {/* Subtitle */}
-        <p style={{
-          color: "#94a3b8", fontSize: "13px", marginBottom: "16px", lineHeight: 1.6,
+          background:"linear-gradient(135deg,#001f3f 0%,#002b55 50%,#001a33 100%)",
+          borderBottom:"1px solid rgba(0,170,255,0.2)",
+          padding:"24px 24px 20px",
+          position:"relative",
+          overflow:"hidden",
         }}>
-          {user?.labor_rate
-            ? <>Your labor rate is set to <strong style={{ color: "#4ade80" }}>${user.labor_rate}/hr</strong> ✓ — it will now auto-fill on every new job.</>
-            : <>We added a <strong style={{ color: "#38bdf8" }}>Default Labor Rate</strong> to your shop settings. Set it once and it auto-fills on every new job — no more typing your hourly rate every time.</>
-          }
-        </p>
+          {/* Glow orb */}
+          <div style={{
+            position:"absolute", top:-40, right:-40,
+            width:160, height:160, borderRadius:"50%",
+            background:"radial-gradient(circle,rgba(0,170,255,0.18) 0%,transparent 70%)",
+            pointerEvents:"none",
+          }}/>
 
-        {/* What's new list */}
-        <div style={{
-          background: "rgba(255,255,255,0.04)", borderRadius: "10px",
-          padding: "12px 14px", marginBottom: "20px",
-          border: "1px solid rgba(255,255,255,0.07)",
-        }}>
-          <p style={{ color: "#64748b", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "8px", fontWeight: 600 }}>
+          {/* Close */}
+          <button onClick={dismiss} style={{
+            position:"absolute", top:14, right:16,
+            background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.12)",
+            borderRadius:"50%", width:28, height:28,
+            cursor:"pointer", color:"#94a3b8", fontSize:16, lineHeight:"28px",
+            textAlign:"center", padding:0,
+          }}>×</button>
+
+          {/* AI Icon + badge */}
+          <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:14 }}>
+            <div style={{
+              width:52, height:52, borderRadius:14,
+              background:"linear-gradient(135deg,#0066cc,#00aaff)",
+              boxShadow:"0 0 20px rgba(0,170,255,0.5)",
+              display:"flex", alignItems:"center", justifyContent:"center",
+              fontSize:26, flexShrink:0,
+            }}>🤖</div>
+            <div>
+              <div style={{
+                display:"inline-flex", alignItems:"center", gap:6,
+                background:"rgba(0,170,255,0.15)",
+                border:"1px solid rgba(0,170,255,0.3)",
+                borderRadius:20, padding:"3px 10px",
+                marginBottom:4,
+              }}>
+                <div style={{ width:6, height:6, borderRadius:"50%", background:"#00ff88", boxShadow:"0 0 6px #00ff88" }}/>
+                <span style={{ color:"#00aaff", fontSize:11, fontWeight:700, letterSpacing:"0.06em" }}>NOW LIVE</span>
+              </div>
+              <h2 style={{ color:"#f1f5f9", fontSize:17, fontWeight:800, margin:0, lineHeight:1.2 }}>
+                Meet LBC Auto AI
+              </h2>
+            </div>
+          </div>
+
+          <p style={{ color:"#94a3b8", fontSize:13, lineHeight:1.65, margin:0 }}>
+            Your new <strong style={{ color:"#38bdf8" }}>partner AI</strong> — built exclusively for automotive knowledge. Ask it anything about <strong style={{ color:"#e2e8f0" }}>vehicles, diagnostics, repair history, labor hours, OBD-II codes</strong>, and more. It knows cars the way your best mechanic does.
+          </p>
+
+          {/* Feature chips */}
+          <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginTop:14 }}>
+            {["🔧 Repair Diagnostics","📋 Labor Hours","🦀 Rust Multipliers","⚡ OBD-II Codes","🚗 Vehicle History","💡 Fix Recommendations"].map(chip => (
+              <span key={chip} style={{
+                background:"rgba(0,170,255,0.1)", border:"1px solid rgba(0,170,255,0.2)",
+                borderRadius:20, padding:"4px 10px", fontSize:11, color:"#93c5fd", fontWeight:600,
+              }}>{chip}</span>
+            ))}
+          </div>
+
+          {/* How to use */}
+          <div style={{
+            marginTop:14, padding:"10px 12px",
+            background:"rgba(0,255,136,0.06)", borderRadius:10,
+            border:"1px solid rgba(0,255,136,0.15)",
+            display:"flex", alignItems:"center", gap:10,
+          }}>
+            <span style={{ fontSize:18 }}>💬</span>
+            <span style={{ color:"#6ee7b7", fontSize:12, lineHeight:1.5 }}>
+              Look for the <strong>🤖 floating button</strong> at the bottom-right of every page — click it to open your AI assistant anytime.
+            </span>
+          </div>
+        </div>
+
+        {/* ── Platform Updates ── */}
+        <div style={{ padding:"18px 24px 22px" }}>
+          <p style={{ color:"#475569", fontSize:11, textTransform:"uppercase", letterSpacing:"0.08em", fontWeight:700, marginBottom:12 }}>
             Also in this update
           </p>
-          {[
-            "🎨 Sidebar — each item now has its own unique color",
-            "💲 Discount — choose $ fixed or % percentage",
-            "📄 Discount always shown on print & estimates",
-            "🎯 Cashout button right below invoice preview",
-          ].map((item, idx) => (
-            <p key={idx} style={{ color: "#cbd5e1", fontSize: "12.5px", marginBottom: "5px", lineHeight: 1.5 }}>
-              {item}
-            </p>
-          ))}
-        </div>
 
-        {/* CTA buttons */}
-        <div style={{ display: "flex", gap: "10px" }}>
-          {!user?.labor_rate ? (
-            <button
-              onClick={goToSettings}
-              style={{
-                flex: 1, padding: "11px 0",
-                background: "linear-gradient(135deg, #3b82f6, #06b6d4)",
-                color: "#fff", fontWeight: 700, fontSize: "14px",
-                border: "none", borderRadius: "10px", cursor: "pointer",
-                boxShadow: "0 4px 15px rgba(59,130,246,0.4)",
-              }}
-            >
-              Set My Labor Rate →
-            </button>
-          ) : (
-            <button
-              onClick={dismiss}
-              style={{
-                flex: 1, padding: "11px 0",
-                background: "linear-gradient(135deg, #22c55e, #16a34a)",
-                color: "#fff", fontWeight: 700, fontSize: "14px",
-                border: "none", borderRadius: "10px", cursor: "pointer",
-                boxShadow: "0 4px 15px rgba(34,197,94,0.3)",
-              }}
-            >
-              ✓ Got it!
-            </button>
-          )}
-          <button
-            onClick={dismiss}
-            style={{
-              padding: "11px 18px",
-              background: "rgba(255,255,255,0.06)", color: "#94a3b8",
-              fontWeight: 600, fontSize: "13px",
-              border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px",
-              cursor: "pointer",
-            }}
-          >
-            {user?.labor_rate ? "Close" : "Later"}
-          </button>
-        </div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:18 }}>
+            {[
+              ["💲","Discount: $ or %","Choose fixed dollar or percentage on every job"],
+              ["⚙️","Default Labor Rate","Set once, auto-fills every new labor row"],
+              ["💳","Unified Payments","One payment dialog across all modules"],
+              ["🎨","Colored Sidebar","Each module has its own unique icon color"],
+              ["📄","Discount on Print","Discount always visible on estimates & invoices"],
+              ["👤","Center Control","Customer changes sync across all records"],
+            ].map(([icon, title, desc]) => (
+              <div key={title} style={{
+                background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.07)",
+                borderRadius:10, padding:"10px 12px",
+              }}>
+                <div style={{ fontSize:16, marginBottom:4 }}>{icon}</div>
+                <div style={{ color:"#e2e8f0", fontSize:12, fontWeight:700, marginBottom:2 }}>{title}</div>
+                <div style={{ color:"#64748b", fontSize:11, lineHeight:1.4 }}>{desc}</div>
+              </div>
+            ))}
+          </div>
 
-        {/* Fine print */}
-        <p style={{ color: "#475569", fontSize: "11px", textAlign: "center", marginTop: "12px" }}>
-          This message appears only once.
-        </p>
+          {/* CTA */}
+          <div style={{ display:"flex", gap:10 }}>
+            {!user?.labor_rate && (
+              <button onClick={goToSettings} style={{
+                flex:1, padding:"11px 0",
+                background:"linear-gradient(135deg,#3b82f6,#06b6d4)",
+                color:"#fff", fontWeight:700, fontSize:13,
+                border:"none", borderRadius:10, cursor:"pointer",
+                boxShadow:"0 4px 15px rgba(59,130,246,0.35)",
+              }}>
+                ⚙️ Set Labor Rate →
+              </button>
+            )}
+            <button onClick={dismiss} style={{
+              flex:1, padding:"11px 0",
+              background: user?.labor_rate
+                ? "linear-gradient(135deg,#0066cc,#00aaff)"
+                : "rgba(255,255,255,0.07)",
+              color: user?.labor_rate ? "#fff" : "#94a3b8",
+              fontWeight:700, fontSize:13,
+              border: user?.labor_rate ? "none" : "1px solid rgba(255,255,255,0.1)",
+              borderRadius:10, cursor:"pointer",
+              boxShadow: user?.labor_rate ? "0 4px 15px rgba(0,170,255,0.35)" : "none",
+            }}>
+              {user?.labor_rate ? "🚀 Let's Go!" : "Got it"}
+            </button>
+          </div>
+
+          <p style={{ color:"#334155", fontSize:11, textAlign:"center", marginTop:10 }}>
+            Powered by <strong style={{ color:"#0066cc" }}>Lumina</strong> · LBC Network
+          </p>
+        </div>
       </div>
     </div>
   );
