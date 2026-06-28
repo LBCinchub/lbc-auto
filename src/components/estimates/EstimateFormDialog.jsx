@@ -811,15 +811,13 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
             </div>
           </div>
 
-          {/* Notes */}
-          {/* ── LBC Auto AI Bubble ── */}
-          <div className="space-y-2">
-            <AutoAIBubble
-              vehicle={form.vehicle_info || ""}
-              description={form.notes || form.service_reason || ""}
-            />
-          </div>
+          {/* ── LBC Auto AI ── */}
+          <AutoAIBubble
+            vehicle={form.vehicle_info || ""}
+            description={form.notes || form.service_reason || ""}
+          />
 
+          {/* Notes */}
           <div>
             <Label className="text-gray-400">Notes</Label>
             <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
