@@ -96,6 +96,19 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
         mechanic_id: "", mechanic_name: "", service_type: "", date: "",
         time_slot: "", notes: "", status: "scheduled"
       });
+        // Seed vehicle dropdown immediately so it shows before async fetch
+        const apptVid   = appointment._prefillVehicleId   || "";
+        const apptVinfo = appointment._prefillVehicleInfo || "";
+        if (apptVid && apptVinfo) {
+          const parts = apptVinfo.trim().split(" ");
+          setFetchedVehicles([{
+            id: apptVid,
+            year: parts[0] || "",
+            make: parts[1] || "",
+            model: parts.slice(2).join(" ") || "",
+            customer_id: appointment._prefillCustomerId || "",
+          }]);
+        }
     } else {
       setForm({
         customer_id: "", customer_name: "", customer_phone: "", vehicle_id: "", vehicle_info: "",
