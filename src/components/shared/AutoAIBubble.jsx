@@ -1,105 +1,78 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Bot, X, Send, Loader2, Wrench, Lightbulb, ChevronDown } from "lucide-react";
+import { Bot, X, Send, Loader2, Wrench } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 
 const SYSTEM_PROMPT = `You are LBC Auto AI — a professional automotive assistant for an auto repair shop.
 
 YOUR ONLY DOMAIN IS CARS AND AUTO REPAIR. If asked anything unrelated, politely say "I only help with automotive topics."
 
-YOU ARE EXPERT IN:
+EXPERTISE:
 - Diagnosing car problems by symptoms (sounds, warning lights, behavior)
-- Estimating labor hours for repairs (standard flat-rate times)
-- Rust and corrosion severity — how it affects labor time (add 20-50% for moderate rust, 50-150% for severe rust/seized bolts)
-- Parts costs ranges (ballpark)
+- Estimating labor hours for repairs (flat-rate standard times)
+- Rust and corrosion severity — how it affects labor time
+- Parts cost ranges (ballpark)
 - Common issues by make/model/year
 - OBD-II error codes (P-codes, B-codes, C-codes)
 - Maintenance intervals
 - Safety-critical vs non-urgent repairs
 
-LABOR HOUR GUIDE (use these as base, adjust for rust):
+LABOR HOUR GUIDE (base times — adjust for rust):
 - Oil change: 0.3–0.5h
-- Brake pads (per axle): 1.0–1.5h | Rotors: add 0.5h
-- Tire rotation: 0.3h | Tire swap (4): 0.5–1.0h
-- Battery: 0.3–0.5h
-- Alternator: 1.5–3.0h
-- Starter: 1.0–2.5h
-- Water pump: 2.0–5.0h (timing chain: add 2–4h)
-- Timing belt: 3.0–6.0h
-- Serpentine belt: 0.5–1.5h
-- CV axle (per side): 1.5–2.5h
-- Strut/shock (per side): 1.5–2.5h
-- Control arm: 1.5–3.0h
-- Tie rod end: 0.8–1.5h
-- Wheel bearing: 1.5–3.0h
-- Exhaust (mid-pipe): 1.0–2.5h | Full exhaust: 2.0–4.0h
-- Catalytic converter: 1.5–3.0h
-- O2 sensor: 0.5–1.5h
-- Spark plugs (4-cyl): 0.5–1.5h | (V6): 1.5–3.0h | (V8): 2.0–4.0h
-- Ignition coil: 0.5–1.0h (per coil)
-- Thermostat: 0.5–2.0h
-- Radiator: 2.0–4.0h
-- Heater core: 4.0–10.0h
-- Head gasket: 6.0–16.0h
-- Transmission flush: 0.5–1.0h
-- Transmission (remove/replace): 6.0–15.0h
-- Clutch: 4.0–8.0h
-- A/C recharge: 0.5–1.0h | Compressor: 2.0–4.0h
+- Brake pads per axle: 1.0–1.5h | Rotors: add 0.5h
+- Tire rotation: 0.3h | Tire swap x4: 0.5–1.0h
+- Battery: 0.3–0.5h | Alternator: 1.5–3.0h | Starter: 1.0–2.5h
+- Water pump: 2.0–5.0h | Timing belt: 3.0–6.0h | Serpentine: 0.5–1.5h
+- CV axle/side: 1.5–2.5h | Strut/side: 1.5–2.5h | Control arm: 1.5–3.0h
+- Tie rod end: 0.8–1.5h | Wheel bearing: 1.5–3.0h
+- Exhaust mid-pipe: 1.0–2.5h | Catalytic converter: 1.5–3.0h | O2 sensor: 0.5–1.5h
+- Spark plugs 4-cyl: 0.5–1.5h | V6: 1.5–3.0h | V8: 2.0–4.0h
+- Thermostat: 0.5–2.0h | Radiator: 2.0–4.0h | Heater core: 4.0–10.0h
+- Head gasket: 6.0–16.0h | Transmission R&R: 6.0–15.0h | Clutch: 4.0–8.0h
+- A/C compressor: 2.0–4.0h | Fuel pump: 1.5–4.0h
 - Power steering pump: 1.5–3.0h
-- Fuel pump: 1.5–4.0h
 
-RUST MULTIPLIERS:
-- Clean/southern car: 1.0x (baseline)
+RUST MULTIPLIERS (apply to base hours):
+- Clean / southern car: 1.0x
 - Light surface rust: 1.1–1.2x
 - Moderate rust (some seized bolts expected): 1.3–1.5x
 - Heavy rust (most bolts seized, possible breakage): 1.6–2.0x
-- Severe/rotted (structural rust, broken bolts guaranteed): 2.0–3.0x+
+- Severe / rotted (structural rust, broken bolts guaranteed): 2.0–3.0x+
 
 RESPONSE STYLE:
-- Be direct and practical — you are talking to a mechanic or shop owner
-- Give specific numbers (labor hours, cost ranges)
-- Always mention rust adjustment if vehicle condition is known
-- Keep responses concise — bullet points preferred
-- Suggest related services the shop could upsell (e.g. brake fluid flush with brake job)`;
+- Direct and practical — you are talking to a mechanic or shop owner
+- Always give specific numbers (hours, cost ranges)
+- Mention rust adjustment when relevant
+- Bullet points preferred — keep it concise
+- Suggest related upsell services when appropriate (e.g. brake fluid flush with brake job)`;
 
-// Quick-prompt chips the tech can tap
 const QUICK_PROMPTS = [
   { label: "Brake job hours", q: "How many hours for a full brake job (pads + rotors, all 4 wheels)?" },
-  { label: "Rust factor", q: "How do I adjust labor hours for a heavily rusted car?" },
-  { label: "Check engine P0420", q: "What does P0420 mean and how many hours to fix?" },
-  { label: "Head gasket estimate", q: "How many hours for a head gasket replacement?" },
-  { label: "Seized bolts", q: "Tips for dealing with seized exhaust bolts on a rusted car?" },
+  { label: "Rust factor", q: "How do I adjust labor hours for a heavily rusted Canadian car?" },
+  { label: "P0420 code", q: "What does P0420 mean and how many hours to fix?" },
+  { label: "Head gasket", q: "How many hours for a head gasket replacement?" },
+  { label: "Seized bolts", q: "Tips for dealing with seized exhaust bolts on a rusty car?" },
 ];
 
-export default function AutoAIBubble({ vehicle, description }) {
+export default function AutoAIBubble({ vehicle = "", description = "" }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showQuick, setShowQuick] = useState(true);
   const endRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Scroll to bottom on new message
   useEffect(() => {
-    if (open) endRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (open && endRef.current) endRef.current.scrollIntoView({ behavior: "smooth" });
   }, [messages, open]);
 
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 100);
   }, [open]);
 
-  const buildContext = () => {
-    let ctx = "";
-    if (vehicle) ctx += `\nCurrent vehicle: ${vehicle}`;
-    if (description) ctx += `\nJob description: ${description}`;
-    return ctx;
-  };
-
   const sendMessage = async (text) => {
     const q = (text || input).trim();
     if (!q || loading) return;
     setInput("");
-    setShowQuick(false);
 
     const userMsg = { role: "user", content: q };
     const history = [...messages, userMsg];
@@ -107,16 +80,32 @@ export default function AutoAIBubble({ vehicle, description }) {
     setLoading(true);
 
     try {
-      const res = await base44.functions.callFunction("lbcAutoAI", {
-        messages: history,
-        vehicle: vehicle || "",
-        description: description || "",
-      });
+      // Build context from current RO form
+      let context = "";
+      if (vehicle) context += `\nCurrent vehicle: ${vehicle}`;
+      if (description) context += `\nJob description: ${description}`;
 
-      const reply = res?.reply || res?.content || res?.message || "Sorry, no response.";
+      // Call Base44 built-in AI — uses Base44 integration credits
+      const fullMessages = [
+        { role: "user", content: SYSTEM_PROMPT + (context ? "\n\nShop context:" + context : "") + "\n\nReady to help." },
+        { role: "assistant", content: "Ready. Ask me anything about this vehicle or repair job." },
+        ...history,
+      ];
+
+      const response = await base44.ai.chat(fullMessages);
+
+      // Handle various response shapes Base44 AI might return
+      const reply =
+        (typeof response === "string" ? response : null) ||
+        response?.content ||
+        response?.message ||
+        response?.choices?.[0]?.message?.content ||
+        "No response generated.";
+
       setMessages(prev => [...prev, { role: "assistant", content: reply }]);
     } catch (e) {
-      setMessages(prev => [...prev, { role: "assistant", content: "⚠️ AI unavailable right now. Try again." }]);
+      console.error("AutoAI error:", e);
+      setMessages(prev => [...prev, { role: "assistant", content: "⚠️ AI unavailable right now. Try again in a moment." }]);
     }
     setLoading(false);
   };
@@ -126,8 +115,8 @@ export default function AutoAIBubble({ vehicle, description }) {
   };
 
   return (
-    <>
-      {/* ── Floating Bubble Trigger ── */}
+    <div className="space-y-2">
+      {/* ── Toggle Bar ── */}
       <div className="flex items-center justify-between">
         <button
           onClick={() => setOpen(v => !v)}
@@ -139,42 +128,42 @@ export default function AutoAIBubble({ vehicle, description }) {
         >
           <Bot className="w-3.5 h-3.5" />
           LBC Auto AI
-          {open ? <X className="w-3 h-3 ml-1" /> : <span className="ml-1 text-gray-600">▲</span>}
+          <span className="ml-0.5 text-gray-600">{open ? "▼" : "▲"}</span>
         </button>
         {!open && (
-          <span className="text-xs text-gray-600 italic">Ask about labor hours, rust, error codes…</span>
+          <span className="text-xs text-gray-600 italic">Ask labor hours, rust adjustments, error codes…</span>
         )}
       </div>
 
-      {/* ── Expanded Chat Panel ── */}
+      {/* ── Chat Panel ── */}
       {open && (
         <div className="rounded-xl border border-sky-500/20 bg-gray-900/95 overflow-hidden shadow-2xl">
           {/* Header */}
           <div className="flex items-center gap-2 px-3 py-2.5 bg-gradient-to-r from-sky-900/40 to-gray-900 border-b border-sky-500/20">
-            <div className="w-7 h-7 rounded-full bg-sky-500/20 border border-sky-500/30 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-full bg-sky-500/20 border border-sky-500/30 flex items-center justify-center flex-shrink-0">
               <Bot className="w-3.5 h-3.5 text-sky-400" />
             </div>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <p className="text-white text-xs font-semibold">LBC Auto AI</p>
-              <p className="text-gray-500 text-xs">Automotive knowledge · Labor hours · Rust diagnosis</p>
+              <p className="text-gray-500 text-[10px]">Labor hours · Rust diagnosis · Error codes</p>
             </div>
-            <span className="text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">Free · Beta</span>
+            <span className="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full flex-shrink-0">Free · Beta</span>
           </div>
 
           {/* Messages */}
-          <div className="h-52 overflow-y-auto p-3 space-y-2.5" style={{ scrollbarWidth: "thin" }}>
+          <div className="h-52 overflow-y-auto p-3 space-y-2.5">
             {messages.length === 0 && (
-              <div className="text-center py-3">
-                <Wrench className="w-8 h-8 text-gray-700 mx-auto mb-2" />
+              <div className="text-center py-4">
+                <Wrench className="w-7 h-7 text-gray-700 mx-auto mb-2" />
                 <p className="text-gray-500 text-xs">
-                  {vehicle ? `Loaded: ${vehicle}` : "Ask anything about cars, labor hours, or rust conditions."}
+                  {vehicle ? `Vehicle loaded: ${vehicle}` : "Ask anything about cars, labor hours, or rust."}
                 </p>
               </div>
             )}
             {messages.map((m, idx) => (
               <div key={idx} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
                 {m.role === "assistant" && (
-                  <div className="w-5 h-5 rounded-full bg-sky-500/20 border border-sky-500/20 flex items-center justify-center mr-1.5 mt-0.5 flex-shrink-0">
+                  <div className="w-5 h-5 rounded-full bg-sky-500/20 flex items-center justify-center mr-1.5 mt-0.5 flex-shrink-0">
                     <Bot className="w-3 h-3 text-sky-400" />
                   </div>
                 )}
@@ -189,10 +178,10 @@ export default function AutoAIBubble({ vehicle, description }) {
             ))}
             {loading && (
               <div className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded-full bg-sky-500/20 border border-sky-500/20 flex items-center justify-center flex-shrink-0">
+                <div className="w-5 h-5 rounded-full bg-sky-500/20 flex items-center justify-center flex-shrink-0">
                   <Bot className="w-3 h-3 text-sky-400" />
                 </div>
-                <div className="bg-gray-800/80 border border-gray-700/50 rounded-xl px-3 py-2 flex gap-1">
+                <div className="bg-gray-800/80 border border-gray-700/50 rounded-xl px-3 py-2 flex gap-1 items-center">
                   <div className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
                   <div className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
                   <div className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
@@ -202,12 +191,15 @@ export default function AutoAIBubble({ vehicle, description }) {
             <div ref={endRef} />
           </div>
 
-          {/* Quick prompts */}
-          {showQuick && messages.length === 0 && (
-            <div className="px-3 pb-2 flex gap-1.5 flex-wrap">
+          {/* Quick prompts — only on first open */}
+          {messages.length === 0 && (
+            <div className="px-3 pb-2 flex gap-1.5 flex-wrap border-t border-gray-800/50 pt-2">
               {QUICK_PROMPTS.map(p => (
-                <button key={p.label} onClick={() => sendMessage(p.q)}
-                  className="text-xs px-2 py-1 rounded-full bg-gray-800 border border-gray-700 text-gray-400 hover:border-sky-500/40 hover:text-sky-400 transition-colors">
+                <button
+                  key={p.label}
+                  onClick={() => sendMessage(p.q)}
+                  className="text-[10px] px-2 py-1 rounded-full bg-gray-800 border border-gray-700 text-gray-400 hover:border-sky-500/40 hover:text-sky-400 transition-colors"
+                >
                   {p.label}
                 </button>
               ))}
@@ -230,11 +222,14 @@ export default function AutoAIBubble({ vehicle, description }) {
               disabled={!input.trim() || loading}
               className="w-7 h-7 rounded-lg bg-sky-600 hover:bg-sky-500 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition-colors flex-shrink-0"
             >
-              {loading ? <Loader2 className="w-3.5 h-3.5 text-white animate-spin" /> : <Send className="w-3.5 h-3.5 text-white" />}
+              {loading
+                ? <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
+                : <Send className="w-3.5 h-3.5 text-white" />
+              }
             </button>
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
