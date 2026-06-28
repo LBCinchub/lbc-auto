@@ -151,7 +151,7 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
         description: description || "",
       });
 
-      const reply = result?.reply || "No response generated.";
+      const reply = result?.data?.reply || result?.reply || "No response generated.";
       setMessages(prev => [...prev, { role: "assistant", content: reply }]);
     } catch (e) {
       console.error("AutoAI error:", e);
