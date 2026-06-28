@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { syncCustomerActivity } from "@/utils/syncCustomerActivity";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Store, Plus, Trash2, Save, Loader2, CreditCard, X, Printer, Download, Share2, Mail, Send, CheckCircle2, Wrench } from "lucide-react";
+import { ArrowLeft, Store, Plus, Trash2, Save, Loader2, CreditCard, X, Printer, Download, Share2, Mail, Send, CheckCircle2, Wrench, History } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { formatPhone } from "@/utils/formatPhone";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import TechnicianNotes from "@/components/invoices/TechnicianNotes";
 import PaymentReceiptDialog from "@/components/invoices/PaymentReceiptDialog";
 import { useEmailSend } from "@/hooks/useEmailSend";
 import RepairOrderFormDialog from "@/components/orders/RepairOrderFormDialog";
+import PaymentHistoryManager from "@/components/invoices/PaymentHistoryManager";
 
 
 
@@ -52,6 +53,7 @@ export default function InvoiceDetail() {
   const [showCashoutDialog, setShowCashoutDialog] = useState(false);
   const [showRODialog, setShowRODialog] = useState(false);
   const [creatingRO, setCreatingRO] = useState(false);
+  const [showHistoryManager, setShowHistoryManager] = useState(false);
   const { sendEmail, sending: sendingEmail } = useEmailSend();
 
   useEffect(() => {
@@ -356,6 +358,13 @@ export default function InvoiceDetail() {
             {sendingEmail ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
             Email
           </Button>
+          {/* Edit Payment History */}
+          {(invoice?.payment_history?.length > 0 || invoice?.amount_paid > 0) && (
+            <Button variant="outline" size="sm" onClick={() => setShowHistoryManager(true)}
+              className="border-yellow-700/50 text-yellow-400 h-9 gap-1.5 text-xs hover:border-yellow-500 hover:bg-yellow-500/10">
+              <History className="w-3.5 h-3.5" /> Edit Payments
+            </Button>
+          )}
           {/* Cashout — full PaymentReceiptDialog */}
           {invoice?.status !== "paid" && (
             <Button size="sm" onClick={() => setShowCashoutDialog(true)}
