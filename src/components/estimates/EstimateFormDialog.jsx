@@ -5,9 +5,10 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
+import PaymentReceiptDialog from "@/components/invoices/PaymentReceiptDialog";
 import { syncCustomerActivity } from "@/utils/syncCustomerActivity";
 import { useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, Loader2, X, Search, CheckCircle2 } from "lucide-react";
+import { Plus, Trash2, Loader2, X, Search, CheckCircle2, CreditCard, Save } from "lucide-react";
 import { useNhtsaVinDecode } from "@/hooks/useNhtsaVinDecode";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -27,6 +28,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [showCashout, setShowCashout] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
   const [newCustomerForm, setNewCustomerForm] = useState(null);
   const queryClient = useQueryClient();
@@ -842,13 +844,74 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
         </div>{/* end space-y-6 */}
         </div>{/* end scrollable body */}
 
-        {/* Footer */}
-        <div className="flex-shrink-0 bg-gray-900 px-6 py-4 border-t border-gray-800 flex gap-3">
-          <Button variant="outline" onClick={onClose} className="flex-1 border-gray-700 text-gray-300">Cancel</Button>
-          <Button onClick={handleSave} disabled={saving} className="flex-1 bg-sky-500 hover:bg-sky-600">
-            {saving ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Saving...</> : "Save Estimate"}
-          </Button>
+        {/* ── Bottom Bar: Totals + Cashout + Save ── */}
+        <div className="flex-shrink-0 border-t border-gray-800 px-5 py-3"
+          style={{ background: "linear-gradient(135deg,#0f172a 0%,#111827 100%)" }}>
+          <div className="flex items-center gap-3 flex-wrap">
+
+            {/* Status pill */}
+            <div style={{
+              background: form.status === "approved" ? "rgba(74,222,128,0.1)" : "rgba(148,163,184,0.08)",
+              border: `1px solid ${form.status === "approved" ? "rgba(74,222,128,0.3)" : "rgba(148,163,184,0.15)"}`,
+              borderRadius: "20px", padding: "3px 12px",
+              color: form.status === "approved" ? "#4ade80" : "#94a3b8",
+              fontSize: "11px", fontWeight: 700, textTransform: "capitalize",
+            }}>{form.status || "draft"}</div>
+
+            {/* Totals inline */}
+            <div className="flex items-center gap-3 text-xs flex-1">
+              <span className="text-gray-500">Total <strong className="text-sky-400">${grandTotal.toFixed(2)}</strong></span>
+              <span className="text-gray-500">Labor <strong className="text-purple-400">${laborTotal.toFixed(2)}</strong></span>
+              <span className="text-gray-500">Parts <strong className="text-orange-400">${partsTotal.toFixed(2)}</strong></span>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2 ml-auto">
+              <Button variant="outline" onClick={onClose} className="border-gray-700 text-gray-300 h-8 text-xs px-3">
+                Cancel
+              </Button>
+              <Button onClick={handleSave} disabled={saving} className="bg-sky-500 hover:bg-sky-600 text-white gap-1.5 h-8 text-xs px-4">
+                {saving ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Saving...</> : "Save Estimate"}
+              </Button>
+              {estimate?.id && (
+                <Button
+                  onClick={async () => { await handleSave(); setShowCashout(true); }}
+                  disabled={saving}
+                  className="gap-1.5 h-8 text-xs px-4 font-bold"
+                  style={{ background: "linear-gradient(135deg,#16a34a,#15803d)", color: "#fff", border: "none", boxShadow: "0 2px 10px rgba(22,163,74,0.4)" }}
+                >
+                  <CreditCard className="w-3.5 h-3.5" /> Cashout
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
+
+        {/* Unified Cashout Dialog */}
+        {showCashout && estimate?.id && (
+          <PaymentReceiptDialog
+            open={showCashout}
+            onClose={() => setShowCashout(false)}
+            invoice={{
+              id: estimate.id,
+              invoice_number: estimate.estimate_number,
+              customer_id: estimate.customer_id || "",
+              customer_name: estimate.customer_name || form.customer_name,
+              vehicle_info: estimate.vehicle_info || form.vehicle_info,
+              total: grandTotal,
+              labor_cost: laborTotal,
+              parts_cost: partsTotal,
+              amount_paid: 0,
+              balance_due: grandTotal,
+              payment_history: [],
+            }}
+            entityName="Estimate"
+            onSaved={() => {
+              setShowCashout(false);
+              onSaved?.();
+            }}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );
