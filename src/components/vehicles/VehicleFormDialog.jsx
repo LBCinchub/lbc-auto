@@ -17,6 +17,15 @@ const emptyForm = {
   make: "", model: "", year: "", engine_type: "", color: "", mileage: ""
 };
 
+
+// Auto-capitalise: first letter of every word
+const toTitleCase = (str) => str.replace(/\b\w/g, c => c.toUpperCase());
+const capWords = (e, setter, key) => {
+  const val = toTitleCase(e.target.value);
+  if (key) setter(p => ({ ...p, [key]: val }));
+  else setter(val);
+};
+
 export default function VehicleFormDialog({ open, onClose, vehicle, onSaved, customers = [] }) {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
@@ -174,12 +183,12 @@ export default function VehicleFormDialog({ open, onClose, vehicle, onSaved, cus
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-gray-400">Make *</Label>
-              <Input value={form.make} onChange={e => setForm({...form, make: e.target.value})}
+              <Input value={form.make} autoCapitalize="words" onChange={e => setForm({...form, make: toTitleCase(e.target.value)})}
                 className="bg-gray-800 border-gray-700 text-white mt-1" />
             </div>
             <div>
               <Label className="text-gray-400">Model *</Label>
-              <Input value={form.model} onChange={e => setForm({...form, model: e.target.value})}
+              <Input value={form.model} autoCapitalize="words" onChange={e => setForm({...form, model: toTitleCase(e.target.value)})}
                 className="bg-gray-800 border-gray-700 text-white mt-1" />
             </div>
           </div>
@@ -192,7 +201,7 @@ export default function VehicleFormDialog({ open, onClose, vehicle, onSaved, cus
             </div>
             <div>
               <Label className="text-gray-400">Color</Label>
-              <Input value={form.color} onChange={e => setForm({...form, color: e.target.value})}
+              <Input value={form.color} autoCapitalize="words" onChange={e => setForm({...form, color: toTitleCase(e.target.value)})}
                 className="bg-gray-800 border-gray-700 text-white mt-1" />
             </div>
             <div>
@@ -204,7 +213,7 @@ export default function VehicleFormDialog({ open, onClose, vehicle, onSaved, cus
 
           <div>
             <Label className="text-gray-400">Engine Type</Label>
-            <Input value={form.engine_type} onChange={e => setForm({...form, engine_type: e.target.value})}
+            <Input value={form.engine_type} autoCapitalize="words" onChange={e => setForm({...form, engine_type: toTitleCase(e.target.value)})}
               className="bg-gray-800 border-gray-700 text-white mt-1" />
           </div>
 
