@@ -892,17 +892,22 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
               payment_history: form.payment_history || [],
             }}
             entityName="Invoice"
-            onSaved={(updatedInvoice) => {
-              if (updatedInvoice) {
-                setForm(f => ({
-                  ...f,
-                  amount_paid: updatedInvoice.amount_paid || 0,
-                  payment_method: updatedInvoice.payment_method || f.payment_method,
-                  payment_history: updatedInvoice.payment_history || f.payment_history,
-                  status: updatedInvoice.status || f.status,
-                }));
-              }
+            onSaved={async () => {
+              // Reload invoice from DB to sync amount_paid / status / payment_history into form
+              try {
+                const refreshed = await base44.entities.Invoice.get(invoice.id);
+                if (refreshed) {
+                  setForm(f => ({
+                    ...f,
+                    amount_paid: refreshed.amount_paid || 0,
+                    payment_method: refreshed.payment_method || f.payment_method,
+                    payment_history: refreshed.payment_history || f.payment_history,
+                    status: refreshed.status || f.status,
+                  }));
+                }
+              } catch(e) { /* non-critical */ }
               setShowCashout(false);
+              onSaved?.();
             }}
           />
         )}
