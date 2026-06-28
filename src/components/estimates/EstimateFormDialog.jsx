@@ -5,7 +5,6 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
-import AutoAIBubble from "@/components/shared/AutoAIBubble";
 import { syncCustomerActivity } from "@/utils/syncCustomerActivity";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, Loader2, X, Search, CheckCircle2 } from "lucide-react";
@@ -810,12 +809,6 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
               </table>
             </div>
           </div>
-
-          {/* ── LBC Auto AI ── */}
-          <AutoAIBubble
-            vehicle={form.vehicle_info || ""}
-            description={form.notes || form.service_reason || ""}
-          />
 
           {/* Notes */}
           <div>
