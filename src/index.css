@@ -264,3 +264,8 @@
 .light ::-webkit-scrollbar-thumb:hover {
   background: rgba(100, 116, 139, 0.5);
 }
+
+/* ── Hide UI chrome when printing ── */
+@media print {
+  .no-print { display: none !important; }
+}
