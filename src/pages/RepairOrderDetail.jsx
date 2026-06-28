@@ -603,6 +603,19 @@ export default function RepairOrderDetail() {
         }}
       />
 
+      {/* Payment History Manager — edits payments on the linked invoice */}
+      {showHistoryManager && linkedInvoicesList[0] && (
+        <PaymentHistoryManager
+          open={showHistoryManager}
+          onClose={() => setShowHistoryManager(false)}
+          invoice={linkedInvoicesList[0]}
+          onSaved={() => {
+            setShowHistoryManager(false);
+            queryClient.invalidateQueries({ queryKey: ["invoices", "byRO", orderId] });
+          }}
+        />
+      )}
+
       <Dialog open={showSignatureDialog} onOpenChange={setShowSignatureDialog}>
         <DialogContent className="bg-gray-900 border-gray-800 text-white sm:max-w-md">
           <DialogHeader>
