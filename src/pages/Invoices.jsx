@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import AutoAIBubble from "@/components/shared/AutoAIBubble";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation} from 'react-router-dom';
-import { FileText, Pencil, Trash2, Printer, Download, DollarSign, MessageSquare, ShieldCheck, Calendar, AlertCircle, Phone, Mail, Hash, Sheet, Send, Loader2, Wrench, ExternalLink } from "lucide-react";
+import { FileText, Pencil, Trash2, Printer, Download, DollarSign, MessageSquare, ShieldCheck, Calendar, AlertCircle, Phone, Mail, Hash, Sheet, Send, Loader2, Wrench, ExternalLink, History } from "lucide-react";
 import { useEmailSend } from "@/hooks/useEmailSend";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,6 +19,7 @@ import StatusBadge from "../components/shared/StatusBadge";
 import InvoiceFormDialog from "../components/invoices/InvoiceFormDialog";
 import InvoicePrintView from "../components/invoices/InvoicePrintView";
 import PaymentReceiptDialog from "../components/invoices/PaymentReceiptDialog";
+import PaymentHistoryManager from "../components/invoices/PaymentHistoryManager";
 import DateFilter, { applyDateFilter } from "../components/shared/DateFilter";
 
 const PAGE_SIZE = 20;
@@ -42,6 +43,7 @@ export default function Invoices() {
   const [paymentInvoice, setPaymentInvoice] = useState(null);
   const [sendingAuth, setSendingAuth] = useState(null);
   const [creatingRO, setCreatingRO] = useState(null); // invoice id being sent to RO
+  const [historyInvoice, setHistoryInvoice] = useState(null); // invoice open in history manager
   const [dateRange, setDateRange] = useState(null);
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
@@ -533,6 +535,15 @@ export default function Invoices() {
                         : <Wrench className="w-3.5 h-3.5" />
                       }
                     </Button>
+                    {/* Edit Payment History */}
+                    {(inv.payment_history?.length > 0 || inv.amount_paid > 0) && (
+                      <Button variant="ghost" size="icon"
+                        className="h-8 w-8 text-yellow-500 hover:text-yellow-400"
+                        title="Edit Payment History"
+                        onClick={(e) => { e.stopPropagation(); setHistoryInvoice(inv); }}>
+                        <History className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
                     {/* Edit invoice */}
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-sky-400"
                       title="Edit Invoice"
@@ -568,6 +579,19 @@ export default function Invoices() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Payment History Manager */}
+      {historyInvoice && (
+        <PaymentHistoryManager
+          open={!!historyInvoice}
+          onClose={() => setHistoryInvoice(null)}
+          invoice={historyInvoice}
+          onSaved={() => {
+            setHistoryInvoice(null);
+            queryClient.invalidateQueries({ queryKey: ["invoices"] });
+          }}
+        />
       )}
 
       <InvoiceFormDialog
