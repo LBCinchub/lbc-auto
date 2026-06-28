@@ -651,3 +651,36 @@ export default function InvoiceDetail() {
               </div>
             </div>
           )}
+        </div>
+
+        {/* Parts & Suppliers section placeholder */}
+      </div>
+
+      {/* ── Unified Payment Dialog — opened by ALL payment buttons ── */}
+      {showCashoutDialog && invoice && (
+        <PaymentReceiptDialog
+          open={showCashoutDialog}
+          onClose={() => setShowCashoutDialog(false)}
+          entityName="Invoice"
+          invoice={{
+            id: invoiceId,
+            invoice_number: invoice.invoice_number,
+            customer_name: invoice.customer_name,
+            vehicle_info: invoice.vehicle_info,
+            total: grandTotal,
+            amount_paid: invoice.amount_paid || 0,
+            balance_due: invoice.balance_due || 0,
+            payment_history: invoice.payment_history || [],
+            tax_amount: taxAmount,
+            tax_rate: taxRate,
+            status: invoice.status,
+          }}
+          onSaved={() => {
+            setShowCashoutDialog(false);
+            window.location.reload();
+          }}
+        />
+      )}
+    </div>
+  );
+}
