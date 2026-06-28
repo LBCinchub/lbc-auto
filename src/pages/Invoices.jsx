@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import AutoAIBubble from "@/components/shared/AutoAIBubble";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation} from 'react-router-dom';
-import { FileText, Pencil, Trash2, Printer, Download, DollarSign, MessageSquare, ShieldCheck, Calendar, AlertCircle, Phone, Mail, Hash, Sheet, Send, Loader2 } from "lucide-react";
+import { FileText, Pencil, Trash2, Printer, Download, DollarSign, MessageSquare, ShieldCheck, Calendar, AlertCircle, Phone, Mail, Hash, Sheet, Send, Loader2, Wrench, ExternalLink } from "lucide-react";
 import { useEmailSend } from "@/hooks/useEmailSend";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -41,6 +41,7 @@ export default function Invoices() {
   const [printInvoice, setPrintInvoice] = useState(null);
   const [paymentInvoice, setPaymentInvoice] = useState(null);
   const [sendingAuth, setSendingAuth] = useState(null);
+  const [creatingRO, setCreatingRO] = useState(null); // invoice id being sent to RO
   const [dateRange, setDateRange] = useState(null);
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
@@ -300,6 +301,43 @@ export default function Invoices() {
     setPage(prev => prev !== _pg ? _pg : prev);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [_location.search]);
+
+  // ── Send Invoice to Repair Order ──────────────────────────────────────────
+  const handleSendToRO = async (e, inv) => {
+    e.stopPropagation();
+    if (inv.repair_order_id) {
+      navigate(`/RepairOrderDetail/${inv.repair_order_id}`);
+      return;
+    }
+    setCreatingRO(inv.id);
+    try {
+      const roData = {
+        customer_id:       inv.customer_id || "",
+        customer_name:     inv.customer_name || "",
+        customer_phone:    inv.customer_phone || "",
+        vehicle_id:        inv.vehicle_id || "",
+        vehicle_info:      inv.vehicle_info || "",
+        description:       inv.service_reason || "Service from Invoice #" + inv.invoice_number,
+        labor_items:       inv.labor_items  || [],
+        parts_used:        inv.parts_used   || [],
+        labor_cost:        inv.labor_total  || 0,
+        parts_cost:        inv.parts_total  || 0,
+        total_cost:        inv.grand_total  || inv.total || 0,
+        status:            "pending",
+        linked_invoice_id: inv.id,
+        order_number:      "RO-" + Date.now().toString(36).toUpperCase(),
+      };
+      const newRO = await base44.entities.RepairOrder.create(roData);
+      await base44.entities.Invoice.update(inv.id, { repair_order_id: newRO.id });
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      navigate(`/RepairOrderDetail/${newRO.id}`);
+    } catch(err) {
+      alert("Could not create Repair Order: " + (err?.message || err));
+    } finally {
+      setCreatingRO(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -484,12 +522,31 @@ export default function Invoices() {
                       onClick={() => setPrintInvoice(inv)} title="Print">
                       <Printer className="w-4 h-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-white"
-                      onClick={() => { setEditingInvoice(inv); setDialogOpen(true); }}>
+                    {/* Send to / View Repair Order */}
+                    <Button variant="ghost" size="icon"
+                      className={`h-8 w-8 ${inv.repair_order_id ? "text-orange-400 hover:text-orange-300" : "text-gray-500 hover:text-orange-400"}`}
+                      onClick={(e) => handleSendToRO(e, inv)}
+                      title={inv.repair_order_id ? "View Repair Order" : "Send to Repair Order"}
+                      disabled={creatingRO === inv.id}>
+                      {creatingRO === inv.id
+                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        : <Wrench className="w-3.5 h-3.5" />
+                      }
+                    </Button>
+                    {/* Edit invoice */}
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-sky-400"
+                      title="Edit Invoice"
+                      onClick={(e) => { e.stopPropagation(); setEditingInvoice(inv); setDialogOpen(true); }}>
                       <Pencil className="w-3.5 h-3.5" />
                     </Button>
+                    {/* Open detail page */}
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-violet-400"
+                      title="Open Invoice Detail"
+                      onClick={(e) => { e.stopPropagation(); navigate(`/InvoiceDetail/${inv.id}`); }}>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-rose-400"
-                      onClick={() => handleDelete(inv.id)}>
+                      onClick={(e) => { e.stopPropagation(); handleDelete(inv.id); }}>
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   </div>
