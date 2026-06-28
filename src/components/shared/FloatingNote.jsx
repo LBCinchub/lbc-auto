@@ -59,7 +59,7 @@ export default function FloatingNote() {
   };
 
   return (
-    <div className="fixed bottom-6 left-6 z-50 flex flex-col items-start gap-2">
+    <div className="fixed top-6 right-6 z-50 flex flex-col items-end gap-2">
       {open && (
         <div className="bg-gradient-to-b from-yellow-50 to-yellow-100 border border-yellow-300 rounded-xl shadow-2xl w-80 flex flex-col overflow-hidden max-h-[80vh]">
           {/* Input Section */}
@@ -129,7 +129,8 @@ export default function FloatingNote() {
 
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-12 h-12 rounded-full bg-yellow-400 hover:bg-yellow-300 shadow-lg flex items-center justify-center transition-all relative"
+        className="w-12 h-12 rounded-full bg-yellow-400 hover:bg-yellow-300 flex items-center justify-center transition-all relative"
+        style={{ boxShadow: "0 0 14px #facc15, 0 0 28px #facc1580" }}
       >
         <StickyNote className="w-5 h-5 text-yellow-900" />
         {notes.length > 0 && !open && (
