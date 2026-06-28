@@ -9,7 +9,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
-import AutoAIBubble from "@/components/shared/AutoAIBubble";
 import { syncCustomerActivity } from "@/utils/syncCustomerActivity";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, X, Loader2 } from "lucide-react";
@@ -717,12 +716,6 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
               </table>
             </div>
           </div>
-
-          {/* ── LBC Auto AI ── */}
-          <AutoAIBubble
-            vehicle={form.vehicle_info || ""}
-            description={form.notes || form.description || ""}
-          />
 
           <div>
             <Label className="text-gray-400">Notes</Label>
