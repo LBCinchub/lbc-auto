@@ -550,7 +550,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
             {!sourceEstimate && (
               <div className="sm:col-span-2">
                 <div className="flex items-center justify-between mb-1">
-                  <Label className="text-gray-400 text-xs uppercase tracking-wider">Link Estimate / Repair / Invoice</Label>
+                  <Label className="text-gray-400">Link to Record</Label>
                   {!form.repair_order_id && !["invoice-linked", "estimate-linked"].includes(linkMode) && (
                     <div className="flex gap-1">
                       <button onClick={() => { setLinkMode("order"); setInvoiceSearch(""); setEstimateSearch(""); }} className={`text-xs px-2 py-0.5 rounded ${linkMode === "order" ? "bg-sky-500/20 text-sky-400" : "text-gray-500 hover:text-gray-300"}`}>Repair Order</button>
@@ -677,15 +677,15 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
               <p className="text-gray-400 text-xs mb-1">Invoice Date</p>
               <Input type="date" value={form.invoice_date || ""}
                 onChange={e => setForm({ ...form, invoice_date: e.target.value })}
-                className="bg-gray-800 border-gray-700 text-white h-7 text-xs" />
+                className="bg-gray-800 border-gray-700 text-white" />
             </div>
             <div>
               <p className="text-gray-400 text-xs mb-1">Due Date</p>
-              <Input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} className="bg-gray-800 border-gray-700 text-white h-7 text-xs" />
+              <Input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} className="bg-gray-800 border-gray-700 text-white" />
             </div>
             <div>
               <p className="text-gray-400 text-xs mb-1">Amount Paid</p>
-              <Input type="number" onFocus={e => e.target.select()} step="0.01" value={form.amount_paid} onChange={e => setForm({ ...form, amount_paid: Number(e.target.value) })} className="bg-gray-800 border-gray-700 text-white h-7 text-xs" />
+              <Input type="number" onFocus={e => e.target.select()} step="0.01" value={form.amount_paid} onChange={e => setForm({ ...form, amount_paid: Number(e.target.value) })} className="bg-gray-800 border-gray-700 text-white" />
             </div>
             <div>
               <p className="text-gray-400 text-xs mb-1">Balance Due</p>
@@ -694,7 +694,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
             <div>
               <p className="text-gray-400 text-xs mb-1">Status</p>
               <Select value={form.status} onValueChange={v => setForm({ ...form, status: v })}>
-                <SelectTrigger className="bg-gray-800 border-gray-700 text-white h-7 text-xs">
+                <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-gray-800 border-gray-700">
@@ -854,7 +854,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
           <div>
             <Label className="text-gray-400">Note for Customer</Label>
             <div className="mb-4">
-              <label className="text-gray-400 text-xs uppercase tracking-wider font-semibold block mb-1">Reason for Visit / Customer Complaint</label>
+              <Label className="text-gray-400 block mb-1">Reason for Visit / Customer Complaint</Label>
               <Textarea value={form.service_reason || ""} onChange={e => setForm({ ...form, service_reason: e.target.value })}
                 rows={2} placeholder="e.g. Engine light on, grinding noise when braking, oil change due..."
                 className="bg-gray-800 border-gray-700 text-white placeholder-gray-600 resize-none" />
