@@ -389,29 +389,11 @@ export default function InvoiceDetail() {
         />
       </div>
 
-      {/* ── Action Strip: below print preview, above edit section ── */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-1 print:hidden">
+      {/* ── Section divider ── */}
+      <div className="flex items-center gap-3 px-1 print:hidden">
         <p className="text-xs text-gray-500 italic">↑ Print preview above · Edit details below</p>
+        <div className="flex-1 border-t border-gray-800" />
         <div className="flex flex-wrap gap-2">
-          {invoice?.status !== "paid" && (
-            <button
-              onClick={() => setShowCashoutDialog(true)}
-              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-lg shadow-emerald-900/30"
-            >
-              <CreditCard className="w-4 h-4" />
-              Cashout — Record Payment
-            </button>
-          )}
-          {invoice?.status === "paid" && (
-            <span className="flex items-center gap-2 text-emerald-400 text-sm font-semibold bg-emerald-500/10 border border-emerald-500/30 px-4 py-2 rounded-lg">
-              ✓ Paid in Full
-            </span>
-          )}
-          {invoice?.balance_due > 0 && invoice?.status !== "paid" && (
-            <span className="text-yellow-400 text-sm font-medium bg-yellow-500/10 border border-yellow-500/30 px-3 py-2 rounded-lg">
-              Balance Due: ${(invoice.balance_due || 0).toFixed(2)}
-            </span>
-          )}
         </div>
       </div>
 
@@ -679,15 +661,7 @@ export default function InvoiceDetail() {
           {invoice.balance_due > 0 && (
             <div className="flex justify-between text-yellow-400 font-semibold">
               <span>Balance Due</span>
-              <div className="flex items-center gap-3">
-                <span>${invoice.balance_due.toFixed(2)}</span>
-                {invoice.status !== "paid" && (
-                  <button onClick={() => setShowCashoutDialog(true)}
-                    className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-md flex items-center gap-1 transition-colors">
-                    <CreditCard className="w-3 h-3" /> Record Payment
-                  </button>
-                )}
-              </div>
+              <span>${invoice.balance_due.toFixed(2)}</span>
             </div>
           )}
         </div>
