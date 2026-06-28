@@ -397,20 +397,20 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         {/* Header */}
         <div className="flex-shrink-0 px-6 pt-6 pb-4 border-b border-gray-800">
           <DialogHeader>
-            <DialogTitle className="text-lg font-semibold text-white">
+            <DialogTitle>
               {invoice?.id ? "Edit Invoice" : sourceEstimate ? `Invoice from Estimate #${sourceEstimate.estimate_number}${sourceEstimate.created_date ? ` · ${new Date(sourceEstimate.created_date).toLocaleDateString()}` : ""}` : "Create Invoice"}
             </DialogTitle>
           </DialogHeader>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-5">
-        <div className="space-y-6">
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="space-y-5">
 
           {/* Customer + Vehicle + Repair Order Link — unified layout */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Customer */}
             <div>
-              <Label className="text-gray-400 text-xs uppercase tracking-wider">Customer *</Label>
+              <Label className="text-gray-400">Customer *</Label>
               <div className="relative mt-1">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                 <Input
@@ -469,7 +469,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
 
             {/* Vehicle */}
             <div>
-              <Label className="text-gray-400 text-xs uppercase tracking-wider">Vehicle</Label>
+              <Label className="text-gray-400">Vehicle</Label>
               <div className="mt-1">
                 {form.customer_id && !form.repair_order_id && !sourceEstimate ? (
                   <>
@@ -672,27 +672,27 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
           </div>
 
           {/* Info Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-4 border-y border-gray-800">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <p className="text-gray-500 text-xs uppercase mb-1">Invoice Date</p>
+              <p className="text-gray-400 text-xs mb-1">Invoice Date</p>
               <Input type="date" value={form.invoice_date || ""}
                 onChange={e => setForm({ ...form, invoice_date: e.target.value })}
                 className="bg-gray-800 border-gray-700 text-white h-7 text-xs" />
             </div>
             <div>
-              <p className="text-gray-500 text-xs uppercase mb-1">Due Date</p>
+              <p className="text-gray-400 text-xs mb-1">Due Date</p>
               <Input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} className="bg-gray-800 border-gray-700 text-white h-7 text-xs" />
             </div>
             <div>
-              <p className="text-gray-500 text-xs uppercase mb-1">Amount Paid</p>
+              <p className="text-gray-400 text-xs mb-1">Amount Paid</p>
               <Input type="number" onFocus={e => e.target.select()} step="0.01" value={form.amount_paid} onChange={e => setForm({ ...form, amount_paid: Number(e.target.value) })} className="bg-gray-800 border-gray-700 text-white h-7 text-xs" />
             </div>
             <div>
-              <p className="text-gray-500 text-xs uppercase mb-1">Balance Due</p>
+              <p className="text-gray-400 text-xs mb-1">Balance Due</p>
               <p className={`font-bold text-sm ${balanceDue > 0 ? "text-yellow-400" : "text-emerald-400"}`}>${balanceDue.toFixed(2)}</p>
             </div>
             <div>
-              <p className="text-gray-500 text-xs uppercase mb-1">Status</p>
+              <p className="text-gray-400 text-xs mb-1">Status</p>
               <Select value={form.status} onValueChange={v => setForm({ ...form, status: v })}>
                 <SelectTrigger className="bg-gray-800 border-gray-700 text-white h-7 text-xs">
                   <SelectValue />
@@ -808,7 +808,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
           {/* Payment & Settings */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-3">
-              <Label className="text-gray-400 text-xs uppercase tracking-wider">Payment Method</Label>
+              <Label className="text-gray-400">Payment Method</Label>
               <div className="flex gap-3">
                 {["cash", "card", "e-transfer"].map(m => (
                   <label key={m} className="flex items-center gap-1.5 cursor-pointer">
@@ -824,7 +824,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
               <Input value={form.cashier_name} onChange={e => setForm({ ...form, cashier_name: e.target.value })} className="bg-gray-800 border-gray-700 text-white" placeholder="Cashier name" />
             </div>
             <div className="space-y-3">
-              <Label className="text-gray-400 text-xs uppercase tracking-wider">Tax & Discount</Label>
+              <Label className="text-gray-400">Tax & Discount</Label>
               <div className="rounded-md bg-gray-800/50 border border-gray-700 p-3">
                 <Label className="text-gray-400 text-xs">Tax Rate (%) *</Label>
                 <Input type="number" onFocus={e => e.target.select()} step="0.1" value={form.tax_rate} onChange={e => setForm({ ...form, tax_rate: Number(e.target.value) })} className="bg-gray-800 border-gray-700 text-white mt-1 font-semibold" placeholder="0" />
@@ -852,7 +852,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
 
           {/* Note */}
           <div>
-            <Label className="text-gray-400 text-xs uppercase tracking-wider">Note for Customer</Label>
+            <Label className="text-gray-400">Note for Customer</Label>
             <div className="mb-4">
               <label className="text-gray-400 text-xs uppercase tracking-wider font-semibold block mb-1">Reason for Visit / Customer Complaint</label>
               <Textarea value={form.service_reason || ""} onChange={e => setForm({ ...form, service_reason: e.target.value })}
