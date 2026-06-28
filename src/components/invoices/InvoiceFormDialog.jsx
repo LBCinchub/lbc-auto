@@ -843,81 +843,61 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         </div>{/* end space-y-6 */}
         </div>{/* end scrollable body */}
 
-        {/* ── Bottom Panel: Status + Totals + Cashout ── */}
-        <div className="flex-shrink-0 border-t border-gray-800"
-          style={{ background: "linear-gradient(180deg,#0f172a 0%,#111827 100%)" }}>
+        {/* ── Bottom Bar: Status + Totals + Actions ── */}
+        <div className="flex-shrink-0 border-t border-gray-800 px-5 py-3"
+          style={{ background: "linear-gradient(135deg,#0f172a 0%,#111827 100%)" }}>
+          <div className="flex items-center gap-3 flex-wrap">
 
-          {/* Status + Summary row */}
-          <div className="px-6 pt-4 pb-3 flex flex-wrap items-center gap-3">
+            {/* Status selector */}
+            <Select value={form.status} onValueChange={v => setForm({ ...form, status: v })}>
+              <SelectTrigger className="border border-gray-700 bg-gray-800/60 h-8 text-xs font-bold w-28 rounded-full"
+                style={{ color: form.status === "paid" ? "#4ade80" : form.status === "partial" ? "#fbbf24" : form.status === "overdue" ? "#f87171" : "#94a3b8" }}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-800 border-gray-700">
+                {[
+                  { v: "unpaid",  label: "Unpaid",  color: "#94a3b8" },
+                  { v: "partial", label: "Partial", color: "#fbbf24" },
+                  { v: "paid",    label: "Paid",    color: "#4ade80" },
+                  { v: "overdue", label: "Overdue", color: "#f87171" },
+                ].map(s => (
+                  <SelectItem key={s.v} value={s.v}>
+                    <span style={{ color: s.color }}>{s.label}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-            {/* Status badge selector */}
-            <div className="flex items-center gap-2 bg-gray-800/60 border border-gray-700 rounded-lg px-3 py-2">
-              <span className="text-gray-500 text-xs">Status</span>
-              <Select value={form.status} onValueChange={v => setForm({ ...form, status: v })}>
-                <SelectTrigger className="border-0 bg-transparent p-0 h-auto text-sm font-semibold w-24 focus:ring-0"
-                  style={{ color: form.status === "paid" ? "#4ade80" : form.status === "partial" ? "#fbbf24" : form.status === "overdue" ? "#f87171" : "#94a3b8" }}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-gray-800 border-gray-700">
-                  {[
-                    { v: "unpaid",  label: "Unpaid",  color: "#94a3b8" },
-                    { v: "partial", label: "Partial", color: "#fbbf24" },
-                    { v: "paid",    label: "Paid",    color: "#4ade80" },
-                    { v: "overdue", label: "Overdue", color: "#f87171" },
-                  ].map(s => (
-                    <SelectItem key={s.v} value={s.v}>
-                      <span style={{ color: s.color }}>{s.label}</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* Totals inline */}
+            <div className="flex items-center gap-3 text-xs flex-1">
+              <span className="text-gray-500">Total <strong className="text-sky-400">${calculations.total.toFixed(2)}</strong></span>
+              {balanceDue > 0 && <span className="text-gray-500">Balance <strong className="text-yellow-400">${balanceDue.toFixed(2)}</strong></span>}
+              {(form.amount_paid || 0) > 0 && <span className="text-gray-500">Paid <strong className="text-emerald-400">${(form.amount_paid || 0).toFixed(2)}</strong></span>}
             </div>
 
-            {/* Totals pills */}
-            <div className="flex gap-2 flex-wrap ml-auto">
-              {(form.amount_paid || 0) > 0 && (
-                <div className="bg-emerald-500/10 border border-emerald-500/25 rounded-lg px-3 py-2 text-center min-w-[80px]">
-                  <p className="text-emerald-400 text-xs font-medium">Paid</p>
-                  <p className="text-emerald-300 font-bold text-sm">${(form.amount_paid || 0).toFixed(2)}</p>
-                </div>
-              )}
-              <div className={`border rounded-lg px-3 py-2 text-center min-w-[80px] ${balanceDue > 0 ? "bg-yellow-500/10 border-yellow-500/25" : "bg-emerald-500/10 border-emerald-500/25"}`}>
-                <p className={`text-xs font-medium ${balanceDue > 0 ? "text-yellow-400" : "text-emerald-400"}`}>
-                  {balanceDue <= 0 ? "Paid Off" : "Balance Due"}
-                </p>
-                <p className={`font-bold text-sm ${balanceDue > 0 ? "text-yellow-300" : "text-emerald-300"}`}>
-                  ${Math.abs(balanceDue).toFixed(2)}
-                </p>
-              </div>
-              <div className="bg-sky-500/10 border border-sky-500/25 rounded-lg px-3 py-2 text-center min-w-[80px]">
-                <p className="text-sky-400 text-xs font-medium">Total</p>
-                <p className="text-sky-300 font-bold text-sm">${calculations.total.toFixed(2)}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Action buttons */}
-          <div className="px-6 pb-4 flex gap-3">
-            <Button variant="outline" onClick={onClose} className="border-gray-700 text-gray-300">
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={saving || (!form.customer_id && !form.customer_name)}
-              className="flex-1 bg-sky-500 hover:bg-sky-600 text-white gap-2"
-            >
-              {saving ? <><Loader2 className="w-4 h-4 animate-spin" />Saving...</> : "Save Invoice"}
-            </Button>
-            {invoice?.id && (
-              <Button
-                onClick={async () => { await handleSave(); setShowCashout(true); }}
-                disabled={saving}
-                className="flex-1 gap-2 font-bold"
-                style={{ background: "linear-gradient(135deg,#16a34a,#15803d)", color: "#fff", border: "none", boxShadow: "0 4px 14px rgba(22,163,74,0.35)" }}
-              >
-                <CreditCard className="w-4 h-4" /> Cashout
+            {/* Actions */}
+            <div className="flex gap-2 ml-auto">
+              <Button variant="outline" onClick={onClose} className="border-gray-700 text-gray-300 h-8 text-xs px-3">
+                Cancel
               </Button>
-            )}
+              <Button
+                onClick={handleSave}
+                disabled={saving || (!form.customer_id && !form.customer_name)}
+                className="bg-sky-500 hover:bg-sky-600 text-white gap-1.5 h-8 text-xs px-4"
+              >
+                {saving ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Saving...</> : "Save Invoice"}
+              </Button>
+              {invoice?.id && (
+                <Button
+                  onClick={async () => { await handleSave(); setShowCashout(true); }}
+                  disabled={saving}
+                  className="gap-1.5 h-8 text-xs px-4 font-bold"
+                  style={{ background: "linear-gradient(135deg,#16a34a,#15803d)", color: "#fff", border: "none", boxShadow: "0 2px 10px rgba(22,163,74,0.4)" }}
+                >
+                  <CreditCard className="w-3.5 h-3.5" /> Cashout
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 
