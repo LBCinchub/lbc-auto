@@ -144,8 +144,8 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
     setLoading(true);
 
     try {
-      // Call the Base44 in-app function lbcAutoAI
-      const result = await base44.functions.lbcAutoAI({
+      // Call the Base44 in-app function via invoke
+      const result = await base44.functions.invoke("lbcAutoAI", {
         messages: history,
         vehicle: vehicle || "",
         description: description || "",
