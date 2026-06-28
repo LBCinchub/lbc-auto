@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
+import { propagateCustomerUpdate } from "@/utils/syncCustomerActivity";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -639,7 +640,18 @@ export default function CustomerDetails() {
           open={editOpen}
           onClose={() => setEditOpen(false)}
           customer={customer}
-          onSaved={() => { setEditOpen(false); reload(); queryClient.invalidateQueries({ queryKey: ["customers"] }); }}
+          onSaved={async (updatedCustomer) => {
+            // CENTER CONTROL — fan out name/phone/email to all linked records
+            if (customer?.id) {
+              const fresh = updatedCustomer || customer;
+              await propagateCustomerUpdate(customer.id, {
+                full_name: fresh.full_name,
+                phone: fresh.phone,
+                email: fresh.email,
+              }).catch(() => {});
+            }
+            setEditOpen(false); reload(); queryClient.invalidateQueries({ queryKey: ["customers"] });
+          }}
           onQuickAction={() => {}}
         />
       )}
