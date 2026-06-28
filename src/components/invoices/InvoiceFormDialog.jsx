@@ -8,10 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { base44 } from "@/api/base44Client";
 import { syncCustomerActivity } from "@/utils/syncCustomerActivity";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, X, Plus, Trash2, Store, Loader2 } from "lucide-react";
+import { Search, X, Plus, Trash2, Store, Loader2, CreditCard } from "lucide-react";
 import { useNhtsaVinDecode } from "@/hooks/useNhtsaVinDecode";
 import { fuzzyMatch } from "@/utils/fuzzySearch";
 import TechnicianNotes from "@/components/invoices/TechnicianNotes";
+import PaymentReceiptDialog from "@/components/invoices/PaymentReceiptDialog";
 
 const emptyForm = {
   repair_order_id: "", estimate_id: "", customer_id: "", customer_name: "", customer_phone: "", vehicle_info: "",
@@ -28,6 +29,7 @@ const emptyPartRow = () => ({ name: "", quantity: 1, unit_price: 0, total: 0 });
 export default function InvoiceFormDialog({ open, onClose, invoice, orders, customers, vehicles = [], invoices = [], estimates = [], onSaved, initialOrderId, sourceEstimate }) {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [showCashout, setShowCashout] = useState(false);
   const [fetchedVehicles, setFetchedVehicles] = useState([]);
   const [loadingVehicles, setLoadingVehicles] = useState(false);
   const { decoding: decodingVin, vinError: vinDecodeError, decodeVin: nhtsaDecode, setVinError: setVinDecodeError } = useNhtsaVinDecode();
@@ -685,7 +687,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
             </div>
             <div>
               <p className="text-gray-400 text-xs mb-1">Amount Paid</p>
-              <Input type="number" onFocus={e => e.target.select()} step="0.01" value={form.amount_paid} onChange={e => setForm({ ...form, amount_paid: Number(e.target.value) })} className="bg-gray-800 border-gray-700 text-white" />
+              <Input type="number" readOnly value={form.amount_paid || 0} onChange={e => setForm({ ...form, amount_paid: Number(e.target.value) })} className="bg-gray-800 border-gray-700 text-white" />
             </div>
             <div>
               <p className="text-gray-400 text-xs mb-1">Balance Due</p>
@@ -805,48 +807,34 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
             </div>
           </div>
 
-          {/* Payment & Settings */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-3">
-              <Label className="text-gray-400">Payment Method</Label>
-              <div className="flex gap-3">
-                {["cash", "card", "e-transfer"].map(m => (
-                  <label key={m} className="flex items-center gap-1.5 cursor-pointer">
-                    <input type="radio" name="payMethod" value={m} checked={form.payment_method === m} onChange={e => setForm({ ...form, payment_method: e.target.value, card_last4: "" })} className="w-3.5 h-3.5" />
-                    <span className="text-sm text-gray-300 capitalize">{m}</span>
-                  </label>
-                ))}
+          {/* Tax & Discount */}
+          <div className="rounded-md bg-gray-800/50 border border-gray-700 p-4 space-y-3">
+            <Label className="text-gray-400 font-semibold">Tax & Discount</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-gray-400 text-xs">Tax Rate (%)</Label>
+                <Input type="number" onFocus={e => e.target.select()} step="0.1" value={form.tax_rate} onChange={e => setForm({ ...form, tax_rate: Number(e.target.value) })} className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="0" />
               </div>
-              {form.payment_method === "card" && (
-                <Input value={form.card_last4} onChange={e => setForm({ ...form, card_last4: e.target.value.slice(0, 4) })} className="bg-gray-800 border-gray-700 text-white" placeholder="Card last 4 digits" maxLength={4} />
-              )}
-              <Input value={form.receipt_number} onChange={e => setForm({ ...form, receipt_number: e.target.value })} className="bg-gray-800 border-gray-700 text-white" placeholder="Receipt #" />
-              <Input value={form.cashier_name} onChange={e => setForm({ ...form, cashier_name: e.target.value })} className="bg-gray-800 border-gray-700 text-white" placeholder="Cashier name" />
+              <div>
+                <Label className="text-gray-400 text-xs">Discount</Label>
+                <div className="flex gap-2 mt-1">
+                  <Select value={form.discount_type} onValueChange={v => setForm({ ...form, discount_type: v, discount_value: 0 })}>
+                    <SelectTrigger className="bg-gray-800 border-gray-700 text-white w-24"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-gray-800 border-gray-700">
+                      <SelectItem value="none">No Disc.</SelectItem>
+                      <SelectItem value="percentage">%</SelectItem>
+                      <SelectItem value="fixed">$</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {form.discount_type !== "none" && (
+                    <Input type="number" onFocus={e => e.target.select()} step="0.01" value={form.discount_value} onChange={e => setForm({ ...form, discount_value: Number(e.target.value) })} className="bg-gray-800 border-gray-700 text-white flex-1" placeholder="0" />
+                  )}
+                </div>
+              </div>
             </div>
-            <div className="space-y-3">
-              <Label className="text-gray-400">Tax & Discount</Label>
-              <div className="rounded-md bg-gray-800/50 border border-gray-700 p-3">
-                <Label className="text-gray-400 text-xs">Tax Rate (%) *</Label>
-                <Input type="number" onFocus={e => e.target.select()} step="0.1" value={form.tax_rate} onChange={e => setForm({ ...form, tax_rate: Number(e.target.value) })} className="bg-gray-800 border-gray-700 text-white mt-1 font-semibold" placeholder="0" />
-                <p className="text-gray-500 text-xs mt-1">Your saved tax rate: {form.tax_rate}%</p>
-              </div>
-              <div className="flex gap-3">
-                <label className="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" checked={form.apply_tax_labor} onChange={e => setForm({ ...form, apply_tax_labor: e.target.checked })} className="w-4 h-4 rounded" /><span className="text-xs text-gray-300">Tax on Labor</span></label>
-                <label className="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" checked={form.apply_tax_parts} onChange={e => setForm({ ...form, apply_tax_parts: e.target.checked })} className="w-4 h-4 rounded" /><span className="text-xs text-gray-300">Tax on Parts</span></label>
-              </div>
-              <div className="flex gap-2">
-                <Select value={form.discount_type} onValueChange={v => setForm({ ...form, discount_type: v, discount_value: 0 })}>
-                  <SelectTrigger className="bg-gray-800 border-gray-700 text-white w-24"><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-gray-800 border-gray-700">
-                    <SelectItem value="none">No Disc.</SelectItem>
-                    <SelectItem value="percentage">%</SelectItem>
-                    <SelectItem value="fixed">$</SelectItem>
-                  </SelectContent>
-                </Select>
-                {form.discount_type !== "none" && (
-                  <Input type="number" onFocus={e => e.target.select()} step="0.01" value={form.discount_value} onChange={e => setForm({ ...form, discount_value: Number(e.target.value) })} className="bg-gray-800 border-gray-700 text-white flex-1" placeholder="0" />
-                )}
-              </div>
+            <div className="flex gap-3">
+              <label className="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" checked={form.apply_tax_labor} onChange={e => setForm({ ...form, apply_tax_labor: e.target.checked })} className="w-4 h-4 rounded" /><span className="text-xs text-gray-300">Tax on Labor</span></label>
+              <label className="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" checked={form.apply_tax_parts} onChange={e => setForm({ ...form, apply_tax_parts: e.target.checked })} className="w-4 h-4 rounded" /><span className="text-xs text-gray-300">Tax on Parts</span></label>
             </div>
           </div>
 
@@ -876,11 +864,48 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
 
         {/* Footer */}
         <div className="flex-shrink-0 bg-gray-900 px-6 py-4 border-t border-gray-800 flex gap-3">
-          <Button variant="outline" onClick={onClose} className="flex-1 border-gray-700 text-gray-300">Cancel</Button>
+          <Button variant="outline" onClick={onClose} className="border-gray-700 text-gray-300">Cancel</Button>
           <Button onClick={handleSave} disabled={saving || (!form.customer_id && !form.customer_name)} className="flex-1 bg-sky-500 hover:bg-sky-600 text-white gap-2">
             {saving ? <><Loader2 className="w-4 h-4 animate-spin" />Saving...</> : "Save Invoice"}
           </Button>
+          {invoice?.id && (
+            <Button
+              onClick={async () => { await handleSave(); setShowCashout(true); }}
+              disabled={saving}
+              className="flex-1 gap-2"
+              style={{ background: "linear-gradient(135deg,#16a34a,#15803d)", color: "#fff", border: "none" }}
+            >
+              <CreditCard className="w-4 h-4" /> Cashout
+            </Button>
+          )}
         </div>
+
+        {/* Unified Payment Dialog */}
+        {showCashout && invoice?.id && (
+          <PaymentReceiptDialog
+            open={showCashout}
+            onClose={() => setShowCashout(false)}
+            invoice={{
+              ...invoice,
+              total: calculations.total,
+              amount_paid: form.amount_paid || 0,
+              payment_history: form.payment_history || [],
+            }}
+            entityName="Invoice"
+            onSaved={(updatedInvoice) => {
+              if (updatedInvoice) {
+                setForm(f => ({
+                  ...f,
+                  amount_paid: updatedInvoice.amount_paid || 0,
+                  payment_method: updatedInvoice.payment_method || f.payment_method,
+                  payment_history: updatedInvoice.payment_history || f.payment_history,
+                  status: updatedInvoice.status || f.status,
+                }));
+              }
+              setShowCashout(false);
+            }}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );
