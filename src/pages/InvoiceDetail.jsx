@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { syncCustomerActivity } from "@/utils/syncCustomerActivity";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Store, Plus, Trash2, Save, Loader2, CreditCard, X, Printer, Download, Share2, Mail, Send, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Store, Plus, Trash2, Save, Loader2, CreditCard, X, Printer, Download, Share2, Mail, Send, CheckCircle2, Wrench } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { formatPhone } from "@/utils/formatPhone";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import PrintTemplate from "@/components/shared/PrintTemplate";
 import TechnicianNotes from "@/components/invoices/TechnicianNotes";
 import PaymentReceiptDialog from "@/components/invoices/PaymentReceiptDialog";
 import { useEmailSend } from "@/hooks/useEmailSend";
+import RepairOrderFormDialog from "@/components/orders/RepairOrderFormDialog";
 
 
 
@@ -49,6 +50,8 @@ export default function InvoiceDetail() {
   const [discount, setDiscount] = useState(0);
   const [discountType, setDiscountType] = useState("$"); // "$" or "%"
   const [showCashoutDialog, setShowCashoutDialog] = useState(false);
+  const [showRODialog, setShowRODialog] = useState(false);
+  const [creatingRO, setCreatingRO] = useState(false);
   const { sendEmail, sending: sendingEmail } = useEmailSend();
 
   useEffect(() => {
@@ -174,6 +177,40 @@ export default function InvoiceDetail() {
   };
 
 
+
+  // ── Create Repair Order from this Invoice ─────────────────────────────────
+  const handleCreateRO = async () => {
+    setCreatingRO(true);
+    try {
+      // Build a RO pre-filled from invoice data
+      const roData = {
+        customer_id:    invoice.customer_id,
+        customer_name:  invoice.customer_name,
+        customer_phone: invoice.customer_phone || "",
+        vehicle_id:     invoice.vehicle_id || "",
+        vehicle_info:   invoice.vehicle_info || "",
+        description:    invoice.service_reason || "Service from Invoice #" + invoice.invoice_number,
+        labor_items:    invoice.labor_items || [],
+        parts_used:     invoice.parts_used  || [],
+        labor_cost:     invoice.labor_total || 0,
+        parts_cost:     invoice.parts_total || 0,
+        total_cost:     invoice.grand_total || invoice.total || 0,
+        status:         "pending",
+        linked_invoice_id: invoice.id,
+        order_number:   "RO-" + Date.now().toString(36).toUpperCase(),
+      };
+      const newRO = await base44.entities.RepairOrder.create(roData);
+      // Link back from invoice → RO
+      await base44.entities.Invoice.update(invoice.id, { repair_order_id: newRO.id });
+      queryClient.invalidateQueries({ queryKey: ["invoice", invoiceId] });
+      navigate(`/RepairOrderDetail/${newRO.id}`);
+    } catch(e) {
+      alert("Could not create Repair Order: " + (e?.message || e));
+    } finally {
+      setCreatingRO(false);
+    }
+  };
+
   const handleSave = async () => {
     if (saving) return;
     setSaving(true);
@@ -298,11 +335,19 @@ export default function InvoiceDetail() {
           <ArrowLeft className="w-4 h-4" /> Back to Invoices
         </Button>
         <div className="flex flex-wrap gap-2">
-          {/* Repair Order link if exists */}
-          {invoice?.repair_order_id && (
+          {/* Repair Order — view if exists, create if not */}
+          {invoice?.repair_order_id ? (
             <Button variant="outline" size="sm" onClick={() => navigate(`/RepairOrderDetail/${invoice.repair_order_id}`)}
-              className="border-gray-700 text-gray-300 h-9 gap-1.5 text-xs hover:border-gray-500">
-              View Repair Order
+              className="border-orange-700/50 text-orange-400 h-9 gap-1.5 text-xs hover:border-orange-500 hover:text-orange-300">
+              <Wrench className="w-3.5 h-3.5" /> View Repair Order
+            </Button>
+          ) : (
+            <Button variant="outline" size="sm" onClick={handleCreateRO} disabled={creatingRO}
+              className="border-orange-700/50 text-orange-400 h-9 gap-1.5 text-xs hover:border-orange-500 hover:bg-orange-500/10">
+              {creatingRO
+                ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Creating...</>
+                : <><Wrench className="w-3.5 h-3.5" /> Send to Repair Order</>
+              }
             </Button>
           )}
           {/* Email */}
