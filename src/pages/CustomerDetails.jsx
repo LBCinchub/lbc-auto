@@ -57,67 +57,109 @@ const roStatusDot = {
   delivered: "bg-teal-400",
 };
 
-function VehicleTimeline({ vehicle, repairOrders }) {
+function VehicleTimeline({ vehicle, repairOrders, defaultOpen = false }) {
+  const [open, setOpen] = React.useState(defaultOpen);
   const vehicleOrders = repairOrders
     .filter(ro => ro.vehicle_id === vehicle.id)
     .sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
 
+  const totalSpent = vehicleOrders.reduce((sum, ro) => sum + (ro.total_cost || 0), 0);
+
   return (
-    <div className="rounded-lg border border-gray-800 bg-gray-900/50 overflow-hidden">
-      <div className="flex items-center gap-3 p-4 bg-gray-800/40 border-b border-gray-800">
-        <div className="w-9 h-9 rounded-full bg-sky-500/20 flex items-center justify-center flex-shrink-0">
+    <div className="rounded-xl border border-gray-800 bg-gray-900/50 overflow-hidden">
+      {/* ── Clickable Header ── */}
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center gap-3 px-4 py-3.5 bg-gray-800/50 hover:bg-gray-800/80 transition-colors text-left"
+      >
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500/20 to-blue-600/20 border border-sky-500/20 flex items-center justify-center flex-shrink-0">
           <Car className="w-4 h-4 text-sky-400" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="font-semibold text-white capitalize">{vehicle.year} {vehicle.make} {vehicle.model}</div>
-          <div className="flex gap-3 mt-0.5 flex-wrap">
-            {vehicle.license_plate && <span className="text-xs text-gray-400 font-mono">Plate: {vehicle.license_plate}</span>}
-            {vehicle.vin && <span className="text-xs text-gray-500 font-mono">VIN: {vehicle.vin}</span>}
-            {vehicle.mileage && <span className="text-xs text-gray-400">{vehicle.mileage.toLocaleString()} km</span>}
+          <div className="font-semibold text-white text-sm capitalize">
+            {[vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ") || "Unknown Vehicle"}
+            {vehicle.color && <span className="ml-2 text-xs font-normal text-gray-400 capitalize">({vehicle.color})</span>}
+          </div>
+          <div className="flex gap-2 mt-0.5 flex-wrap">
+            {vehicle.license_plate && (
+              <span className="text-xs text-gray-400 font-mono bg-gray-800 px-1.5 py-0.5 rounded">{vehicle.license_plate}</span>
+            )}
+            {vehicle.vin && (
+              <span className="text-xs text-gray-600 font-mono">VIN ...{vehicle.vin.slice(-6)}</span>
+            )}
           </div>
         </div>
-      </div>
+        <div className="flex items-center gap-3 flex-shrink-0">
+          {vehicleOrders.length > 0 ? (
+            <>
+              <div className="text-right hidden sm:block">
+                <div className="text-xs text-gray-500">Total spent</div>
+                <div className="text-sm font-bold text-emerald-400">${totalSpent.toFixed(0)}</div>
+              </div>
+              <div className="text-right hidden sm:block">
+                <div className="text-xs text-gray-500">Jobs</div>
+                <div className="text-sm font-bold text-white">{vehicleOrders.length}</div>
+              </div>
+            </>
+          ) : (
+            <span className="text-xs text-gray-600 italic hidden sm:block">No history</span>
+          )}
+          <div className={`transition-transform duration-200 ${open ? "rotate-180" : ""}`}>
+            <ChevronDown className="w-4 h-4 text-gray-500" />
+          </div>
+        </div>
+      </button>
 
-      {vehicleOrders.length === 0 ? (
-        <div className="text-gray-600 text-sm py-5 text-center">No repair history for this vehicle.</div>
-      ) : (
-        <div className="p-4">
-          <div className="relative">
-            {/* Vertical line */}
-            <div className="absolute left-3 top-2 bottom-2 w-px bg-gray-700" />
-            <div className="space-y-4">
-              {vehicleOrders.map((ro) => (
-                <div key={ro.id} className="relative flex gap-4 pl-8">
-                  {/* Status dot */}
-                  <div className={`absolute left-0 top-1.5 w-6 h-6 rounded-full border-2 border-gray-900 flex items-center justify-center ${roStatusDot[ro.status] || "bg-gray-500"}`}>
-                    <div className="w-2 h-2 rounded-full bg-gray-900" />
-                  </div>
-                  <div
-                    className="flex-1 rounded-lg border border-gray-800 bg-gray-800/30 p-3 cursor-pointer hover:border-sky-500/30 hover:bg-gray-800/60 transition-all"
-                    onClick={() => window.location.href = `/RepairOrderDetail/${ro.id}`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-white truncate">{ro.description}</div>
-                        <div className="text-xs text-gray-500 mt-0.5">
-                          {new Date(ro.created_date).toLocaleDateString("en-CA")}
-                          {ro.order_number && <span className="ml-2 text-gray-600">#{ro.order_number}</span>}
+      {/* ── Expandable History ── */}
+      {open && (
+        <div className="border-t border-gray-800">
+          {/* Mobile stats */}
+          {vehicleOrders.length > 0 && (
+            <div className="flex gap-4 px-4 py-2 bg-gray-900/30 sm:hidden border-b border-gray-800/50">
+              <span className="text-xs text-gray-500">Jobs: <strong className="text-white">{vehicleOrders.length}</strong></span>
+              <span className="text-xs text-gray-500">Total: <strong className="text-emerald-400">${totalSpent.toFixed(0)}</strong></span>
+            </div>
+          )}
+          {vehicleOrders.length === 0 ? (
+            <div className="text-gray-600 text-sm py-6 text-center">No repair history for this vehicle.</div>
+          ) : (
+            <div className="p-4">
+              <div className="relative">
+                <div className="absolute left-3 top-2 bottom-2 w-px bg-gray-700/60" />
+                <div className="space-y-3">
+                  {vehicleOrders.map((ro) => (
+                    <div key={ro.id} className="relative flex gap-4 pl-8">
+                      <div className={`absolute left-0 top-1.5 w-6 h-6 rounded-full border-2 border-gray-900 flex items-center justify-center ${statusColors[ro.status] || "bg-gray-700"}`}>
+                        <div className="w-2 h-2 rounded-full bg-gray-900" />
+                      </div>
+                      <div
+                        className="flex-1 rounded-lg border border-gray-800 bg-gray-800/30 p-3 cursor-pointer hover:border-sky-500/40 hover:bg-gray-800/60 transition-all"
+                        onClick={() => window.location.href = `/RepairOrderDetail/${ro.id}`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-white truncate">{ro.description || "Repair Order"}</div>
+                            <div className="text-xs text-gray-500 mt-0.5">
+                              {new Date(ro.created_date).toLocaleDateString("en-CA")}
+                              {ro.order_number && <span className="ml-2 text-gray-600">#{ro.order_number}</span>}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {ro.total_cost > 0 && (
+                              <span className="text-sm font-bold text-white">${(ro.total_cost || 0).toFixed(2)}</span>
+                            )}
+                            <Badge className={`${statusColors[ro.status] || "bg-gray-700 text-gray-300"} text-xs capitalize border-0`}>
+                              {ro.status?.replace(/_/g, " ")}
+                            </Badge>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        {(ro.total_cost > 0) && (
-                          <span className="text-sm font-bold text-white">${(ro.total_cost || 0).toFixed(2)}</span>
-                        )}
-                        <Badge className={`${statusColors[ro.status] || "bg-gray-700 text-gray-300"} text-xs capitalize`}>
-                          {ro.status?.replace(/_/g, " ")}
-                        </Badge>
-                      </div>
                     </div>
-                  </div>
+                  ))}
                 </div>
-              ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
     </div>
@@ -384,9 +426,14 @@ export default function CustomerDetails() {
 
             {/* Vehicles with Timeline */}
             <TabsContent value="vehicles" className="mt-4">
-              <div className="flex justify-end mb-3">
+              <div className="flex items-center justify-between mb-3">
+                {vehicles.length > 1 ? (
+                  <p className="text-xs text-gray-500 italic">
+                    {vehicles.length} vehicles · tap any to expand history
+                  </p>
+                ) : <span />}
                 <Button size="sm" variant="outline"
-                  className="border-sky-500/40 bg-sky-500/10 text-sky-400 hover:bg-sky-500/20 hover:text-sky-300 gap-1.5"
+                  className="border-sky-500/40 bg-sky-500/10 text-sky-400 hover:bg-sky-500/20 hover:text-sky-300 h-8 gap-1.5 text-xs"
                   onClick={() => { setEditingVehicle(null); setVehicleDialogOpen(true); }}>
                   <Plus className="w-3.5 h-3.5" /> Add Vehicle
                 </Button>
@@ -394,16 +441,17 @@ export default function CustomerDetails() {
               {vehicles.length === 0 ? (
                 <div className="text-gray-500 text-sm py-8 text-center">No vehicles on file.</div>
               ) : (
-                <div className="space-y-4">
-                  {vehicles.map(v => (
+                <div className="space-y-2">
+                  {vehicles.map((v) => (
                     <div key={v.id} className="relative group">
-                      <div className="absolute top-3 right-3 flex gap-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button size="icon" variant="ghost" className="h-7 w-7 text-gray-500 hover:text-white bg-gray-900/80"
-                          onClick={() => { setEditingVehicle(v); setVehicleDialogOpen(true); }}>
+                      <div className="absolute top-3 right-10 flex gap-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button size="icon" variant="ghost" className="h-7 w-7 text-gray-500 hover:text-white hover:bg-gray-700"
+                          onClick={(e) => { e.stopPropagation(); setEditingVehicle(v); setVehicleDialogOpen(true); }}>
                           <Pencil className="w-3.5 h-3.5" />
                         </Button>
-                        <Button size="icon" variant="ghost" className="h-7 w-7 text-gray-500 hover:text-rose-400 bg-gray-900/80"
-                          onClick={async () => {
+                        <Button size="icon" variant="ghost" className="h-7 w-7 text-gray-500 hover:text-rose-400 hover:bg-rose-500/10"
+                          onClick={async (e) => {
+                            e.stopPropagation();
                             if (window.confirm(`Delete ${v.year} ${v.make} ${v.model}?`)) {
                               await base44.entities.Vehicle.delete(v.id);
                               setVehicles(prev => prev.filter(x => x.id !== v.id));
@@ -412,7 +460,7 @@ export default function CustomerDetails() {
                           <Trash2 className="w-3.5 h-3.5" />
                         </Button>
                       </div>
-                      <VehicleTimeline vehicle={v} repairOrders={repairOrders} />
+                      <VehicleTimeline vehicle={v} repairOrders={repairOrders} defaultOpen={vehicles.length === 1} />
                     </div>
                   ))}
                 </div>
