@@ -843,14 +843,14 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         </div>{/* end space-y-6 */}
         </div>{/* end scrollable body */}
 
-        {/* ── Bottom Bar: Status + Totals + Actions ── */}
-        <div className="flex-shrink-0 border-t border-gray-800 px-5 py-3"
+        {/* ── Bottom Bar ── */}
+        <div className="flex-shrink-0 border-t border-gray-800"
           style={{ background: "linear-gradient(135deg,#0f172a 0%,#111827 100%)" }}>
-          <div className="flex items-center gap-3 flex-wrap">
 
-            {/* Status selector */}
+          {/* Row 1 — Status + Totals */}
+          <div className="flex items-center gap-4 px-5 pt-3 pb-2 border-b border-gray-800/60">
             <Select value={form.status} onValueChange={v => setForm({ ...form, status: v })}>
-              <SelectTrigger className="border border-gray-700 bg-gray-800/60 h-8 text-xs font-bold w-28 rounded-full"
+              <SelectTrigger className="border border-gray-700 bg-gray-800/60 h-7 text-xs font-bold w-26 rounded-full focus:ring-0"
                 style={{ color: form.status === "paid" ? "#4ade80" : form.status === "partial" ? "#fbbf24" : form.status === "overdue" ? "#f87171" : "#94a3b8" }}>
                 <SelectValue />
               </SelectTrigger>
@@ -867,37 +867,34 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
                 ))}
               </SelectContent>
             </Select>
-
-            {/* Totals inline */}
-            <div className="flex items-center gap-3 text-xs flex-1">
+            <div className="flex items-center gap-4 text-xs">
               <span className="text-gray-500">Total <strong className="text-sky-400">${calculations.total.toFixed(2)}</strong></span>
               {balanceDue > 0 && <span className="text-gray-500">Balance <strong className="text-yellow-400">${balanceDue.toFixed(2)}</strong></span>}
               {(form.amount_paid || 0) > 0 && <span className="text-gray-500">Paid <strong className="text-emerald-400">${(form.amount_paid || 0).toFixed(2)}</strong></span>}
             </div>
+          </div>
 
-            {/* Actions */}
-            <div className="flex gap-2 ml-auto">
-              <Button variant="outline" onClick={onClose} className="border-gray-700 text-gray-300 h-8 text-xs px-3">
-                Cancel
-              </Button>
+          {/* Row 2 — Action buttons always full-width, never wrap */}
+          <div className="flex gap-2 px-5 py-3">
+            <Button variant="outline" onClick={onClose}
+              className="border-gray-700 text-gray-300 h-9 text-sm px-4 shrink-0">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={saving || (!form.customer_id && !form.customer_name)}
+              className="flex-1 bg-sky-500 hover:bg-sky-600 text-white gap-2 h-9 text-sm font-semibold">
+              {saving ? <><Loader2 className="w-4 h-4 animate-spin" />Saving...</> : "Save Invoice"}
+            </Button>
+            {invoice?.id && (
               <Button
-                onClick={handleSave}
-                disabled={saving || (!form.customer_id && !form.customer_name)}
-                className="bg-sky-500 hover:bg-sky-600 text-white gap-1.5 h-8 text-xs px-4"
-              >
-                {saving ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Saving...</> : "Save Invoice"}
+                onClick={async () => { await handleSave(); setShowCashout(true); }}
+                disabled={saving}
+                className="flex-1 gap-2 h-9 text-sm font-bold shrink-0"
+                style={{ background: "linear-gradient(135deg,#16a34a,#15803d)", color: "#fff", border: "none", boxShadow: "0 2px 12px rgba(22,163,74,0.45)" }}>
+                <CreditCard className="w-4 h-4" /> Cashout
               </Button>
-              {invoice?.id && (
-                <Button
-                  onClick={async () => { await handleSave(); setShowCashout(true); }}
-                  disabled={saving}
-                  className="gap-1.5 h-8 text-xs px-4 font-bold"
-                  style={{ background: "linear-gradient(135deg,#16a34a,#15803d)", color: "#fff", border: "none", boxShadow: "0 2px 10px rgba(22,163,74,0.4)" }}
-                >
-                  <CreditCard className="w-3.5 h-3.5" /> Cashout
-                </Button>
-              )}
-            </div>
+            )}
           </div>
         </div>
 
