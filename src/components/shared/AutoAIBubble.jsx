@@ -116,23 +116,34 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
 
   return (
     <div className="space-y-2">
-      {/* ── Toggle Bar ── */}
-      <div className="flex items-center justify-between">
-        <button
-          onClick={() => setOpen(v => !v)}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-            open
-              ? "bg-sky-500/20 border border-sky-500/40 text-sky-300"
-              : "bg-gray-800/80 border border-gray-700/60 text-gray-400 hover:border-sky-500/40 hover:text-sky-400"
-          }`}
-        >
-          <Bot className="w-3.5 h-3.5" />
-          LBC Auto AI
-          <span className="ml-0.5 text-gray-600">{open ? "▼" : "▲"}</span>
-        </button>
-        {!open && (
-          <span className="text-xs text-gray-600 italic">Ask labor hours, rust adjustments, error codes…</span>
-        )}
+      {/* ── LBC Auto AI Toggle Bar ── */}
+      <div
+        onClick={() => setOpen(v => !v)}
+        className="flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer select-none"
+        style={{
+          background: open
+            ? "linear-gradient(90deg,#0ea5e920,#1e293b)"
+            : "linear-gradient(90deg,#0369a120,#1e293b)",
+          border: open ? "1px solid #0ea5e950" : "1px solid #0369a140",
+        }}
+      >
+        {/* Robot icon in a coloured circle */}
+        <div style={{
+          width: 28, height: 28, borderRadius: "50%",
+          background: "#0ea5e930",
+          border: "1px solid #0ea5e960",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          flexShrink: 0,
+        }}>
+          <Bot className="w-4 h-4" style={{ color: "#38bdf8" }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p style={{ color: "#e0f2fe", fontSize: 12, fontWeight: 600, margin: 0 }}>🤖 LBC Auto AI</p>
+          <p style={{ color: "#7dd3fc", fontSize: 10, margin: 0 }}>
+            {open ? "Click to close" : "Labor hours · Rust · Error codes"}
+          </p>
+        </div>
+        <span style={{ color: "#38bdf8", fontSize: 11 }}>{open ? "▼" : "▲"}</span>
       </div>
 
       {/* ── Chat Panel ── */}
