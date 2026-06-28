@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
-import { syncCustomerActivity } from "@/utils/syncCustomerActivity";
+import { syncCustomerActivity, validateRecord } from "@/utils/syncCustomerActivity";
 import { Textarea } from "@/components/ui/textarea";
 import { Search, X, Plus, Trash2, Store, Loader2, CreditCard } from "lucide-react";
 import { useNhtsaVinDecode } from "@/hooks/useNhtsaVinDecode";
@@ -317,6 +317,20 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
 
   const handleSave = async () => {
     if (saving) return; // prevent double-submit
+
+    // ── CENTER CONTROL: Validate before any DB write ──────────────────────
+    if (form.customer_id) {
+      const validation = await validateRecord({
+        customerId: form.customer_id,
+        vehicleId: form.vehicle_id,
+        entityType: "Invoice",
+      });
+      if (!validation.ok) {
+        alert("⚠️ Cannot save:\n\n" + validation.errors.join("\n"));
+        return;
+      }
+    }
+
     setSaving(true);
     let resolvedCustomerId = form.customer_id;
     if (!form.repair_order_id && !form.customer_id && form.customer_name) {
