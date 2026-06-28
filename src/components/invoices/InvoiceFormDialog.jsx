@@ -6,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
-import AutoAIBubble from "@/components/shared/AutoAIBubble";
 import { syncCustomerActivity } from "@/utils/syncCustomerActivity";
 import { Textarea } from "@/components/ui/textarea";
 import { Search, X, Plus, Trash2, Store, Loader2 } from "lucide-react";
@@ -850,12 +849,6 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
               </div>
             </div>
           </div>
-
-          {/* ── LBC Auto AI ── */}
-          <AutoAIBubble
-            vehicle={form.vehicle_info || ""}
-            description={form.service_reason || form.customer_note || ""}
-          />
 
           {/* Note */}
           <div>
