@@ -18,15 +18,15 @@ export default function RecentInvoices({ invoices = [], customers = [] }) {
     .slice(0, 15);
 
   return (
-    <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5">
+    <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-white font-semibold">Recent Invoices</h3>
+        <h3 className="text-white font-bold text-lg">Recent Invoices</h3>
         <button onClick={() => navigate("/Invoices")}
           className="text-xs text-sky-400 hover:text-sky-300 transition-colors">
           View all →
         </button>
       </div>
-      <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+      <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1">
         {sorted.length === 0 && (
           <p className="text-gray-500 text-sm text-center py-8">No invoices yet</p>
         )}
@@ -37,26 +37,26 @@ export default function RecentInvoices({ invoices = [], customers = [] }) {
             <button
               key={inv.id}
               onClick={() => navigate(`/InvoiceDetail/${inv.id}`)}
-              className="w-full flex items-center justify-between p-3 rounded-lg bg-gray-800/30 hover:bg-gray-700/50 transition-colors text-left gap-3"
+              className="w-full flex items-center justify-between p-4 rounded-lg bg-gray-800/30 hover:bg-gray-700/50 transition-colors text-left gap-3"
             >
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <p className="text-sm text-blue-400 font-medium truncate capitalize">{inv.customer_name || "—"}</p>
+                  <p className="text-base text-blue-400 font-semibold truncate capitalize">{inv.customer_name || "—"}</p>
                   {inv.invoice_number && (
-                    <span className="text-xs text-gray-500 flex-shrink-0">#{inv.invoice_number}</span>
+                    <span className="text-sm text-gray-400 flex-shrink-0">#{inv.invoice_number}</span>
                   )}
                 </div>
-                <p className="text-xs text-green-400 truncate capitalize mt-0.5">{inv.vehicle_info || "—"}</p>
+                <p className="text-sm text-green-400 truncate capitalize mt-1">{inv.vehicle_info || "—"}</p>
                 <div className="flex items-center gap-3 mt-0.5">
-                  <p className="text-xs text-gray-400">Total: <span className="text-white font-semibold">${(inv.total || 0).toFixed(2)}</span></p>
+                  <p className="text-sm text-gray-300">Total: <span className="text-white font-bold text-lg">${(inv.total || 0).toFixed(2)}</span></p>
                   {balance > 0 && inv.status !== "paid" && (
-                    <p className="text-xs text-rose-400">Due: ${balance.toFixed(2)}</p>
+                    <p className="text-sm text-rose-400">Due: ${balance.toFixed(2)}</p>
                   )}
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
-                <Badge variant="outline" className={cn("text-xs", cfg.cls)}>{cfg.label}</Badge>
-                <ChevronRight className="w-4 h-4 text-gray-600" />
+                <Badge variant="outline" className={cn("text-sm", cfg.cls)}>{cfg.label}</Badge>
+                <ChevronRight className="w-5 h-5 text-gray-500" />
               </div>
             </button>
           );
