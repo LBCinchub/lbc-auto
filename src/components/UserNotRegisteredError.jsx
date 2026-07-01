@@ -2,27 +2,24 @@ import React from 'react';
 
 const UserNotRegisteredError = () => {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-white to-slate-50">
-      <div className="max-w-md w-full p-8 bg-white rounded-lg shadow-lg border border-slate-100">
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 mb-6 rounded-full bg-orange-100">
-            <svg className="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          </div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-4">Access Restricted</h1>
-          <p className="text-slate-600 mb-8">
-            You are not registered to use this application. Please contact the app administrator to request access.
-          </p>
-          <div className="p-4 bg-slate-50 rounded-md text-sm text-slate-600">
-            <p>If you believe this is an error, you can:</p>
-            <ul className="list-disc list-inside mt-2 space-y-1">
-              <li>Verify you are logged in with the correct account</li>
-              <li>Contact the app administrator for access</li>
-              <li>Try logging out and back in again</li>
-            </ul>
-          </div>
+    <div style={{ minHeight:"100vh", background:"#020617", display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
+      <div style={{ maxWidth:400, width:"100%", background:"#0f172a", border:"1px solid #1e293b", borderRadius:20, padding:32, textAlign:"center" }}>
+        <div style={{ width:64, height:64, borderRadius:"50%", background:"rgba(255,100,100,0.1)", border:"2px solid rgba(255,100,100,0.3)", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 20px", fontSize:28 }}>
+          🔒
         </div>
+        <h1 style={{ color:"#fff", fontSize:22, fontWeight:800, margin:"0 0 12px" }}>Access Restricted</h1>
+        <p style={{ color:"#64748b", fontSize:14, lineHeight:1.6, margin:"0 0 24px" }}>
+          Your account is not registered on LBC Auto. Contact your shop owner to get access.
+        </p>
+        <div style={{ background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:12, padding:"14px 16px", textAlign:"left" }}>
+          <p style={{ color:"#475569", fontSize:13, margin:"0 0 8px", fontWeight:600 }}>Try these steps:</p>
+          <ul style={{ color:"#475569", fontSize:13, lineHeight:1.8, paddingLeft:18, margin:0 }}>
+            <li>Make sure you're signed in with the right email</li>
+            <li>Ask your shop owner to add your account</li>
+            <li>Sign out and sign back in</li>
+          </ul>
+        </div>
+        <p style={{ color:"#1e3a5f", fontSize:11, marginTop:24 }}>LBC Auto · lbc.network</p>
       </div>
     </div>
   );
