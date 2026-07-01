@@ -18,14 +18,14 @@ export default function RecentEstimates({ estimates = [], customers = [] }) {
   const sorted = [...estimates].sort((a, b) => new Date(b.created_date) - new Date(a.created_date)).slice(0, 10);
 
   return (
-    <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5">
+    <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-white font-semibold">Recent Estimates</h3>
+        <h3 className="text-white font-bold text-lg">Recent Estimates</h3>
         <button onClick={() => navigate("/Estimates")} className="text-xs text-sky-400 hover:text-sky-300 transition-colors">
           View all →
         </button>
       </div>
-      <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
+      <div className="space-y-3 max-h-[480px] overflow-y-auto pr-2">
         {sorted.length === 0 && (
           <p className="text-gray-500 text-sm text-center py-8">No estimates yet</p>
         )}
@@ -36,22 +36,22 @@ export default function RecentEstimates({ estimates = [], customers = [] }) {
             <button
               key={est.id}
               onClick={() => navigate(`/EstimateDetail/${est.id}`)}
-              className="w-full flex items-center justify-between p-3 rounded-lg bg-gray-800/30 hover:bg-gray-700/50 transition-colors text-left"
+              className="w-full flex items-center justify-between p-4 rounded-lg bg-gray-800/30 hover:bg-gray-700/50 transition-colors text-left"
             >
               <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <p className="text-sm text-blue-400 font-medium truncate capitalize">{est.customer_name}</p>
-                {est.estimate_number && <span className="text-xs text-gray-500 flex-shrink-0">#{est.estimate_number}</span>}
+                <p className="text-base text-blue-400 font-semibold truncate capitalize">{est.customer_name}</p>
+                {est.estimate_number && <span className="text-sm text-gray-400 flex-shrink-0">#{est.estimate_number}</span>}
               </div>
               {(() => { const phone = customers.find(c => c.id === est.customer_id)?.phone; return phone ? <p className="text-xs text-amber-400">{formatPhone(phone)}</p> : null; })()}
-              <p className="text-xs text-green-400 truncate capitalize">{est.vehicle_info || "Unknown Vehicle"}</p>
-              {total > 0 && <p className="text-xs text-gray-400">${total.toFixed(2)}</p>}
+              <p className="text-sm text-green-400 truncate capitalize">{est.vehicle_info || "Unknown Vehicle"}</p>
+              {total > 0 && <p className="text-sm text-gray-300">${total.toFixed(2)}</p>}
               </div>
               <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-                <Badge variant="outline" className={cn("text-xs", config.class)}>
+                <Badge variant="outline" className={cn("text-sm", config.class)}>
                   {config.label}
                 </Badge>
-                <ChevronRight className="w-4 h-4 text-gray-600" />
+                <ChevronRight className="w-5 h-5 text-gray-500" />
               </div>
             </button>
           );
