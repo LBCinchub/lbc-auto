@@ -454,7 +454,7 @@ export default function InvoiceDetail() {
         {/* Invoice Header — matches screenshot layout */}
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
-            <p className="text-sky-400 text-sm font-semibold mb-0.5">{customer?.full_name || invoice.customer_name}</p>
+            <button onClick={() => invoice.customer_id && navigate(`/CustomerDetails?id=${invoice.customer_id}`)} className="text-sky-400 hover:text-sky-300 hover:underline text-sm font-semibold mb-0.5 text-left transition-colors">{customer?.full_name || invoice.customer_name} →</button>
             <h1 className="text-3xl font-bold text-white">Invoice #{invoice.invoice_number}</h1>
             <p className="text-gray-400 mt-1">{invoice.customer_name}</p>
             {(invoice.customer_phone || customer?.phone) && (
