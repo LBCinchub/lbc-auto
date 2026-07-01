@@ -28,18 +28,18 @@ export default function TodayAppointments({ appointments = [], customers = [], o
   const allAppts = [...todayAppts, ...upcomingAppts];
 
   return (
-    <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-5">
+    <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <h3 className="text-white font-semibold">Appointments</h3>
+          <h3 className="text-white font-bold text-lg">Appointments</h3>
           {todayAppts.length > 0 && (
-            <span className="text-xs font-bold bg-purple-500/20 text-purple-400 border border-purple-500/30 px-2 py-0.5 rounded-full">
+            <span className="text-sm font-bold bg-purple-500/20 text-purple-400 border border-purple-500/30 px-2 py-0.5 rounded-full">
               {todayAppts.length} today
             </span>
           )}
         </div>
         <button onClick={() => navigate("/Appointments")}
-          className="text-xs text-sky-400 hover:text-sky-300 transition-colors">
+          className="text-sm text-sky-400 hover:text-sky-300 transition-colors">
           View all →
         </button>
       </div>
@@ -51,7 +51,7 @@ export default function TodayAppointments({ appointments = [], customers = [], o
 
         {/* Today divider */}
         {todayAppts.length > 0 && (
-          <p className="text-xs font-semibold text-purple-400 uppercase tracking-wider px-1 pb-1">Today</p>
+          <p className="text-sm font-semibold text-purple-400 uppercase tracking-wider px-1 pb-1">Today</p>
         )}
 
         {todayAppts.map((appt) => {
@@ -64,22 +64,22 @@ export default function TodayAppointments({ appointments = [], customers = [], o
             >
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <p className="text-sm text-blue-400 font-medium truncate capitalize">{appt.customer_name || "—"}</p>
-                  <span className="text-xs text-purple-400 font-mono flex-shrink-0 flex items-center gap-1">
+                  <p className="text-base text-blue-400 font-medium truncate capitalize">{appt.customer_name || "—"}</p>
+                  <span className="text-sm text-purple-400 font-mono flex-shrink-0 flex items-center gap-1">
                     <Clock className="w-3 h-3" />{appt.time_slot || "—"}
                   </span>
                 </div>
                 {customer?.phone && (
-                  <p className="text-xs text-amber-400">{formatPhone(customer.phone)}</p>
+                  <p className="text-sm text-amber-400">{formatPhone(customer.phone)}</p>
                 )}
-                <p className="text-xs text-green-400 truncate capitalize mt-0.5">{appt.vehicle_info || "—"}</p>
+                <p className="text-sm text-green-400 truncate capitalize mt-0.5">{appt.vehicle_info || "—"}</p>
                 {appt.service_type && (
-                  <p className="text-xs text-gray-500 truncate">{appt.service_type}</p>
+                  <p className="text-sm text-gray-500 truncate">{appt.service_type}</p>
                 )}
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 <Badge variant="outline" className={cn("text-xs", cfg.cls)}>{cfg.label}</Badge>
-                <ChevronRight className="w-4 h-4 text-gray-600" />
+                <ChevronRight className="w-5 h-5 text-gray-600" />
               </div>
             </button>
           );
@@ -87,7 +87,7 @@ export default function TodayAppointments({ appointments = [], customers = [], o
 
         {/* Upcoming divider */}
         {upcomingAppts.length > 0 && (
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-1 pt-2 pb-1">Upcoming</p>
+          <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider px-1 pt-2 pb-1">Upcoming</p>
         )}
 
         {upcomingAppts.map((appt) => {
@@ -97,26 +97,26 @@ export default function TodayAppointments({ appointments = [], customers = [], o
           return (
             <button key={appt.id}
               onClick={() => onApptClick ? onApptClick(appt) : navigate("/Appointments")}
-              className="w-full flex items-center justify-between p-3 rounded-lg bg-gray-800/30 hover:bg-gray-700/50 transition-colors text-left gap-3"
+              className="w-full flex items-center justify-between p-4 rounded-lg bg-gray-800/30 hover:bg-gray-700/50 transition-colors text-left gap-3"
             >
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <p className="text-sm text-blue-400 font-medium truncate capitalize">{appt.customer_name || "—"}</p>
-                  <span className="text-xs text-gray-400 flex-shrink-0 flex items-center gap-1">
+                  <p className="text-base text-blue-400 font-medium truncate capitalize">{appt.customer_name || "—"}</p>
+                  <span className="text-sm text-gray-400 flex-shrink-0 flex items-center gap-1">
                     <Calendar className="w-3 h-3" />{apptDate}
                   </span>
                 </div>
                 {customer?.phone && (
-                  <p className="text-xs text-amber-400">{formatPhone(customer.phone)}</p>
+                  <p className="text-sm text-amber-400">{formatPhone(customer.phone)}</p>
                 )}
-                <p className="text-xs text-green-400 truncate capitalize mt-0.5">{appt.vehicle_info || "—"}</p>
+                <p className="text-sm text-green-400 truncate capitalize mt-0.5">{appt.vehicle_info || "—"}</p>
                 {appt.service_type && (
-                  <p className="text-xs text-gray-500 truncate">{appt.service_type}</p>
+                  <p className="text-sm text-gray-500 truncate">{appt.service_type}</p>
                 )}
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 <Badge variant="outline" className={cn("text-xs", cfg.cls)}>{cfg.label}</Badge>
-                <ChevronRight className="w-4 h-4 text-gray-600" />
+                <ChevronRight className="w-5 h-5 text-gray-600" />
               </div>
             </button>
           );
