@@ -1,8 +1,9 @@
+// customerLogin v3 — service role bypass for Customer RLS
+// deployed: 2026-07-01
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
-
   try {
     const { shop_email, phone } = await req.json();
     const cleaned = (phone || "").replace(/\D/g, "");
@@ -13,7 +14,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Service role bypasses RLS — reads ALL customers for this shop owner email
+    // asServiceRole bypasses RLS — reads all customers for this shop
     const customers = await base44.asServiceRole.entities.Customer.filter(
       { created_by: shop_email.toLowerCase().trim() },
       "full_name",
@@ -26,7 +27,7 @@ Deno.serve(async (req) => {
     });
 
     if (!match) {
-      return new Response(JSON.stringify({ success: false, error: "Phone not found" }), {
+      return new Response(JSON.stringify({ success: false, error: "Phone not found", debug_count: customers.length }), {
         headers: { "Content-Type": "application/json" }
       });
     }
@@ -43,8 +44,7 @@ Deno.serve(async (req) => {
 
   } catch (e) {
     return new Response(JSON.stringify({ success: false, error: String(e) }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" }
+      status: 500, headers: { "Content-Type": "application/json" }
     });
   }
 });
