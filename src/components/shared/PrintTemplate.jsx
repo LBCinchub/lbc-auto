@@ -34,7 +34,7 @@ function buildPrintHTML(contentHTML, title, isWorker) {
   `;
 }
 
-export default function PrintTemplate({ type = "Invoice", docNumber, createdDate, user, customer, vehicle, lineItems = [], paymentHistory = [], financials = {}, notes, serviceReason }) {
+export default function PrintTemplate({ type = "Invoice", docNumber, createdDate, user, customer, vehicle, lineItems = [], paymentHistory = [], financials = {}, notes, serviceReason, onNavigateCustomer, onNavigateVehicle }) {
   const {
     partsTotal = 0,
     laborTotal = 0,
@@ -108,7 +108,13 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
             <div style={{ fontSize: 8.5, fontWeight: 700, color: "#6366f1", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 6 }}>Vehicle Information</div>
 
             {/* Main vehicle title */}
-            <div style={{ fontSize: 13, fontWeight: 800, color: "#0f172a", marginBottom: 6 }}>{vehicle.info}</div>
+            {onNavigateVehicle ? (
+              <button onClick={onNavigateVehicle} style={{ fontSize: 13, fontWeight: 800, color: "#6366f1", background: "none", border: "none", padding: 0, cursor: "pointer", marginBottom: 6, textDecoration: "underline", textAlign: "left", display: "block" }}>
+                {vehicle.info} →
+              </button>
+            ) : (
+              <div style={{ fontSize: 13, fontWeight: 800, color: "#0f172a", marginBottom: 6 }}>{vehicle.info}</div>
+            )}
 
             {/* Grid of vehicle details */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 16px", fontSize: 10, color: "#334155" }}>
