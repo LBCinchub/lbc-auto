@@ -21,6 +21,7 @@ import Settings from './pages/Settings';
 import PaymentWall from './pages/PaymentWall';
 import Landing from './pages/Landing';
 import TechPortal from './pages/TechPortal';
+import CustomerProfile from './pages/CustomerProfile';
 import TechDashboard from './pages/TechDashboard';
 import TechJobView from './pages/TechJobView';
 import Billing from './pages/Billing';
@@ -307,6 +308,7 @@ const AuthenticatedApp = () => {
         <Route path="/PaymentWall" element={<PaymentWall />} />
         <Route path="/landing" element={<Landing />} />
         <Route path="/TechPortal" element={<TechPortal />} />
+        <Route path="/CustomerProfile/:id" element={<CustomerProfile />} />
         <Route path="/TechDashboard" element={<TechDashboard />} />
         <Route path="/TechJobView" element={<TechJobView />} />
         <Route path="*" element={<PageNotFound />} />
