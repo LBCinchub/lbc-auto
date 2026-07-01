@@ -29,9 +29,9 @@ function injectLEDStyle() {
     .lbc-ai-toggle {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 10px 16px;
-      border-radius: 12px;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: 14px;
       cursor: pointer;
       user-select: none;
       background: linear-gradient(135deg, #001f3f 0%, #003366 60%, #004080 100%);
@@ -165,41 +165,11 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
   };
 
   return (
-    <div style={{ width: "100%", marginBottom: 8 }}>
+    <div style={{ position: "fixed", bottom: 20, right: 20, zIndex: 50, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
 
-      {/* ── LED Toggle Bar ── */}
-      <div className="lbc-ai-toggle" onClick={() => setOpen(v => !v)}>
-        <div className="lbc-ai-icon-ring">
-          <Bot style={{ width: 18, height: 18, color: "#ffffff" }} />
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ color: "#ffffff", fontSize: 13, fontWeight: 700, letterSpacing: 0.4 }}>
-            LBC Auto AI
-          </div>
-          <div style={{ color: "#80d8ff", fontSize: 10, marginTop: 1 }}>
-            {open ? "Click to close" : "Labor hours · Rust adjustments · Error codes"}
-          </div>
-        </div>
-        {/* Live LED dot */}
-        <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-          <div style={{ width:8, height:8, borderRadius:"50%", background:"#00ff88", boxShadow:"0 0 6px #00ff88", flexShrink:0 }} />
-          <span style={{
-            background: "#00aaff22",
-            border: "1px solid #00aaff",
-            color: "#80d8ff",
-            fontSize: 10,
-            fontWeight: 700,
-            padding: "2px 9px",
-            borderRadius: 20,
-          }}>
-            {open ? "CLOSE ▼" : "ASK AI ▲"}
-          </span>
-        </div>
-      </div>
-
-      {/* ── Chat Panel ── */}
+      {/* ── Chat Panel (opens above the button) ── */}
       {open && (
-        <div className="lbc-ai-panel" style={{ marginTop: 6 }}>
+        <div className="lbc-ai-panel" style={{ width: 340 }}>
 
           {/* Header */}
           <div className="lbc-ai-header">
@@ -315,6 +285,23 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
 
         </div>
       )}
+
+      {/* ── LED Floating Toggle Button ── */}
+      <div className="lbc-ai-toggle" onClick={() => setOpen(v => !v)}>
+        <div className="lbc-ai-icon-ring">
+          <Bot style={{ width: 18, height: 18, color: "#ffffff" }} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ color: "#ffffff", fontSize: 13, fontWeight: 700, letterSpacing: 0.4 }}>
+            LBC Auto AI
+          </div>
+          <div style={{ color: "#80d8ff", fontSize: 10, marginTop: 1 }}>
+            {open ? "Click to close" : "Labor hours · Rust · Codes"}
+          </div>
+        </div>
+        {/* Live LED dot */}
+        <div style={{ width:8, height:8, borderRadius:"50%", background:"#00ff88", boxShadow:"0 0 6px #00ff88", flexShrink:0 }} />
+      </div>
     </div>
   );
 }

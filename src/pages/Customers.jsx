@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
-import AutoAIBubble from "@/components/shared/AutoAIBubble";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation} from 'react-router-dom';
 import { Users, Phone, Mail, Car, Pencil, Trash2, DollarSign } from "lucide-react";
@@ -36,7 +35,6 @@ export default function Customers() {
   const _location = useLocation();
   const _urlQ = new URLSearchParams(_location.search).get("q") || "";
   const [search, setSearch] = useState(_urlQ);
-  const [aiOpen, setAiOpen] = useState(false);
   // Sync search if URL param changes (e.g. navigating from GlobalSearch)
   React.useEffect(() => {
     const q = new URLSearchParams(_location.search).get("q") || "";
@@ -465,45 +463,6 @@ export default function Customers() {
         customers={customers}
       />
 
-      {/* ══ LBC Auto AI — Fixed Floating Widget ══ */}
-      <div style={{
-        position: "fixed", bottom: 24, right: 24, zIndex: 9999,
-        width: aiOpen ? 380 : "auto", maxWidth: "calc(100vw - 48px)",
-      }}>
-        {aiOpen && (
-          <div style={{ marginBottom: 8 }}>
-            <AutoAIBubble vehicle="" description="" />
-          </div>
-        )}
-        <button
-          onClick={() => setAiOpen(v => !v)}
-          style={{
-            display:"flex", alignItems:"center", gap:10,
-            padding:"12px 18px", borderRadius:40,
-            border:"2px solid #00aaff",
-            background: aiOpen ? "linear-gradient(135deg,#002b55,#004080)" : "linear-gradient(135deg,#001f3f,#003366)",
-            boxShadow:"0 0 16px #00aaff80, 0 4px 24px #00000088",
-            cursor:"pointer", color:"#fff", fontSize:13, fontWeight:700,
-            animation: !aiOpen ? "lbc-led-pulse 2.2s ease-in-out infinite" : "none",
-            width:"100%", justifyContent: aiOpen ? "center" : "flex-start",
-          }}
-        >
-          <div style={{
-            width:32, height:32, borderRadius:"50%", background:"#00aaff",
-            boxShadow:"0 0 10px #00aaff",
-            display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0,
-          }}>
-            <span style={{ fontSize:16 }}>🤖</span>
-          </div>
-          {!aiOpen && (
-            <>
-              <span>LBC Auto AI</span>
-              <div style={{ width:8,height:8,borderRadius:"50%",background:"#00ff88",boxShadow:"0 0 6px #00ff88",marginLeft:4 }} />
-            </>
-          )}
-          {aiOpen && <span>✕ Close AI</span>}
-        </button>
-      </div>
     </div>
   );
 }
