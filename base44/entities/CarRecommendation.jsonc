@@ -1,0 +1,62 @@
+{
+  "name": "CarRecommendation",
+  "type": "object",
+  "properties": {
+    "shop_owner_email": {
+      "type": "string"
+    },
+    "customer_id": {
+      "type": "string"
+    },
+    "vehicle_id": {
+      "type": "string"
+    },
+    "vehicle_info": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string",
+      "description": "e.g. 'Brake pads need replacement soon'"
+    },
+    "description": {
+      "type": "string"
+    },
+    "urgency": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ]
+    },
+    "estimated_cost": {
+      "type": "number"
+    },
+    "is_resolved": {
+      "type": "boolean",
+      "default": false
+    },
+    "resolved_date": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "shop_owner_email",
+    "customer_id",
+    "title",
+    "urgency"
+  ],
+  "rls": {
+    "create": true,
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}
