@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { Search, Phone, Store, ArrowRight, CheckCircle2, AlertCircle } from "lucide-react";
+import { Search, Phone, Store, AlertCircle, CheckCircle2 } from "lucide-react";
 
 export default function CustomerPortal() {
   const [step, setStep] = useState("shop"); // shop | phone | loading
@@ -12,71 +12,29 @@ export default function CustomerPortal() {
   const [shopUser, setShopUser] = useState(null);
 
   useEffect(() => {
-    // Already logged in?
     const saved = sessionStorage.getItem("customer_session");
     if (saved) { window.location.href = "/CustomerDashboard"; return; }
-    // Pre-fill from URL ?shop=
     const params = new URLSearchParams(window.location.search);
     const s = params.get("shop");
-    if (s) { setShopEmail(s); findShop(s); }
+    if (s) { setShopEmail(s); goToPhone(s); }
   }, []);
 
-  const findShop = async (email) => {
-    const target = (email || shopEmail).trim().toLowerCase();
-    if (!target || !target.includes("@")) {
-      setError("Please enter a valid email address.");
+  // Step 1: just validate email format, then proceed — phone match IS the security
+  const findShop = (emailOverride) => {
+    const target = (emailOverride || shopEmail).trim().toLowerCase();
+    if (!target || !target.includes("@") || !target.includes(".")) {
+      setError("Enter a valid email address (e.g. shop@gmail.com)");
       return;
     }
-    setSearching(true);
+    goToPhone(target);
+  };
+
+  const goToPhone = (target) => {
+    setShopUser({ email: target });
+    const namePart = target.split("@")[0].replace(/[._\-]/g, " ");
+    setShopName(namePart.replace(/\b\w/g, l => l.toUpperCase()));
+    setStep("phone");
     setError("");
-    try {
-      // Try to find any record created by this email across multiple entities
-      // This is resilient — works even if shop has no customers yet
-      let found = false;
-
-      // Method 1: Check Users entity (most reliable)
-      try {
-        const users = await base44.entities.User.filter({ email: target }, "email", 1);
-        if (users.length > 0) { found = true; }
-      } catch {}
-
-      // Method 2: Check Customers (existing shops with data)
-      if (!found) {
-        try {
-          const custs = await base44.entities.Customer.filter({ created_by: target }, "full_name", 1);
-          if (custs.length > 0) found = true;
-        } catch {}
-      }
-
-      // Method 3: Check RepairOrders
-      if (!found) {
-        try {
-          const ros = await base44.entities.RepairOrder.filter({ created_by: target }, "id", 1);
-          if (ros.length > 0) found = true;
-        } catch {}
-      }
-
-      // Method 4: Check Vehicles
-      if (!found) {
-        try {
-          const vs = await base44.entities.Vehicle.filter({ created_by: target }, "id", 1);
-          if (vs.length > 0) found = true;
-        } catch {}
-      }
-
-      if (found) {
-        setShopUser({ email: target });
-        // Build a readable shop name from email
-        const namePart = target.split("@")[0].replace(/[._\-]/g, " ");
-        setShopName(namePart.replace(/\w/g, l => l.toUpperCase()));
-        setStep("phone");
-      } else {
-        setError("No LBC Auto account found with that email. Double-check the shop's email address.");
-      }
-    } catch {
-      setError("Could not connect. Please try again.");
-    }
-    setSearching(false);
   };
 
   const handlePhoneLogin = async () => {
@@ -85,9 +43,8 @@ export default function CustomerPortal() {
     setStep("loading");
     setError("");
     try {
-      // Find customer in this shop by phone
       const customers = await base44.entities.Customer.filter(
-        { created_by: shopUser.email }, "full_name", 1000
+        { created_by: shopUser.email }, "full_name", 2000
       );
       const match = customers.find(c => {
         const cp = (c.phone || "").replace(/\D/g, "");
@@ -104,10 +61,11 @@ export default function CustomerPortal() {
         }));
         window.location.href = "/CustomerDashboard";
       } else {
-        setError("Phone number not found in this shop's records. Make sure your number is on file.");
+        setError("Phone number not found at this shop. Make sure your number is saved on file.");
         setStep("phone");
       }
-    } catch {
+    } catch (e) {
+      console.error(e);
       setError("Something went wrong. Try again.");
       setStep("phone");
     }
@@ -123,14 +81,12 @@ export default function CustomerPortal() {
 
   return (
     <div style={S.page}>
-      {/* Logo */}
       <div style={{ textAlign:"center", marginBottom:28 }}>
         <div style={{
           width:72, height:72, borderRadius:"50%",
           background:"linear-gradient(135deg,#001f3f,#003366)",
           border:"3px solid #00aaff", boxShadow:"0 0 24px #00aaff50",
-          display:"flex", alignItems:"center", justifyContent:"center",
-          margin:"0 auto 14px",
+          display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 14px",
         }}>
           <Store style={{ width:32, height:32, color:"#00aaff" }}/>
         </div>
@@ -139,7 +95,8 @@ export default function CustomerPortal() {
       </div>
 
       <div style={S.card}>
-        {/* Step 1: Find shop */}
+
+        {/* Step 1: shop email */}
         {step === "shop" && (
           <>
             <div style={{ marginBottom:20, textAlign:"center" }}>
@@ -152,7 +109,7 @@ export default function CustomerPortal() {
             <span style={S.label}>Shop Email</span>
             <input
               style={S.input}
-              type="email" inputMode="email"
+              type="email" inputMode="email" autoComplete="email"
               placeholder="e.g. hajwheels@gmail.com"
               value={shopEmail}
               onChange={e => { setShopEmail(e.target.value); setError(""); }}
@@ -163,13 +120,13 @@ export default function CustomerPortal() {
                 <AlertCircle style={{ width:14, height:14 }}/> {error}
               </div>
             )}
-            <button style={S.btn} onClick={() => findShop()} disabled={searching}>
-              {searching ? "Searching..." : "Find Shop →"}
+            <button style={S.btn} onClick={() => findShop()}>
+              Continue →
             </button>
           </>
         )}
 
-        {/* Step 2: Enter phone */}
+        {/* Step 2: phone */}
         {step === "phone" && (
           <>
             <button onClick={() => { setStep("shop"); setError(""); setPhone(""); }} style={{ background:"transparent", border:"none", color:"#38bdf8", cursor:"pointer", fontSize:13, padding:0, marginBottom:16, display:"flex", alignItems:"center", gap:4 }}>
@@ -178,9 +135,7 @@ export default function CustomerPortal() {
             <div style={{ background:"rgba(74,222,128,0.08)", border:"1px solid rgba(74,222,128,0.2)", borderRadius:10, padding:"10px 14px", marginBottom:20 }}>
               <div style={{ display:"flex", alignItems:"center", gap:6 }}>
                 <CheckCircle2 style={{ width:14, height:14, color:"#4ade80" }}/>
-                <p style={{ color:"#4ade80", fontSize:13, fontWeight:700, margin:0, textTransform:"capitalize" }}>
-                  {shopName}
-                </p>
+                <p style={{ color:"#4ade80", fontSize:13, fontWeight:700, margin:0 }}>{shopName}</p>
               </div>
               <p style={{ color:"#64748b", fontSize:11, margin:"3px 0 0" }}>{shopUser?.email}</p>
             </div>
@@ -196,7 +151,7 @@ export default function CustomerPortal() {
             <input
               style={{ ...S.input, fontSize:22, fontWeight:700, textAlign:"center", letterSpacing:2 }}
               type="tel" inputMode="tel"
-              placeholder="e.g. 613-555-0100"
+              placeholder="613-555-0100"
               value={phone}
               onChange={e => { setPhone(e.target.value); setError(""); }}
               onKeyDown={e => e.key === "Enter" && handlePhoneLogin()}
@@ -206,16 +161,13 @@ export default function CustomerPortal() {
                 <AlertCircle style={{ width:14, height:14, flexShrink:0, marginTop:2 }}/> {error}
               </div>
             )}
-            <button style={S.btn} onClick={handlePhoneLogin}>
-              Sign In →
-            </button>
+            <button style={S.btn} onClick={handlePhoneLogin}>Sign In →</button>
             <p style={{ color:"#334155", fontSize:11, textAlign:"center", marginTop:14, lineHeight:1.5 }}>
-              Your phone number must be on file at the shop. Ask the shop owner to add it.
+              Your phone number must be saved at the shop. Ask the owner to add it if needed.
             </p>
           </>
         )}
 
-        {/* Loading */}
         {step === "loading" && (
           <div style={{ textAlign:"center", padding:20 }}>
             <div style={{ color:"#38bdf8", fontSize:16 }}>Signing you in...</div>
