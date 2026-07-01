@@ -147,7 +147,7 @@ export default function CustomerPortal() {
           </>
         )}
       </div>
-      <p style={{ color:"#1e293b", fontSize:11, marginTop:32 }}>Powered by LBC Auto · LBC.NETWORK</p>
+      <p style={{ color:"#1e293b", fontSize:11, marginTop:32 }}>Powered by LBC Auto · lbc.network</p>
     </div>
   );
 }
