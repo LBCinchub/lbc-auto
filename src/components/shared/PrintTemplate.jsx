@@ -104,31 +104,47 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
           </div>
         </div>
         {vehicle?.info && (
-          <div style={{ flex: 1, background: "#f8fafc", borderRadius: 6, padding: "6px 10px", borderLeft: "3px solid #6366f1" }}>
-            <div style={{ fontSize: 8.5, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 2 }}>Vehicle</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#0f172a", marginBottom: 1 }}>{vehicle.info}</div>
-            <div style={{ fontSize: 10, color: "#475569", lineHeight: 1.7 }}>
-              {(vehicle?.license_plate || vehicle?.color) && (
-                <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 2 }}>
-                  {vehicle?.license_plate && (
-                    <span style={{ fontWeight: 700, color: "#0f172a", fontSize: 11, background: "#e0f2fe", borderRadius: 4, padding: "1px 6px", letterSpacing: 1 }}>
-                      🪪 {vehicle.license_plate.toUpperCase()}
-                    </span>
-                  )}
-                  {vehicle?.color && (
-                    <span style={{ fontWeight: 600, color: "#334155", fontSize: 10 }}>
-                      ● {vehicle.color}
-                    </span>
-                  )}
-                </div>
+          <div style={{ flex: 1, background: "#f0f9ff", borderRadius: 8, padding: "10px 12px", borderLeft: "4px solid #6366f1" }}>
+            <div style={{ fontSize: 8.5, fontWeight: 700, color: "#6366f1", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 6 }}>Vehicle Information</div>
+
+            {/* Main vehicle title */}
+            <div style={{ fontSize: 13, fontWeight: 800, color: "#0f172a", marginBottom: 6 }}>{vehicle.info}</div>
+
+            {/* Grid of vehicle details */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 16px", fontSize: 10, color: "#334155" }}>
+              {vehicle?.make && (
+                <div><span style={{ color: "#94a3b8", fontWeight: 600, textTransform: "uppercase", fontSize: 8, letterSpacing: 0.8 }}>Make</span><br/><span style={{ fontWeight: 700, color: "#0f172a" }}>{vehicle.make}</span></div>
               )}
-              {vehicle?.vin && (
-                <div style={{ fontFamily: "monospace", fontSize: 9.5, color: "#334155", letterSpacing: 0.5 }}>
-                  VIN: <strong style={{ textTransform: "uppercase" }}>{vehicle.vin.toUpperCase()}</strong>
-                </div>
+              {vehicle?.model && (
+                <div><span style={{ color: "#94a3b8", fontWeight: 600, textTransform: "uppercase", fontSize: 8, letterSpacing: 0.8 }}>Model</span><br/><span style={{ fontWeight: 700, color: "#0f172a" }}>{vehicle.model}</span></div>
               )}
-              {vehicle?.mileage && <div>Mileage: {vehicle.mileage.toLocaleString()} km</div>}
+              {vehicle?.year && (
+                <div><span style={{ color: "#94a3b8", fontWeight: 600, textTransform: "uppercase", fontSize: 8, letterSpacing: 0.8 }}>Year</span><br/><span style={{ fontWeight: 700, color: "#0f172a" }}>{vehicle.year}</span></div>
+              )}
+              {vehicle?.color && (
+                <div><span style={{ color: "#94a3b8", fontWeight: 600, textTransform: "uppercase", fontSize: 8, letterSpacing: 0.8 }}>Color</span><br/><span style={{ fontWeight: 700, color: "#0f172a", textTransform: "capitalize" }}>{vehicle.color}</span></div>
+              )}
+              {vehicle?.engine_type && (
+                <div style={{ gridColumn: "span 2" }}><span style={{ color: "#94a3b8", fontWeight: 600, textTransform: "uppercase", fontSize: 8, letterSpacing: 0.8 }}>Engine</span><br/><span style={{ fontWeight: 700, color: "#0f172a" }}>{vehicle.engine_type}</span></div>
+              )}
+              {vehicle?.mileage && (
+                <div><span style={{ color: "#94a3b8", fontWeight: 600, textTransform: "uppercase", fontSize: 8, letterSpacing: 0.8 }}>Mileage</span><br/><span style={{ fontWeight: 700, color: "#0f172a" }}>{Number(vehicle.mileage).toLocaleString()} km</span></div>
+              )}
             </div>
+
+            {/* License plate badge + VIN below grid */}
+            <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
+              {vehicle?.license_plate && (
+                <span style={{ fontWeight: 800, color: "#0f172a", fontSize: 11, background: "#dbeafe", borderRadius: 5, padding: "3px 10px", letterSpacing: 2, border: "1px solid #93c5fd", fontFamily: "monospace" }}>
+                  🪪 {vehicle.license_plate.toUpperCase()}
+                </span>
+              )}
+            </div>
+            {vehicle?.vin && (
+              <div style={{ marginTop: 6, fontFamily: "monospace", fontSize: 9, color: "#64748b", letterSpacing: 0.8, background: "#f1f5f9", borderRadius: 4, padding: "3px 8px", display: "inline-block" }}>
+                VIN: <strong style={{ color: "#0f172a", textTransform: "uppercase" }}>{vehicle.vin.toUpperCase()}</strong>
+              </div>
+            )}
           </div>
         )}
       </div>
