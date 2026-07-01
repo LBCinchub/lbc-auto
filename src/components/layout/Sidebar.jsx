@@ -49,6 +49,7 @@ const navItems = [
   { name: "Payroll",       icon: Banknote,        page: "Payroll",          color: "from-green-500 to-teal-500",    light: "bg-green-50 text-green-700 border-green-200",     dark: "bg-green-500/15 text-green-400 border-green-500/30", label: "text-green-400" },
   { name: "Analytics",     icon: BarChart3,       page: "Analytics",        color: "from-purple-500 to-violet-600", light: "bg-purple-50 text-purple-700 border-purple-200",  dark: "bg-purple-500/15 text-purple-400 border-purple-500/30", label: "text-purple-400" },
   { name: "Import",        icon: FileUp,          page: "ImportCustomers",  color: "from-gray-500 to-slate-600",    light: "bg-gray-50 text-gray-700 border-gray-200",        dark: "bg-gray-500/15 text-gray-400 border-gray-500/30",    label: "text-slate-400", path: "/ImportCustomers" },
+  { name: "Customer Hub",  icon: Store,           page: "CustomerHub",      color: "from-sky-400 to-cyan-500",      light: "bg-sky-500/20",   text: "text-sky-400" },
 ];
 
 export default function Sidebar({ currentPage }) {
