@@ -302,7 +302,10 @@ export default function Customers() {
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <h3 className="text-white font-bold capitalize leading-tight">{customer.full_name}</h3>
+                          <h3
+                              className="text-white font-bold capitalize leading-tight cursor-pointer hover:text-sky-400 transition-colors"
+                              onClick={e => { e.stopPropagation(); navigate(`/CustomerProfile/${customer.id}`); }}
+                            >{customer.full_name}</h3>
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${statusText[activity]} border ${statusBorder[activity]}`} title={statusLabel[activity]} />
                         </div>
                         {customer.address && (
