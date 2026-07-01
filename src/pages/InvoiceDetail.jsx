@@ -456,7 +456,7 @@ export default function InvoiceDetail() {
           <div>
             <button onClick={() => invoice.customer_id && navigate(`/CustomerDetails?id=${invoice.customer_id}`)} className="text-sky-400 hover:text-sky-300 hover:underline text-sm font-semibold mb-0.5 text-left transition-colors">{customer?.full_name || invoice.customer_name} →</button>
             <h1 className="text-3xl font-bold text-white">Invoice #{invoice.invoice_number}</h1>
-            <p className="text-gray-400 mt-1">{invoice.customer_name}</p>
+            <button onClick={() => invoice.customer_id && navigate(`/CustomerDetails?id=${invoice.customer_id}`)} className="text-sky-400 hover:text-sky-300 hover:underline mt-1 text-sm font-medium text-left transition-colors">{invoice.customer_name}</button>
             {(invoice.customer_phone || customer?.phone) && (
               <a href={`tel:${invoice.customer_phone || customer?.phone}`}
                 className="text-sky-400 hover:text-sky-300 text-sm font-semibold mt-1 inline-flex items-center gap-1">
@@ -482,7 +482,9 @@ export default function InvoiceDetail() {
           </div>
           <div>
             <p className="text-gray-500 text-xs uppercase mb-1">Customer</p>
-            <p className="text-white font-bold text-sm">{customer?.full_name || invoice.customer_name || "—"}</p>
+            <button onClick={() => invoice.customer_id && navigate(`/CustomerDetails?id=${invoice.customer_id}`)} className="text-sky-400 hover:text-sky-300 hover:underline font-bold text-sm text-left transition-colors block">
+              {customer?.full_name || invoice.customer_name || "—"} →
+            </button>
             {customer?.phone && <p className="text-sky-400 text-xs">{formatPhone(customer.phone)}</p>}
           </div>
           <div>
