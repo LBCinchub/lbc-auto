@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
+import { base44 } from "@/api/base44Client";
 import { Search, Phone, Store, AlertCircle, CheckCircle2 } from "lucide-react";
-
-const APP_URL = "https://app-69b0bd497bfce90f18df6cdd.base44.app";
 
 export default function CustomerPortal() {
   const [step, setStep] = useState("shop");
@@ -36,18 +35,16 @@ export default function CustomerPortal() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`${APP_URL}/functions/customerLogin`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ shop_email: shopUser.email, phone: cleaned }),
+      const result = await base44.functions.invoke("customerLogin", {
+        shop_email: shopUser.email,
+        phone: cleaned,
       });
-      const data = await res.json();
 
-      if (data.success && data.customer) {
+      if (result?.success && result?.customer) {
         sessionStorage.setItem("customer_session", JSON.stringify({
-          customer_id: data.customer.id,
-          customer_name: data.customer.full_name,
-          customer_phone: data.customer.phone,
+          customer_id: result.customer.id,
+          customer_name: result.customer.full_name,
+          customer_phone: result.customer.phone,
           shop_email: shopUser.email,
           shop_name: shopName,
         }));
@@ -56,7 +53,8 @@ export default function CustomerPortal() {
         setError("Phone number not found at this shop. Make sure the shop has your number on file.");
       }
     } catch (e) {
-      setError("Connection error. Please try again.");
+      console.error("Login error:", e);
+      setError("Connection error — please try again.");
     }
     setLoading(false);
   };
@@ -98,7 +96,11 @@ export default function CustomerPortal() {
               onChange={e => { setShopEmail(e.target.value); setError(""); }}
               onKeyDown={e => e.key === "Enter" && findShop()}
             />
-            {error && <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:10, color:"#f87171", fontSize:13 }}><AlertCircle style={{ width:14, height:14 }}/> {error}</div>}
+            {error && (
+              <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:10, color:"#f87171", fontSize:13 }}>
+                <AlertCircle style={{ width:14, height:14 }}/> {error}
+              </div>
+            )}
             <button style={S.btn} onClick={findShop}>Continue →</button>
           </>
         )}
@@ -131,7 +133,11 @@ export default function CustomerPortal() {
               onChange={e => { setPhone(e.target.value); setError(""); }}
               onKeyDown={e => e.key === "Enter" && handlePhoneLogin()}
             />
-            {error && <div style={{ display:"flex", alignItems:"flex-start", gap:6, marginTop:10, color:"#f87171", fontSize:13, lineHeight:1.4 }}><AlertCircle style={{ width:14, height:14, flexShrink:0, marginTop:2 }}/> {error}</div>}
+            {error && (
+              <div style={{ display:"flex", alignItems:"flex-start", gap:6, marginTop:10, color:"#f87171", fontSize:13, lineHeight:1.4 }}>
+                <AlertCircle style={{ width:14, height:14, flexShrink:0, marginTop:2 }}/> {error}
+              </div>
+            )}
             <button style={{ ...S.btn, opacity: loading ? 0.6 : 1 }} onClick={handlePhoneLogin} disabled={loading}>
               {loading ? "Checking..." : "Sign In →"}
             </button>
