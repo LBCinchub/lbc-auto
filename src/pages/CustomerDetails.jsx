@@ -68,48 +68,73 @@ function VehicleTimeline({ vehicle, repairOrders, defaultOpen = false }) {
 
   return (
     <div className="rounded-xl border border-gray-800 bg-gray-900/50 overflow-hidden">
-      {/* ── Clickable Header ── */}
-      <button
-        onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center gap-3 px-4 py-3.5 bg-gray-800/50 hover:bg-gray-800/80 transition-colors text-left"
-      >
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500/20 to-blue-600/20 border border-sky-500/20 flex items-center justify-center flex-shrink-0">
-          <Car className="w-4 h-4 text-sky-400" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="font-semibold text-white text-sm capitalize">
-            {[vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ") || "Unknown Vehicle"}
-            {vehicle.color && <span className="ml-2 text-xs font-normal text-gray-400 capitalize">({vehicle.color})</span>}
+      {/* ── Vehicle Card — always visible, full info ── */}
+      <div className="px-4 pt-4 pb-3 bg-gray-800/40">
+        <div className="flex items-start gap-3">
+          {/* Car icon */}
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500/20 to-blue-600/20 border border-sky-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <Car className="w-4 h-4 text-sky-400" />
           </div>
-          <div className="flex gap-2 mt-0.5 flex-wrap">
-            {vehicle.license_plate && (
-              <span className="text-xs text-gray-400 font-mono bg-gray-800 px-1.5 py-0.5 rounded">{vehicle.license_plate}</span>
-            )}
+
+          {/* All vehicle info always visible */}
+          <div className="flex-1 min-w-0">
+            {/* Title row */}
+            <div className="font-bold text-white text-base capitalize">
+              {[vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ") || "Unknown Vehicle"}
+            </div>
+
+            {/* Detail pills row 1: color + plate */}
+            <div className="flex flex-wrap gap-2 mt-1.5 items-center">
+              {vehicle.color && (
+                <span className="text-xs text-gray-300 bg-gray-700/60 px-2 py-0.5 rounded-full capitalize">● {vehicle.color}</span>
+              )}
+              {vehicle.license_plate && (
+                <span className="text-xs font-mono font-bold text-white bg-blue-900/40 border border-blue-700/40 px-2 py-0.5 rounded tracking-widest">
+                  🪪 {vehicle.license_plate.toUpperCase()}
+                </span>
+              )}
+              {vehicle.engine_type && (
+                <span className="text-xs text-amber-300 bg-amber-900/20 px-2 py-0.5 rounded-full">⚙ {vehicle.engine_type}</span>
+              )}
+            </div>
+
+            {/* VIN — full, always visible */}
             {vehicle.vin && (
-              <span className="text-xs text-gray-600 font-mono">VIN ...{vehicle.vin.slice(-6)}</span>
+              <div className="mt-1.5 font-mono text-xs text-gray-400 bg-gray-900/60 rounded px-2 py-1 tracking-wider">
+                VIN: <span className="text-gray-200 font-semibold uppercase">{vehicle.vin}</span>
+              </div>
+            )}
+
+            {/* Mileage if set */}
+            {vehicle.mileage && (
+              <div className="text-xs text-gray-500 mt-1">🛣 {Number(vehicle.mileage).toLocaleString()} km</div>
             )}
           </div>
-        </div>
-        <div className="flex items-center gap-3 flex-shrink-0">
-          {vehicleOrders.length > 0 ? (
-            <>
-              <div className="text-right hidden sm:block">
-                <div className="text-xs text-gray-500">Total spent</div>
-                <div className="text-sm font-bold text-emerald-400">${totalSpent.toFixed(0)}</div>
-              </div>
-              <div className="text-right hidden sm:block">
-                <div className="text-xs text-gray-500">Jobs</div>
-                <div className="text-sm font-bold text-white">{vehicleOrders.length}</div>
-              </div>
-            </>
-          ) : (
-            <span className="text-xs text-gray-600 italic hidden sm:block">No history</span>
-          )}
-          <div className={`transition-transform duration-200 ${open ? "rotate-180" : ""}`}>
-            <ChevronDown className="w-4 h-4 text-gray-500" />
+
+          {/* Stats + collapse toggle */}
+          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+            {vehicleOrders.length > 0 && (
+              <>
+                <div className="text-right">
+                  <div className="text-xs text-gray-500">Spent</div>
+                  <div className="text-sm font-bold text-emerald-400">${totalSpent.toFixed(0)}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs text-gray-500">Jobs</div>
+                  <div className="text-sm font-bold text-white">{vehicleOrders.length}</div>
+                </div>
+              </>
+            )}
+            <button
+              onClick={() => setOpen(v => !v)}
+              className="mt-1 flex items-center gap-1 text-xs text-gray-500 hover:text-gray-300 transition-colors"
+            >
+              {open ? "Hide history" : "Show history"}
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+            </button>
           </div>
         </div>
-      </button>
+      </div>
 
       {/* ── Expandable History ── */}
       {open && (
