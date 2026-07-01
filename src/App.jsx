@@ -4,7 +4,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { base44 } from '@/api/base44Client'
 import { pagesConfig } from './pages.config'
-import { BrowserRouter as Router, Route, Routes, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, useNavigate, useLocation } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { ThemeProvider } from '@/lib/ThemeContext';
@@ -232,6 +232,22 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
 
 const AuthenticatedApp = () => {
   const { user, isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+  const location = useLocation();
+
+  // PUBLIC ROUTES — bypass all auth, render immediately, no login required
+  const PUBLIC_PATHS = ['/CustomerPortal', '/CustomerDashboard', '/TechPortal', '/TechDashboard', '/TechJobView', '/landing'];
+  if (PUBLIC_PATHS.some(p => location.pathname.startsWith(p))) {
+    return (
+      <Routes>
+        <Route path="/CustomerPortal" element={<CustomerPortal />} />
+        <Route path="/CustomerDashboard" element={<CustomerDashboard />} />
+        <Route path="/TechPortal" element={<TechPortal />} />
+        <Route path="/TechDashboard" element={<TechDashboard />} />
+        <Route path="/TechJobView" element={<TechJobView />} />
+        <Route path="/landing" element={<Landing />} />
+      </Routes>
+    );
+  }
 
   useEffect(() => {
     if (user && !user.trial_started_date) {
