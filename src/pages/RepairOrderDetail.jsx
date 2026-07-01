@@ -253,10 +253,10 @@ export default function RepairOrderDetail() {
         <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mb-8">
           <div>
             <p className="text-gray-500 text-xs uppercase mb-1">Vehicle</p>
-            <p
-              className="text-sky-400 font-semibold cursor-pointer hover:text-sky-300 hover:underline"
-              onClick={() => order.vehicle_id && navigate(`/VehicleTimeline/${order.vehicle_id}`)}
-             className="text-emerald-400 hover:text-emerald-300 hover:underline cursor-pointer transition-colors font-medium text-left">{order.vehicle_info}</button>
+             <button
+               onClick={() => order.vehicle_id && navigate(`/VehicleTimeline/${order.vehicle_id}`)}
+               className="text-emerald-400 hover:text-emerald-300 hover:underline cursor-pointer transition-colors font-semibold text-left"
+             >{order.vehicle_info || "—"}</button>
           </div>
           <div>
             <p className="text-gray-500 text-xs uppercase mb-1">Mechanic</p>
