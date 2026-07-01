@@ -52,86 +52,78 @@ export default function CustomerFormDialog({ open, onClose, customer, onSaved, o
   }, [customer, open]);
 
   const handleSave = async () => {
+    if (saving) return; // prevent double-tap
+    if (!form.full_name?.trim()) return; // must have a name
     setSaving(true);
-    let newCustomer;
-    if (customer) {
-      await base44.entities.Customer.update(customer.id, form);
-      newCustomer = { id: customer.id, ...form };
+    try {
+      let newCustomer;
 
-      // ── CENTER CONTROL: propagate ALL customer field changes outward ──────
-      const customerChanged =
-        customer.full_name !== form.full_name ||
-        customer.phone     !== form.phone ||
-        customer.email     !== form.email;
+      if (customer) {
+        // ── EDIT: save customer first, then propagate in background ──
+        await base44.entities.Customer.update(customer.id, form);
+        newCustomer = { id: customer.id, ...form };
 
-      if (customerChanged) {
-        const recordUpdate = {
-          customer_name:  form.full_name,
-          customer_phone: form.phone  || "",
-          customer_email: form.email  || "",
-        };
+        const customerChanged =
+          customer.full_name !== form.full_name ||
+          customer.phone     !== form.phone ||
+          customer.email     !== form.email;
 
-        // Vehicles — keep customer_name + phone in sync
-        const vehicles = await base44.entities.Vehicle.filter({ customer_id: customer.id });
-        await Promise.all(vehicles.map(v =>
-          base44.entities.Vehicle.update(v.id, {
-            customer_name: form.full_name,
-            phone: form.phone || "",
-          })
-        ));
+        if (customerChanged) {
+          const recordUpdate = {
+            customer_name:  form.full_name,
+            customer_phone: form.phone  || "",
+            customer_email: form.email  || "",
+          };
+          // Fire propagation in background — don't block the save
+          (async () => {
+            try {
+              const [vehicles, orders, estimates, invoices, appts] = await Promise.all([
+                base44.entities.Vehicle.filter({ customer_id: customer.id }),
+                base44.entities.RepairOrder.filter({ customer_id: customer.id }),
+                base44.entities.Estimate.filter({ customer_id: customer.id }),
+                base44.entities.Invoice.filter({ customer_id: customer.id }),
+                base44.entities.Appointment.filter({ customer_id: customer.id }),
+              ]);
+              await Promise.all([
+                ...vehicles.map(v => base44.entities.Vehicle.update(v.id, { customer_name: form.full_name, phone: form.phone || "" })),
+                ...orders.map(o => base44.entities.RepairOrder.update(o.id, recordUpdate)),
+                ...estimates.map(e => base44.entities.Estimate.update(e.id, recordUpdate)),
+                ...invoices.map(inv => base44.entities.Invoice.update(inv.id, recordUpdate)),
+                ...appts.map(a => base44.entities.Appointment.update(a.id, recordUpdate)),
+              ]);
+            } catch (_) {}
+          })();
+        }
+        setSaving(false);
+        onSaved();
+        onClose();
 
-        // Repair Orders
-        const orders = await base44.entities.RepairOrder.filter({ customer_id: customer.id });
-        await Promise.all(orders.map(o =>
-          base44.entities.RepairOrder.update(o.id, recordUpdate)
-        ));
+      } else {
+        // ── NEW CUSTOMER: create immediately, vehicle in parallel ──
+        newCustomer = await base44.entities.Customer.create(form);
 
-        // Estimates
-        const estimates = await base44.entities.Estimate.filter({ customer_id: customer.id });
-        await Promise.all(estimates.map(e =>
-          base44.entities.Estimate.update(e.id, recordUpdate)
-        ));
+        let createdVehicleData = null;
+        if (addVehicle && vehicleForm.make && vehicleForm.model && vehicleForm.year) {
+          try {
+            createdVehicleData = await base44.entities.Vehicle.create({
+              ...vehicleForm,
+              year: Number(vehicleForm.year),
+              customer_id: newCustomer.id,
+              customer_name: form.full_name,
+            });
+          } catch (_) {}
+        }
 
-        // Invoices
-        const invoices = await base44.entities.Invoice.filter({ customer_id: customer.id });
-        await Promise.all(invoices.map(inv =>
-          base44.entities.Invoice.update(inv.id, recordUpdate)
-        ));
-
-        // Appointments
-        const appts = await base44.entities.Appointment.filter({ customer_id: customer.id });
-        await Promise.all(appts.map(appt =>
-          base44.entities.Appointment.update(appt.id, recordUpdate)
-        ));
+        _latestVehicle.current = createdVehicleData;
+        setSaving(false);
+        onSaved();
+        setSavedCustomer(newCustomer);
+        if (createdVehicleData) setSavedVehicle(createdVehicleData);
       }
-    } else {
-      newCustomer = await base44.entities.Customer.create(form);
+    } catch (err) {
+      setSaving(false);
+      alert("Save failed — please try again.");
     }
-    let createdVehicleData = null;
-    if (!customer && addVehicle && vehicleForm.make && vehicleForm.model && vehicleForm.year) {
-      createdVehicleData = await base44.entities.Vehicle.create({
-        ...vehicleForm,
-        year: Number(vehicleForm.year),
-        customer_id: newCustomer.id,
-        customer_name: form.full_name,
-      });
-      // Store in both state AND a ref so handleQuickAction can read it instantly
-      setSavedVehicle(createdVehicleData);
-    }
-    setSaving(false);
-    onSaved();
-    // For new customers, show quick-action step instead of closing
-    if (!customer) {
-      setSavedCustomer(newCustomer);
-      // Keep vehicle data in ref for immediate use in handleQuickAction
-      if (createdVehicleData) {
-        setSavedVehicle(createdVehicleData);
-      }
-    } else {
-      onClose();
-    }
-    // Store vehicle outside of state for immediate access
-    _latestVehicle.current = createdVehicleData;
   };
 
   const handleVinDecode = async () => {
