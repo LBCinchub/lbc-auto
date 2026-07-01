@@ -228,7 +228,7 @@ export default function RepairOrderDetail() {
         <div className="flex items-start justify-between mb-6">
            <div>
              <h1 className="text-3xl font-bold text-white">Repair Order #{order.order_number}</h1>
-             <p className="text-gray-400 mt-1">{order.customer_name}</p>
+             <button onClick={() => order.customer_id && navigate(`/CustomerDetails?id=${order.customer_id}`)} className="text-sky-400 hover:text-sky-300 hover:underline mt-1 text-left transition-colors font-medium">{order.customer_name}</button>
              {customer?.phone && <p className="text-sky-400 text-sm mt-1">{formatPhone(customer.phone)}</p>}
            </div>
            <Select value={order.status} onValueChange={(newStatus) => {
@@ -256,7 +256,7 @@ export default function RepairOrderDetail() {
             <p
               className="text-sky-400 font-semibold cursor-pointer hover:text-sky-300 hover:underline"
               onClick={() => order.vehicle_id && navigate(`/VehicleTimeline/${order.vehicle_id}`)}
-            >{order.vehicle_info}</p>
+             className="text-emerald-400 hover:text-emerald-300 hover:underline cursor-pointer transition-colors font-medium text-left">{order.vehicle_info}</button>
           </div>
           <div>
             <p className="text-gray-500 text-xs uppercase mb-1">Mechanic</p>
