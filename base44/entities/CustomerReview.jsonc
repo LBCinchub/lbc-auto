@@ -1,0 +1,52 @@
+{
+  "name": "CustomerReview",
+  "type": "object",
+  "properties": {
+    "shop_owner_email": {
+      "type": "string"
+    },
+    "customer_id": {
+      "type": "string"
+    },
+    "customer_name": {
+      "type": "string"
+    },
+    "customer_phone": {
+      "type": "string"
+    },
+    "rating": {
+      "type": "number",
+      "description": "1-5 stars"
+    },
+    "review_text": {
+      "type": "string"
+    },
+    "is_published": {
+      "type": "boolean",
+      "default": true
+    },
+    "shop_reply": {
+      "type": "string"
+    },
+    "shop_replied_at": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "shop_owner_email",
+    "customer_id",
+    "rating"
+  ],
+  "rls": {
+    "create": true,
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}
