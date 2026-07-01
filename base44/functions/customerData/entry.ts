@@ -1,3 +1,5 @@
+// customerData v2 — service role bypass for RLS
+// deployed: 2026-07-01
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 Deno.serve(async (req) => {
@@ -5,11 +7,12 @@ Deno.serve(async (req) => {
   try {
     const { customer_id, shop_email } = await req.json();
     if (!customer_id || !shop_email) {
-      return new Response(JSON.stringify({ error: "Missing params" }), { status: 400, headers: { "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "Missing params" }), {
+        status: 400, headers: { "Content-Type": "application/json" }
+      });
     }
 
     const sr = base44.asServiceRole;
-
     const [vehicles, orders, invoices, messages, notifications, offers, recommendations, reviews] = await Promise.all([
       sr.entities.Vehicle.filter({ customer_id }, "-created_date", 20),
       sr.entities.RepairOrder.filter({ customer_id }, "-created_date", 50),
@@ -26,6 +29,8 @@ Deno.serve(async (req) => {
     }), { headers: { "Content-Type": "application/json" } });
 
   } catch (e) {
-    return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: String(e) }), {
+      status: 500, headers: { "Content-Type": "application/json" }
+    });
   }
 });
