@@ -16,10 +16,12 @@ export default function TechDashboard() {
 
     base44.auth.me().then(u => {
       setUser(u);
-      if (u) {
-        base44.entities.RepairOrder.filter({ created_by: u.email }, "-created_date", 100)
+      // Use owner_email from session to scope orders to the right shop
+      const ownerEmail = t.owner_email || (u ? u.email : null);
+      if (ownerEmail) {
+        base44.entities.RepairOrder.filter({ created_by: ownerEmail }, "-created_date", 200)
           .then(all => {
-            // Show ROs assigned to this tech
+            // Show only ROs assigned to this specific tech
             const mine = all.filter(o =>
               (o.mechanic_name || "").toLowerCase().includes(t.name.toLowerCase()) ||
               o.mechanic_id === t.id
