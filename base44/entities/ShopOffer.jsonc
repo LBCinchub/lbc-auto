@@ -1,0 +1,71 @@
+{
+  "name": "ShopOffer",
+  "type": "object",
+  "properties": {
+    "shop_owner_email": {
+      "type": "string"
+    },
+    "shop_name": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string",
+      "description": "Offer title e.g. '20% off oil change'"
+    },
+    "description": {
+      "type": "string"
+    },
+    "image_url": {
+      "type": "string"
+    },
+    "valid_until": {
+      "type": "string",
+      "format": "date"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "reactions": {
+      "type": "object",
+      "description": "JSON map of emoji -> count e.g. {thumbsup: 5, fire: 2}"
+    },
+    "comments": {
+      "type": "array",
+      "description": "Customer comments on the offer",
+      "items": {
+        "type": "object",
+        "properties": {
+          "customer_name": {
+            "type": "string"
+          },
+          "customer_phone": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "shop_owner_email",
+    "title"
+  ],
+  "rls": {
+    "create": true,
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}
