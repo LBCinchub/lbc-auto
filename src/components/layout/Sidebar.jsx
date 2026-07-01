@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Tablet, Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import {
@@ -169,6 +169,22 @@ export default function Sidebar({ currentPage }) {
 
         {/* Footer — fixed at bottom, never scrolls */}
         <div className={cn("flex-shrink-0 p-2 border-t space-y-0.5", isLight ? "border-gray-200" : "border-gray-800/50")}>
+          <Link
+            to="/TechPortal"
+            onClick={() => setMobileOpen(false)}
+            className={cn(
+              "flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm font-medium transition-all border",
+              currentPage === "TechPortal"
+                ? isLight ? "bg-indigo-50 text-indigo-700 border-indigo-200" : "bg-indigo-900/30 text-indigo-400 border-indigo-700/40"
+                : "border-transparent " + (isLight ? "text-gray-500 hover:bg-gray-100 hover:text-gray-800" : "text-gray-400 hover:bg-gray-800 hover:text-white")
+            )}
+          >
+            <div className={cn("flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center", isLight ? "bg-indigo-50" : "bg-indigo-900/30")}>
+              <Tablet className="w-4 h-4 text-indigo-400" />
+            </div>
+            {!collapsed && <span>Tech Portal</span>}
+          </Link>
+
           <Link
             to="/Settings"
             onClick={() => setMobileOpen(false)}
