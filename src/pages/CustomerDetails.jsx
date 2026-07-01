@@ -373,21 +373,21 @@ export default function CustomerDetails() {
           {/* Quick Actions Bar */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             <Button
-              onClick={() => setApptOpen(true)}
+              onClick={async () => { const v = await base44.entities.Vehicle.filter({ customer_id: customerId }); setVehicles(v); setApptOpen(true); }}
               variant="outline"
               className="border-sky-500/40 bg-sky-500/10 text-sky-400 hover:bg-sky-500/20 hover:text-sky-300 gap-2"
             >
               <CalendarPlus className="w-4 h-4" /> New Appointment
             </Button>
             <Button
-              onClick={() => setRoOpen(true)}
+              onClick={async () => { const v = await base44.entities.Vehicle.filter({ customer_id: customerId }); setVehicles(v); setRoOpen(true); }}
               variant="outline"
               className="border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 hover:text-amber-300 gap-2"
             >
               <Wrench className="w-4 h-4" /> New Repair Order
             </Button>
             <Button
-              onClick={() => setEstimateOpen(true)}
+              onClick={async () => { const v = await base44.entities.Vehicle.filter({ customer_id: customerId }); setVehicles(v); setEstimateOpen(true); }}
               variant="outline"
               className="border-purple-500/40 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 hover:text-purple-300 gap-2"
             >
@@ -544,7 +544,7 @@ export default function CustomerDetails() {
               <div className="flex justify-end mb-3">
                 <Button size="sm" variant="outline"
                   className="border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 hover:text-amber-300 gap-1.5"
-                  onClick={() => setRoOpen(true)}>
+                  onClick={async () => { const v = await base44.entities.Vehicle.filter({ customer_id: customerId }); setVehicles(v); setRoOpen(true); }}>
                   <Plus className="w-3.5 h-3.5" /> New Repair Order
                 </Button>
               </div>
@@ -657,7 +657,7 @@ export default function CustomerDetails() {
       )}
 
       {/* New Repair Order Dialog */}
-      {customer && (
+      {customer && roOpen && (
         <RepairOrderFormDialog
           open={roOpen}
           onClose={() => setRoOpen(false)}
@@ -671,7 +671,7 @@ export default function CustomerDetails() {
       )}
 
       {/* New Appointment Dialog */}
-      {customer && (
+      {customer && apptOpen && (
         <AppointmentFormDialog
           open={apptOpen}
           onClose={() => setApptOpen(false)}
@@ -689,7 +689,7 @@ export default function CustomerDetails() {
       )}
 
       {/* New Estimate Dialog */}
-      {customer && (
+      {customer && estimateOpen && (
         <EstimateFormDialog
           open={estimateOpen}
           onClose={() => setEstimateOpen(false)}
@@ -707,10 +707,12 @@ export default function CustomerDetails() {
           open={vehicleDialogOpen}
           onClose={() => { setVehicleDialogOpen(false); setEditingVehicle(null); }}
           vehicle={editingVehicle ? editingVehicle : { customer_id: customer.id, customer_name: customer.full_name }}
-          onSaved={() => {
+          onSaved={async () => {
             setVehicleDialogOpen(false);
             setEditingVehicle(null);
-            base44.entities.Vehicle.filter({ customer_id: customerId }).then(setVehicles);
+            // Re-fetch vehicles immediately so all open dialogs get the fresh list
+            const freshVehicles = await base44.entities.Vehicle.filter({ customer_id: customerId });
+            setVehicles(freshVehicles);
           }}
           customers={[customer]}
         />
