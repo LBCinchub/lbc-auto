@@ -705,19 +705,7 @@ export default function InvoiceDetail() {
               <span className="text-gray-400 whitespace-nowrap">${taxAmount.toFixed(2)}</span>
             </div>
           )}
-          <div className="flex justify-between text-white font-bold text-base border-t border-gray-700 pt-2">
-            <span>Grand Total</span>
-            <span className="text-sky-400">${grandTotal.toFixed(2)}</span>
-          </div>
-          {invoice.amount_paid > 0 && (
-            <div className="flex justify-between text-emerald-400"><span>Amount Paid</span><span>${(invoice.amount_paid || 0).toFixed(2)}</span></div>
-          )}
-          {invoice.balance_due > 0 && (
-            <div className="flex justify-between text-yellow-400 font-semibold">
-              <span>Balance Due</span>
-              <span>${invoice.balance_due.toFixed(2)}</span>
-            </div>
-          )}
+
         </div>
 
         {/* Parts & Suppliers section placeholder */}
