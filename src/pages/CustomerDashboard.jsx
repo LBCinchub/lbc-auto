@@ -82,16 +82,12 @@ export default function CustomerDashboard() {
     }
   }, [messages, activeTab]);
 
-  const APP_URL = "https://app-69b0bd497bfce90f18df6cdd.base44.app";
-
   const loadAll = async (sess) => {
     try {
-      const res = await fetch(`${APP_URL}/functions/customerData`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ customer_id: sess.customer_id, shop_email: sess.shop_email }),
+      const d = await base44.functions.invoke("customerData", {
+        customer_id: sess.customer_id,
+        shop_email: sess.shop_email,
       });
-      const d = await res.json();
       setVehicles(d.vehicles || []); setOrders(d.orders || []); setInvoices(d.invoices || []);
       setMessages(d.messages || []); setNotifications(d.notifications || []);
       setOffers(d.offers || []); setRecommendations(d.recommendations || []);
@@ -103,12 +99,10 @@ export default function CustomerDashboard() {
 
   const refreshMessages = async (sess) => {
     try {
-      const res = await fetch(`${APP_URL}/functions/customerData`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ customer_id: sess.customer_id, shop_email: sess.shop_email }),
+      const d = await base44.functions.invoke("customerData", {
+        customer_id: sess.customer_id,
+        shop_email: sess.shop_email,
       });
-      const d = await res.json();
       if (d.messages) setMessages(d.messages);
       if (d.notifications) setNotifications(d.notifications);
     } catch {}
@@ -126,12 +120,7 @@ export default function CustomerDashboard() {
       message: newMsg.trim(),
       sent_at: new Date().toISOString(),
     };
-    const res = await fetch(`${APP_URL}/functions/customerSendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(msgPayload),
-    });
-    const data = await res.json();
+    const data = await base44.functions.invoke("customerSendMessage", msgPayload);
     if (data.message) setMessages(prev => [...prev, data.message]);
     setNewMsg("");
     setSendingMsg(false);
