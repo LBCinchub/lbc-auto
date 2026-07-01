@@ -478,7 +478,7 @@ export default function InvoiceDetail() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pb-4 border-b border-gray-800">
           <div>
             <p className="text-gray-500 text-xs uppercase mb-1">Vehicle</p>
-            <p className="text-white font-bold text-sm">{invoice.vehicle_info || "—"}</p>
+            <button onClick={() => vehicleId && navigate(`/VehicleTimeline/${vehicleId}`)} className="text-emerald-400 hover:text-emerald-300 hover:underline font-bold text-sm text-left transition-colors">{invoice.vehicle_info || "—"}</button>
           </div>
           <div>
             <p className="text-gray-500 text-xs uppercase mb-1">Customer</p>
