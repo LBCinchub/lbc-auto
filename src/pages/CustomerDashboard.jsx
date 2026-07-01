@@ -82,45 +82,42 @@ export default function CustomerDashboard() {
     }
   }, [messages, activeTab]);
 
+  const APP_URL = "https://app-69b0bd497bfce90f18df6cdd.base44.app";
+
   const loadAll = async (sess) => {
     try {
-      const [v, o, inv, msg, notifs, off, recs, revs] = await Promise.all([
-        base44.entities.Vehicle.filter({ customer_id: sess.customer_id }, "-created_date", 20),
-        base44.entities.RepairOrder.filter({ customer_id: sess.customer_id }, "-created_date", 50),
-        base44.entities.Invoice.filter({ customer_id: sess.customer_id }, "-created_date", 50),
-        base44.entities.CustomerMessage.filter({ customer_id: sess.customer_id }, "sent_at", 100),
-        base44.entities.CustomerNotification.filter({ customer_id: sess.customer_id }, "-sent_at", 30),
-        base44.entities.ShopOffer.filter({ shop_owner_email: sess.shop_email, is_active: true }, "-created_date", 20),
-        base44.entities.CarRecommendation.filter({ customer_id: sess.customer_id, is_resolved: false }, "-created_date", 20),
-        base44.entities.CustomerReview.filter({ customer_id: sess.customer_id }, "-created_date", 5),
-      ]);
-      setVehicles(v); setOrders(o); setInvoices(inv);
-      setMessages(msg); setNotifications(notifs);
-      setOffers(off); setRecommendations(recs);
-      setReviews(revs);
-      if (revs.length > 0) { setMyReview(revs[0]); setReviewDone(true); }
-
-      // Mark notifications read
-      notifs.filter(n => !n.is_read).forEach(n =>
-        base44.entities.CustomerNotification.update(n.id, { is_read: true })
-      );
+      const res = await fetch(`${APP_URL}/functions/customerData`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ customer_id: sess.customer_id, shop_email: sess.shop_email }),
+      });
+      const d = await res.json();
+      setVehicles(d.vehicles || []); setOrders(d.orders || []); setInvoices(d.invoices || []);
+      setMessages(d.messages || []); setNotifications(d.notifications || []);
+      setOffers(d.offers || []); setRecommendations(d.recommendations || []);
+      setReviews(d.reviews || []);
+      if (d.reviews?.length > 0) { setMyReview(d.reviews[0]); setReviewDone(true); }
     } catch (e) { console.error(e); }
     setLoading(false);
   };
 
   const refreshMessages = async (sess) => {
     try {
-      const msg = await base44.entities.CustomerMessage.filter({ customer_id: sess.customer_id }, "sent_at", 100);
-      setMessages(msg);
-      const notifs = await base44.entities.CustomerNotification.filter({ customer_id: sess.customer_id }, "-sent_at", 30);
-      setNotifications(notifs);
+      const res = await fetch(`${APP_URL}/functions/customerData`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ customer_id: sess.customer_id, shop_email: sess.shop_email }),
+      });
+      const d = await res.json();
+      if (d.messages) setMessages(d.messages);
+      if (d.notifications) setNotifications(d.notifications);
     } catch {}
   };
 
   const sendMessage = async () => {
     if (!newMsg.trim() || !session) return;
     setSendingMsg(true);
-    const msg = {
+    const msgPayload = {
       shop_owner_email: session.shop_email,
       customer_id: session.customer_id,
       customer_phone: session.customer_phone,
@@ -128,11 +125,14 @@ export default function CustomerDashboard() {
       sender: "customer",
       message: newMsg.trim(),
       sent_at: new Date().toISOString(),
-      read_by_shop: false,
-      read_by_customer: true,
     };
-    const created = await base44.entities.CustomerMessage.create(msg);
-    setMessages(prev => [...prev, created]);
+    const res = await fetch(`${APP_URL}/functions/customerSendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(msgPayload),
+    });
+    const data = await res.json();
+    if (data.message) setMessages(prev => [...prev, data.message]);
     setNewMsg("");
     setSendingMsg(false);
     setTimeout(() => msgEndRef.current?.scrollIntoView({ behavior:"smooth" }), 100);
