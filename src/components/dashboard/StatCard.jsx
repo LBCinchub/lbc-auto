@@ -20,22 +20,22 @@ export default function StatCard({ title, value, icon: Icon, trend, trendLabel, 
 
   return (
     <div onClick={onClick} className={cn(
-      "relative overflow-hidden rounded-xl border bg-gradient-to-br p-5",
+      "relative overflow-hidden rounded-xl border bg-gradient-to-br p-6",
       onClick ? "cursor-pointer hover:brightness-110 transition-all" : "",
       colors[color]
     )}>
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm text-gray-400 font-medium">{title}</p>
-          <p className="text-2xl font-bold text-white mt-1">{value}</p>
+          <p className="text-base text-gray-300 font-semibold">{title}</p>
+          <p className="text-4xl font-bold text-white mt-2">{value}</p>
           {trendLabel && (
             <p className={cn("text-xs mt-2 font-medium", trend >= 0 ? "text-emerald-400" : "text-rose-400")}>
               {trend >= 0 ? "↑" : "↓"} {Math.abs(trend)}% {trendLabel}
             </p>
           )}
         </div>
-        <div className={cn("p-2.5 rounded-lg", iconColors[color])}>
-          <Icon className="w-5 h-5" />
+        <div className={cn("p-3 rounded-xl", iconColors[color])}>
+          <Icon className="w-7 h-7" />
         </div>
       </div>
     </div>
