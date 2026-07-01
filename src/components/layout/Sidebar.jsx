@@ -235,13 +235,6 @@ export default function Sidebar({ currentPage }) {
           </div>
         )}
 
-        {!collapsed && (
-          <div className="flex-shrink-0 px-4 pb-3 text-center">
-            <p className={cn("text-[10px]", isLight ? "text-gray-400" : "text-gray-600")}>
-              Powered by <a href="https://lbc.network" target="_blank" rel="noopener noreferrer" className="hover:text-sky-400 transition-colors">lbc.network</a>
-            </p>
-          </div>
-        )}
       </aside>
     </>
   );
