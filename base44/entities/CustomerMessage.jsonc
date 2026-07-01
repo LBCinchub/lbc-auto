@@ -1,0 +1,62 @@
+{
+  "name": "CustomerMessage",
+  "type": "object",
+  "properties": {
+    "shop_owner_email": {
+      "type": "string",
+      "description": "Shop owner email (scopes to shop)"
+    },
+    "customer_id": {
+      "type": "string",
+      "description": "Linked Customer record ID"
+    },
+    "customer_phone": {
+      "type": "string",
+      "description": "Customer phone (their PIN/identifier)"
+    },
+    "customer_name": {
+      "type": "string"
+    },
+    "sender": {
+      "type": "string",
+      "enum": [
+        "shop",
+        "customer"
+      ],
+      "description": "Who sent this message"
+    },
+    "message": {
+      "type": "string"
+    },
+    "read_by_customer": {
+      "type": "boolean",
+      "default": false
+    },
+    "read_by_shop": {
+      "type": "boolean",
+      "default": false
+    },
+    "sent_at": {
+      "type": "string",
+      "description": "ISO timestamp"
+    }
+  },
+  "required": [
+    "shop_owner_email",
+    "customer_id",
+    "sender",
+    "message"
+  ],
+  "rls": {
+    "create": true,
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}
