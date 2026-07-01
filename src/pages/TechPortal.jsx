@@ -19,8 +19,11 @@ export default function TechPortal() {
     base44.auth.me().then(u => {
       setUser(u);
       if (u) {
-        base44.entities.Mechanic.filter({ created_by: u.email }, "name", 50)
-          .then(setMechanics).finally(() => setLoading(false));
+        base44.entities.Mechanic.list("-created_date", 100)
+          .then(all => {
+            // Only keep mechanics with a PIN set
+            setMechanics(all.filter(m => m.pin && m.pin.length === 4));
+          }).finally(() => setLoading(false));
       } else {
         setLoading(false);
       }
@@ -39,7 +42,7 @@ export default function TechPortal() {
   };
 
   const checkPin = (p) => {
-    const match = mechanics.find(m => m.pin === p);
+    const match = mechanics.find(m => String(m.pin).trim() === String(p).trim());
     if (match) {
       sessionStorage.setItem("tech_session", JSON.stringify({
         id: match.id,
@@ -122,6 +125,16 @@ export default function TechPortal() {
       </div>
 
       {/* Error */}
+      {!loading && mechanics.length === 0 && (
+        <div style={{
+          background:"rgba(251,191,36,0.1)", border:"1px solid rgba(251,191,36,0.3)",
+          color:"#fbbf24", borderRadius:10, padding:"10px 20px",
+          fontSize:13, marginBottom:20, fontWeight:600, textAlign:"center",
+        }}>
+          No techs with a PIN set yet.<br/>
+          <span style={{ fontWeight:400, fontSize:12 }}>Go to Mechanics → Edit → set a 4-digit PIN</span>
+        </div>
+      )}
       {error && (
         <div style={{
           background:"rgba(239,68,68,0.1)", border:"1px solid rgba(239,68,68,0.3)",
