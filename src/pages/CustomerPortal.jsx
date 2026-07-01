@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { base44 } from "@/api/base44Client";
 import { Search, Phone, Store, AlertCircle, CheckCircle2 } from "lucide-react";
 
 export default function CustomerPortal() {
@@ -34,18 +35,10 @@ export default function CustomerPortal() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/functions/customerLogin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ shop_email: shopEmail.trim().toLowerCase(), phone: cleaned }),
+      const result = await base44.functions.invoke("customerLogin", {
+        shop_email: shopEmail.trim().toLowerCase(),
+        phone: cleaned,
       });
-      
-      let result;
-      try { result = await res.json(); } catch(e) { 
-        setError("Server error — please try again.");
-        setLoading(false);
-        return;
-      }
 
       if (result?.success && result?.customer) {
         sessionStorage.setItem("customer_session", JSON.stringify({
@@ -58,10 +51,10 @@ export default function CustomerPortal() {
         window.location.href = "/CustomerDashboard";
       } else {
         const count = result?.debug_count ?? "?";
-        setError(`Phone not found. (${count} customers checked) Make sure the shop saved this number.`);
+        setError("Phone not found. (" + count + " records checked) Make sure the shop saved this number exactly.");
       }
     } catch (e) {
-      setError("Connection error: " + e.message);
+      setError("Error: " + (e?.message || String(e)));
     }
     setLoading(false);
   };
@@ -74,7 +67,7 @@ export default function CustomerPortal() {
     label: { display:"block", color:"#94a3b8", fontSize:11, fontWeight:700, letterSpacing:1, marginBottom:6, textTransform:"uppercase" },
     input: { width:"100%", background:"#1e293b", border:"1px solid #334155", borderRadius:10, padding:"14px 16px", color:"#fff", fontSize:16, boxSizing:"border-box", outline:"none" },
     btn: { width:"100%", background:"#3b82f6", color:"#fff", border:"none", borderRadius:10, padding:"15px", fontSize:16, fontWeight:700, cursor:"pointer", marginTop:12 },
-    err: { color:"#f87171", fontSize:13, display:"flex", alignItems:"flex-start", gap:6, marginTop:8, lineHeight:1.4 },
+    err: { color:"#f87171", fontSize:13, display:"flex", alignItems:"flex-start", gap:6, marginTop:8, lineHeight:1.4, wordBreak:"break-word" },
     shopBadge: { background:"#0f3b2e", border:"1px solid #16a34a", borderRadius:10, padding:"12px 16px", marginBottom:20 },
     back: { background:"transparent", border:"none", color:"#60a5fa", cursor:"pointer", fontSize:13, padding:0, marginBottom:16 },
     icon: { width:56, height:56, borderRadius:"50%", background:"#1e3a5f", border:"2px solid #3b82f6", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px" },
@@ -92,8 +85,8 @@ export default function CustomerPortal() {
       <div style={S.card}>
         {step === "shop" && (
           <>
-            <div style={{ ...S.icon, width:44, height:44, marginBottom:12 }}>
-              <Search style={{ color:"#60a5fa", width:20, height:20 }} />
+            <div style={{ textAlign:"center", marginBottom:16 }}>
+              <Search style={{ color:"#60a5fa", width:28, height:28 }} />
             </div>
             <h2 style={{ color:"#fff", fontSize:18, fontWeight:700, textAlign:"center", margin:"0 0 4px" }}>Find Your Shop</h2>
             <p style={{ ...S.sub, marginBottom:20 }}>Enter the shop's email address</p>
@@ -107,7 +100,7 @@ export default function CustomerPortal() {
               onKeyDown={e => e.key === "Enter" && findShop()}
               autoFocus
             />
-            {error && <div style={S.err}><AlertCircle style={{ width:14, height:14, flexShrink:0, marginTop:1 }} />{error}</div>}
+            {error && <div style={S.err}><AlertCircle style={{ width:14, height:14, flexShrink:0, marginTop:1 }} /><span>{error}</span></div>}
             <button style={S.btn} onClick={findShop}>Continue →</button>
           </>
         )}
@@ -124,22 +117,22 @@ export default function CustomerPortal() {
                 </div>
               </div>
             </div>
-            <div style={{ ...S.icon, width:44, height:44, marginBottom:12 }}>
-              <Phone style={{ color:"#a78bfa", width:20, height:20 }} />
+            <div style={{ textAlign:"center", marginBottom:12 }}>
+              <Phone style={{ color:"#a78bfa", width:28, height:28 }} />
             </div>
             <h2 style={{ color:"#fff", fontSize:18, fontWeight:700, textAlign:"center", margin:"0 0 4px" }}>Enter Your Phone</h2>
-            <p style={{ ...S.sub, marginBottom:20 }}>The number you gave the shop</p>
+            <p style={{ ...S.sub, marginBottom:20 }}>The number you gave the shop (digits only)</p>
             <label style={S.label}>Phone Number</label>
             <input
               style={S.input}
               type="tel"
-              placeholder="e.g. 6135551234"
+              placeholder="6135551234"
               value={phone}
               onChange={e => { setPhone(e.target.value); setError(""); }}
               onKeyDown={e => e.key === "Enter" && handlePhoneLogin()}
               autoFocus
             />
-            {error && <div style={S.err}><AlertCircle style={{ width:14, height:14, flexShrink:0, marginTop:1 }} />{error}</div>}
+            {error && <div style={S.err}><AlertCircle style={{ width:14, height:14, flexShrink:0, marginTop:1 }} /><span>{error}</span></div>}
             <button style={{ ...S.btn, opacity: loading ? 0.6 : 1 }} onClick={handlePhoneLogin} disabled={loading}>
               {loading ? "Checking..." : "Sign In →"}
             </button>
