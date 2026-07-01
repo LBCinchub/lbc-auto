@@ -20,6 +20,9 @@ import InvoiceDetail from './pages/InvoiceDetail';
 import Settings from './pages/Settings';
 import PaymentWall from './pages/PaymentWall';
 import Landing from './pages/Landing';
+import TechPortal from './pages/TechPortal';
+import TechDashboard from './pages/TechDashboard';
+import TechJobView from './pages/TechJobView';
 import Billing from './pages/Billing';
 import PartsLookup from './pages/PartsLookup';
 import ImportCustomers from './pages/ImportCustomers';
@@ -303,6 +306,9 @@ const AuthenticatedApp = () => {
         <Route path="/MissingPhones" element={<LayoutWrapper currentPageName="MissingPhones"><MissingPhones /></LayoutWrapper>} />
         <Route path="/PaymentWall" element={<PaymentWall />} />
         <Route path="/landing" element={<Landing />} />
+        <Route path="/TechPortal" element={<TechPortal />} />
+        <Route path="/TechDashboard" element={<TechDashboard />} />
+        <Route path="/TechJobView" element={<TechJobView />} />
         <Route path="*" element={<PageNotFound />} />
       </Routes>
     </>
