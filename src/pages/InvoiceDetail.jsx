@@ -408,7 +408,7 @@ export default function InvoiceDetail() {
           createdDate={new Date((invoiceDate || invoice.created_date) + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           user={user}
           customer={{ name: invoice.customer_name || customer?.full_name || "—", phone: customer?.phone, email: customer?.email, address: customer?.address }}
-          vehicle={{ info: invoice.vehicle_info, vin: vehicleRecord?.vin, license_plate: vehicleRecord?.license_plate, color: vehicleRecord?.color, mileage: vehicleRecord?.mileage }}
+          vehicle={{ info: invoice.vehicle_info, vin: vehicleRecord?.vin, license_plate: vehicleRecord?.license_plate, color: vehicleRecord?.color, make: vehicleRecord?.make, model: vehicleRecord?.model, year: vehicleRecord?.year, engine_type: vehicleRecord?.engine_type, mileage: vehicleRecord?.mileage }}
           lineItems={[
             ...(laborItems.map(r => ({
               name: r.description || "Labor",
