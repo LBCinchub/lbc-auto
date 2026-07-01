@@ -24,6 +24,7 @@ import TechPortal from './pages/TechPortal';
 import CustomerProfile from './pages/CustomerProfile';
 import CustomerPortal from './pages/CustomerPortal';
 import CustomerDashboard from './pages/CustomerDashboard';
+import CustomerHub from './pages/CustomerHub';
 import TechDashboard from './pages/TechDashboard';
 import TechJobView from './pages/TechJobView';
 import Billing from './pages/Billing';
@@ -313,6 +314,7 @@ const AuthenticatedApp = () => {
         <Route path="/CustomerProfile/:id" element={<CustomerProfile />} />
         <Route path="/CustomerPortal" element={<CustomerPortal />} />
         <Route path="/CustomerDashboard" element={<CustomerDashboard />} />
+        <Route path="/CustomerHub" element={<LayoutWrapper currentPageName="CustomerHub"><CustomerHub /></LayoutWrapper>} />
         <Route path="/TechDashboard" element={<TechDashboard />} />
         <Route path="/TechJobView" element={<TechJobView />} />
         <Route path="*" element={<PageNotFound />} />
