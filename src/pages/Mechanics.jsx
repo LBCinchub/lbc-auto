@@ -18,7 +18,7 @@ import StatusBadge from "../components/shared/StatusBadge";
 export default function Mechanics() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ name: "", phone: "", email: "", specialty: "", pay_type: "hourly", hourly_rate: "", daily_rate: "", status: "available" });
+  const [form, setForm] = useState({ name: "", phone: "", email: "", specialty: "", pin: "", pay_type: "hourly", hourly_rate: "", daily_rate: "", status: "available" });
   const [saving, setSaving] = useState(false);
   const [user, setUser] = useState(null);
   const queryClient = useQueryClient();
@@ -43,8 +43,8 @@ export default function Mechanics() {
     setEditing(mech);
     setForm(mech ? {
       name: mech.name || "", phone: mech.phone || "", email: mech.email || "",
-      specialty: mech.specialty || "", pay_type: mech.pay_type || "hourly", hourly_rate: mech.hourly_rate || "", daily_rate: mech.daily_rate || "", status: mech.status || "available"
-    } : { name: "", phone: "", email: "", specialty: "", pay_type: "hourly", hourly_rate: "", daily_rate: "", status: "available" });
+      specialty: mech.specialty || "", pin: mech.pin || "", pay_type: mech.pay_type || "hourly", hourly_rate: mech.hourly_rate || "", daily_rate: mech.daily_rate || "", status: mech.status || "available"
+    } : { name: "", phone: "", email: "", specialty: "", pin: "", pay_type: "hourly", hourly_rate: "", daily_rate: "", status: "available" });
     setDialogOpen(true);
   };
 
@@ -246,6 +246,18 @@ export default function Mechanics() {
                 <Label className="text-gray-400">Email</Label>
                 <Input value={form.email} onChange={e => setForm({...form, email: e.target.value})}
                   className="bg-gray-800 border-gray-700 text-white mt-1" />
+              </div>
+              <div>
+                <Label className="text-gray-300 text-sm">Tablet PIN (4 digits)</Label>
+                <Input
+                  value={form.pin}
+                  onChange={e => setForm({...form, pin: e.target.value.replace(/\D/g,'').slice(0,4)})}
+                  placeholder="e.g. 1234"
+                  maxLength={4}
+                  inputMode="numeric"
+                  className="mt-1 bg-gray-800 border-gray-700 text-white"
+                />
+                <p className="text-xs text-gray-500 mt-1">Tech uses this PIN to log into the Tablet Portal</p>
               </div>
             </div>
             <div>
