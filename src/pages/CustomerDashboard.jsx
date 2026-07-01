@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import { base44 } from "@/api/base44Client";
 import {
   Car, MessageSquare, Bell, Tag, Star, Wrench,
   Send, X, ChevronRight, LogOut, ThumbsUp, Flame,
@@ -84,10 +83,10 @@ export default function CustomerDashboard() {
 
   const loadAll = async (sess) => {
     try {
-      const d = await base44.functions.invoke("customerData", {
+      const d = await (await fetch("/api/functions/customerData", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({
         customer_id: sess.customer_id,
         shop_email: sess.shop_email,
-      });
+      }) })).json();
       setVehicles(d.vehicles || []); setOrders(d.orders || []); setInvoices(d.invoices || []);
       setMessages(d.messages || []); setNotifications(d.notifications || []);
       setOffers(d.offers || []); setRecommendations(d.recommendations || []);
@@ -99,10 +98,10 @@ export default function CustomerDashboard() {
 
   const refreshMessages = async (sess) => {
     try {
-      const d = await base44.functions.invoke("customerData", {
+      const d = await (await fetch("/api/functions/customerData", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({
         customer_id: sess.customer_id,
         shop_email: sess.shop_email,
-      });
+      }) })).json();
       if (d.messages) setMessages(d.messages);
       if (d.notifications) setNotifications(d.notifications);
     } catch {}
