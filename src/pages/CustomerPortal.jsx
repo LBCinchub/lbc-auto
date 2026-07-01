@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
 import { Search, Phone, Store, AlertCircle, CheckCircle2 } from "lucide-react";
 
 export default function CustomerPortal() {
@@ -35,10 +34,13 @@ export default function CustomerPortal() {
     setLoading(true);
     setError("");
     try {
-      const result = await base44.functions.invoke("customerLogin", {
-        shop_email: shopUser.email,
-        phone: cleaned,
+      // Use raw fetch — this page is public (no auth token), SDK invoke requires auth
+      const fnRes = await fetch("/api/functions/customerLogin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shop_email: shopUser.email, phone: cleaned }),
       });
+      const result = await fnRes.json();
 
       if (result?.success && result?.customer) {
         sessionStorage.setItem("customer_session", JSON.stringify({
