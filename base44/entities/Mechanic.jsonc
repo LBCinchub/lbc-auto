@@ -44,6 +44,10 @@
       ],
       "default": "available",
       "description": "Current availability status"
+    },
+    "pin": {
+      "type": "string",
+      "description": "4-digit PIN for tablet login"
     }
   },
   "required": [
