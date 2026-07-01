@@ -766,76 +766,41 @@ export default function InvoiceDetail() {
         />
       )}
 
-      {/* ── BOTTOM SAVE BAR ── */}
-      <div className="no-print mt-6 mb-2">
-        <div>
-          <div style={{
-            background: "linear-gradient(135deg,#0f172a 0%,#1e293b 100%)",
-            border: "1px solid rgba(99,179,237,0.15)",
-            borderRadius: "12px",
-            padding: "10px 16px",
-            display: "flex",
-            alignItems: "center",
-            gap: "12px",
-          }}>
-            {/* Status pill */}
-            <div style={{
-              background: invoice.status === "paid" ? "rgba(74,222,128,0.1)" : invoice.status === "partial" ? "rgba(251,191,36,0.1)" : invoice.status === "overdue" ? "rgba(248,113,113,0.1)" : "rgba(148,163,184,0.1)",
-              border: `1px solid ${invoice.status === "paid" ? "rgba(74,222,128,0.3)" : invoice.status === "partial" ? "rgba(251,191,36,0.3)" : invoice.status === "overdue" ? "rgba(248,113,113,0.3)" : "rgba(148,163,184,0.2)"}`,
-              borderRadius: "20px", padding: "4px 12px",
-              color: invoice.status === "paid" ? "#4ade80" : invoice.status === "partial" ? "#fbbf24" : invoice.status === "overdue" ? "#f87171" : "#94a3b8",
-              fontSize: "12px", fontWeight: 700, textTransform: "capitalize", flexShrink: 0,
-            }}>{invoice.status || "unpaid"}</div>
+      {/* ── BOTTOM ACTION BAR — compact dashboard style ── */}
+      <div className="no-print mt-4 mb-2 flex items-center justify-between gap-3 px-1">
+        {/* Left: status + financials */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className={`text-xs font-bold px-2.5 py-1 rounded-full border capitalize ${
+            invoice.status === "paid" ? "bg-green-500/10 border-green-500/30 text-green-400"
+            : invoice.status === "partial" ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-400"
+            : invoice.status === "overdue" ? "bg-red-500/10 border-red-500/30 text-red-400"
+            : "bg-gray-700/40 border-gray-600/40 text-gray-400"
+          }`}>{invoice.status || "unpaid"}</span>
+          <span className="text-xs text-gray-500">Total <strong className="text-sky-400">${grandTotal.toFixed(2)}</strong></span>
+          {invoice.amount_paid > 0 && <span className="text-xs text-gray-500">Paid <strong className="text-emerald-400">${(invoice.amount_paid||0).toFixed(2)}</strong></span>}
+          {invoice.balance_due > 0 && <span className="text-xs text-gray-500">Balance <strong className="text-yellow-400">${(invoice.balance_due||0).toFixed(2)}</strong></span>}
+        </div>
 
-            {/* Total info */}
-            <div style={{ flex: 1, display: "flex", gap: "16px", alignItems: "center" }}>
-              <span style={{ color: "#64748b", fontSize: "12px" }}>Total <strong style={{ color: "#38bdf8" }}>${grandTotal.toFixed(2)}</strong></span>
-              {invoice.balance_due > 0 && (
-                <span style={{ color: "#64748b", fontSize: "12px" }}>Balance <strong style={{ color: "#fbbf24" }}>${invoice.balance_due.toFixed(2)}</strong></span>
-              )}
-              {invoice.amount_paid > 0 && (
-                <span style={{ color: "#64748b", fontSize: "12px" }}>Paid <strong style={{ color: "#4ade80" }}>${invoice.amount_paid.toFixed(2)}</strong></span>
-              )}
-            </div>
-
-            {/* Cashout */}
-            <button
-              onClick={() => setShowCashoutDialog(true)}
-              style={{
-                background: "linear-gradient(135deg,#16a34a,#15803d)",
-                color: "#fff", border: "none", borderRadius: "10px",
-                padding: "8px 16px", fontSize: "13px", fontWeight: 700,
-                cursor: "pointer", display: "flex", alignItems: "center", gap: "6px",
-                boxShadow: "0 4px 12px rgba(22,163,74,0.4)", flexShrink: 0,
-              }}
-            >
-              <CreditCard style={{ width: 14, height: 14 }} /> Cashout
+        {/* Right: action buttons */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {(invoice?.payment_history?.length > 0 || invoice?.amount_paid > 0) && (
+            <button onClick={() => setShowHistoryManager(true)}
+              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-900/30 border border-amber-700/30 text-amber-400 hover:bg-amber-900/50 transition-colors">
+              <History className="w-3.5 h-3.5" /> Payments
             </button>
-
-            {/* Save Changes */}
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              style={{
-                background: savedOk ? "linear-gradient(135deg,#22c55e,#16a34a)" : "linear-gradient(135deg,#3b82f6,#2563eb)",
-                color: "#fff", border: "none", borderRadius: "10px",
-                padding: "8px 20px", fontSize: "13px", fontWeight: 700,
-                cursor: saving ? "not-allowed" : "pointer",
-                display: "flex", alignItems: "center", gap: "6px",
-                boxShadow: savedOk ? "0 4px 12px rgba(34,197,94,0.4)" : "0 4px 12px rgba(59,130,246,0.4)",
-                opacity: saving ? 0.7 : 1, flexShrink: 0,
-                transition: "all 0.3s ease",
-              }}
-            >
-              {saving ? (
-                <><Loader2 style={{ width: 14, height: 14, animation: "spin 1s linear infinite" }} /> Saving...</>
-              ) : savedOk ? (
-                <><CheckCircle2 style={{ width: 14, height: 14 }} /> Saved ✓</>
-              ) : (
-                <><Save style={{ width: 14, height: 14 }} /> Save Changes</>
-              )}
-            </button>
-          </div>
+          )}
+          <button onClick={() => setShowCashoutDialog(true)}
+            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-900/30 border border-emerald-700/30 text-emerald-400 hover:bg-emerald-900/50 transition-colors">
+            <CreditCard className="w-3.5 h-3.5" /> Cashout
+          </button>
+          <button onClick={handleSave} disabled={saving}
+            className={`flex items-center gap-1.5 text-xs font-semibold px-4 py-1.5 rounded-lg transition-all ${
+              savedOk ? "bg-emerald-600 text-white" : "bg-blue-600 hover:bg-blue-500 text-white"
+            } disabled:opacity-50`}>
+            {saving ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving...</>
+              : savedOk ? <><CheckCircle2 className="w-3.5 h-3.5" /> Saved ✓</>
+              : <><Save className="w-3.5 h-3.5" /> Save</>}
+          </button>
         </div>
       </div>
     </div>
