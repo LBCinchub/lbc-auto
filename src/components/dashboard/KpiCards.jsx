@@ -16,11 +16,11 @@ function KpiCard({ title, value, icon: Icon, color, sub, onClick }) {
     <button onClick={onClick}
       className={`w-full text-left rounded-xl border p-5 transition-all hover:scale-[1.02] ${colors[color]}`}>
       <div className="flex items-center justify-between mb-3">
-        <span className="text-xs text-gray-400 font-medium uppercase tracking-wide">{title}</span>
+        <span className="text-sm text-gray-400 font-medium uppercase tracking-wide">{title}</span>
         <Icon className={`w-5 h-5 ${iconColors[color]}`} />
       </div>
       <p className={`text-3xl font-bold ${iconColors[color]}`}>{value}</p>
-      {sub && <p className="text-xs text-gray-500 mt-1">{sub}</p>}
+      {sub && <p className="text-sm text-gray-500 mt-1">{sub}</p>}
     </button>
   );
 }
