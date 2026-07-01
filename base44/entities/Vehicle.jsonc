@@ -30,9 +30,25 @@
       "type": "number",
       "description": "Model year"
     },
+    "trim": {
+      "type": "string",
+      "description": "Trim level (e.g. LX, EX, Sport)"
+    },
     "engine_type": {
       "type": "string",
-      "description": "Engine type"
+      "description": "Engine size and type (e.g. 2.4L 4-Cyl)"
+    },
+    "fuel_type": {
+      "type": "string",
+      "description": "Fuel type (Gasoline, Diesel, Hybrid, Electric)"
+    },
+    "drive_type": {
+      "type": "string",
+      "description": "Drive type (FWD, RWD, AWD, 4WD)"
+    },
+    "transmission": {
+      "type": "string",
+      "description": "Transmission type (Automatic, Manual, CVT)"
     },
     "color": {
       "type": "string",
@@ -41,6 +57,48 @@
     "mileage": {
       "type": "number",
       "description": "Current mileage"
+    },
+    "mileage_history": {
+      "type": "array",
+      "description": "Log of mileage at each visit",
+      "items": {
+        "type": "object",
+        "properties": {
+          "mileage": {
+            "type": "number"
+          },
+          "date": {
+            "type": "string"
+          },
+          "ro_id": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "intake_photos": {
+      "type": "object",
+      "description": "4-way intake photos + dashboard photo",
+      "properties": {
+        "front": {
+          "type": "string"
+        },
+        "back": {
+          "type": "string"
+        },
+        "driver": {
+          "type": "string"
+        },
+        "passenger": {
+          "type": "string"
+        },
+        "dashboard": {
+          "type": "string"
+        }
+      }
     },
     "last_service_date": {
       "type": "string",
@@ -51,17 +109,25 @@
       "type": "number",
       "description": "Mileage at last service"
     },
-    "service_interval_miles": {
+    "service_interval_km": {
       "type": "number",
-      "description": "Miles between services"
+      "description": "KM between services (e.g. 5000)"
     },
-    "service_interval_days": {
+    "service_interval_months": {
       "type": "number",
-      "description": "Days between services"
+      "description": "Months between services (e.g. 6)"
+    },
+    "reminder_email": {
+      "type": "boolean",
+      "description": "Send email reminders"
+    },
+    "reminder_sms": {
+      "type": "boolean",
+      "description": "Send SMS reminders (requires Twilio)"
     },
     "phone": {
       "type": "string",
-      "description": "Customer phone number for reminders"
+      "description": "Customer phone for reminders"
     },
     "reminder_sent_date": {
       "type": "string",
