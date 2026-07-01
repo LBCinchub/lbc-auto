@@ -662,10 +662,7 @@ export default function EstimateDetail() {
               <span className="text-gray-400 whitespace-nowrap">${taxAmount.toFixed(2)}</span>
             </div>
           )}
-          <div className="flex justify-between text-white font-bold text-base border-t border-gray-700 pt-2">
-            <span>Grand Total</span>
-            <span className="text-sky-400">${grandTotal.toFixed(2)}</span>
-          </div>
+
         </div>
       </div>
       {/* Payment History Manager */}
