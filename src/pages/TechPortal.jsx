@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { Wrench, Delete } from "lucide-react";
+import { Wrench, Delete, ArrowLeft } from "lucide-react";
 
 export default function TechPortal() {
   const [mechanics, setMechanics] = useState([]);
@@ -71,8 +71,23 @@ export default function TechPortal() {
     <div style={{
       minHeight:"100vh", background:"#020617",
       display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
-      fontFamily:"inherit", padding:24,
+      fontFamily:"inherit", padding:24, position:"relative",
     }}>
+      {/* Back button */}
+      <button
+        onClick={() => window.history.back()}
+        style={{
+          position:"absolute", top:24, left:24,
+          background:"transparent", border:"1px solid #1e293b",
+          borderRadius:10, padding:"8px 14px",
+          color:"#64748b", cursor:"pointer",
+          display:"flex", alignItems:"center", gap:6,
+          fontSize:13, fontWeight:600,
+        }}
+      >
+        <ArrowLeft style={{ width:15, height:15 }} /> Back
+      </button>
+
       {/* Logo */}
       <div style={{ marginBottom:32, textAlign:"center" }}>
         <div style={{
