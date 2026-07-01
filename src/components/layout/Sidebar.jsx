@@ -28,7 +28,8 @@ import {
   Moon,
   FileUp,
   Search,
-  Tablet
+  Tablet,
+  Store
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/lib/ThemeContext";
