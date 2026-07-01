@@ -409,7 +409,7 @@ export default function EstimateDetail() {
           createdDate={new Date((estimateDate || estimate.created_date) + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           user={user}
           customer={{ name: estimate.customer_name || customer?.full_name || "—", phone: customer?.phone, email: customer?.email, address: customer?.address }}
-          vehicle={{ info: estimate.vehicle_info, vin: vehicleRecord?.vin, license_plate: vehicleRecord?.license_plate, color: vehicleRecord?.color, mileage: vehicleRecord?.mileage }}
+          vehicle={{ info: estimate.vehicle_info, vin: vehicleRecord?.vin, license_plate: vehicleRecord?.license_plate, color: vehicleRecord?.color, make: vehicleRecord?.make, model: vehicleRecord?.model, year: vehicleRecord?.year, engine_type: vehicleRecord?.engine_type, mileage: vehicleRecord?.mileage //icleRecord?.color, mileage: vehicleRecord?.mileage }}
           lineItems={[
             ...laborItems.map(l => ({ name: l.description || "Labor", description: `${parseFloat(l.hours)||0}h @ $${parseFloat(l.rate)||0}/hr`, qty: parseFloat(l.hours) || 0, unit_price: parseFloat(l.rate) || 0 })),
             ...partsItems.map(p => ({ name: p.name || "Part", description: p.part_number ? `Part #: ${p.part_number}` : "", qty: parseFloat(p.quantity) || 0, unit_price: parseFloat(p.unit_price) || 0 }))
