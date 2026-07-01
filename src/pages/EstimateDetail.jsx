@@ -418,6 +418,8 @@ export default function EstimateDetail() {
           financials={{ laborTotal, partsTotal, subtotal, discount: discountAmount, discountType, taxRate, taxAmount, grandTotal }}
           notes={estimateNotes}
           serviceReason={estimateServiceReason}
+          onNavigateCustomer={() => estimate.customer_id && navigate(`/CustomerDetails?id=${estimate.customer_id}`)}
+          onNavigateVehicle={() => estimate.vehicle_id && navigate(`/VehicleTimeline/${estimate.vehicle_id}`)}
         />
       </div>
 
