@@ -433,7 +433,7 @@ export default function EstimateDetail() {
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-3xl font-bold text-white">Estimate #{estimate.estimate_number}</h1>
-            <p className="text-gray-400 mt-1">{estimate.customer_name}</p>
+            <button onClick={() => estimate.customer_id && navigate(`/CustomerDetails?id=${estimate.customer_id}`)} className="text-sky-400 hover:text-sky-300 hover:underline mt-1 text-left transition-colors font-medium">{estimate.customer_name}</button>
           </div>
           <span className={`px-3 py-1 rounded-full text-sm font-medium ${
             estimate.status === "approved" ? "bg-green-500/20 text-green-400"
