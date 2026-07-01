@@ -1,5 +1,8 @@
 import React from "react";
 import Sidebar from "./components/layout/Sidebar";
+import FloatingNote from "./components/shared/FloatingNote";
+import AutoAIBubble from "./components/shared/AutoAIBubble";
+import GlobalSearch from "./components/shared/GlobalSearch";
 import { useTheme } from "./lib/ThemeContext";
 
 export default function Layout({ children, currentPageName }) {
@@ -17,6 +20,10 @@ export default function Layout({ children, currentPageName }) {
           {children}
         </div>
       </main>
+
+      {/* ── Global overlays — appear on every page, every layout ── */}
+      <FloatingNote />
+      <AutoAIBubble />
     </div>
   );
 }
