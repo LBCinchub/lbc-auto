@@ -22,23 +22,56 @@ export default function CustomerPortal() {
   }, []);
 
   const findShop = async (email) => {
-    const target = email || shopEmail.trim().toLowerCase();
-    if (!target) return;
+    const target = (email || shopEmail).trim().toLowerCase();
+    if (!target || !target.includes("@")) {
+      setError("Please enter a valid email address.");
+      return;
+    }
     setSearching(true);
     setError("");
     try {
-      // Look up shop by finding any Customer record created_by that email
-      // We use a lightweight check — look for a User record or just proceed
-      // The validation happens when customer tries to match their phone
-      const testCustomers = await base44.entities.Customer.filter(
-        { created_by: target }, "full_name", 1
-      );
-      if (testCustomers.length > 0) {
+      // Try to find any record created by this email across multiple entities
+      // This is resilient — works even if shop has no customers yet
+      let found = false;
+
+      // Method 1: Check Users entity (most reliable)
+      try {
+        const users = await base44.entities.User.filter({ email: target }, "email", 1);
+        if (users.length > 0) { found = true; }
+      } catch {}
+
+      // Method 2: Check Customers (existing shops with data)
+      if (!found) {
+        try {
+          const custs = await base44.entities.Customer.filter({ created_by: target }, "full_name", 1);
+          if (custs.length > 0) found = true;
+        } catch {}
+      }
+
+      // Method 3: Check RepairOrders
+      if (!found) {
+        try {
+          const ros = await base44.entities.RepairOrder.filter({ created_by: target }, "id", 1);
+          if (ros.length > 0) found = true;
+        } catch {}
+      }
+
+      // Method 4: Check Vehicles
+      if (!found) {
+        try {
+          const vs = await base44.entities.Vehicle.filter({ created_by: target }, "id", 1);
+          if (vs.length > 0) found = true;
+        } catch {}
+      }
+
+      if (found) {
         setShopUser({ email: target });
-        setShopName(target.split("@")[0].replace(/[._]/g, " "));
+        // Build a readable shop name from email
+        const namePart = target.split("@")[0].replace(/[._\-]/g, " ");
+        setShopName(namePart.replace(/\w/g, l => l.toUpperCase()));
         setStep("phone");
       } else {
-        setError("No shop found with that email. Ask your shop for their exact email.");
+        setError("No LBC Auto account found with that email. Double-check the shop's email address.");
       }
     } catch {
       setError("Could not connect. Please try again.");
