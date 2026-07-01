@@ -96,7 +96,13 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
       <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
         <div style={{ flex: 1, background: "#f8fafc", borderRadius: 6, padding: "6px 10px", borderLeft: "3px solid #0ea5e9" }}>
           <div style={{ fontSize: 8.5, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 2 }}>Bill To</div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "#0f172a", marginBottom: 1 }}>{customer?.name || customer?.full_name}</div>
+          {onNavigateCustomer ? (
+            <button onClick={onNavigateCustomer} style={{ fontSize: 12, fontWeight: 700, color: "#0ea5e9", background: "none", border: "none", padding: 0, cursor: "pointer", marginBottom: 1, textDecoration: "underline", textAlign: "left", display: "block" }}>
+              {customer?.name || customer?.full_name || "—"} →
+            </button>
+          ) : (
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#0f172a", marginBottom: 1 }}>{customer?.name || customer?.full_name || "—"}</div>
+          )}
           <div style={{ fontSize: 10, color: "#475569", lineHeight: 1.6 }}>
             {customer?.phone && <div>{formatPhone(customer.phone)}</div>}
             {customer?.email && <div>{customer.email}</div>}
