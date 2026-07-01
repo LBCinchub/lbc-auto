@@ -1,35 +1,28 @@
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
 import { Search, Phone, Store, AlertCircle, CheckCircle2 } from "lucide-react";
 
+const APP_URL = "https://app-69b0bd497bfce90f18df6cdd.base44.app";
+
 export default function CustomerPortal() {
-  const [step, setStep] = useState("shop"); // shop | phone | loading
+  const [step, setStep] = useState("shop");
   const [shopEmail, setShopEmail] = useState("");
   const [shopName, setShopName] = useState("");
   const [phone, setPhone] = useState("");
   const [error, setError] = useState("");
-  const [searching, setSearching] = useState(false);
   const [shopUser, setShopUser] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const saved = sessionStorage.getItem("customer_session");
     if (saved) { window.location.href = "/CustomerDashboard"; return; }
-    const params = new URLSearchParams(window.location.search);
-    const s = params.get("shop");
-    if (s) { setShopEmail(s); goToPhone(s); }
   }, []);
 
-  // Step 1: just validate email format, then proceed — phone match IS the security
-  const findShop = (emailOverride) => {
-    const target = (emailOverride || shopEmail).trim().toLowerCase();
+  const findShop = () => {
+    const target = shopEmail.trim().toLowerCase();
     if (!target || !target.includes("@") || !target.includes(".")) {
-      setError("Enter a valid email address (e.g. shop@gmail.com)");
+      setError("Enter a valid email address.");
       return;
     }
-    goToPhone(target);
-  };
-
-  const goToPhone = (target) => {
     setShopUser({ email: target });
     const namePart = target.split("@")[0].replace(/[._\-]/g, " ");
     setShopName(namePart.replace(/\b\w/g, l => l.toUpperCase()));
@@ -39,36 +32,33 @@ export default function CustomerPortal() {
 
   const handlePhoneLogin = async () => {
     const cleaned = phone.replace(/\D/g, "");
-    if (cleaned.length < 7) { setError("Enter your phone number."); return; }
-    setStep("loading");
+    if (cleaned.length < 7) { setError("Enter your full phone number."); return; }
+    setLoading(true);
     setError("");
     try {
-      const customers = await base44.entities.Customer.filter(
-        { created_by: shopUser.email }, "full_name", 2000
-      );
-      const match = customers.find(c => {
-        const cp = (c.phone || "").replace(/\D/g, "");
-        return cp === cleaned || cp.endsWith(cleaned) || cleaned.endsWith(cp);
+      const res = await fetch(`${APP_URL}/functions/customerLogin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shop_email: shopUser.email, phone: cleaned }),
       });
+      const data = await res.json();
 
-      if (match) {
+      if (data.success && data.customer) {
         sessionStorage.setItem("customer_session", JSON.stringify({
-          customer_id: match.id,
-          customer_name: match.full_name,
-          customer_phone: match.phone,
+          customer_id: data.customer.id,
+          customer_name: data.customer.full_name,
+          customer_phone: data.customer.phone,
           shop_email: shopUser.email,
           shop_name: shopName,
         }));
         window.location.href = "/CustomerDashboard";
       } else {
-        setError("Phone number not found at this shop. Make sure your number is saved on file.");
-        setStep("phone");
+        setError("Phone number not found at this shop. Make sure the shop has your number on file.");
       }
     } catch (e) {
-      console.error(e);
-      setError("Something went wrong. Try again.");
-      setStep("phone");
+      setError("Connection error. Please try again.");
     }
+    setLoading(false);
   };
 
   const S = {
@@ -82,12 +72,7 @@ export default function CustomerPortal() {
   return (
     <div style={S.page}>
       <div style={{ textAlign:"center", marginBottom:28 }}>
-        <div style={{
-          width:72, height:72, borderRadius:"50%",
-          background:"linear-gradient(135deg,#001f3f,#003366)",
-          border:"3px solid #00aaff", boxShadow:"0 0 24px #00aaff50",
-          display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 14px",
-        }}>
+        <div style={{ width:72, height:72, borderRadius:"50%", background:"linear-gradient(135deg,#001f3f,#003366)", border:"3px solid #00aaff", boxShadow:"0 0 24px #00aaff50", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 14px" }}>
           <Store style={{ width:32, height:32, color:"#00aaff" }}/>
         </div>
         <h1 style={{ color:"#fff", fontSize:24, fontWeight:800, margin:0 }}>Customer Portal</h1>
@@ -95,8 +80,6 @@ export default function CustomerPortal() {
       </div>
 
       <div style={S.card}>
-
-        {/* Step 1: shop email */}
         {step === "shop" && (
           <>
             <div style={{ marginBottom:20, textAlign:"center" }}>
@@ -115,18 +98,11 @@ export default function CustomerPortal() {
               onChange={e => { setShopEmail(e.target.value); setError(""); }}
               onKeyDown={e => e.key === "Enter" && findShop()}
             />
-            {error && (
-              <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:10, color:"#f87171", fontSize:13 }}>
-                <AlertCircle style={{ width:14, height:14 }}/> {error}
-              </div>
-            )}
-            <button style={S.btn} onClick={() => findShop()}>
-              Continue →
-            </button>
+            {error && <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:10, color:"#f87171", fontSize:13 }}><AlertCircle style={{ width:14, height:14 }}/> {error}</div>}
+            <button style={S.btn} onClick={findShop}>Continue →</button>
           </>
         )}
 
-        {/* Step 2: phone */}
         {step === "phone" && (
           <>
             <button onClick={() => { setStep("shop"); setError(""); setPhone(""); }} style={{ background:"transparent", border:"none", color:"#38bdf8", cursor:"pointer", fontSize:13, padding:0, marginBottom:16, display:"flex", alignItems:"center", gap:4 }}>
@@ -139,7 +115,6 @@ export default function CustomerPortal() {
               </div>
               <p style={{ color:"#64748b", fontSize:11, margin:"3px 0 0" }}>{shopUser?.email}</p>
             </div>
-
             <div style={{ marginBottom:20, textAlign:"center" }}>
               <div style={{ width:40, height:40, borderRadius:"50%", background:"rgba(167,139,250,0.1)", border:"1px solid rgba(167,139,250,0.3)", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 10px" }}>
                 <Phone style={{ width:18, height:18, color:"#a78bfa" }}/>
@@ -156,25 +131,16 @@ export default function CustomerPortal() {
               onChange={e => { setPhone(e.target.value); setError(""); }}
               onKeyDown={e => e.key === "Enter" && handlePhoneLogin()}
             />
-            {error && (
-              <div style={{ display:"flex", alignItems:"flex-start", gap:6, marginTop:10, color:"#f87171", fontSize:13, lineHeight:1.4 }}>
-                <AlertCircle style={{ width:14, height:14, flexShrink:0, marginTop:2 }}/> {error}
-              </div>
-            )}
-            <button style={S.btn} onClick={handlePhoneLogin}>Sign In →</button>
+            {error && <div style={{ display:"flex", alignItems:"flex-start", gap:6, marginTop:10, color:"#f87171", fontSize:13, lineHeight:1.4 }}><AlertCircle style={{ width:14, height:14, flexShrink:0, marginTop:2 }}/> {error}</div>}
+            <button style={{ ...S.btn, opacity: loading ? 0.6 : 1 }} onClick={handlePhoneLogin} disabled={loading}>
+              {loading ? "Checking..." : "Sign In →"}
+            </button>
             <p style={{ color:"#334155", fontSize:11, textAlign:"center", marginTop:14, lineHeight:1.5 }}>
-              Your phone number must be saved at the shop. Ask the owner to add it if needed.
+              Your phone number must be saved at the shop.
             </p>
           </>
         )}
-
-        {step === "loading" && (
-          <div style={{ textAlign:"center", padding:20 }}>
-            <div style={{ color:"#38bdf8", fontSize:16 }}>Signing you in...</div>
-          </div>
-        )}
       </div>
-
       <p style={{ color:"#1e293b", fontSize:11, marginTop:32 }}>Powered by LBC Auto · LBC.NETWORK</p>
     </div>
   );
