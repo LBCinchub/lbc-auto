@@ -107,7 +107,12 @@ export default function VehicleTimeline() {
             <div className="flex items-center gap-2">
               <Car className="w-4 h-4 text-gray-500 flex-shrink-0" />
               <span className="text-gray-400 w-20 flex-shrink-0">Owner</span>
-              <span className="text-white font-medium">{vehicle.customer_name}</span>
+              <button
+                onClick={() => vehicle.customer_id && navigate(`/CustomerDetails?id=${vehicle.customer_id}`)}
+                className="text-sky-400 hover:text-sky-300 hover:underline font-medium transition-colors text-left"
+              >
+                {vehicle.customer_name} →
+              </button>
             </div>
           )}
           {vehicle.phone && (
