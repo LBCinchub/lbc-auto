@@ -1,6 +1,12 @@
-// customerLogin v3 — service role bypass for Customer RLS
-// deployed: 2026-07-01
+// customerLogin v4 — EXACT match only (fixes cross-tenant/partial-number login bug)
+// deployed: 2026-07-03
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+
+function normalize(digits) {
+  // Strip leading country code "1" only when it results in a proper 10-digit NA number
+  if (digits.length === 11 && digits.startsWith("1")) return digits.slice(1);
+  return digits;
+}
 
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
@@ -14,6 +20,8 @@ Deno.serve(async (req) => {
       });
     }
 
+    const cleanedNorm = normalize(cleaned);
+
     // asServiceRole bypasses RLS — reads all customers for this shop
     const customers = await base44.asServiceRole.entities.Customer.filter(
       { created_by: shop_email.toLowerCase().trim() },
@@ -21,9 +29,12 @@ Deno.serve(async (req) => {
       5000
     );
 
+    // STRICT exact match only (normalized for optional leading "1" country code).
+    // No more endsWith/startsWith fuzzy matching — that let ANY partial number log in as a customer.
     const match = customers.find((c) => {
       const cp = (c.phone || "").replace(/\D/g, "");
-      return cp === cleaned || cp.endsWith(cleaned) || cleaned.endsWith(cp);
+      if (!cp) return false;
+      return normalize(cp) === cleanedNorm;
     });
 
     if (!match) {
