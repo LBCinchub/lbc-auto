@@ -1,4 +1,4 @@
-// customerLogin v4 — EXACT match only (fixes cross-tenant/partial-number login bug)
+// customerLogin v5 — EXACT match only, supports multiple profiles sharing one phone number
 // deployed: 2026-07-03
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
@@ -11,7 +11,7 @@ function normalize(digits) {
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
   try {
-    const { shop_email, phone } = await req.json();
+    const { shop_email, phone, customer_id } = await req.json();
     const cleaned = (phone || "").replace(/\D/g, "");
 
     if (!shop_email || cleaned.length < 7) {
@@ -30,19 +30,47 @@ Deno.serve(async (req) => {
     );
 
     // STRICT exact match only (normalized for optional leading "1" country code).
-    // No more endsWith/startsWith fuzzy matching — that let ANY partial number log in as a customer.
-    const match = customers.find((c) => {
+    const matches = customers.filter((c) => {
       const cp = (c.phone || "").replace(/\D/g, "");
       if (!cp) return false;
       return normalize(cp) === cleanedNorm;
     });
 
-    if (!match) {
+    if (matches.length === 0) {
       return new Response(JSON.stringify({ success: false, error: "Phone not found", debug_count: customers.length }), {
         headers: { "Content-Type": "application/json" }
       });
     }
 
+    // If a specific profile was already chosen (2nd call, after user picked one), log in with it directly.
+    if (customer_id) {
+      const chosen = matches.find((c) => c.id === customer_id) || matches[0];
+      return new Response(JSON.stringify({
+        success: true,
+        customer: {
+          id: chosen.id,
+          full_name: chosen.full_name,
+          phone: chosen.phone,
+          email: chosen.email || null,
+        }
+      }), { headers: { "Content-Type": "application/json" } });
+    }
+
+    // Multiple customer profiles share this exact phone number — ask the user to pick which one.
+    if (matches.length > 1) {
+      return new Response(JSON.stringify({
+        success: false,
+        multiple: true,
+        profiles: matches.map((c) => ({
+          id: c.id,
+          full_name: c.full_name,
+          email: c.email || null,
+        }))
+      }), { headers: { "Content-Type": "application/json" } });
+    }
+
+    // Single unambiguous match
+    const match = matches[0];
     return new Response(JSON.stringify({
       success: true,
       customer: {
