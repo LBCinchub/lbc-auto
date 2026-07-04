@@ -214,6 +214,10 @@ export default function CustomerDetails() {
   const [vehicleDialogOpen, setVehicleDialogOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState(null);
 
+  // Portal access verification
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [verifyResult, setVerifyResult] = useState(null); // { ok: bool, message: string }
+
   // Notes state
   const [notesValue, setNotesValue] = useState("");
   const [notesSaving, setNotesSaving] = useState(false);
@@ -265,6 +269,27 @@ export default function CustomerDetails() {
       setRepairOrders(ros);
       setNotesValue(customers[0]?.notes || "");
     }).finally(() => setLoading(false));
+  };
+
+  const verifyPortalAccess = async (testPhone) => {
+    if (!customer) return;
+    setVerifyLoading(true);
+    setVerifyResult(null);
+    try {
+      const cleaned = (testPhone || customer.phone || "").replace(/\D/g, "");
+      const res = await base44.functions.invoke("customerLogin", {
+        shop_email: (customer.created_by || "").trim().toLowerCase(),
+        phone: cleaned,
+      });
+      if (res?.success && res?.customer) {
+        setVerifyResult({ ok: true, message: `Match found: "${res.customer.full_name}" — this exact number will log in to the Customer Portal.` });
+      } else {
+        setVerifyResult({ ok: false, message: `No match. (${res?.debug_count ?? "?"} records checked under ${customer.created_by || "this shop"}). The phone on file for this customer is "${customer.phone || "(none saved)"}" — the customer must enter it exactly (digits only, country code optional).` });
+      }
+    } catch (e) {
+      setVerifyResult({ ok: false, message: "Error: " + (e?.message || String(e)) });
+    }
+    setVerifyLoading(false);
   };
 
   const saveNotes = async () => {
@@ -357,6 +382,16 @@ export default function CustomerDetails() {
                         <Phone className="w-3.5 h-3.5" /> {formatPhone(customer.phone)}
                       </a>
                     )}
+                    {customer.phone && (
+                      <button
+                        type="button"
+                        onClick={() => verifyPortalAccess(customer.phone)}
+                        disabled={verifyLoading}
+                        className="flex items-center gap-1.5 text-xs text-sky-400 hover:text-sky-300 border border-sky-800 rounded-full px-2.5 py-0.5 disabled:opacity-50"
+                      >
+                        <Lock className="w-3 h-3" /> {verifyLoading ? "Checking…" : "Verify Portal Access"}
+                      </button>
+                    )}
                     {customer.email && (
                       <a href={`mailto:${customer.email}`} className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-sky-400">
                         <Mail className="w-3.5 h-3.5" /> {customer.email}
@@ -368,6 +403,12 @@ export default function CustomerDetails() {
                       </span>
                     )}
                   </div>
+
+                  {verifyResult && (
+                    <div className={`mt-2 text-xs rounded-lg px-3 py-2 border ${verifyResult.ok ? "bg-emerald-500/10 border-emerald-800 text-emerald-400" : "bg-rose-500/10 border-rose-800 text-rose-400"}`}>
+                      {verifyResult.message}
+                    </div>
+                  )}
 
                   {/* Stats row */}
                   <div className="flex flex-wrap gap-4 mt-3">
