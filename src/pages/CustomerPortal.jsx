@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { Search, Phone, Store, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Search, Phone, Store, AlertCircle, CheckCircle2, Users } from "lucide-react";
 
 export default function CustomerPortal() {
   const [step, setStep] = useState("shop");
@@ -9,6 +9,7 @@ export default function CustomerPortal() {
   const [phone, setPhone] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [profiles, setProfiles] = useState([]);
 
   useEffect(() => {
     const saved = sessionStorage.getItem("customer_session");
@@ -29,6 +30,17 @@ export default function CustomerPortal() {
     setStep("phone");
   };
 
+  const logInAsCustomer = (customer) => {
+    sessionStorage.setItem("customer_session", JSON.stringify({
+      customer_id: customer.id,
+      customer_name: customer.full_name,
+      customer_phone: customer.phone || phone.replace(/\D/g, ""),
+      shop_email: shopEmail.trim().toLowerCase(),
+      shop_name: shopName,
+    }));
+    window.location.href = "/CustomerDashboard";
+  };
+
   const handlePhoneLogin = async () => {
     const cleaned = phone.replace(/\D/g, "");
     if (cleaned.length < 7) { setError("Enter your full phone number."); return; }
@@ -41,17 +53,35 @@ export default function CustomerPortal() {
       });
 
       if (result?.success && result?.customer) {
-        sessionStorage.setItem("customer_session", JSON.stringify({
-          customer_id: result.customer.id,
-          customer_name: result.customer.full_name,
-          customer_phone: result.customer.phone,
-          shop_email: shopEmail.trim().toLowerCase(),
-          shop_name: shopName,
-        }));
-        window.location.href = "/CustomerDashboard";
+        logInAsCustomer(result.customer);
+      } else if (result?.multiple && result?.profiles?.length > 0) {
+        setProfiles(result.profiles);
+        setStep("choose");
       } else {
         const count = result?.debug_count ?? "?";
         setError("Phone not found. (" + count + " records checked) Make sure the shop saved this number exactly.");
+      }
+    } catch (e) {
+      setError("Error: " + (e?.message || String(e)));
+    }
+    setLoading(false);
+  };
+
+  const selectProfile = async (profileId) => {
+    setLoading(true);
+    setError("");
+    try {
+      const cleaned = phone.replace(/\D/g, "");
+      const result = await base44.functions.invoke("customerLogin", {
+        shop_email: shopEmail.trim().toLowerCase(),
+        phone: cleaned,
+        customer_id: profileId,
+      });
+      if (result?.success && result?.customer) {
+        logInAsCustomer(result.customer);
+      } else {
+        setError("Couldn't sign in with that profile. Please try again.");
+        setStep("phone");
       }
     } catch (e) {
       setError("Error: " + (e?.message || String(e)));
@@ -71,7 +101,8 @@ export default function CustomerPortal() {
     shopBadge: { background:"#0f3b2e", border:"1px solid #16a34a", borderRadius:10, padding:"12px 16px", marginBottom:20 },
     back: { background:"transparent", border:"none", color:"#60a5fa", cursor:"pointer", fontSize:13, padding:0, marginBottom:16 },
     icon: { width:56, height:56, borderRadius:"50%", background:"#1e3a5f", border:"2px solid #3b82f6", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px" },
-    footer: { color:"#334155", fontSize:12, textAlign:"center", marginTop:24 }
+    footer: { color:"#334155", fontSize:12, textAlign:"center", marginTop:24 },
+    profileRow: { width:"100%", textAlign:"left", background:"#1e293b", border:"1px solid #334155", borderRadius:10, padding:"14px 16px", color:"#fff", fontSize:15, fontWeight:600, cursor:"pointer", marginBottom:10, display:"flex", alignItems:"center", justifyContent:"space-between" }
   };
 
   return (
@@ -137,6 +168,29 @@ export default function CustomerPortal() {
               {loading ? "Checking..." : "Sign In →"}
             </button>
             <p style={{ color:"#475569", fontSize:12, textAlign:"center", marginTop:10 }}>Your phone number must be saved at the shop.</p>
+          </>
+        )}
+
+        {step === "choose" && (
+          <>
+            <button onClick={() => { setStep("phone"); setError(""); }} style={S.back}>← Back</button>
+            <div style={{ textAlign:"center", marginBottom:12 }}>
+              <Users style={{ color:"#a78bfa", width:28, height:28 }} />
+            </div>
+            <h2 style={{ color:"#fff", fontSize:18, fontWeight:700, textAlign:"center", margin:"0 0 4px" }}>Multiple Profiles Found</h2>
+            <p style={{ ...S.sub, marginBottom:20 }}>This phone number is saved under a few names at {shopName}. Which one is you?</p>
+            {profiles.map(p => (
+              <button
+                key={p.id}
+                style={{ ...S.profileRow, opacity: loading ? 0.6 : 1 }}
+                onClick={() => selectProfile(p.id)}
+                disabled={loading}
+              >
+                <span>{p.full_name || "Unnamed"}</span>
+                <span style={{ color:"#64748b", fontWeight:400, fontSize:13 }}>{p.email || ""}</span>
+              </button>
+            ))}
+            {error && <div style={S.err}><AlertCircle style={{ width:14, height:14, flexShrink:0, marginTop:1 }} /><span>{error}</span></div>}
           </>
         )}
       </div>
