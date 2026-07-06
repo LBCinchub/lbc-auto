@@ -37,13 +37,17 @@
         }
       }
     },
+    "shop_owner_email": {
+      "type": "string",
+      "description": "Shop owner email \u2014 set by backend functions (officeAddCustomer, importCustomersFromCSV) for cross-tenant RLS scoping"
+    },
     "last_visit": {
       "type": "string",
-      "description": "Date of last visit (YYYY-MM-DD) — auto-updated on every save"
+      "description": "Date of last visit (YYYY-MM-DD) \u2014 auto-updated on every save"
     },
     "last_vehicle_info": {
       "type": "string",
-      "description": "Most recent vehicle worked on — e.g. '2018 Toyota Camry'"
+      "description": "Most recent vehicle worked on \u2014 e.g. '2018 Toyota Camry'"
     },
     "total_visits": {
       "type": "number",
@@ -57,13 +61,34 @@
   "rls": {
     "create": true,
     "read": {
-      "created_by": "{{user.email}}"
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "data.shop_owner_email": "{{user.email}}"
+        }
+      ]
     },
     "update": {
-      "created_by": "{{user.email}}"
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "data.shop_owner_email": "{{user.email}}"
+        }
+      ]
     },
     "delete": {
-      "created_by": "{{user.email}}"
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "data.shop_owner_email": "{{user.email}}"
+        }
+      ]
     }
   }
 }
