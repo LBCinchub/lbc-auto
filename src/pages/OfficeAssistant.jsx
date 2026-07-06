@@ -67,11 +67,12 @@ export default function OfficeAssistant() {
         email: customerForm.email || undefined,
         address: customerForm.address || undefined,
       });
-      if (result?.success) {
-        setCustomer(result.customer);
+      const data = result?.data ?? result;
+      if (data?.success) {
+        setCustomer(data.customer);
         setStep("vehicle");
       } else {
-        setError(result?.error || "Couldn't save customer. Try again.");
+        setError(data?.error || "Couldn't save customer. Try again.");
       }
     } catch (e) {
       setError("Error: " + (e?.message || String(e)));
@@ -126,10 +127,11 @@ export default function OfficeAssistant() {
         engine_type: vehicleForm.engine_type || undefined,
         license_plate: vehicleForm.license_plate || undefined,
       });
-      if (result?.success) {
+      const data = result?.data ?? result;
+      if (data?.success) {
         setStep("done");
       } else {
-        setError(result?.error || "Couldn't save vehicle. Try again.");
+        setError(data?.error || "Couldn't save vehicle. Try again.");
       }
     } catch (e) {
       setError("Error: " + (e?.message || String(e)));
