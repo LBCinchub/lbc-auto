@@ -17,7 +17,20 @@ export default function CustomerPortal() {
       try {
         const s = JSON.parse(saved);
         if (s?.customer_id) window.location.href = "/CustomerDashboard";
+        return;
       } catch {}
+    }
+    // Deep-link support: ?shop=<email> pre-fills the shop and skips straight to phone entry.
+    // Used by the "Track My Vehicle" link-out on lbc-hub.com so customers land in ONE
+    // consistent portal instead of two separate implementations.
+    const params = new URLSearchParams(window.location.search);
+    const shopParam = params.get("shop");
+    if (shopParam && shopParam.includes("@")) {
+      const em = shopParam.trim().toLowerCase();
+      setShopEmail(em);
+      const namePart = em.split("@")[0].replace(/[._\-]/g, " ");
+      setShopName(namePart.replace(/\b\w/g, l => l.toUpperCase()));
+      setStep("phone");
     }
   }, []);
 
