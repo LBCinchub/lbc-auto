@@ -3,10 +3,13 @@ import { base44 } from "@/api/base44Client";
 import { Wrench, ArrowLeft, Copy, CheckCheck, Link } from "lucide-react";
 
 export default function TechPortal() {
-  const [mechanics, setMechanics] = useState([]);
+  // Assume true until the teamLogin check says otherwise, so we don't flash a
+  // false "no team" warning while the request is in flight.
+  const [hasTeam, setHasTeam] = useState(true);
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [checking, setChecking] = useState(false);
   const [ownerEmail, setOwnerEmail] = useState("");
   const [shopName, setShopName] = useState("");
   const [noOwner, setNoOwner] = useState(false);
@@ -25,6 +28,16 @@ export default function TechPortal() {
       return;
     }
 
+    // Checks (via the teamLogin backend function, which uses asServiceRole to bypass
+    // RLS) whether this shop has any PIN-enabled team members, just to power the
+    // "no techs with a PIN set" warning banner — no PINs are ever sent to the browser.
+    const loadTeamStatus = (email) => {
+      base44.functions.invoke("teamLogin", { shop_email: email })
+        .then(res => setHasTeam(!!res?.data?.has_team))
+        .catch(() => setHasTeam(true)) // don't show a false warning just because this check failed
+        .finally(() => setLoading(false));
+    };
+
     const params = new URLSearchParams(window.location.search);
     const ownerParam = params.get("owner");
 
@@ -39,10 +52,7 @@ export default function TechPortal() {
         setOwnerEmail(decoded);
         setShopName(decoded.split("@")[0]);
         setIsOwnerView(false);
-        base44.entities.Mechanic.filter({ created_by: decoded }, "name", 100)
-          .then(all => setMechanics(all.filter(m => m.pin && m.pin.length === 4)))
-          .catch(() => setError("Couldn't load team data. Check your connection and try again."))
-          .finally(() => setLoading(false));
+        loadTeamStatus(decoded);
       } catch {
         setNoOwner(true);
         setLoading(false);
@@ -58,13 +68,13 @@ export default function TechPortal() {
           setOwnerEmail(u.email);
           setShopName(u.full_name || u.email.split("@")[0]);
           setIsOwnerView(true);
-          return base44.entities.Mechanic.filter({ created_by: u.email }, "name", 100)
-            .then(all => setMechanics(all.filter(m => m.pin && m.pin.length === 4)));
+          loadTeamStatus(u.email);
+        } else {
+          setNoOwner(true);
+          setLoading(false);
         }
-        setNoOwner(true);
       })
-      .catch(() => setNoOwner(true))
-      .finally(() => setLoading(false));
+      .catch(() => { setNoOwner(true); setLoading(false); });
   }, []);
 
   const getTechLink = () => {
@@ -81,7 +91,7 @@ export default function TechPortal() {
   };
 
   const handleDigit = (d) => {
-    if (pin.length >= 4) return;
+    if (pin.length >= 4 || checking) return;
     const next = pin + d;
     setPin(next);
     setError("");
@@ -89,22 +99,35 @@ export default function TechPortal() {
   };
 
   const checkPin = (p) => {
-    const match = mechanics.find(m => String(m.pin).trim() === String(p).trim());
-    if (match) {
-      const role = match.role || "mechanic";
-      sessionStorage.setItem("tech_session", JSON.stringify({
-        id: match.id,
-        name: match.name,
-        specialty: match.specialty || "",
-        hourly_rate: match.hourly_rate || 0,
-        owner_email: ownerEmail,
-        role,
-      }));
-      window.location.href = role === "office_staff" ? "/OfficeAssistant" : "/TechDashboard";
-    } else {
-      setError("Wrong PIN. Try again.");
-      setPin("");
-    }
+    // Verified server-side via the teamLogin function (asServiceRole bypasses RLS,
+    // and only the single matched mechanic's info is ever returned to the browser —
+    // never the full team list or anyone's PIN).
+    setChecking(true);
+    base44.functions.invoke("teamLogin", { shop_email: ownerEmail, pin: p })
+      .then(res => {
+        const data = res?.data;
+        if (data?.success && data.mechanic) {
+          const m = data.mechanic;
+          const role = m.role || "mechanic";
+          sessionStorage.setItem("tech_session", JSON.stringify({
+            id: m.id,
+            name: m.name,
+            specialty: m.specialty || "",
+            hourly_rate: m.hourly_rate || 0,
+            owner_email: ownerEmail,
+            role,
+          }));
+          window.location.href = role === "office_staff" ? "/OfficeAssistant" : "/TechDashboard";
+          return;
+        }
+        setError("Wrong PIN. Try again.");
+        setPin("");
+      })
+      .catch(() => {
+        setError("Couldn't verify PIN — check your connection and try again.");
+        setPin("");
+      })
+      .finally(() => setChecking(false));
   };
 
   const handleDelete = () => { setPin(p => p.slice(0,-1)); setError(""); };
@@ -196,7 +219,7 @@ export default function TechPortal() {
       )}
 
       {/* No PIN warning */}
-      {mechanics.length === 0 && (
+      {!hasTeam && (
         <div style={{
           background:"rgba(251,191,36,0.1)",border:"1px solid rgba(251,191,36,0.3)",
           color:"#fbbf24",borderRadius:10,padding:"10px 20px",
@@ -233,8 +256,13 @@ export default function TechPortal() {
         }}>{error}</div>
       )}
 
+      {/* Checking indicator */}
+      {checking && (
+        <div style={{color:"#38bdf8",fontSize:13,marginBottom:16,fontWeight:600}}>Verifying...</div>
+      )}
+
       {/* Keypad */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,80px)",gap:12}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,80px)",gap:12, opacity: checking ? 0.5 : 1, pointerEvents: checking ? "none" : "auto"}}>
         {digits.map((d,i) => {
           if (d === "") return <div key={i}/>;
           return (
