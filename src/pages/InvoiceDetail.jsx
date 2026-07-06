@@ -463,6 +463,12 @@ export default function InvoiceDetail() {
           <div>
             <p className="text-gray-500 text-xs uppercase mb-1">Vehicle</p>
             <button onClick={() => vehicleId && navigate(`/VehicleTimeline/${vehicleId}`)} className="text-emerald-400 hover:text-emerald-300 hover:underline font-bold text-sm text-left transition-colors">{invoice.vehicle_info || "—"}</button>
+            {vehicleRecord?.license_plate && (
+              <p className="text-gray-400 text-xs mt-1 font-mono tracking-wide">🪪 {vehicleRecord.license_plate.toUpperCase()}</p>
+            )}
+            {vehicleRecord?.vin && (
+              <p className="text-gray-500 text-xs mt-0.5 font-mono">VIN: {vehicleRecord.vin.toUpperCase()}</p>
+            )}
           </div>
           <div>
             <p className="text-gray-500 text-xs uppercase mb-1">Customer</p>

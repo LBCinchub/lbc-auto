@@ -433,6 +433,12 @@ export default function EstimateDetail() {
             <h1 className="text-3xl font-bold text-white">Estimate #{estimate.estimate_number}</h1>
             <button onClick={() => estimate.customer_id && navigate(`/CustomerDetails?id=${estimate.customer_id}`)} className="text-sky-400 hover:text-sky-300 hover:underline mt-1 text-left transition-colors font-medium">{estimate.customer_name}</button>
             {estimate.vehicle_info && <button onClick={() => estimate.vehicle_id && navigate(`/VehicleTimeline/${estimate.vehicle_id}`)} className="text-emerald-400 hover:text-emerald-300 hover:underline text-sm font-medium text-left transition-colors mt-0.5 block">{estimate.vehicle_info} 🚗</button>}
+            {vehicleRecord?.license_plate && (
+              <p className="text-gray-400 text-xs mt-1 font-mono tracking-wide">🪪 {vehicleRecord.license_plate.toUpperCase()}</p>
+            )}
+            {vehicleRecord?.vin && (
+              <p className="text-gray-500 text-xs mt-0.5 font-mono">VIN: {vehicleRecord.vin.toUpperCase()}</p>
+            )}
           </div>
           <span className={`px-3 py-1 rounded-full text-sm font-medium ${
             estimate.status === "approved" ? "bg-green-500/20 text-green-400"
