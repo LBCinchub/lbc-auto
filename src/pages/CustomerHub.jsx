@@ -202,8 +202,11 @@ export default function CustomerHub() {
   };
 
   const getPortalLink = () => {
+    // Short, memorable /lbc-customer link, pre-filled with this shop's email via ?shop= so
+    // customers land straight on the phone-number step — no shop email to type or remember.
     const base = window.location.origin;
-    return `${base}/CustomerPortal`;
+    const shopParam = user?.email ? `?shop=${encodeURIComponent(user.email)}` : "";
+    return `${base}/lbc-customer${shopParam}`;
   };
 
   const avgRating = reviews.length > 0
@@ -554,7 +557,7 @@ export default function CustomerHub() {
           <div style={S.card}>
             <h3 style={{ color:"#fff", fontSize:16, fontWeight:800, marginBottom:6 }}>Customer Portal Link</h3>
             <p style={{ color:"#64748b", fontSize:13, lineHeight:1.6, marginBottom:16 }}>
-              Share this link with your customers. They type your shop email + their phone number to log in and see their car history, messages, and your offers.
+              Share this link with your customers. Your shop is already built in — they just enter their phone number to see their car history, messages, and your offers.
             </p>
 
             <div style={{ background:"#1e293b", borderRadius:10, padding:"10px 14px", fontSize:12, color:"#94a3b8", wordBreak:"break-all", fontFamily:"monospace", marginBottom:12 }}>

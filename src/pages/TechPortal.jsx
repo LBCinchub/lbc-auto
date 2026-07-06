@@ -62,7 +62,8 @@ export default function TechPortal() {
   }, []);
 
   const getTechLink = () => {
-    const base = window.location.origin + window.location.pathname;
+    // Always hand out the short, memorable /lbc-team link (not whatever path was used to view this page)
+    const base = `${window.location.origin}/lbc-team`;
     return `${base}?owner=${btoa(ownerEmail)}`;
   };
 

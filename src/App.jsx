@@ -242,13 +242,15 @@ const AuthenticatedApp = () => {
   }, [user]);
 
   // PUBLIC ROUTES — bypass all auth, render immediately, no login required
-  const PUBLIC_PATHS = ['/CustomerPortal', '/CustomerDashboard', '/TechPortal', '/TechDashboard', '/TechJobView', '/OfficeAssistant', '/landing'];
+  const PUBLIC_PATHS = ['/CustomerPortal', '/lbc-customer', '/CustomerDashboard', '/TechPortal', '/lbc-team', '/TechDashboard', '/TechJobView', '/OfficeAssistant', '/landing'];
   if (PUBLIC_PATHS.some(p => location.pathname.startsWith(p))) {
     return (
       <Routes>
         <Route path="/CustomerPortal" element={<CustomerPortal />} />
+        <Route path="/lbc-customer" element={<CustomerPortal />} />
         <Route path="/CustomerDashboard" element={<CustomerDashboard />} />
         <Route path="/TechPortal" element={<TechPortal />} />
+        <Route path="/lbc-team" element={<TechPortal />} />
         <Route path="/TechDashboard" element={<TechDashboard />} />
         <Route path="/TechJobView" element={<TechJobView />} />
         <Route path="/OfficeAssistant" element={<OfficeAssistant />} />
@@ -329,8 +331,10 @@ const AuthenticatedApp = () => {
         <Route path="/PaymentWall" element={<PaymentWall />} />
         <Route path="/landing" element={<Landing />} />
         <Route path="/TechPortal" element={<TechPortal />} />
+        <Route path="/lbc-team" element={<TechPortal />} />
         <Route path="/CustomerProfile/:id" element={<CustomerProfile />} />
         <Route path="/CustomerPortal" element={<CustomerPortal />} />
+        <Route path="/lbc-customer" element={<CustomerPortal />} />
         <Route path="/CustomerDashboard" element={<CustomerDashboard />} />
         <Route path="/CustomerHub" element={<LayoutWrapper currentPageName="CustomerHub"><CustomerHub /></LayoutWrapper>} />
         <Route path="/TechDashboard" element={<TechDashboard />} />
