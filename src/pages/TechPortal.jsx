@@ -15,17 +15,23 @@ export default function TechPortal() {
   const [noOwner, setNoOwner] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isOwnerView, setIsOwnerView] = useState(false);
+  const [existingSession, setExistingSession] = useState(null);
 
   useEffect(() => {
     const saved = sessionStorage.getItem("tech_session");
     if (saved) {
       try {
         const s = JSON.parse(saved);
-        window.location.href = s?.role === "office_staff" ? "/OfficeAssistant" : "/TechDashboard";
+        // Don't silently bounce back into whatever role is already signed in —
+        // that's what made it impossible to sign back in as a different role
+        // (e.g. office staff couldn't get back to the PIN pad to sign in as a
+        // mechanic). Show an explicit "continue or switch" choice instead, and
+        // keep loading the rest of the page (owner banner / no-PIN warning)
+        // normally underneath it in case they choose to switch.
+        setExistingSession(s);
       } catch {
-        window.location.href = "/TechDashboard";
+        sessionStorage.removeItem("tech_session");
       }
-      return;
     }
 
     // Checks (via the teamLogin backend function, which uses asServiceRole to bypass
@@ -178,9 +184,36 @@ export default function TechPortal() {
         </div>
         <h1 style={{color:"#fff",fontSize:26,fontWeight:800,margin:0}}>Tech Portal</h1>
         {shopName && <p style={{color:"#38bdf8",fontSize:14,marginTop:4,textTransform:"capitalize"}}>{shopName}</p>}
-        <p style={{color:"#475569",fontSize:13,marginTop:2}}>Enter your 4-digit PIN</p>
+        {!existingSession && <p style={{color:"#475569",fontSize:13,marginTop:2}}>Enter your 4-digit PIN</p>}
       </div>
 
+      {/* Already signed in — offer to continue or switch instead of silently bouncing */}
+      {existingSession && (
+        <div style={{
+          background:"#0f172a",border:"1px solid #1e293b",borderRadius:14,
+          padding:"18px 20px",marginBottom:24,maxWidth:320,width:"100%",textAlign:"center",
+        }}>
+          <p style={{color:"#64748b",fontSize:12,marginBottom:4}}>Already signed in as</p>
+          <p style={{color:"#fff",fontSize:17,fontWeight:800,marginBottom:2}}>{existingSession.name}</p>
+          <p style={{color:"#38bdf8",fontSize:12,fontWeight:600,marginBottom:16,textTransform:"capitalize"}}>
+            {existingSession.role === "office_staff" ? "Office Staff" : "Mechanic"}
+          </p>
+          <button onClick={() => {
+            window.location.href = existingSession.role === "office_staff" ? "/OfficeAssistant" : "/TechDashboard";
+          }} style={{
+            width:"100%",background:"linear-gradient(135deg,#1d4ed8,#2563eb)",border:"none",
+            borderRadius:8,padding:"11px",color:"#fff",fontSize:14,fontWeight:700,
+            cursor:"pointer",marginBottom:8,
+          }}>Continue</button>
+          <button onClick={() => { sessionStorage.removeItem("tech_session"); setExistingSession(null); }} style={{
+            width:"100%",background:"transparent",border:"1px solid #334155",
+            borderRadius:8,padding:"11px",color:"#94a3b8",fontSize:13,fontWeight:600,cursor:"pointer",
+          }}>Switch User / Enter Different PIN</button>
+        </div>
+      )}
+
+      {!existingSession && (
+      <>
       {/* Owner: shareable link banner */}
       {isOwnerView && ownerEmail && (
         <div style={{
@@ -283,6 +316,8 @@ export default function TechPortal() {
           );
         })}
       </div>
+      </>
+      )}
 
       <p style={{color:"#1e293b",fontSize:11,marginTop:40}}>Powered by LBC.NETWORK</p>
     </div>
