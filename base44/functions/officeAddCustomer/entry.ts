@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
       }
       const cleanedNorm = normalizePhone(cleaned);
 
-      const existing = await sr.entities.Customer.filter({ created_by: shopEmail }, "full_name", 5000);
+      const existing = await sr.entities.Customer.filter({ shop_owner_email: shopEmail }, "full_name", 5000);
       const match = existing.find((c) => {
         const cp = (c.phone || "").replace(/\D/g, "");
         return cp && normalizePhone(cp) === cleanedNorm;
@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
         phone: cleaned,
         email: email ? email.trim() : undefined,
         address: address ? address.trim() : undefined,
-        created_by: shopEmail,
+        shop_owner_email: shopEmail,
       });
 
       return new Response(JSON.stringify({
@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
         engine_type: engine_type || undefined,
         color: color || undefined,
         license_plate: license_plate || undefined,
-        created_by: shopEmail,
+        shop_owner_email: shopEmail,
       });
 
       // Center Control: keep the customer record's summary fields in sync.
