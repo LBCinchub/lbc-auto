@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
     const { action, shop_email } = body;
-    const shopEmail = (shop_email || "").toLowerCase().trim();
+    const shopEmail = (shop_email || "").trim();
 
     if (!action || !shopEmail) {
       return new Response(JSON.stringify({ success: false, error: "Missing action or shop_email" }), {
