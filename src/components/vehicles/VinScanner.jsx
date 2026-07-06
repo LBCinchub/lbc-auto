@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Camera, X, ScanLine, Loader2, Upload } from "lucide-react";
+import { Camera, X, ScanLine, Loader2, Upload, SwitchCamera } from "lucide-react";
 
 export default function VinScanner({ onVinDetected, onClose }) {
   const videoRef = useRef(null);
@@ -9,13 +9,14 @@ export default function VinScanner({ onVinDetected, onClose }) {
   const streamRef = useRef(null);
   const [step, setStep] = useState("preview"); // preview | processing | done | error
   const [error, setError] = useState("");
+  const [facingMode, setFacingMode] = useState("environment");
 
   useEffect(() => {
-    startCamera();
+    startCamera(facingMode);
     return () => stopCamera();
   }, []);
 
-  const startCamera = async () => {
+  const startCamera = async (mode = facingMode) => {
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         setError("Camera is not supported on this device. Please use the Upload option instead.");
@@ -26,7 +27,7 @@ export default function VinScanner({ onVinDetected, onClose }) {
       );
       const stream = await Promise.race([
         navigator.mediaDevices.getUserMedia({
-          video: { width: { ideal: 1280 }, height: { ideal: 720 } }
+          video: { facingMode: { ideal: mode }, width: { ideal: 1280 }, height: { ideal: 720 } }
         }),
         timeoutPromise
       ]);
@@ -51,6 +52,14 @@ export default function VinScanner({ onVinDetected, onClose }) {
 
   const stopCamera = () => {
     streamRef.current?.getTracks().forEach(t => t.stop());
+  };
+
+  const flipCamera = async () => {
+    const next = facingMode === "environment" ? "user" : "environment";
+    stopCamera();
+    setFacingMode(next);
+    setError("");
+    await startCamera(next);
   };
 
   const processBlob = async (blob) => {
@@ -152,6 +161,12 @@ export default function VinScanner({ onVinDetected, onClose }) {
               className="w-16 h-16 rounded-full bg-white border-4 border-sky-400 flex items-center justify-center shadow-lg hover:scale-105 transition-transform active:scale-95">
               <Camera className="w-7 h-7 text-gray-800" />
             </button>
+            <label className="flex flex-col items-center gap-1 cursor-pointer">
+              <div onClick={flipCamera} className="w-12 h-12 rounded-full bg-gray-800/80 border-2 border-gray-500 flex items-center justify-center hover:border-sky-400 transition-colors">
+                <SwitchCamera className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-white text-xs">Flip</span>
+            </label>
           </div>
         </>
       )}
