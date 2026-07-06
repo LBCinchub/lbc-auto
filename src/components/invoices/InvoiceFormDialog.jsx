@@ -39,6 +39,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
   const [estimateSearch, setEstimateSearch] = useState("");
   const [linkMode, setLinkMode] = useState("order"); // "order" | "invoice" | "estimate"
   const [customerSearch, setCustomerSearch] = useState("");
+  const [customerOverride, setCustomerOverride] = useState(false); // "Change" was clicked to unlock a source-linked customer
   const [newCustomerForm, setNewCustomerForm] = useState(null);
   const [newVehicleForm, setNewVehicleForm] = useState(null);
   const [laborItems, setLaborItems] = useState([emptyLaborRow()]);
@@ -49,6 +50,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
     setLinkMode("order");
     setInvoiceSearch("");
     setEstimateSearch("");
+    setCustomerOverride(false);
 
     base44.auth.me().then(async u => {
       const userTaxRate    = u?.tax_rate     != null ? u.tax_rate     : 0;
@@ -183,14 +185,14 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
       });
       }, [open, invoice?.id, initialOrderId, sourceEstimate?.id, orders]);
 
-  // Reactive vehicle fetch whenever customer changes (only when not linked to a repair order or estimate)
+  // Reactive vehicle fetch whenever customer changes (only when not linked to a repair order or estimate, unless overridden)
   useEffect(() => {
-    if (!form.customer_id || form.repair_order_id || sourceEstimate) { setFetchedVehicles([]); return; }
+    if (!form.customer_id || ((form.repair_order_id || sourceEstimate) && !customerOverride)) { setFetchedVehicles([]); return; }
     setLoadingVehicles(true);
     base44.entities.Vehicle.filter({ customer_id: form.customer_id })
       .then(vehs => setFetchedVehicles(vehs))
       .finally(() => setLoadingVehicles(false));
-  }, [form.customer_id, form.repair_order_id, sourceEstimate]);
+  }, [form.customer_id, form.repair_order_id, sourceEstimate, customerOverride]);
 
   const handleOrderSelect = useCallback(async (orderId) => {
     const order = orders.find(o => o.id === orderId);
@@ -350,7 +352,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
 
     setSaving(true);
     let resolvedCustomerId = form.customer_id;
-    if (!form.repair_order_id && !form.customer_id && form.customer_name) {
+    if ((!form.repair_order_id || customerOverride) && !form.customer_id && form.customer_name) {
       const newCustomer = await base44.entities.Customer.create({ full_name: form.customer_name, phone: form.customer_phone || "" });
       resolvedCustomerId = newCustomer.id;
       if (form.vehicle_info) {
@@ -449,37 +451,63 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
             {/* Customer */}
             <div>
               <Label className="text-gray-400">Customer *</Label>
-              <div className="relative mt-1">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                <Input
-                  value={form.customer_id ? (customers.find(c => c.id === form.customer_id)?.full_name || form.customer_name || "") : customerSearch}
-                  onChange={e => { setCustomerSearch(e.target.value); setForm(f => ({ ...f, customer_id: "", customer_name: e.target.value, vehicle_id: "", vehicle_info: "", repair_order_id: "" })); }}
-                  placeholder="Search by name or phone..."
-                  className="bg-gray-800 border-gray-700 text-white pl-8"
-                  readOnly={!!form.repair_order_id || !!sourceEstimate}
-                />
-                {customerSearch && !form.customer_id && (
-                  <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg overflow-hidden shadow-xl max-h-48 overflow-y-auto">
-                    {customers.filter(c => !customerSearch || c.full_name.toLowerCase().includes(customerSearch.toLowerCase()) || (c.phone || "").includes(customerSearch)).slice(0, 8).map(c => (
-                      <button key={c.id} onClick={() => {
-                        setForm(f => ({ ...f, customer_id: c.id, customer_name: c.full_name, customer_phone: c.phone || "", vehicle_id: "", vehicle_info: "" }));
-                        setCustomerSearch("");
-                      }} className="w-full px-3 py-2 text-left hover:bg-sky-500/20 text-sm text-white flex justify-between gap-2">
-                        <span>{c.full_name}</span>
-                        <span className="text-gray-400 text-xs">{c.phone}</span>
+              {(() => {
+                const isCustomerLocked = (!!form.repair_order_id || !!sourceEstimate) && !customerOverride;
+                if (isCustomerLocked) {
+                  // Linked from a source record (Repair Order or Estimate) — show a clear, styled
+                  // "linked" card instead of a bare disabled-looking input, with an explicit way out.
+                  const linkedFrom = sourceEstimate
+                    ? `Estimate #${sourceEstimate.estimate_number}`
+                    : `RO #${orders.find(o => o.id === form.repair_order_id)?.order_number || ""}`;
+                  return (
+                    <div className="mt-1 rounded-lg border border-sky-500/30 bg-gray-800/60 p-3 text-sm">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-white font-medium truncate">{form.customer_name || "—"}</p>
+                          {form.customer_phone && <p className="text-gray-400 text-xs mt-0.5">{form.customer_phone}</p>}
+                        </div>
+                        <button onClick={() => setCustomerOverride(true)}
+                          className="text-sky-400 hover:text-sky-300 text-xs underline flex-shrink-0">
+                          Change
+                        </button>
+                      </div>
+                      <p className="text-gray-500 text-xs mt-2 pt-2 border-t border-gray-700">Linked from {linkedFrom}</p>
+                    </div>
+                  );
+                }
+                return (
+                  <div className="relative mt-1">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                    <Input
+                      value={form.customer_id ? (customers.find(c => c.id === form.customer_id)?.full_name || form.customer_name || "") : customerSearch}
+                      onChange={e => { setCustomerSearch(e.target.value); setForm(f => ({ ...f, customer_id: "", customer_name: e.target.value, vehicle_id: "", vehicle_info: "" })); }}
+                      placeholder="Search by name or phone..."
+                      className="bg-gray-800 border-gray-700 text-white pl-8"
+                    />
+                    {customerSearch && !form.customer_id && (
+                      <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg overflow-hidden shadow-xl max-h-48 overflow-y-auto">
+                        {customers.filter(c => !customerSearch || c.full_name.toLowerCase().includes(customerSearch.toLowerCase()) || (c.phone || "").includes(customerSearch)).slice(0, 8).map(c => (
+                          <button key={c.id} onClick={() => {
+                            setForm(f => ({ ...f, customer_id: c.id, customer_name: c.full_name, customer_phone: c.phone || "", vehicle_id: "", vehicle_info: "" }));
+                            setCustomerSearch("");
+                          }} className="w-full px-3 py-2 text-left hover:bg-sky-500/20 text-sm text-white flex justify-between gap-2">
+                            <span>{c.full_name}</span>
+                            <span className="text-gray-400 text-xs">{c.phone}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {form.customer_id && (
+                      <button onClick={() => { setForm(f => ({ ...f, customer_id: "", customer_name: "", customer_phone: "", vehicle_id: "", vehicle_info: "" })); setCustomerSearch(""); }}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
+                        <X className="w-3.5 h-3.5" />
                       </button>
-                    ))}
+                    )}
                   </div>
-                )}
-                {form.customer_id && !form.repair_order_id && !sourceEstimate && (
-                  <button onClick={() => { setForm(f => ({ ...f, customer_id: "", customer_name: "", customer_phone: "", vehicle_id: "", vehicle_info: "" })); setCustomerSearch(""); }}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
+                );
+              })()}
               {/* Inline add-new-customer */}
-              {!form.repair_order_id && !sourceEstimate && (
+              {!((form.repair_order_id || sourceEstimate) && !customerOverride) && (
                 newCustomerForm !== null ? (
                   <div className="bg-gray-800 border border-sky-500/30 rounded-lg p-3 space-y-2 mt-2">
                     <div className="flex items-center justify-between">
@@ -509,7 +537,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
             <div>
               <Label className="text-gray-400">Vehicle</Label>
               <div className="mt-1">
-                {form.customer_id && !form.repair_order_id && !sourceEstimate ? (
+                {form.customer_id && !((form.repair_order_id || sourceEstimate) && !customerOverride) ? (
                   <>
                   <Select value={form.vehicle_id || ""} onValueChange={vid => {
                     const v = fetchedVehicles.find(v => v.id === vid);
@@ -559,8 +587,8 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
                   </>
                 ) : (
                   <div className="space-y-2">
-                    <Input value={form.vehicle_info} onChange={e => !form.repair_order_id && !sourceEstimate && setForm({ ...form, vehicle_info: e.target.value })} className="bg-gray-800 border-gray-700 text-white" placeholder={form.customer_name ? "e.g. 2020 Honda Civic" : "Select customer first..."} readOnly={!!form.repair_order_id || !!sourceEstimate} />
-                    {!form.repair_order_id && !sourceEstimate && (
+                    <Input value={form.vehicle_info} onChange={e => !((form.repair_order_id || sourceEstimate) && !customerOverride) && setForm({ ...form, vehicle_info: e.target.value })} className="bg-gray-800 border-gray-700 text-white" placeholder={form.customer_name ? "e.g. 2020 Honda Civic" : "Select customer first..."} readOnly={(form.repair_order_id || sourceEstimate) && !customerOverride} />
+                    {!((form.repair_order_id || sourceEstimate) && !customerOverride) && (
                       <div className="flex gap-2">
                         <Input
                           value={vinInput}

@@ -292,7 +292,7 @@ export default function EstimateDetail() {
   const handleConvertToRepairOrder = async () => {
     if (!window.confirm("Convert this estimate to a repair order?")) return;
     try {
-      await base44.entities.RepairOrder.create({
+      const ro = await base44.entities.RepairOrder.create({
         estimate_id: estimate.id,
         customer_id: estimate.customer_id,
         customer_name: estimate.customer_name,
@@ -315,7 +315,8 @@ export default function EstimateDetail() {
       });
       await base44.entities.Estimate.update(estimate.id, { status: "approved" });
       queryClient.invalidateQueries({ queryKey: ["estimates", "repairOrders"] });
-      navigate("/RepairOrders");
+      // Consistent with "Convert to Invoice" — land on the new record itself, not the list.
+      navigate(`/RepairOrderDetail/${ro.id}`);
     } catch (error) {
       console.error("Error converting estimate:", error);
     }
