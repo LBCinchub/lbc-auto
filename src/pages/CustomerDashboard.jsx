@@ -5,6 +5,7 @@ import {
   Heart, Gauge, AlertTriangle, CheckCircle2, Clock,
   Image, ArrowLeft
 } from "lucide-react";
+import { base44 } from "@/api/base44Client";
 
 const REACTIONS = [
   { emoji:"👍", key:"thumbsup" },

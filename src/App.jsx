@@ -235,6 +235,12 @@ const AuthenticatedApp = () => {
   const { user, isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
   const location = useLocation();
 
+  useEffect(() => {
+    if (user && !user.trial_started_date) {
+      base44.functions.invoke('initializeUserTrial', {});
+    }
+  }, [user]);
+
   // PUBLIC ROUTES — bypass all auth, render immediately, no login required
   const PUBLIC_PATHS = ['/CustomerPortal', '/CustomerDashboard', '/TechPortal', '/TechDashboard', '/TechJobView', '/OfficeAssistant', '/landing'];
   if (PUBLIC_PATHS.some(p => location.pathname.startsWith(p))) {
@@ -250,12 +256,6 @@ const AuthenticatedApp = () => {
       </Routes>
     );
   }
-
-  useEffect(() => {
-    if (user && !user.trial_started_date) {
-      base44.functions.invoke('initializeUserTrial', {});
-    }
-  }, [user]);
 
   // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
