@@ -201,12 +201,22 @@ export default function CustomerHub() {
     setReplyingTo(null); setReplyText("");
   };
 
+  // LBC Hub (lbc-hub.com) is the public customer-facing site — this internal app's own
+  // preview/production URL is never what customers should see. Map each shop owner's login
+  // email to the short slug LBC Hub's /services page expects.
+  const SHOP_SLUGS = {
+    "mokhtartareksamara@gmail.com": "mokhtar",
+    "belalautoservices@gmail.com": "belal",
+    "hajwheels@gmail.com": "haj",
+    "aka.auto.group@gmail.com": "aka",
+  };
+
   const getPortalLink = () => {
-    // Short, memorable /lbc-customer link, pre-filled with this shop's email via ?shop= so
+    // Public LBC Hub Services page, pre-filled with this shop's slug via ?shop= so
     // customers land straight on the phone-number step — no shop email to type or remember.
-    const base = window.location.origin;
-    const shopParam = user?.email ? `?shop=${encodeURIComponent(user.email)}` : "";
-    return `${base}/lbc-customer${shopParam}`;
+    const slug = user?.email ? SHOP_SLUGS[user.email] : null;
+    const shopParam = slug ? `?shop=${encodeURIComponent(slug)}` : "";
+    return `https://lbc-hub.com/services${shopParam}`;
   };
 
   const avgRating = reviews.length > 0
