@@ -453,33 +453,41 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
               <Label className="text-gray-400">Customer *</Label>
               {(() => {
                 const isCustomerLocked = (!!form.repair_order_id || !!sourceEstimate) && !customerOverride;
-                if (isCustomerLocked) {
-                  // Linked from a source record (Repair Order or Estimate) — show a clear, styled
-                  // "linked" card instead of a bare disabled-looking input, with an explicit way out.
-                  const linkedFrom = sourceEstimate
-                    ? `Estimate #${sourceEstimate.estimate_number}`
-                    : `RO #${orders.find(o => o.id === form.repair_order_id)?.order_number || ""}`;
+                const selectedCustomer = form.customer_id ? customers.find(c => c.id === form.customer_id) : null;
+
+                // Parity with Estimate's dialog: once a customer is attached (locked-from-source OR
+                // freely picked), show the same rich "selected customer" card — name/phone/email plus
+                // a Change link — instead of a plain input. Only show the live search box when no
+                // customer is attached yet.
+                if (form.customer_id) {
+                  const linkedFrom = isCustomerLocked
+                    ? (sourceEstimate
+                        ? `Estimate #${sourceEstimate.estimate_number}`
+                        : `RO #${orders.find(o => o.id === form.repair_order_id)?.order_number || ""}`)
+                    : null;
                   return (
                     <div className="mt-1 rounded-lg border border-sky-500/30 bg-gray-800/60 p-3 text-sm">
                       <div className="flex items-center justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="text-white font-medium truncate">{form.customer_name || "—"}</p>
-                          {form.customer_phone && <p className="text-gray-400 text-xs mt-0.5">{form.customer_phone}</p>}
+                          <p className="text-white font-medium truncate">{form.customer_name || selectedCustomer?.full_name || "—"}</p>
+                          {(form.customer_phone || selectedCustomer?.phone) && <p className="text-gray-400 text-xs mt-0.5">{form.customer_phone || selectedCustomer?.phone}</p>}
+                          {selectedCustomer?.email && <p className="text-gray-400 text-xs">{selectedCustomer.email}</p>}
                         </div>
-                        <button onClick={() => setCustomerOverride(true)}
+                        <button onClick={() => { if (isCustomerLocked) { setCustomerOverride(true); } else { setForm(f => ({ ...f, customer_id: "", customer_name: "", customer_phone: "", vehicle_id: "", vehicle_info: "" })); setCustomerSearch(""); } }}
                           className="text-sky-400 hover:text-sky-300 text-xs underline flex-shrink-0">
                           Change
                         </button>
                       </div>
-                      <p className="text-gray-500 text-xs mt-2 pt-2 border-t border-gray-700">Linked from {linkedFrom}</p>
+                      {linkedFrom && <p className="text-gray-500 text-xs mt-2 pt-2 border-t border-gray-700">Linked from {linkedFrom}</p>}
                     </div>
                   );
                 }
+
                 return (
                   <div className="relative mt-1">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                     <Input
-                      value={form.customer_id ? (customers.find(c => c.id === form.customer_id)?.full_name || form.customer_name || "") : customerSearch}
+                      value={customerSearch}
                       onChange={e => { setCustomerSearch(e.target.value); setForm(f => ({ ...f, customer_id: "", customer_name: e.target.value, vehicle_id: "", vehicle_info: "" })); }}
                       placeholder="Search by name or phone..."
                       className="bg-gray-800 border-gray-700 text-white pl-8"
@@ -496,12 +504,6 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
                           </button>
                         ))}
                       </div>
-                    )}
-                    {form.customer_id && (
-                      <button onClick={() => { setForm(f => ({ ...f, customer_id: "", customer_name: "", customer_phone: "", vehicle_id: "", vehicle_info: "" })); setCustomerSearch(""); }}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
-                        <X className="w-3.5 h-3.5" />
-                      </button>
                     )}
                   </div>
                 );
