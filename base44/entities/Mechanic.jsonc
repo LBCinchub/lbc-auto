@@ -48,6 +48,15 @@
     "pin": {
       "type": "string",
       "description": "4-digit PIN for tablet login"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "mechanic",
+        "office_staff"
+      ],
+      "default": "mechanic",
+      "description": "mechanic = shop-floor tech assigned to repair jobs. office_staff = front-desk/admin helper who can add customers & vehicles from their phone but has no job assignments."
     }
   },
   "required": [

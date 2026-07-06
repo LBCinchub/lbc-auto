@@ -27,6 +27,7 @@ import CustomerDashboard from './pages/CustomerDashboard';
 import CustomerHub from './pages/CustomerHub';
 import TechDashboard from './pages/TechDashboard';
 import TechJobView from './pages/TechJobView';
+import OfficeAssistant from './pages/OfficeAssistant';
 import Billing from './pages/Billing';
 import PartsLookup from './pages/PartsLookup';
 import ImportCustomers from './pages/ImportCustomers';
@@ -235,7 +236,7 @@ const AuthenticatedApp = () => {
   const location = useLocation();
 
   // PUBLIC ROUTES — bypass all auth, render immediately, no login required
-  const PUBLIC_PATHS = ['/CustomerPortal', '/CustomerDashboard', '/TechPortal', '/TechDashboard', '/TechJobView', '/landing'];
+  const PUBLIC_PATHS = ['/CustomerPortal', '/CustomerDashboard', '/TechPortal', '/TechDashboard', '/TechJobView', '/OfficeAssistant', '/landing'];
   if (PUBLIC_PATHS.some(p => location.pathname.startsWith(p))) {
     return (
       <Routes>
@@ -244,6 +245,7 @@ const AuthenticatedApp = () => {
         <Route path="/TechPortal" element={<TechPortal />} />
         <Route path="/TechDashboard" element={<TechDashboard />} />
         <Route path="/TechJobView" element={<TechJobView />} />
+        <Route path="/OfficeAssistant" element={<OfficeAssistant />} />
         <Route path="/landing" element={<Landing />} />
       </Routes>
     );
@@ -333,6 +335,7 @@ const AuthenticatedApp = () => {
         <Route path="/CustomerHub" element={<LayoutWrapper currentPageName="CustomerHub"><CustomerHub /></LayoutWrapper>} />
         <Route path="/TechDashboard" element={<TechDashboard />} />
         <Route path="/TechJobView" element={<TechJobView />} />
+        <Route path="/OfficeAssistant" element={<OfficeAssistant />} />
         <Route path="*" element={<PageNotFound />} />
       </Routes>
     </>

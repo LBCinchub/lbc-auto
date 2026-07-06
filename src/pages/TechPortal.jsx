@@ -16,7 +16,15 @@ export default function TechPortal() {
 
   useEffect(() => {
     const saved = sessionStorage.getItem("tech_session");
-    if (saved) { window.location.href = "/TechDashboard"; return; }
+    if (saved) {
+      try {
+        const s = JSON.parse(saved);
+        window.location.href = s?.role === "office_staff" ? "/OfficeAssistant" : "/TechDashboard";
+      } catch {
+        window.location.href = "/TechDashboard";
+      }
+      return;
+    }
 
     const params = new URLSearchParams(window.location.search);
     const ownerParam = params.get("owner");
@@ -76,14 +84,16 @@ export default function TechPortal() {
   const checkPin = (p) => {
     const match = mechanics.find(m => String(m.pin).trim() === String(p).trim());
     if (match) {
+      const role = match.role || "mechanic";
       sessionStorage.setItem("tech_session", JSON.stringify({
         id: match.id,
         name: match.name,
         specialty: match.specialty || "",
         hourly_rate: match.hourly_rate || 0,
         owner_email: ownerEmail,
+        role,
       }));
-      window.location.href = "/TechDashboard";
+      window.location.href = role === "office_staff" ? "/OfficeAssistant" : "/TechDashboard";
     } else {
       setError("Wrong PIN. Try again.");
       setPin("");

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { HardHat, Phone, Mail, Pencil, Trash2, Wrench, DollarSign, LogIn, LogOut } from "lucide-react";
+import { HardHat, Phone, Mail, Pencil, Trash2, LogIn, LogOut } from "lucide-react";
 import { formatPhone } from "@/utils/formatPhone";
 import { format, differenceInMinutes } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ import StatusBadge from "../components/shared/StatusBadge";
 export default function Mechanics() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ name: "", phone: "", email: "", specialty: "", pin: "", pay_type: "hourly", hourly_rate: "", daily_rate: "", status: "available" });
+  const [form, setForm] = useState({ name: "", phone: "", email: "", specialty: "", pin: "", pay_type: "hourly", hourly_rate: "", daily_rate: "", status: "available", role: "mechanic" });
   const [saving, setSaving] = useState(false);
   const [user, setUser] = useState(null);
   const queryClient = useQueryClient();
@@ -43,8 +43,9 @@ export default function Mechanics() {
     setEditing(mech);
     setForm(mech ? {
       name: mech.name || "", phone: mech.phone || "", email: mech.email || "",
-      specialty: mech.specialty || "", pin: mech.pin || "", pay_type: mech.pay_type || "hourly", hourly_rate: mech.hourly_rate || "", daily_rate: mech.daily_rate || "", status: mech.status || "available"
-    } : { name: "", phone: "", email: "", specialty: "", pin: "", pay_type: "hourly", hourly_rate: "", daily_rate: "", status: "available" });
+      specialty: mech.specialty || "", pin: mech.pin || "", pay_type: mech.pay_type || "hourly", hourly_rate: mech.hourly_rate || "", daily_rate: mech.daily_rate || "", status: mech.status || "available",
+      role: mech.role || "mechanic"
+    } : { name: "", phone: "", email: "", specialty: "", pin: "", pay_type: "hourly", hourly_rate: "", daily_rate: "", status: "available", role: "mechanic" });
     setDialogOpen(true);
   };
 
@@ -127,12 +128,12 @@ export default function Mechanics() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Mechanics" subtitle={`${mechanics.length} team members`}
-        onAdd={() => openDialog(null)} addLabel="Add Mechanic" />
+      <PageHeader title="Mechanics" subtitle={`${mechanics.length} team members — mechanics & office staff`}
+        onAdd={() => openDialog(null)} addLabel="Add Team Member" />
 
       {mechanics.length === 0 ? (
-        <EmptyState icon={HardHat} title="No mechanics yet" description="Add your first mechanic."
-          onAction={() => openDialog(null)} actionLabel="Add Mechanic" />
+        <EmptyState icon={HardHat} title="No team members yet" description="Add your first mechanic or office staff member."
+          onAction={() => openDialog(null)} actionLabel="Add Team Member" />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
            {mechanics.map(m => {
@@ -145,7 +146,12 @@ export default function Mechanics() {
                       <span className="text-sky-400 font-bold">{m.name?.charAt(0)?.toUpperCase()}</span>
                      </div>
                      <div>
-                       <h3 className="text-white font-semibold">{m.name}</h3>
+                       <div className="flex items-center gap-2">
+                         <h3 className="text-white font-semibold">{m.name}</h3>
+                         {m.role === "office_staff" && (
+                           <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300">OFFICE</span>
+                         )}
+                       </div>
                        <div className="flex items-center gap-2 mt-1">
                          <StatusBadge status={m.status} />
                          <span className="text-xs text-gray-500">${m.pay_type === "daily" ? m.daily_rate : m.hourly_rate}/{m.pay_type === "daily" ? "day" : "hr"}</span>
@@ -166,24 +172,30 @@ export default function Mechanics() {
 
                 {m.specialty && <p className="text-xs text-gray-500 mb-3">{m.specialty}</p>}
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-lg bg-gray-800/30 p-3 text-center">
-                    <p className="text-lg font-bold text-white">{stats.active}</p>
-                    <p className="text-[10px] text-gray-500">Active Jobs</p>
+                {m.role === "office_staff" ? (
+                  <div className="rounded-lg bg-violet-500/10 border border-violet-500/20 p-3 text-center">
+                    <p className="text-xs text-violet-300">Front-desk access — adds customers &amp; vehicles via the Office Assistant phone portal.</p>
                   </div>
-                  <div className="rounded-lg bg-gray-800/30 p-3 text-center">
-                    <p className="text-lg font-bold text-white">{stats.completed}</p>
-                    <p className="text-[10px] text-gray-500">Completed</p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-lg bg-gray-800/30 p-3 text-center">
+                      <p className="text-lg font-bold text-white">{stats.active}</p>
+                      <p className="text-[10px] text-gray-500">Active Jobs</p>
+                    </div>
+                    <div className="rounded-lg bg-gray-800/30 p-3 text-center">
+                      <p className="text-lg font-bold text-white">{stats.completed}</p>
+                      <p className="text-[10px] text-gray-500">Completed</p>
+                    </div>
+                    <div className="rounded-lg bg-gray-800/30 p-3 text-center">
+                      <p className="text-lg font-bold text-white">{stats.totalHours.toFixed(1)}</p>
+                      <p className="text-[10px] text-gray-500">Hours Logged</p>
+                    </div>
+                    <div className="rounded-lg bg-gray-800/30 p-3 text-center">
+                      <p className="text-lg font-bold text-emerald-400">${stats.totalRevenue.toFixed(0)}</p>
+                      <p className="text-[10px] text-gray-500">Revenue</p>
+                    </div>
                   </div>
-                  <div className="rounded-lg bg-gray-800/30 p-3 text-center">
-                    <p className="text-lg font-bold text-white">{stats.totalHours.toFixed(1)}</p>
-                    <p className="text-[10px] text-gray-500">Hours Logged</p>
-                  </div>
-                  <div className="rounded-lg bg-gray-800/30 p-3 text-center">
-                    <p className="text-lg font-bold text-emerald-400">${stats.totalRevenue.toFixed(0)}</p>
-                    <p className="text-[10px] text-gray-500">Revenue</p>
-                  </div>
-                </div>
+                )}
 
                 {/* Quick clock in/out buttons */}
                 <div className="flex gap-2 mt-3">
@@ -228,9 +240,21 @@ export default function Mechanics() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-md">
           <DialogHeader>
-            <DialogTitle>{editing ? "Edit Mechanic" : "New Mechanic"}</DialogTitle>
+            <DialogTitle>{editing ? "Edit Team Member" : "New Team Member"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-2">
+            <div>
+              <Label className="text-gray-400">Role *</Label>
+              <Select value={form.role} onValueChange={v => setForm({...form, role: v})}>
+                <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                  <SelectItem value="mechanic">Mechanic — assigned to repair jobs</SelectItem>
+                  <SelectItem value="office_staff">Office Staff — add customers &amp; vehicles from phone</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div>
               <Label className="text-gray-400">Full Name *</Label>
               <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})}
@@ -257,14 +281,16 @@ export default function Mechanics() {
                   inputMode="numeric"
                   className="mt-1 bg-gray-800 border-gray-700 text-white"
                 />
-                <p className="text-xs text-gray-500 mt-1">Tech uses this PIN to log into the Tablet Portal</p>
+                <p className="text-xs text-gray-500 mt-1">{form.role === "office_staff" ? "Used to log into the Office Assistant (add customers & scan VINs from phone)" : "Tech uses this PIN to log into the Tablet Portal"}</p>
               </div>
             </div>
-            <div>
-              <Label className="text-gray-400">Specialty</Label>
-              <Input value={form.specialty} onChange={e => setForm({...form, specialty: e.target.value})}
-                className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="e.g., Engine, Transmission" />
-            </div>
+            {form.role !== "office_staff" && (
+              <div>
+                <Label className="text-gray-400">Specialty</Label>
+                <Input value={form.specialty} onChange={e => setForm({...form, specialty: e.target.value})}
+                  className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="e.g., Engine, Transmission" />
+              </div>
+            )}
             <div>
               <Label className="text-gray-400">Pay Type *</Label>
               <Select value={form.pay_type} onValueChange={v => setForm({...form, pay_type: v})}>
