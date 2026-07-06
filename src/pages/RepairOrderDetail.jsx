@@ -79,7 +79,9 @@ export default function RepairOrderDetail() {
         <div style="flex:1;background:#f8fafc;border-radius:10px;padding:14px 16px;border-left:3px solid #6366f1">
           <div style="font-size:8px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px">Vehicle</div>
           <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:4px">${order.vehicle_info}</div>
-          ${order.mechanic_name ? `<div style="font-size:10px;color:#475569">Mechanic: ${order.mechanic_name}</div>` : ""}
+          ${vehicleRecord?.license_plate ? `<div style="font-size:10px;color:#475569;font-weight:600;letter-spacing:0.5px">Plate: ${vehicleRecord.license_plate.toUpperCase()}</div>` : ""}
+          ${vehicleRecord?.vin ? `<div style="font-size:9px;color:#64748b;font-family:monospace;margin-top:2px">VIN: ${vehicleRecord.vin.toUpperCase()}</div>` : ""}
+          ${order.mechanic_name ? `<div style="font-size:10px;color:#475569;margin-top:2px">Mechanic: ${order.mechanic_name}</div>` : ""}
         </div>
       </div>
       ${order.description ? `<div style="margin-bottom:24px;background:#f8fafc;border-radius:8px;padding:14px;border-left:3px solid #94a3b8"><div style="font-size:8px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px">Description</div><div style="font-size:10.5px;color:#334155;line-height:1.6">${order.description}</div></div>` : ""}
@@ -120,6 +122,9 @@ export default function RepairOrderDetail() {
     queryKey: ["vehicles"],
     queryFn: () => base44.entities.Vehicle.list(),
   });
+
+  // Full vehicle record (VIN, plate, color, engine, mileage) — parity with Estimate/Invoice detail pages
+  const vehicleRecord = vehicles.find(v => v.id === order?.vehicle_id);
 
   const { data: customer } = useQuery({
     queryKey: ["customer", order?.customer_id],
@@ -257,6 +262,12 @@ export default function RepairOrderDetail() {
                onClick={() => order.vehicle_id && navigate(`/VehicleTimeline/${order.vehicle_id}`)}
                className="text-emerald-400 hover:text-emerald-300 hover:underline cursor-pointer transition-colors font-semibold text-left"
              >{order.vehicle_info || "—"}</button>
+             {vehicleRecord?.license_plate && (
+               <p className="text-gray-400 text-xs mt-1 font-mono tracking-wide">🪪 {vehicleRecord.license_plate.toUpperCase()}</p>
+             )}
+             {vehicleRecord?.vin && (
+               <p className="text-gray-500 text-xs mt-0.5 font-mono">VIN: {vehicleRecord.vin.toUpperCase()}</p>
+             )}
           </div>
           <div>
             <p className="text-gray-500 text-xs uppercase mb-1">Mechanic</p>
