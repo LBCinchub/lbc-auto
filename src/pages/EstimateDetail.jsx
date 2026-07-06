@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { syncCustomerActivity } from "@/utils/syncCustomerActivity";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, CreditCard, CheckCircle2, Plus, Trash2, Save, Loader2, Printer, Share2, History } from "lucide-react";
+import { ArrowLeft, CreditCard, CheckCircle2, Plus, Trash2, Save, Loader2, Share2, History } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import PaymentHistoryManager from "@/components/invoices/PaymentHistoryManager";
 import { Button } from "@/components/ui/button";
@@ -363,11 +363,6 @@ export default function EstimateDetail() {
           <ArrowLeft className="w-4 h-4" /> Back
         </Button>
         <div className="flex flex-wrap gap-2">
-          {/* Print / Save PDF */}
-          <Button variant="outline" size="sm" onClick={() => window.print()}
-            className="border-gray-700 text-gray-300 h-9 gap-1.5 text-xs hover:border-sky-500 hover:text-sky-400">
-            <Printer className="w-3.5 h-3.5" /> Print / Save PDF
-          </Button>
           {/* Share */}
           <Button variant="outline" size="sm" onClick={handleShare}
             className="border-gray-700 text-gray-300 h-9 gap-1.5 text-xs hover:border-violet-500 hover:text-violet-400">

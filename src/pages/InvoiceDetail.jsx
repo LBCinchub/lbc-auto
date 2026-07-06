@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { syncCustomerActivity } from "@/utils/syncCustomerActivity";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Store, Plus, Trash2, Save, Loader2, CreditCard, X, Printer, Download, Share2, Mail, Send, CheckCircle2, Wrench, History } from "lucide-react";
+import { ArrowLeft, Store, Plus, Trash2, Save, Loader2, CreditCard, X, Download, Share2, Mail, Send, CheckCircle2, Wrench, History } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { formatPhone } from "@/utils/formatPhone";
 import { Button } from "@/components/ui/button";
@@ -130,18 +130,7 @@ export default function InvoiceDetail() {
   const taxAmount = taxableBase * (taxRate / 100);
   const grandTotal = Math.max(0, subtotal - discountAmount + taxAmount);
 
-  // ── Share / Print / Save as PDF ──────────────────────────────────────────
-  const handlePrint = () => {
-    // Hide everything except the print preview, then trigger browser print
-    const printEl = document.getElementById("invoice-print-area");
-    if (!printEl) { window.print(); return; }
-    const original = document.body.innerHTML;
-    document.body.innerHTML = printEl.outerHTML;
-    window.print();
-    document.body.innerHTML = original;
-    window.location.reload();
-  };
-
+  // ── Share ─────────────────────────────────────────────────────────────────
   const handleShare = async () => {
     const title = `Invoice #${invoice?.invoice_number} — ${invoice?.customer_name || ""}`;
     const text  = `Invoice #${invoice?.invoice_number}\nVehicle: ${invoice?.vehicle_info || ""}\nTotal: $${(invoice?.total || 0).toFixed(2)}\nBalance Due: $${(invoice?.balance_due || 0).toFixed(2)}\n\nThank you for your business!`;
@@ -372,11 +361,6 @@ export default function InvoiceDetail() {
               <CreditCard className="w-3.5 h-3.5" /> Cashout
             </Button>
           )}
-          {/* Print / Save PDF */}
-          <Button variant="outline" size="sm" onClick={() => window.print()}
-            className="border-gray-700 text-gray-300 h-9 gap-1.5 text-xs hover:border-sky-500 hover:text-sky-400">
-            <Printer className="w-3.5 h-3.5" /> Print / Save PDF
-          </Button>
           {/* Share */}
           <Button variant="outline" size="sm" onClick={handleShare}
             className="border-gray-700 text-gray-300 h-9 gap-1.5 text-xs hover:border-violet-500 hover:text-violet-400">
