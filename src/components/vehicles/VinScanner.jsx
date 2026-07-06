@@ -7,28 +7,56 @@ export default function VinScanner({ onVinDetected, onClose }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
+  const devicesRef = useRef([]);
+  const currentDeviceIdxRef = useRef(0);
   const [step, setStep] = useState("preview"); // preview | processing | done | error
   const [error, setError] = useState("");
-  const [facingMode, setFacingMode] = useState("environment");
+  const [cameraLabel, setCameraLabel] = useState("Back");
 
   useEffect(() => {
-    startCamera(facingMode);
+    startCamera();
     return () => stopCamera();
   }, []);
 
-  const startCamera = async (mode = facingMode) => {
+  const stopCamera = () => {
+    streamRef.current?.getTracks().forEach(t => t.stop());
+  };
+
+  const startCamera = async (deviceId) => {
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         setError("Camera is not supported on this device. Please use the Upload option instead.");
         return;
       }
-      const timeoutPromise = new Promise((_, reject) => 
+
+      // Enumerate available video devices (requires a permission prompt first on some browsers)
+      try {
+        const allDevices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = allDevices.filter(d => d.kind === "videoinput");
+        if (videoDevices.length > 0) {
+          devicesRef.current = videoDevices;
+          // Pick the back camera by default: prefer a device whose label mentions "back"/"rear"/"environment"
+          let defaultIdx = videoDevices.findIndex(d => /back|rear|environment/i.test(d.label));
+          if (defaultIdx === -1) defaultIdx = 0;
+          currentDeviceIdxRef.current = deviceId
+            ? videoDevices.findIndex(d => d.deviceId === deviceId)
+            : defaultIdx;
+          if (currentDeviceIdxRef.current === -1) currentDeviceIdxRef.current = defaultIdx;
+          setCameraLabel(videoDevices[currentDeviceIdxRef.current]?.label?.includes("front") ? "Front" : "Back");
+        }
+      } catch (_) { /* enumeration may fail if permission not yet granted — ignore */ }
+
+      const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error("Camera timeout")), 10000)
       );
+
+      const targetDeviceId = devicesRef.current[currentDeviceIdxRef.current]?.deviceId;
+      const videoConstraints = targetDeviceId
+        ? { deviceId: { exact: targetDeviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }
+        : { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } };
+
       const stream = await Promise.race([
-        navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: mode }, width: { ideal: 1280 }, height: { ideal: 720 } }
-        }),
+        navigator.mediaDevices.getUserMedia({ video: videoConstraints }),
         timeoutPromise
       ]);
       streamRef.current = stream;
@@ -41,7 +69,7 @@ export default function VinScanner({ onVinDetected, onClose }) {
     } catch (err) {
       const errMsg = err?.message === "Camera timeout"
         ? "Camera is taking too long to start. Try using the Upload option instead."
-        : err?.name === "NotAllowedError" 
+        : err?.name === "NotAllowedError"
         ? "Camera permission denied. Please allow camera access in your browser settings and try again."
         : err?.name === "NotFoundError"
         ? "No camera device found. Please use the Upload option instead."
@@ -50,16 +78,21 @@ export default function VinScanner({ onVinDetected, onClose }) {
     }
   };
 
-  const stopCamera = () => {
-    streamRef.current?.getTracks().forEach(t => t.stop());
-  };
-
   const flipCamera = async () => {
-    const next = facingMode === "environment" ? "user" : "environment";
+    const devices = devicesRef.current;
+    if (devices.length <= 1) {
+      // Fallback: toggle facingMode if no device list
+      stopCamera();
+      setError("");
+      await startCamera();
+      return;
+    }
+    const nextIdx = (currentDeviceIdxRef.current + 1) % devices.length;
+    currentDeviceIdxRef.current = nextIdx;
+    setCameraLabel(devices[nextIdx]?.label?.includes("front") ? "Front" : "Back");
     stopCamera();
-    setFacingMode(next);
     setError("");
-    await startCamera(next);
+    await startCamera(devices[nextIdx].deviceId);
   };
 
   const processBlob = async (blob) => {
@@ -161,12 +194,12 @@ export default function VinScanner({ onVinDetected, onClose }) {
               className="w-16 h-16 rounded-full bg-white border-4 border-sky-400 flex items-center justify-center shadow-lg hover:scale-105 transition-transform active:scale-95">
               <Camera className="w-7 h-7 text-gray-800" />
             </button>
-            <label className="flex flex-col items-center gap-1 cursor-pointer">
-              <div onClick={flipCamera} className="w-12 h-12 rounded-full bg-gray-800/80 border-2 border-gray-500 flex items-center justify-center hover:border-sky-400 transition-colors">
+            <button onClick={flipCamera} className="flex flex-col items-center gap-1 cursor-pointer">
+              <div className="w-12 h-12 rounded-full bg-gray-800/80 border-2 border-gray-500 flex items-center justify-center hover:border-sky-400 transition-colors">
                 <SwitchCamera className="w-5 h-5 text-white" />
               </div>
-              <span className="text-white text-xs">Flip</span>
-            </label>
+              <span className="text-white text-xs">{cameraLabel}</span>
+            </button>
           </div>
         </>
       )}
@@ -187,7 +220,7 @@ export default function VinScanner({ onVinDetected, onClose }) {
           <p className="text-lg font-medium">Scan Failed</p>
           <p className="text-gray-400 text-sm">{error}</p>
           <div className="flex gap-3 mt-2">
-            <Button onClick={() => { setError(""); setStep("preview"); startCamera(); }} className="bg-sky-500 hover:bg-sky-600">
+            <Button onClick={() => { setError(""); setStep("preview"); startCamera(devicesRef.current[currentDeviceIdxRef.current]?.deviceId); }} className="bg-sky-500 hover:bg-sky-600">
               Try Again
             </Button>
             <Button variant="outline" onClick={onClose} className="border-gray-700 text-gray-300">Cancel</Button>
