@@ -1,5 +1,5 @@
-// customerData v2 — service role bypass for RLS
-// deployed: 2026-07-01
+// customerData v3 — service role bypass for RLS. Adds estimates + appointments.
+// deployed: 2026-07-05
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 Deno.serve(async (req) => {
@@ -13,10 +13,12 @@ Deno.serve(async (req) => {
     }
 
     const sr = base44.asServiceRole;
-    const [vehicles, orders, invoices, messages, notifications, offers, recommendations, reviews] = await Promise.all([
+    const [vehicles, orders, invoices, estimates, appointments, messages, notifications, offers, recommendations, reviews] = await Promise.all([
       sr.entities.Vehicle.filter({ customer_id }, "-created_date", 20),
       sr.entities.RepairOrder.filter({ customer_id }, "-created_date", 50),
       sr.entities.Invoice.filter({ customer_id }, "-created_date", 50),
+      sr.entities.Estimate.filter({ customer_id }, "-created_date", 50),
+      sr.entities.Appointment.filter({ customer_id }, "-date", 50),
       sr.entities.CustomerMessage.filter({ customer_id }, "sent_at", 200),
       sr.entities.CustomerNotification.filter({ customer_id }, "-sent_at", 30),
       sr.entities.ShopOffer.filter({ shop_owner_email: shop_email, is_active: true }, "-created_date", 20),
@@ -25,7 +27,7 @@ Deno.serve(async (req) => {
     ]);
 
     return new Response(JSON.stringify({
-      vehicles, orders, invoices, messages, notifications, offers, recommendations, reviews
+      vehicles, orders, invoices, estimates, appointments, messages, notifications, offers, recommendations, reviews
     }), { headers: { "Content-Type": "application/json" } });
 
   } catch (e) {
