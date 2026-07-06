@@ -246,7 +246,7 @@ export default function TechJobView() {
         </button>
         <div style={{flex:1}}>
           <h1 style={{color:"#fff",fontSize:18,fontWeight:800,margin:0}}>{order.customer_name}</h1>
-          <p style={{color:"#38bdf8",fontSize:13,margin:0}}>{order.vehicle_info} · #{order.order_number}</p>
+          <p style={{color:"#38bdf8",fontSize:13,margin:0}}>{order.vehicle_info} · #{order.order_number}{vehicle?.license_plate ? ` · 🪪 ${vehicle.license_plate.toUpperCase()}` : ""}</p>
         </div>
         {/* Intake badge */}
         <div style={{

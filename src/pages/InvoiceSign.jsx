@@ -15,12 +15,20 @@ export default function InvoiceSign() {
   const [signing, setSigning] = useState(false);
   const [done, setDone] = useState(false);
 
+  const [vehicleRecord, setVehicleRecord] = useState(null);
+
   useEffect(() => {
     if (!token) { setError("Invalid link."); setLoading(false); return; }
-    base44.entities.Invoice.filter({ auth_token: token }).then(results => {
+    base44.entities.Invoice.filter({ auth_token: token }).then(async results => {
       if (!results?.length) { setError("Invoice not found or link expired."); }
-      else if (results[0].auth_status === "approved") { setInvoice(results[0]); setDone(true); }
-      else { setInvoice(results[0]); }
+      else {
+        const inv = results[0];
+        if (inv.auth_status === "approved") setDone(true);
+        setInvoice(inv);
+        if (inv.vehicle_id) {
+          try { setVehicleRecord(await base44.entities.Vehicle.get(inv.vehicle_id)); } catch {}
+        }
+      }
       setLoading(false);
     });
   }, [token]);
@@ -87,7 +95,15 @@ export default function InvoiceSign() {
           </div>
           <div className="flex justify-between">
             <span className="text-gray-400 text-sm">Vehicle</span>
-            <span className="text-white">{invoice.vehicle_info}</span>
+            <div className="text-right">
+              <span className="text-white block">{invoice.vehicle_info}</span>
+              {vehicleRecord?.license_plate && (
+                <span className="text-gray-400 text-xs font-mono block mt-0.5">🪪 {vehicleRecord.license_plate.toUpperCase()}</span>
+              )}
+              {vehicleRecord?.vin && (
+                <span className="text-gray-500 text-xs font-mono block mt-0.5">VIN: {vehicleRecord.vin.toUpperCase()}</span>
+              )}
+            </div>
           </div>
           {invoice.line_items?.length > 0 && (
             <div className="border-t border-gray-800 pt-3 space-y-2">
