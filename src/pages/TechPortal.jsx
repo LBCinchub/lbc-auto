@@ -11,7 +11,6 @@ export default function TechPortal() {
   const [shopName, setShopName] = useState("");
   const [noOwner, setNoOwner] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
   const [isOwnerView, setIsOwnerView] = useState(false);
 
   useEffect(() => {
@@ -29,36 +28,43 @@ export default function TechPortal() {
     const params = new URLSearchParams(window.location.search);
     const ownerParam = params.get("owner");
 
-    base44.auth.me().then(u => {
-      setCurrentUser(u);
-
-      if (ownerParam) {
-        // Mechanic is using the shared link — decode owner email, load their mechanics only
-        try {
-          const decoded = atob(ownerParam);
-          setOwnerEmail(decoded);
-          setShopName(decoded.split("@")[0]);
-          setIsOwnerView(false);
-          base44.entities.Mechanic.filter({ created_by: decoded }, "name", 100)
-            .then(all => setMechanics(all.filter(m => m.pin && m.pin.length === 4)))
-            .finally(() => setLoading(false));
-        } catch {
-          setNoOwner(true);
-          setLoading(false);
-        }
-      } else if (u) {
-        // Shop owner is viewing — show their shareable link + let them test PIN too
-        setOwnerEmail(u.email);
-        setShopName(u.full_name || u.email.split("@")[0]);
-        setIsOwnerView(true);
-        base44.entities.Mechanic.filter({ created_by: u.email }, "name", 100)
+    if (ownerParam) {
+      // Mechanic/team member is using the shared link — this never needs a Base44
+      // login (the route is public and most team members have no account at all).
+      // Previously this whole branch lived inside base44.auth.me().then(...) with no
+      // .catch() — if that call rejected for a logged-out visitor (the normal case),
+      // setLoading(false) never ran and the page spun on "Loading..." forever.
+      try {
+        const decoded = atob(ownerParam);
+        setOwnerEmail(decoded);
+        setShopName(decoded.split("@")[0]);
+        setIsOwnerView(false);
+        base44.entities.Mechanic.filter({ created_by: decoded }, "name", 100)
           .then(all => setMechanics(all.filter(m => m.pin && m.pin.length === 4)))
+          .catch(() => setError("Couldn't load team data. Check your connection and try again."))
           .finally(() => setLoading(false));
-      } else {
+      } catch {
         setNoOwner(true);
         setLoading(false);
       }
-    });
+      return;
+    }
+
+    // No owner param — this is the shop owner viewing their own share-link/PIN-test screen,
+    // so a real Base44 session is expected here. Still catch failures so we never hang on loading.
+    base44.auth.me()
+      .then(u => {
+        if (u) {
+          setOwnerEmail(u.email);
+          setShopName(u.full_name || u.email.split("@")[0]);
+          setIsOwnerView(true);
+          return base44.entities.Mechanic.filter({ created_by: u.email }, "name", 100)
+            .then(all => setMechanics(all.filter(m => m.pin && m.pin.length === 4)));
+        }
+        setNoOwner(true);
+      })
+      .catch(() => setNoOwner(true))
+      .finally(() => setLoading(false));
   }, []);
 
   const getTechLink = () => {
