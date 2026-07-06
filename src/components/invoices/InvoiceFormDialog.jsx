@@ -352,12 +352,14 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
 
     setSaving(true);
     let resolvedCustomerId = form.customer_id;
+    let resolvedVehicleId = form.vehicle_id;
     if ((!form.repair_order_id || customerOverride) && !form.customer_id && form.customer_name) {
       const newCustomer = await base44.entities.Customer.create({ full_name: form.customer_name, phone: form.customer_phone || "" });
       resolvedCustomerId = newCustomer.id;
       if (form.vehicle_info) {
         const parts = form.vehicle_info.trim().split(" ");
-        await base44.entities.Vehicle.create({ customer_id: newCustomer.id, customer_name: form.customer_name, year: parseInt(parts[0]) || new Date().getFullYear(), make: parts[1] || "Unknown", model: parts.slice(2).join(" ") || "Unknown" });
+        const newVehicle = await base44.entities.Vehicle.create({ customer_id: newCustomer.id, customer_name: form.customer_name, vin: vinInput || "", year: parseInt(parts[0]) || new Date().getFullYear(), make: parts[1] || "Unknown", model: parts.slice(2).join(" ") || "Unknown" });
+        resolvedVehicleId = newVehicle.id;
       }
     }
 
@@ -389,7 +391,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
       if (form.due_date < new Date().toISOString().split("T")[0]) finalStatus = "overdue";
     }
 
-    const data = { ...form, customer_id: resolvedCustomerId, invoice_number: invoiceNum, labor_items: laborItems, parts_used, labor_total: laborTotal, parts_total: partsTotal, tax_amount: finalTax, total: finalTotal, balance_due: finalBalance, status: finalStatus, paid_date: paidDate, payment_history: paymentHistory, line_items, estimate_id: form.estimate_id || sourceEstimate?.id || "", technician_notes: form.technician_notes || "" };
+    const data = { ...form, customer_id: resolvedCustomerId, vehicle_id: resolvedVehicleId, invoice_number: invoiceNum, labor_items: laborItems, parts_used, labor_total: laborTotal, parts_total: partsTotal, tax_amount: finalTax, total: finalTotal, balance_due: finalBalance, status: finalStatus, paid_date: paidDate, payment_history: paymentHistory, line_items, estimate_id: form.estimate_id || sourceEstimate?.id || "", technician_notes: form.technician_notes || "" };
 
     if (invoice && invoice.id) {
       await base44.entities.Invoice.update(invoice.id, data);
@@ -415,7 +417,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
       // ── Unified sync: Customer.last_visit + Vehicle.customer_id ──
       await syncCustomerActivity({
         customerId: resolvedCustomerId || form.customer_id,
-        vehicleId: form.vehicle_id,
+        vehicleId: resolvedVehicleId || form.vehicle_id,
         vehicleInfo: form.vehicle_info,
         customerName: form.customer_name,
         customerPhone: form.customer_phone || "",

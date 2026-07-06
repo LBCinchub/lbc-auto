@@ -85,6 +85,33 @@ export default function InvoiceDetail() {
     enabled: !!vehicleId,
   });
 
+  // ── Fallback for older records saved without a proper vehicle_id link ──
+  // (e.g. invoices created via free-text vehicle entry). If we have no
+  // vehicleId but do have a customer, try to find the matching Vehicle by
+  // customer + vehicle_info text so VIN/plate still show, and silently
+  // backfill vehicle_id so it's fixed going forward.
+  const { data: customerVehicles } = useQuery({
+    queryKey: ["customerVehiclesFallback", invoice?.customer_id],
+    queryFn: () => base44.entities.Vehicle.filter({ customer_id: invoice.customer_id }),
+    enabled: !vehicleId && !!invoice?.customer_id,
+  });
+
+  const fallbackVehicle = React.useMemo(() => {
+    if (vehicleId || !customerVehicles?.length) return null;
+    const infoNorm = (invoice?.vehicle_info || "").trim().toLowerCase();
+    const exact = customerVehicles.find(v => `${v.year} ${v.make} ${v.model}`.trim().toLowerCase() === infoNorm);
+    if (exact) return exact;
+    return customerVehicles.length === 1 ? customerVehicles[0] : null;
+  }, [vehicleId, customerVehicles, invoice?.vehicle_info]);
+
+  useEffect(() => {
+    if (fallbackVehicle && invoice?.id && !invoice.vehicle_id) {
+      base44.entities.Invoice.update(invoice.id, { vehicle_id: fallbackVehicle.id }).catch(() => {});
+    }
+  }, [fallbackVehicle, invoice?.id, invoice?.vehicle_id]);
+
+  const effectiveVehicleRecord = vehicleRecord || fallbackVehicle;
+
   // Initialize editable state from invoice data once loaded
   useEffect(() => {
     if (invoice && !initialized) {
@@ -392,7 +419,7 @@ export default function InvoiceDetail() {
           createdDate={new Date((invoiceDate || invoice.created_date) + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           user={user}
           customer={{ name: invoice.customer_name || customer?.full_name || "—", phone: customer?.phone, email: customer?.email, address: customer?.address }}
-          vehicle={{ info: invoice.vehicle_info, vin: vehicleRecord?.vin, license_plate: vehicleRecord?.license_plate, color: vehicleRecord?.color, make: vehicleRecord?.make, model: vehicleRecord?.model, year: vehicleRecord?.year, engine_type: vehicleRecord?.engine_type, mileage: vehicleRecord?.mileage }}
+          vehicle={{ info: invoice.vehicle_info, vin: effectiveVehicleRecord?.vin, license_plate: effectiveVehicleRecord?.license_plate, color: effectiveVehicleRecord?.color, make: effectiveVehicleRecord?.make, model: effectiveVehicleRecord?.model, year: effectiveVehicleRecord?.year, engine_type: effectiveVehicleRecord?.engine_type, mileage: effectiveVehicleRecord?.mileage }}
           lineItems={[
             ...(laborItems.map(r => ({
               name: r.description || "Labor",
@@ -463,11 +490,11 @@ export default function InvoiceDetail() {
           <div>
             <p className="text-gray-500 text-xs uppercase mb-1">Vehicle</p>
             <button onClick={() => vehicleId && navigate(`/VehicleTimeline/${vehicleId}`)} className="text-emerald-400 hover:text-emerald-300 hover:underline font-bold text-sm text-left transition-colors">{invoice.vehicle_info || "—"}</button>
-            {vehicleRecord?.license_plate && (
-              <p className="text-gray-400 text-xs mt-1 font-mono tracking-wide">🪪 {vehicleRecord.license_plate.toUpperCase()}</p>
+            {effectiveVehicleRecord?.license_plate && (
+              <p className="text-gray-400 text-xs mt-1 font-mono tracking-wide">🪪 {effectiveVehicleRecord.license_plate.toUpperCase()}</p>
             )}
-            {vehicleRecord?.vin && (
-              <p className="text-gray-500 text-xs mt-0.5 font-mono">VIN: {vehicleRecord.vin.toUpperCase()}</p>
+            {effectiveVehicleRecord?.vin && (
+              <p className="text-gray-500 text-xs mt-0.5 font-mono">VIN: {effectiveVehicleRecord.vin.toUpperCase()}</p>
             )}
           </div>
           <div>
