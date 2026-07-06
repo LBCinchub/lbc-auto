@@ -10,6 +10,10 @@
       "type": "string",
       "description": "Customer name for display"
     },
+    "shop_owner_email": {
+      "type": "string",
+      "description": "Shop owner email \u2014 set by backend functions for cross-tenant RLS scoping"
+    },
     "vin": {
       "type": "string",
       "description": "Vehicle Identification Number"
@@ -144,13 +148,34 @@
   "rls": {
     "create": true,
     "read": {
-      "created_by": "{{user.email}}"
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "data.shop_owner_email": "{{user.email}}"
+        }
+      ]
     },
     "update": {
-      "created_by": "{{user.email}}"
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "data.shop_owner_email": "{{user.email}}"
+        }
+      ]
     },
     "delete": {
-      "created_by": "{{user.email}}"
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "data.shop_owner_email": "{{user.email}}"
+        }
+      ]
     }
   }
 }
