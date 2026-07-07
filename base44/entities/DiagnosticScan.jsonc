@@ -1,0 +1,115 @@
+{
+  "name": "DiagnosticScan",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string",
+      "description": "Linked customer ID"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Customer name for display"
+    },
+    "vehicle_id": {
+      "type": "string",
+      "description": "Linked vehicle ID"
+    },
+    "vehicle_info": {
+      "type": "string",
+      "description": "Vehicle display string (year make model)"
+    },
+    "shop_owner_email": {
+      "type": "string",
+      "description": "Shop owner email — set for cross-tenant RLS scoping"
+    },
+    "adapter_name": {
+      "type": "string",
+      "description": "Bluetooth OBD2 adapter device name used for this scan"
+    },
+    "mileage": {
+      "type": "number",
+      "description": "Odometer reading at time of scan"
+    },
+    "dtc_codes": {
+      "type": "array",
+      "description": "Trouble codes read from the vehicle",
+      "items": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string" },
+          "raw": { "type": "string" },
+          "description": { "type": "string" }
+        }
+      }
+    },
+    "live_data_snapshot": {
+      "type": "object",
+      "description": "Snapshot of key live PIDs at time of scan",
+      "properties": {
+        "rpm": { "type": "number" },
+        "coolant_temp_c": { "type": "number" },
+        "speed_kph": { "type": "number" },
+        "fuel_level_pct": { "type": "number" },
+        "engine_load_pct": { "type": "number" },
+        "intake_temp_c": { "type": "number" }
+      }
+    },
+    "ai_analysis": {
+      "type": "object",
+      "description": "AI-generated diagnosis for the codes found",
+      "properties": {
+        "summary": { "type": "string" },
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "code": { "type": "string" },
+              "plain_english": { "type": "string" },
+              "likely_causes": { "type": "array", "items": { "type": "string" } },
+              "urgency": { "type": "string", "enum": ["Low", "Medium", "High", "Critical"] },
+              "recommended_fix_order": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        }
+      }
+    },
+    "codes_cleared": {
+      "type": "boolean",
+      "description": "Whether the codes were cleared from the vehicle during this session"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Technician notes about this scan"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["Completed", "Codes Cleared", "Needs Follow-up"],
+      "default": "Completed"
+    }
+  },
+  "required": [
+    "vehicle_id"
+  ],
+  "rls": {
+    "create": true,
+    "read": {
+      "$or": [
+        { "created_by": "{{user.email}}" },
+        { "data.shop_owner_email": "{{user.email}}" }
+      ]
+    },
+    "update": {
+      "$or": [
+        { "created_by": "{{user.email}}" },
+        { "data.shop_owner_email": "{{user.email}}" }
+      ]
+    },
+    "delete": {
+      "$or": [
+        { "created_by": "{{user.email}}" },
+        { "data.shop_owner_email": "{{user.email}}" }
+      ]
+    }
+  }
+}

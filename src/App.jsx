@@ -33,6 +33,7 @@ import PartsLookup from './pages/PartsLookup';
 import ImportCustomers from './pages/ImportCustomers';
 import CustomerDetails from './pages/CustomerDetails';
 import MissingPhones from './pages/MissingPhones';
+import Diagnostics from './pages/Diagnostics';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -328,6 +329,7 @@ const AuthenticatedApp = () => {
         <Route path="/ImportCustomers" element={<LayoutWrapper currentPageName="ImportCustomers"><ImportCustomers /></LayoutWrapper>} />
         <Route path="/CustomerDetails" element={<LayoutWrapper currentPageName="Customers"><CustomerDetails /></LayoutWrapper>} />
         <Route path="/MissingPhones" element={<LayoutWrapper currentPageName="MissingPhones"><MissingPhones /></LayoutWrapper>} />
+        <Route path="/Diagnostics" element={<LayoutWrapper currentPageName="Diagnostics"><Diagnostics /></LayoutWrapper>} />
         <Route path="/PaymentWall" element={<PaymentWall />} />
         <Route path="/landing" element={<Landing />} />
         <Route path="/TechPortal" element={<TechPortal />} />
