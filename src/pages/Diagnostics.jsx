@@ -31,6 +31,7 @@ export default function Diagnostics() {
   const clientRef = useRef(null);
 
   const [reading, setReading] = useState(false);
+  const [readProgress, setReadProgress] = useState("");
   const [dtcCodes, setDtcCodes] = useState([]);
   const [liveData, setLiveData] = useState(null);
   const [clearing, setClearing] = useState(false);
@@ -85,10 +86,20 @@ export default function Diagnostics() {
     setReading(true);
     setConnError("");
     setClearedMsg("");
+    setReadProgress("Talking to the vehicle's computer...");
     try {
       // Run sequentially — both share one Bluetooth write/notify pipe, and the
-      // adapter can only handle one in-flight command at a time.
-      const codes = await clientRef.current.readDTCs();
+      // adapter can only handle one in-flight command at a time. First query
+      // can take up to ~75s on some clone adapters while it auto-detects the
+      // vehicle's OBD protocol — this is normal, not stuck.
+      const codes = await clientRef.current.readDTCs((attempt, total) => {
+        setReadProgress(
+          attempt === 1
+            ? "Talking to the vehicle's computer..."
+            : `Still trying (attempt ${attempt}/${total})... this can take up to a minute on first connect.`
+        );
+      });
+      setReadProgress("Pulling live sensor data...");
       const live = await clientRef.current.readLiveData();
       setDtcCodes(codes);
       setLiveData(live);
@@ -97,6 +108,7 @@ export default function Diagnostics() {
       setConnError(err?.message || "Failed to read codes from the vehicle.");
     } finally {
       setReading(false);
+      setReadProgress("");
     }
   };
 
@@ -271,6 +283,7 @@ For each code, give a plain-English explanation, the most likely causes ordered 
         )}
 
         {connState === "connected" && (
+          <div className="flex flex-col gap-2">
           <div className="flex flex-wrap gap-3">
             <Button
               size="sm"
@@ -293,6 +306,10 @@ For each code, give a plain-English explanation, the most likely causes ordered 
                 Clear Codes
               </Button>
             )}
+          </div>
+          {readProgress && (
+            <p className="text-xs text-muted-foreground italic">{readProgress}</p>
+          )}
           </div>
         )}
         {clearedMsg && (

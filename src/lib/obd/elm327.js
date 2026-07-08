@@ -170,21 +170,35 @@ export class ELM327Client {
   }
 
   /** Read Diagnostic Trouble Codes (Mode 03). Returns array of { raw, code }. */
-  async readDTCs() {
-    let response;
-    try {
-      response = await this._sendCommand("03", 15000); // protocol auto-search can be slow on clone chips
-    } catch (err) {
-      throw new Error(
-        "No response from the vehicle. Make sure the ignition is ON (key to ON/ACC, engine doesn't need to be running) and try again — the adapter connects over Bluetooth fine even with the key off, but reading codes needs the car's computer powered up."
-      );
+  /**
+   * Read Diagnostic Trouble Codes (Mode 03). Some clone BLE chips are slow to
+   * complete their protocol auto-search on the very first real query — give
+   * it several increasingly patient attempts (up to ~75s total) before
+   * giving up, rather than failing after a single short timeout.
+   */
+  async readDTCs(onProgress) {
+    const attempts = [15000, 25000, 35000];
+    let lastErr;
+
+    for (let i = 0; i < attempts.length; i++) {
+      if (onProgress) onProgress(i + 1, attempts.length);
+      try {
+        const response = await this._sendCommand("03", attempts[i]);
+        if (/UNABLE TO CONNECT/i.test(response)) {
+          lastErr = new Error("UNABLE_TO_CONNECT");
+          await this._sendCommand("ATSP0", 5000).catch(() => {}); // re-kick protocol search
+          continue;
+        }
+        return parseDTCResponse(response);
+      } catch (err) {
+        lastErr = err;
+        await new Promise((r) => setTimeout(r, 1500));
+      }
     }
-    if (/UNABLE TO CONNECT/i.test(response)) {
-      throw new Error(
-        "Adapter couldn't reach the vehicle's computer. Confirm the key is in the ON/ACC position and the adapter is fully seated in the OBD2 port, then try again."
-      );
-    }
-    return parseDTCResponse(response);
+
+    throw new Error(
+      "Still no response from the vehicle after several tries (~75s). Check: 1) key is in the ON/ACC position (engine doesn't need to be running, but ignition must be on), 2) the adapter is fully clicked into the OBD2 port — not loose, 3) try cycling the key off and back on, then reconnect. If it still won't respond, this vehicle's OBD protocol may not be supported by this adapter."
+    );
   }
 
   /** Clear Diagnostic Trouble Codes + turn off the check engine light (Mode 04). */
