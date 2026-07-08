@@ -86,10 +86,10 @@ export default function Diagnostics() {
     setConnError("");
     setClearedMsg("");
     try {
-      const [codes, live] = await Promise.all([
-        clientRef.current.readDTCs(),
-        clientRef.current.readLiveData(),
-      ]);
+      // Run sequentially — both share one Bluetooth write/notify pipe, and the
+      // adapter can only handle one in-flight command at a time.
+      const codes = await clientRef.current.readDTCs();
+      const live = await clientRef.current.readLiveData();
       setDtcCodes(codes);
       setLiveData(live);
       setAnalysis(null);

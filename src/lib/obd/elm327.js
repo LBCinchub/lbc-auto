@@ -47,6 +47,7 @@ export class ELM327Client {
     this.notifyChar = null;
     this.buffer = "";
     this.pending = null; // { resolve, reject, timeout }
+    this._queue = Promise.resolve(); // serializes commands so concurrent callers can't interleave
   }
 
   static isSupported() {
@@ -100,7 +101,7 @@ export class ELM327Client {
     await this._sendCommand("ATE0");        // echo off
     await this._sendCommand("ATL0");        // linefeeds off
     await this._sendCommand("ATH0");        // headers off
-    await this._sendCommand("ATSP0");       // auto-detect protocol
+    await this._sendCommand("ATSP0", 5000);  // auto-detect protocol
 
     return { name: this.device.name || "OBD2 Adapter" };
   }
@@ -136,7 +137,17 @@ export class ELM327Client {
     }
   }
 
-  async _sendCommand(command, timeoutMs = 4000) {
+  // Public entry point — queues onto _queue so only one command is ever
+  // in flight at a time, even if callers fire multiple requests concurrently
+  // (e.g. Promise.all([readDTCs(), readLiveData()])).
+  _sendCommand(command, timeoutMs = 4000) {
+    const run = () => this._sendCommandInternal(command, timeoutMs);
+    const result = this._queue.then(run, run);
+    this._queue = result.catch(() => {}); // keep the chain alive even after a failed command
+    return result;
+  }
+
+  async _sendCommandInternal(command, timeoutMs) {
     if (!this.writeChar) throw new Error("Not connected to an OBD2 adapter.");
 
     return new Promise(async (resolve, reject) => {
@@ -160,7 +171,19 @@ export class ELM327Client {
 
   /** Read Diagnostic Trouble Codes (Mode 03). Returns array of { raw, code }. */
   async readDTCs() {
-    const response = await this._sendCommand("03");
+    let response;
+    try {
+      response = await this._sendCommand("03", 15000); // protocol auto-search can be slow on clone chips
+    } catch (err) {
+      throw new Error(
+        "No response from the vehicle. Make sure the ignition is ON (key to ON/ACC, engine doesn't need to be running) and try again — the adapter connects over Bluetooth fine even with the key off, but reading codes needs the car's computer powered up."
+      );
+    }
+    if (/UNABLE TO CONNECT/i.test(response)) {
+      throw new Error(
+        "Adapter couldn't reach the vehicle's computer. Confirm the key is in the ON/ACC position and the adapter is fully seated in the OBD2 port, then try again."
+      );
+    }
     return parseDTCResponse(response);
   }
 
