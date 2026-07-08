@@ -15,6 +15,12 @@
 // Known UART-style service profiles used by common BLE ELM327 adapters.
 // We try each until requestDevice/connect succeeds with a matching service.
 const KNOWN_UART_PROFILES = [
+  // Vgate iCar Pro 2S (BLE 5.x) — confirmed profile for this specific model
+  {
+    service: "000018f0-0000-1000-8000-00805f9b34fb",
+    write: "00002af1-0000-1000-8000-00805f9b34fb",
+    notify: "00002af0-0000-1000-8000-00805f9b34fb",
+  },
   // Nordic UART Service (NUS) — Vgate iCar Pro BLE4.0, many others
   {
     service: "6e400001-b5a3-f393-e0a9-e50e24dcca9e",
