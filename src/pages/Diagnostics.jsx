@@ -92,16 +92,35 @@ export default function Diagnostics() {
       // adapter can only handle one in-flight command at a time. First query
       // can take up to ~75s on some clone adapters while it auto-detects the
       // vehicle's OBD protocol — this is normal, not stuck.
-      const codes = await clientRef.current.readDTCs((attempt, total) => {
+      const stored = await clientRef.current.readDTCs((attempt, total) => {
         setReadProgress(
           attempt === 1
             ? "Talking to the vehicle's computer..."
             : `Still trying (attempt ${attempt}/${total})... this can take up to a minute on first connect.`
         );
       });
+      setReadProgress("Checking for pending codes...");
+      const pending = await clientRef.current.readPendingDTCs();
+      setReadProgress("Checking for permanent codes...");
+      const permanent = await clientRef.current.readPermanentDTCs();
       setReadProgress("Pulling live sensor data...");
       const live = await clientRef.current.readLiveData();
-      setDtcCodes(codes);
+
+      // Merge all codes, tagging each with its type; dedupe by code (stored wins)
+      const seen = new Set();
+      const merged = [];
+      const addCodes = (arr, type) => {
+        for (const c of arr) {
+          if (seen.has(c.code)) continue;
+          seen.add(c.code);
+          merged.push({ ...c, type });
+        }
+      };
+      addCodes(stored, "stored");
+      addCodes(pending, "pending");
+      addCodes(permanent, "permanent");
+
+      setDtcCodes(merged);
       setLiveData(live);
       setAnalysis(null);
     } catch (err) {
@@ -136,7 +155,7 @@ export default function Diagnostics() {
         : "Unknown vehicle";
 
       const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `You are an expert automotive diagnostic technician. A vehicle (${vehicleDesc}) was just scanned and returned these OBD2 trouble codes: ${dtcCodes.map(c => c.code).join(", ")}.
+        prompt: `You are an expert automotive diagnostic technician. A vehicle (${vehicleDesc}) was just scanned and returned these OBD2 trouble codes: ${dtcCodes.map(c => `${c.code} (${c.type})`).join(", ")}.
 ${liveData ? `Live data at time of scan: ${JSON.stringify(liveData)}.` : ""}
 For each code, give a plain-English explanation, the most likely causes ordered from most to least probable, an urgency level, and a recommended fix order (cheapest/most-likely-first). Also give a one to two sentence overall summary for the technician.`,
         response_json_schema: {
@@ -342,6 +361,11 @@ For each code, give a plain-English explanation, the most likely causes ordered 
           <div className="flex items-center justify-between">
             <h2 className="text-white font-semibold text-sm flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-amber-400" /> Trouble Codes ({dtcCodes.length})
+              <span className="text-xs text-gray-500 font-normal">
+                {dtcCodes.filter(c => c.type === "stored").length} stored ·{" "}
+                {dtcCodes.filter(c => c.type === "pending").length} pending ·{" "}
+                {dtcCodes.filter(c => c.type === "permanent").length} permanent
+              </span>
             </h2>
             <Button
               size="sm"
@@ -360,7 +384,18 @@ For each code, give a plain-English explanation, the most likely causes ordered 
               return (
                 <div key={i} className="bg-gray-800/60 border border-gray-700 rounded-lg p-4">
                   <div className="flex items-center justify-between flex-wrap gap-2">
-                    <span className="text-white font-mono font-semibold">{c.code}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-white font-mono font-semibold">{c.code}</span>
+                      {c.type !== "stored" && (
+                        <span className={`text-[10px] uppercase tracking-wide border rounded-full px-2 py-0.5 ${
+                          c.type === "pending"
+                            ? "bg-yellow-500/15 text-yellow-400 border-yellow-500/30"
+                            : "bg-blue-500/15 text-blue-400 border-blue-500/30"
+                        }`}>
+                          {c.type}
+                        </span>
+                      )}
+                    </div>
                     {finding?.urgency && (
                       <span className={`text-xs border rounded-full px-2.5 py-0.5 ${URGENCY_STYLES[finding.urgency] || ""}`}>
                         {finding.urgency}

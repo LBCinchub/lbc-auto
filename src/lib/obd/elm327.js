@@ -201,6 +201,33 @@ export class ELM327Client {
     );
   }
 
+  /** Read pending DTCs (Mode 07) — codes detected but not yet confirmed/stored. */
+  async readPendingDTCs() {
+    try {
+      const response = await this._sendCommand("07", 15000);
+      if (/NO DATA|UNABLE TO CONNECT/i.test(response)) return [];
+      // Mode 07 response has no "47" prefix on some adapters — handle both
+      const clean = response.replace(/\s+/g, "").replace(/SEARCHING\.*/gi, "").trim();
+      const hex = clean.replace(/^47/i, "");
+      return parseDTCFromHex(hex);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /** Read permanent DTCs (Mode 0A) — codes the ECU won't let you clear; only the vehicle itself clears them once the fault is fixed. */
+  async readPermanentDTCs() {
+    try {
+      const response = await this._sendCommand("0A", 15000);
+      if (/NO DATA|UNABLE TO CONNECT/i.test(response)) return [];
+      const clean = response.replace(/\s+/g, "").replace(/SEARCHING\.*/gi, "").trim();
+      const hex = clean.replace(/^4A/i, "");
+      return parseDTCFromHex(hex);
+    } catch (e) {
+      return [];
+    }
+  }
+
   /** Clear Diagnostic Trouble Codes + turn off the check engine light (Mode 04). */
   async clearDTCs() {
     const response = await this._sendCommand("04");
@@ -264,6 +291,18 @@ export function parseDTCResponse(response) {
     if (code) codes.push({ raw: chunk, code });
   }
 
+  return codes;
+}
+
+/** Parse a raw hex string (already stripped of mode prefix) into DTC codes. */
+function parseDTCFromHex(hex) {
+  const codes = [];
+  for (let i = 0; i + 4 <= hex.length; i += 4) {
+    const chunk = hex.slice(i, i + 4);
+    if (chunk === "0000") continue;
+    const code = decodeDTC(chunk);
+    if (code) codes.push({ raw: chunk, code });
+  }
   return codes;
 }
 
