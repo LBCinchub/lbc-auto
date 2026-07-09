@@ -290,6 +290,15 @@ const AuthenticatedApp = () => {
     if (now > trialEndDate && user.subscription_status !== 'active') {
       return <Routes><Route path="*" element={<PaymentWall />} /></Routes>;
     }
+
+    // Monthly billing check — active users get gated back to the payment wall
+    // once their 30-day period lapses without a renewal payment.
+    if (user.subscription_status === 'active' && user.setup_fee_paid && user.next_billing_date) {
+      const nextBillingDate = new Date(user.next_billing_date);
+      if (now > nextBillingDate) {
+        return <Routes><Route path="*" element={<PaymentWall />} /></Routes>;
+      }
+    }
   }
 
   // Render the main app

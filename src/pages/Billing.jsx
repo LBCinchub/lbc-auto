@@ -2,13 +2,19 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { CreditCard, Calendar, CheckCircle2, Clock, ArrowLeft } from "lucide-react";
+import { CreditCard, Calendar, CheckCircle2, Clock, ArrowLeft, Check, Loader2, Gauge } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
+
+const PLANS = {
+  basic: { label: "Basic", price: 199, desc: "Everything except LBC AI Diagnostics" },
+  pro:   { label: "Pro",   price: 299, desc: "All features, including LBC AI Diagnostics" },
+};
 
 export default function Billing() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [trialDaysLeft, setTrialDaysLeft] = useState(0);
+  const [switchingTier, setSwitchingTier] = useState(false);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -26,6 +32,19 @@ export default function Billing() {
     };
     loadUser();
   }, []);
+
+  const currentTier = user?.plan_tier ? PLANS[user.plan_tier] : null;
+
+  const handleSwitchTier = async (tier) => {
+    if (tier === user?.plan_tier || switchingTier) return;
+    setSwitchingTier(true);
+    try {
+      const updated = await base44.auth.updateMe({ plan_tier: tier });
+      setUser(updated);
+    } finally {
+      setSwitchingTier(false);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -68,10 +87,53 @@ export default function Billing() {
               <CheckCircle2 className="w-6 h-6 text-green-400" />
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-white mb-1">Active Subscription</h3>
-              <p className="text-green-200">Your account is active and verified</p>
+              <h3 className="text-lg font-semibold text-white mb-1">
+                Active — {currentTier?.label || "—"} Plan (${currentTier?.price || "—"}/mo)
+              </h3>
+              <p className="text-green-200">
+                {user?.next_billing_date
+                  ? `Renews by ${new Date(user.next_billing_date).toLocaleDateString()}`
+                  : "Account verified"}
+              </p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Plan picker */}
+      {user?.subscription_status === 'active' && (
+        <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-6 space-y-4">
+          <div className="flex items-center gap-3">
+            <Gauge className="w-5 h-5 text-sky-400" />
+            <h3 className="font-semibold text-white">Your Plan</h3>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {Object.entries(PLANS).map(([key, plan]) => (
+              <button
+                key={key}
+                onClick={() => handleSwitchTier(key)}
+                disabled={switchingTier}
+                className={`text-left rounded-lg border p-4 transition-colors ${
+                  user?.plan_tier === key
+                    ? "border-sky-500 bg-sky-500/10"
+                    : "border-gray-700 bg-gray-800/50 hover:border-gray-600"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-white">{plan.label}</span>
+                  {user?.plan_tier === key && <Check className="w-4 h-4 text-sky-400" />}
+                </div>
+                <p className="text-xl font-bold text-white mt-1">${plan.price}<span className="text-xs text-gray-400 font-normal">/mo</span></p>
+                <p className="text-xs text-gray-400 mt-1">{plan.desc}</p>
+              </button>
+            ))}
+          </div>
+          {switchingTier && (
+            <p className="text-xs text-gray-500 flex items-center gap-2"><Loader2 className="w-3 h-3 animate-spin" /> Updating plan...</p>
+          )}
+          <p className="text-xs text-gray-500">
+            Plan changes take effect on your next renewal payment — no charge today.
+          </p>
         </div>
       )}
 
@@ -91,7 +153,11 @@ export default function Billing() {
             <h3 className="font-semibold text-white">Next Payment</h3>
           </div>
           <p className="text-gray-400 text-sm">
-            {user?.subscription_status === 'trial' ? 'Due after trial ends' : 'Automatic renewal'}
+            {user?.subscription_status === 'trial'
+              ? 'Due after trial ends'
+              : user?.next_billing_date
+                ? new Date(user.next_billing_date).toLocaleDateString()
+                : '—'}
           </p>
         </div>
       </div>
@@ -101,9 +167,11 @@ export default function Billing() {
         <div className="rounded-xl border border-gray-800/50 bg-gray-900/50 p-6 space-y-4">
           <h3 className="font-semibold text-white flex items-center gap-2">
             <span className="w-6 h-6 rounded-full bg-sky-500 text-white text-xs flex items-center justify-center font-bold">i</span>
-            Ready to upgrade?
+            Ready to activate?
           </h3>
-          <p className="text-gray-400">Send $2,000 USDC to upgrade your account and continue after your trial.</p>
+          <p className="text-gray-400">
+            One-time $2,999 setup covers onboarding + 4 days of on-site training. Then $199/mo (Basic) or $299/mo (Pro, includes AI Diagnostics).
+          </p>
           <Button
             onClick={() => window.location.href = '/PaymentWall'}
             className="bg-sky-500 hover:bg-sky-600 text-white w-full sm:w-auto"

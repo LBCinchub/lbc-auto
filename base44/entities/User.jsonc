@@ -57,6 +57,25 @@
       "type": "string",
       "description": "Date payment was received"
     },
+    "setup_fee_paid": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the $2,999 onboarding/setup + training fee has been paid"
+    },
+    "plan_tier": {
+      "type": "string",
+      "enum": ["basic", "pro", "legacy"],
+      "description": "Monthly plan — basic ($199/mo, no AI Diagnostics), pro ($299/mo, all features including AI Diagnostics), or legacy (grandfathered pre-existing customer on the old flat-fee model — same access as basic, no AI Diagnostics, no recurring billing wall applied)."
+    },
+    "next_billing_date": {
+      "type": "string",
+      "description": "Date the next monthly payment is due — access is gated back to the payment wall if this passes without renewal"
+    },
+    "training_extension_days": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of extra $300/day training days purchased beyond the included 4 days (tracked for billing reference, charged manually)"
+    },
     "notif_sms_repair_status": {
       "type": "boolean",
       "default": true,

@@ -392,6 +392,26 @@ export default function Diagnostics() {
     ? `${selectedVehicle.year || ""} ${selectedVehicle.make || ""} ${selectedVehicle.model || ""}`.trim()
     : "—";
 
+  // Diagnostics + AI is a Pro-tier feature — Basic plan shops get an upsell instead of the tool.
+  if (user && user.plan_tier !== "pro") {
+    return (
+      <div className="max-w-lg mx-auto mt-16 text-center space-y-4 bg-gray-900 border border-gray-800 rounded-xl p-8">
+        <Gauge className="w-10 h-10 text-fuchsia-400 mx-auto" />
+        <h2 className="text-xl font-bold text-white">AI Diagnostics is a Pro feature</h2>
+        <p className="text-gray-400 text-sm">
+          Live Bluetooth OBD2 scanning, AI root-cause analysis, and one-click estimate
+          generation are included on the Pro plan ($299/mo). You're currently on Basic.
+        </p>
+        <Button
+          onClick={() => (window.location.href = "/Billing")}
+          className="bg-fuchsia-600 hover:bg-fuchsia-700 text-white"
+        >
+          Upgrade to Pro
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <style>{`

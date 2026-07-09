@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { transaction_id } = await req.json();
+    const { transaction_id, phase, plan_tier } = await req.json();
 
     if (!transaction_id) {
       return Response.json({ error: "Transaction ID required" }, { status: 400 });
@@ -61,14 +61,39 @@ Deno.serve(async (req) => {
       return Response.json({ error: "Payment not sent to correct wallet" }, { status: 400 });
     }
 
-    // Update user subscription
-    await base44.auth.updateMe({
+    // Prevent replaying the exact same transaction signature to unlock again
+    if (transaction_id === user.payment_transaction_id) {
+      return Response.json({ error: "This transaction has already been used to verify a payment. Please send a new payment." }, { status: 400 });
+    }
+
+    const today = new Date();
+    const nextBillingDate = new Date(today);
+    nextBillingDate.setDate(nextBillingDate.getDate() + 30);
+
+    const tier = plan_tier === "basic" ? "basic" : "pro";
+    const isSetupPhase = phase === "setup" || !user.setup_fee_paid;
+
+    const updates = {
       subscription_status: "active",
       payment_transaction_id: transaction_id,
-      payment_date: new Date().toISOString().split("T")[0],
-    });
+      payment_date: today.toISOString().split("T")[0],
+      next_billing_date: nextBillingDate.toISOString().split("T")[0],
+    };
 
-    return Response.json({ success: true, message: "Payment verified" });
+    if (isSetupPhase) {
+      updates.setup_fee_paid = true;
+      updates.plan_tier = tier;
+    }
+    // On renewal, keep the user's existing plan_tier unless they explicitly changed it via Settings/Billing
+
+    await base44.auth.updateMe(updates);
+
+    return Response.json({
+      success: true,
+      message: isSetupPhase ? "Setup payment verified — account activated" : "Renewal payment verified",
+      plan_tier: isSetupPhase ? tier : user.plan_tier,
+      next_billing_date: updates.next_billing_date,
+    });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }

@@ -1,16 +1,36 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Copy, ExternalLink, Zap, HeadphonesIcon } from "lucide-react";
+import { Copy, ExternalLink, Zap, HeadphonesIcon, Check, Loader2 } from "lucide-react";
+
+const PLANS = {
+  basic: { label: "Basic", price: 199, desc: "Everything except LBC AI Diagnostics" },
+  pro:   { label: "Pro",   price: 299, desc: "All features, including LBC AI Diagnostics" },
+};
 
 export default function PaymentWall() {
+  const [user, setUser] = useState(null);
+  const [loadingUser, setLoadingUser] = useState(true);
   const [copying, setCopying] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [txId, setTxId] = useState("");
   const [verifying, setVerifying] = useState(false);
+  const [selectedTier, setSelectedTier] = useState("pro");
 
   const walletAddress = "2SYh5UjyGEVwCMTQrY5LJrGRfEAmU9MqXECRrAMsNK34";
-  const amount = "2000";
+
+  useEffect(() => {
+    base44.auth.me()
+      .then((u) => {
+        setUser(u);
+        if (u?.plan_tier) setSelectedTier(u.plan_tier);
+      })
+      .finally(() => setLoadingUser(false));
+  }, []);
+
+  const isSetupPhase = !user?.setup_fee_paid;
+  const amount = isSetupPhase ? 2999 : PLANS[user?.plan_tier || selectedTier].price;
+  const phaseLabel = isSetupPhase ? "One-time setup + training" : `${PLANS[user?.plan_tier || selectedTier].label} plan — monthly renewal`;
 
   const copyWallet = () => {
     navigator.clipboard.writeText(walletAddress);
@@ -25,8 +45,12 @@ export default function PaymentWall() {
     }
     setVerifying(true);
     try {
-      await base44.functions.invoke("verifyPayment", { transaction_id: txId });
-      alert("Payment verified! Your account is now active.");
+      await base44.functions.invoke("verifyPayment", {
+        transaction_id: txId,
+        phase: isSetupPhase ? "setup" : "renewal",
+        plan_tier: isSetupPhase ? selectedTier : (user?.plan_tier || selectedTier),
+      });
+      alert(isSetupPhase ? "Setup payment verified! Your account is now active." : "Payment verified! Your subscription has been renewed.");
       window.location.href = "/";
     } catch (err) {
       alert("Failed to verify payment: " + (err?.response?.data?.error || err.message));
@@ -34,6 +58,14 @@ export default function PaymentWall() {
       setVerifying(false);
     }
   };
+
+  if (loadingUser) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <Loader2 className="w-6 h-6 text-sky-400 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
@@ -43,14 +75,49 @@ export default function PaymentWall() {
             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-sky-500 to-purple-600 flex items-center justify-center mx-auto">
               <Zap className="w-6 h-6 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-white">Subscription Required</h1>
-            <p className="text-gray-400 text-sm">Your free trial has ended. Activate your account to continue.</p>
+            <h1 className="text-2xl font-bold text-white">
+              {isSetupPhase ? "Activate Your Account" : "Subscription Renewal"}
+            </h1>
+            <p className="text-gray-400 text-sm">
+              {isSetupPhase
+                ? "Your free trial has ended. One-time setup covers onboarding + 4 days of on-site training (opening to closing)."
+                : "Your monthly billing period has ended. Renew to keep access."}
+            </p>
           </div>
+
+          {isSetupPhase && (
+            <div className="space-y-2">
+              <p className="text-xs text-gray-500">Choose your monthly plan (starts after this setup payment)</p>
+              <div className="grid grid-cols-2 gap-3">
+                {Object.entries(PLANS).map(([key, plan]) => (
+                  <button
+                    key={key}
+                    onClick={() => setSelectedTier(key)}
+                    className={`text-left rounded-lg border p-3 transition-colors ${
+                      selectedTier === key
+                        ? "border-sky-500 bg-sky-500/10"
+                        : "border-gray-700 bg-gray-800/50 hover:border-gray-600"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-white">{plan.label}</span>
+                      {selectedTier === key && <Check className="w-4 h-4 text-sky-400" />}
+                    </div>
+                    <p className="text-lg font-bold text-white mt-1">${plan.price}<span className="text-xs text-gray-400 font-normal">/mo</span></p>
+                    <p className="text-[11px] text-gray-400 mt-1">{plan.desc}</p>
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-gray-500">
+                Need more than 4 training days? Extra days are $300/day — billed separately, just ask.
+              </p>
+            </div>
+          )}
 
           <div className="bg-sky-500/10 border border-sky-500/30 rounded-lg p-4 space-y-3">
             <div>
-              <p className="text-xs text-gray-500 mb-1">Send Amount</p>
-              <p className="text-2xl font-bold text-white">{amount} USDC</p>
+              <p className="text-xs text-gray-500 mb-1">{phaseLabel}</p>
+              <p className="text-2xl font-bold text-white">${amount.toLocaleString()} USDC</p>
               <p className="text-xs text-gray-400">or equivalent in SOL</p>
             </div>
 
@@ -72,6 +139,7 @@ export default function PaymentWall() {
                   <Copy className="w-3.5 h-3.5" />
                 </Button>
               </div>
+              {copying && <p className="text-[11px] text-emerald-400">Copied!</p>}
             </div>
 
             <a
