@@ -446,9 +446,23 @@ export default function Diagnostics() {
                           )}
                         </div>
                       )}
-                      {finding.likely_causes?.length > 0 && (
-                        <div>
-                          <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">Likely causes</p>
+                      {(finding.is_root_cause || finding.is_symptom) && (
+                        <div className="flex gap-1.5 flex-wrap">
+                          {finding.is_root_cause && (
+                            <span className="text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-full px-2 py-0.5">
+                              ⚡ ROOT CAUSE
+                            </span>
+                          )}
+                          {finding.is_symptom && (
+                            <span className="text-xs font-semibold bg-slate-500/20 text-slate-400 border border-slate-500/40 rounded-full px-2 py-0.5">
+                              ↓ Symptom (triggered by root cause)
+                            </span>
+                          )}
+                        </div>
+                      )}
+                       {finding.likely_causes?.length > 0 && (
+                         <div>
+                           <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">Likely causes</p>
                           <ul className="list-disc list-inside text-gray-300 space-y-0.5">
                             {finding.likely_causes.map((cause, j) => <li key={j}>{cause}</li>)}
                           </ul>
@@ -492,6 +506,15 @@ export default function Diagnostics() {
           {analysis?.summary && (
             <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4 text-sm text-purple-200">
               {analysis.summary}
+            </div>
+          )}
+
+          {analysis?.root_cause_analysis && (
+            <div className="bg-amber-500/10 border border-amber-500/40 rounded-lg p-4 space-y-1">
+              <h3 className="text-amber-400 font-bold text-sm flex items-center gap-2 uppercase tracking-wide">
+                ⚡ Root Cause Analysis
+              </h3>
+              <p className="text-gray-200 text-sm leading-relaxed whitespace-pre-wrap">{analysis.root_cause_analysis}</p>
             </div>
           )}
 
@@ -676,6 +699,13 @@ export default function Diagnostics() {
         {analysis?.summary && (
           <div style={{ marginBottom: 16, padding: 12, border: "1px solid #ccc", fontSize: 13 }}>
             <strong>Summary:</strong> {analysis.summary}
+          </div>
+        )}
+
+        {analysis?.root_cause_analysis && (
+          <div style={{ marginBottom: 16, padding: 12, border: "2px solid #f59e0b", background: "#fffbeb", fontSize: 13 }}>
+            <strong style={{ color: "#b45309", textTransform: "uppercase", letterSpacing: "0.05em" }}>⚡ Root Cause Analysis</strong>
+            <p style={{ margin: "6px 0 0", whiteSpace: "pre-wrap" }}>{analysis.root_cause_analysis}</p>
           </div>
         )}
 

@@ -67,6 +67,13 @@ Deno.serve(async (req) => {
 - estimated_labor_cost: hours × our labor rate
 - parts_needed: list of parts (name + approximate cost if known)
 - in_stock: true if we likely have the part in our inventory
+CRITICAL — Think holistically about ALL codes together before giving per-code breakdowns. Codes are often related: one underlying fault triggers multiple codes. Analyze the full picture and determine:
+- Which code is the ROOT CAUSE and which codes are SYMPTOMS (secondary/triggered by the root cause).
+- How the codes connect to each other (e.g., a misfire P030X can cause a catalytic P0420, a lean P0171 can cause a misfire, etc.).
+- Whether fixing the root cause will clear the secondary codes automatically.
+
+Provide a "root_cause_analysis" paragraph (3-5 sentences) that synthesizes the full picture — this must be DISTINCT from the summary. It should explain: the likely single root cause, how the other codes are downstream effects of it, and the recommended fix strategy (fix root cause first, then re-scan to see if secondary codes clear).
+
 Also provide an overall "summary" (1-2 sentences) and a "shop_advice" section with: total_estimated_cost, recommended_action (what to tell the customer), and priority_order (which fix to do first if multiple codes).`;
 
       const result = await base44.integrations.Core.InvokeLLM({
@@ -75,6 +82,7 @@ Also provide an overall "summary" (1-2 sentences) and a "shop_advice" section wi
           type: "object",
           properties: {
             summary: { type: "string" },
+            root_cause_analysis: { type: "string" },
             shop_advice: {
               type: "object",
               properties: {
@@ -92,6 +100,8 @@ Also provide an overall "summary" (1-2 sentences) and a "shop_advice" section wi
                   plain_english: { type: "string" },
                   likely_causes: { type: "array", items: { type: "string" } },
                   urgency: { type: "string", enum: ["Low", "Medium", "High", "Critical"] },
+                  is_root_cause: { type: "boolean" },
+                  is_symptom: { type: "boolean" },
                   recommended_fix_order: { type: "array", items: { type: "string" } },
                   estimated_labor_hours: { type: "number" },
                   estimated_labor_cost: { type: "number" },
