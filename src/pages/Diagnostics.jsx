@@ -623,6 +623,31 @@ export default function Diagnostics() {
                 )}
               </div>
 
+              {analysis.inspection_decision.live_data_checks?.length > 0 && (
+                <div className="bg-sky-500/10 border border-sky-500/30 rounded-md p-3 mt-2">
+                  <p className="text-xs uppercase tracking-wide text-sky-400 font-bold flex items-center gap-1 mb-2">
+                    <Gauge className="w-3 h-3" /> Live Data — Sensors to Check
+                  </p>
+                  <div className="space-y-2">
+                    {analysis.inspection_decision.live_data_checks.map((check, j) => (
+                      <div key={j} className="bg-gray-800/40 border border-gray-700 rounded-md p-2.5">
+                        <div className="flex items-center justify-between flex-wrap gap-2 mb-1">
+                          <span className="text-white text-sm font-semibold">{check.sensor}</span>
+                          {check.normal_range && (
+                            <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-full px-2 py-0.5">
+                              Normal: {check.normal_range}
+                            </span>
+                          )}
+                        </div>
+                        {check.what_to_look_for && (
+                          <p className="text-gray-300 text-xs">📋 {check.what_to_look_for}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {analysis.inspection_decision.safety_warnings?.length > 0 && (
                 <div className="bg-red-500/10 border border-red-500/30 rounded-md p-3 mt-2">
                   <p className="text-xs uppercase tracking-wide text-red-400 font-bold flex items-center gap-1 mb-1">
@@ -868,6 +893,29 @@ export default function Diagnostics() {
                 <ol style={{ margin: "2px 0 2px 20px", padding: 0 }}>
                   {analysis.inspection_decision.post_repair_steps.map((s, j) => <li key={j}>{s}</li>)}
                 </ol>
+              </div>
+            )}
+            {analysis.inspection_decision.live_data_checks?.length > 0 && (
+              <div style={{ margin: "6px 0" }}>
+                <strong>Live Data — Sensors to Check:</strong>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid #ccc" }}>
+                      <th style={{ textAlign: "left", padding: "2px 4px" }}>Sensor</th>
+                      <th style={{ textAlign: "left", padding: "2px 4px" }}>What to Look For</th>
+                      <th style={{ textAlign: "left", padding: "2px 4px" }}>Normal Range</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {analysis.inspection_decision.live_data_checks.map((c, j) => (
+                      <tr key={j} style={{ borderBottom: "1px solid #eee" }}>
+                        <td style={{ padding: "3px 4px", fontWeight: 600 }}>{c.sensor}</td>
+                        <td style={{ padding: "3px 4px" }}>{c.what_to_look_for}</td>
+                        <td style={{ padding: "3px 4px" }}>{c.normal_range || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
             {analysis.inspection_decision.estimated_total_time != null && (

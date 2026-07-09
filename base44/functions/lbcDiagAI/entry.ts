@@ -84,7 +84,8 @@ CRITICAL — Provide an "inspection_decision" section that gives the mechanic a 
 - tools_needed: exact tools required for the repair (e.g., "10mm socket", "torque wrench", "OBD2 scanner for post-repair code clear")
 - safety_warnings: critical safety concerns (e.g., "Battery must be disconnected before removing airbag", "Engine must be cold before draining coolant", "Wear safety glasses when working under vehicle")
 - estimated_total_time: realistic total time including diagnosis + repair + post-repair verification (in hours)
-- post_repair_steps: what the mechanic must verify AFTER the repair (e.g., "Clear codes and road test for 10 mins", "Re-check live data for normal readings", "Confirm check engine light is off")`;
+- post_repair_steps: what the mechanic must verify AFTER the repair (e.g., "Clear codes and road test for 10 mins", "Re-check live data for normal readings", "Confirm check engine light is off")
+- live_data_checks: a list of specific sensor/PID readings the mechanic should monitor with live data to confirm or rule out the diagnosis. Each entry must have: sensor (e.g., "Fuel Trim STFT Bank 1", "O2 Sensor B1S1 Voltage", "MAF Sensor g/s"), what_to_look_for (what reading confirms the problem, e.g., "STFT above +10% indicates lean condition"), and normal_range (e.g., "-5% to +5%"). Be specific to THIS vehicle's codes — don't give generic advice.`;
 
       const result = await base44.integrations.Core.InvokeLLM({
         prompt,
@@ -112,6 +113,17 @@ CRITICAL — Provide an "inspection_decision" section that gives the mechanic a 
                 safety_warnings: { type: "array", items: { type: "string" } },
                 estimated_total_time: { type: "number" },
                 post_repair_steps: { type: "array", items: { type: "string" } },
+                live_data_checks: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      sensor: { type: "string" },
+                      what_to_look_for: { type: "string" },
+                      normal_range: { type: "string" },
+                    },
+                  },
+                },
               },
             },
             findings: {
