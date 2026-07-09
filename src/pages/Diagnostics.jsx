@@ -5,9 +5,13 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Bluetooth, BluetoothConnected, Loader2, AlertTriangle, CheckCircle2,
   Gauge, Sparkles, Trash2, Save, RefreshCw, Search, Printer, Send, Package,
+  UserPlus, Car,
 } from "lucide-react";
 import PageHeader from "../components/shared/PageHeader";
 import CustomerSearchInput from "../components/shared/CustomerSearchInput";
+import VehicleInfoBanner from "../components/diagnostics/VehicleInfoBanner";
+import QuickAddCustomerDialog from "../components/diagnostics/QuickAddCustomerDialog";
+import QuickAddVehicleDialog from "../components/diagnostics/QuickAddVehicleDialog";
 import { ELM327Client } from "../lib/obd/elm327";
 
 const URGENCY_STYLES = {
@@ -47,6 +51,10 @@ export default function Diagnostics() {
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
+
+  // Quick-add dialog state
+  const [showAddCustomer, setShowAddCustomer] = useState(false);
+  const [showAddVehicle, setShowAddVehicle] = useState(false);
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
@@ -199,6 +207,17 @@ export default function Diagnostics() {
     }
   };
 
+  const handleCustomerCreated = (newCustomer) => {
+    setCustomers(prev => [newCustomer, ...prev]);
+    setCustomerId(newCustomer.id);
+    setCustomerName(newCustomer.full_name);
+  };
+
+  const handleVehicleCreated = (newVehicle) => {
+    setVehicles(prev => [newVehicle, ...prev]);
+    setVehicleId(newVehicle.id);
+  };
+
   const handleSave = async () => {
     if (!vehicleId) return;
     setSaving(true);
@@ -267,29 +286,48 @@ export default function Diagnostics() {
           <Search className="w-4 h-4 text-sky-400" /> Select customer & vehicle
         </h2>
         <div className="grid sm:grid-cols-2 gap-4">
-          <CustomerSearchInput
-            customers={customers}
-            value={customerId}
-            onChange={(id, name) => { setCustomerId(id); setCustomerName(name); }}
-          />
-          <select
-            value={vehicleId}
-            onChange={(e) => setVehicleId(e.target.value)}
-            disabled={!customerId}
-            className="bg-gray-800 border border-gray-700 text-white rounded-md px-3 py-2 text-sm disabled:opacity-50"
-          >
-            <option value="">{customerId ? "Select a vehicle..." : "Select a customer first"}</option>
-            {vehicles.map(v => (
-              <option key={v.id} value={v.id}>
-                {v.year} {v.make} {v.model} {v.license_plate ? `— ${v.license_plate}` : ""}
-              </option>
-            ))}
-          </select>
+          <div className="space-y-1.5">
+            <CustomerSearchInput
+              customers={customers}
+              value={customerId}
+              onChange={(id, name) => { setCustomerId(id); setCustomerName(name); }}
+            />
+            <button
+              onClick={() => setShowAddCustomer(true)}
+              className="text-xs text-sky-400 hover:text-sky-300 flex items-center gap-1"
+            >
+              <UserPlus className="w-3 h-3" /> New customer
+            </button>
+          </div>
+          <div className="space-y-1.5">
+            <select
+              value={vehicleId}
+              onChange={(e) => setVehicleId(e.target.value)}
+              disabled={!customerId}
+              className="bg-gray-800 border border-gray-700 text-white rounded-md px-3 py-2 text-sm disabled:opacity-50 w-full"
+            >
+              <option value="">{customerId ? "Select a vehicle..." : "Select a customer first"}</option>
+              {vehicles.map(v => (
+                <option key={v.id} value={v.id}>
+                  {v.year} {v.make} {v.model} {v.license_plate ? `— ${v.license_plate}` : ""}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => setShowAddVehicle(true)}
+              disabled={!customerId}
+              className="text-xs text-sky-400 hover:text-sky-300 flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Car className="w-3 h-3" /> {customerId ? "Add vehicle to this customer" : "Select a customer first"}
+            </button>
+          </div>
         </div>
-        {selectedVehicle?.vin && (
-          <p className="text-xs text-gray-500">VIN: {selectedVehicle.vin}</p>
-        )}
       </div>
+
+      {/* Always-visible vehicle info banner */}
+      {selectedVehicle && (
+        <VehicleInfoBanner vehicle={selectedVehicle} customerName={customerName} />
+      )}
 
       {/* Connection panel */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
@@ -617,6 +655,19 @@ export default function Diagnostics() {
           </div>
         </div>
       )}
+
+      {/* Quick-add dialogs */}
+      <QuickAddCustomerDialog
+        open={showAddCustomer}
+        onClose={() => setShowAddCustomer(false)}
+        onSaved={handleCustomerCreated}
+      />
+      <QuickAddVehicleDialog
+        open={showAddVehicle}
+        onClose={() => setShowAddVehicle(false)}
+        onSaved={handleVehicleCreated}
+        customer={customerId ? { id: customerId, full_name: customerName } : null}
+      />
 
       {/* ── Print-only diagnostic report (hidden on screen) ── */}
       <div id="diag-print-report" style={{ display: "none" }}>
