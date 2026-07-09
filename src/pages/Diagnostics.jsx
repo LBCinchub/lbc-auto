@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Bluetooth, BluetoothConnected, Loader2, AlertTriangle, CheckCircle2,
-  Gauge, Sparkles, Trash2, Save, RefreshCw, Search,
+  Gauge, Sparkles, Trash2, Save, RefreshCw, Search, Printer,
 } from "lucide-react";
 import PageHeader from "../components/shared/PageHeader";
 import CustomerSearchInput from "../components/shared/CustomerSearchInput";
@@ -218,8 +218,22 @@ For each code, give a plain-English explanation, the most likely causes ordered 
 
   const bleSupported = ELM327Client.isSupported();
 
+  const handlePrint = () => window.print();
+
+  const reportVehicleInfo = selectedVehicle
+    ? `${selectedVehicle.year || ""} ${selectedVehicle.make || ""} ${selectedVehicle.model || ""}`.trim()
+    : "—";
+
   return (
     <div className="space-y-6">
+      <style>{`
+        @media print {
+          body * { visibility: hidden !important; }
+          #diag-print-report, #diag-print-report * { visibility: visible !important; }
+          #diag-print-report { position: absolute; left: 0; top: 0; width: 100%; padding: 24px; }
+          .no-print { display: none !important; }
+        }
+      `}</style>
       <PageHeader
         title="Diagnostics"
         subtitle="Read live OBD2 trouble codes with a Bluetooth adapter, get AI-powered fix guidance, and save the scan to the vehicle's history."
@@ -448,15 +462,114 @@ For each code, give a plain-English explanation, the most likely causes ordered 
             className="bg-gray-800 border-gray-700 text-white"
             rows={3}
           />
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <Button onClick={handleSave} disabled={saving} className="bg-sky-500 hover:bg-sky-600 text-white gap-2">
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               {saving ? "Saving..." : "Save Scan to Vehicle History"}
+            </Button>
+            <Button onClick={handlePrint} variant="outline" className="border-gray-700 text-gray-300 gap-2">
+              <Printer className="w-4 h-4" /> Print Report
             </Button>
             {savedMsg && <span className="text-sm text-gray-400">{savedMsg}</span>}
           </div>
         </div>
       )}
+
+      {/* ── Print-only diagnostic report (hidden on screen) ── */}
+      <div id="diag-print-report" style={{ display: "none" }}>
+        <style>{`@media print { #diag-print-report { display: block !important; } }`}</style>
+
+        <div style={{ borderBottom: "2px solid #000", paddingBottom: 12, marginBottom: 16 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>Diagnostic Scan Report</h1>
+          <p style={{ fontSize: 13, color: "#666", margin: "4px 0 0" }}>
+            Generated {new Date().toLocaleString()}
+          </p>
+        </div>
+
+        <table style={{ width: "100%", fontSize: 13, marginBottom: 16 }}>
+          <tbody>
+            <tr><td style={{ fontWeight: 700, width: 120, padding: "3px 0" }}>Customer:</td><td style={{ padding: "3px 0" }}>{customerName || "—"}</td></tr>
+            <tr><td style={{ fontWeight: 700, padding: "3px 0" }}>Vehicle:</td><td style={{ padding: "3px 0" }}>{reportVehicleInfo}</td></tr>
+            {selectedVehicle?.vin && <tr><td style={{ fontWeight: 700, padding: "3px 0" }}>VIN:</td><td style={{ padding: "3px 0" }}>{selectedVehicle.vin}</td></tr>}
+            {selectedVehicle?.license_plate && <tr><td style={{ fontWeight: 700, padding: "3px 0" }}>Plate:</td><td style={{ padding: "3px 0" }}>{selectedVehicle.license_plate}</td></tr>}
+            {selectedVehicle?.mileage !== undefined && <tr><td style={{ fontWeight: 700, padding: "3px 0" }}>Mileage:</td><td style={{ padding: "3px 0" }}>{selectedVehicle.mileage?.toLocaleString()} km</td></tr>}
+            {adapterName && <tr><td style={{ fontWeight: 700, padding: "3px 0" }}>Adapter:</td><td style={{ padding: "3px 0" }}>{adapterName}</td></tr>}
+          </tbody>
+        </table>
+
+        {liveData && (
+          <div style={{ marginBottom: 16 }}>
+            <h2 style={{ fontSize: 15, fontWeight: 700, borderBottom: "1px solid #ccc", paddingBottom: 4, marginBottom: 8 }}>Live Data Snapshot</h2>
+            <table style={{ width: "100%", fontSize: 13 }}>
+              <tbody>
+                {liveData.rpm !== undefined && <tr><td style={{ padding: "2px 0", width: 180 }}>RPM</td><td style={{ padding: "2px 0" }}>{Math.round(liveData.rpm)}</td></tr>}
+                {liveData.speed_kph !== undefined && <tr><td style={{ padding: "2px 0" }}>Speed</td><td style={{ padding: "2px 0" }}>{liveData.speed_kph} km/h</td></tr>}
+                {liveData.coolant_temp_c !== undefined && <tr><td style={{ padding: "2px 0" }}>Coolant Temp</td><td style={{ padding: "2px 0" }}>{liveData.coolant_temp_c}°C</td></tr>}
+                {liveData.intake_temp_c !== undefined && <tr><td style={{ padding: "2px 0" }}>Intake Temp</td><td style={{ padding: "2px 0" }}>{liveData.intake_temp_c}°C</td></tr>}
+                {liveData.engine_load_pct !== undefined && <tr><td style={{ padding: "2px 0" }}>Engine Load</td><td style={{ padding: "2px 0" }}>{liveData.engine_load_pct}%</td></tr>}
+                {liveData.fuel_level_pct !== undefined && <tr><td style={{ padding: "2px 0" }}>Fuel Level</td><td style={{ padding: "2px 0" }}>{liveData.fuel_level_pct}%</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {dtcCodes.length > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <h2 style={{ fontSize: 15, fontWeight: 700, borderBottom: "1px solid #ccc", paddingBottom: 4, marginBottom: 8 }}>
+              Trouble Codes ({dtcCodes.length})
+            </h2>
+            {dtcCodes.map((c, i) => {
+              const finding = analysis?.findings?.find(f => f.code === c.code);
+              return (
+                <div key={i} style={{ marginBottom: 12, paddingBottom: 12, borderBottom: "1px solid #eee" }}>
+                  <div style={{ fontWeight: 700, fontSize: 14 }}>
+                    {c.code} <span style={{ fontSize: 11, textTransform: "uppercase", color: "#666" }}>[{c.type}]</span>
+                  </div>
+                  {finding && (
+                    <div style={{ fontSize: 13, marginTop: 4 }}>
+                      <p style={{ margin: "2px 0" }}>{finding.plain_english}</p>
+                      {finding.urgency && <p style={{ margin: "2px 0" }}><strong>Urgency:</strong> {finding.urgency}</p>}
+                      {finding.likely_causes?.length > 0 && (
+                        <div style={{ margin: "4px 0" }}>
+                          <strong>Likely causes:</strong>
+                          <ol style={{ margin: "2px 0 2px 20px", padding: 0 }}>
+                            {finding.likely_causes.map((cause, j) => <li key={j}>{cause}</li>)}
+                          </ol>
+                        </div>
+                      )}
+                      {finding.recommended_fix_order?.length > 0 && (
+                        <div style={{ margin: "4px 0" }}>
+                          <strong>Recommended fix order:</strong>
+                          <ol style={{ margin: "2px 0 2px 20px", padding: 0 }}>
+                            {finding.recommended_fix_order.map((step, j) => <li key={j}>{step}</li>)}
+                          </ol>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {analysis?.summary && (
+          <div style={{ marginBottom: 16, padding: 12, border: "1px solid #ccc", fontSize: 13 }}>
+            <strong>Summary:</strong> {analysis.summary}
+          </div>
+        )}
+
+        {notes && (
+          <div style={{ marginBottom: 16 }}>
+            <h2 style={{ fontSize: 15, fontWeight: 700, borderBottom: "1px solid #ccc", paddingBottom: 4, marginBottom: 8 }}>Technician Notes</h2>
+            <p style={{ fontSize: 13, whiteSpace: "pre-wrap" }}>{notes}</p>
+          </div>
+        )}
+
+        <div style={{ marginTop: 24, paddingTop: 12, borderTop: "1px solid #ccc", fontSize: 11, color: "#999", textAlign: "center" }}>
+          LBC Auto · Diagnostic Report
+        </div>
+      </div>
     </div>
   );
 }
