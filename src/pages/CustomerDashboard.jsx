@@ -45,6 +45,8 @@ export default function CustomerDashboard() {
   const [vehicles, setVehicles] = useState([]);
   const [orders, setOrders] = useState([]);
   const [invoices, setInvoices] = useState([]);
+  const [estimates, setEstimates] = useState([]);
+  const [appointments, setAppointments] = useState([]);
   const [messages, setMessages] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [offers, setOffers] = useState([]);
@@ -89,6 +91,7 @@ export default function CustomerDashboard() {
         shop_email: sess.shop_email,
       }) })).json();
       setVehicles(d.vehicles || []); setOrders(d.orders || []); setInvoices(d.invoices || []);
+      setEstimates(d.estimates || []); setAppointments(d.appointments || []);
       setMessages(d.messages || []); setNotifications(d.notifications || []);
       setOffers(d.offers || []); setRecommendations(d.recommendations || []);
       setReviews(d.reviews || []);
@@ -181,6 +184,7 @@ export default function CustomerDashboard() {
   const tabs = [
     { id:"home",    icon:"🏠", label:"Home" },
     { id:"cars",    icon:"🚗", label:"My Cars" },
+    { id:"billing", icon:"🧾", label:"Billing" },
     { id:"messages",icon:"💬", label:"Chat",    badge: unreadMsgs },
     { id:"offers",  icon:"🏷️", label:"Offers" },
     { id:"review",  icon:"⭐", label:"Review" },
@@ -306,6 +310,86 @@ export default function CustomerDashboard() {
                 }}>{orders[0].status || "pending"}</span>
               </div>
             )}
+          </>
+        )}
+
+        {/* ══ BILLING (Estimates + Invoices) ══ */}
+        {activeTab === "billing" && (
+          <>
+            {/* Upcoming appointments */}
+            {appointments.filter(a => a.status !== "completed" && a.status !== "cancelled").length > 0 && (
+              <div style={S.card}>
+                <p style={{ ...S.label, marginBottom:10 }}>Upcoming Appointments</p>
+                {appointments
+                  .filter(a => a.status !== "completed" && a.status !== "cancelled")
+                  .map(a => (
+                    <div key={a.id} style={{ borderBottom:"1px solid #1e293b", paddingBottom:10, marginBottom:10 }}>
+                      <p style={{ color:"#fff", fontSize:13, fontWeight:700, margin:0 }}>{a.service_type || "Appointment"}</p>
+                      <p style={{ color:"#64748b", fontSize:12, margin:"4px 0 0" }}>
+                        {a.date ? new Date(a.date).toLocaleDateString() : ""}{a.time_slot ? ` · ${a.time_slot}` : ""}
+                      </p>
+                    </div>
+                  ))}
+              </div>
+            )}
+
+            {/* Estimates */}
+            <div style={S.card}>
+              <p style={{ ...S.label, marginBottom:10 }}>Estimates</p>
+              {estimates.length === 0 ? (
+                <p style={{ color:"#475569", fontSize:13 }}>No estimates yet.</p>
+              ) : [...estimates].reverse().map(e => (
+                <div key={e.id} style={{ borderBottom:"1px solid #1e293b", paddingBottom:10, marginBottom:10 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+                    <div>
+                      <p style={{ color:"#fff", fontSize:13, fontWeight:700, margin:0 }}>
+                        {e.estimate_number ? `#${e.estimate_number}` : "Estimate"}
+                      </p>
+                      <p style={{ color:"#64748b", fontSize:11, margin:"2px 0 0" }}>{e.created_date?.slice(0,10)}</p>
+                    </div>
+                    <div style={{ textAlign:"right" }}>
+                      {e.grand_total != null && <p style={{ color:"#38bdf8", fontSize:14, fontWeight:800, margin:0 }}>${Number(e.grand_total).toFixed(2)}</p>}
+                      <span style={{
+                        display:"inline-block", marginTop:4,
+                        background: e.status==="approved" ? "rgba(74,222,128,0.1)" : "rgba(251,191,36,0.1)",
+                        color: e.status==="approved" ? "#4ade80" : "#fbbf24",
+                        border:`1px solid ${e.status==="approved" ? "rgba(74,222,128,0.3)" : "rgba(251,191,36,0.3)"}`,
+                        borderRadius:20, padding:"2px 8px", fontSize:10, fontWeight:700, textTransform:"capitalize",
+                      }}>{e.status || "pending"}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Invoices */}
+            <div style={S.card}>
+              <p style={{ ...S.label, marginBottom:10 }}>Invoices</p>
+              {invoices.length === 0 ? (
+                <p style={{ color:"#475569", fontSize:13 }}>No invoices yet.</p>
+              ) : [...invoices].reverse().map(inv => (
+                <div key={inv.id} style={{ borderBottom:"1px solid #1e293b", paddingBottom:10, marginBottom:10 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+                    <div>
+                      <p style={{ color:"#fff", fontSize:13, fontWeight:700, margin:0 }}>
+                        {inv.invoice_number ? `#${inv.invoice_number}` : "Invoice"}
+                      </p>
+                      <p style={{ color:"#64748b", fontSize:11, margin:"2px 0 0" }}>{inv.created_date?.slice(0,10)}</p>
+                    </div>
+                    <div style={{ textAlign:"right" }}>
+                      {inv.total != null && <p style={{ color:"#4ade80", fontSize:14, fontWeight:800, margin:0 }}>${Number(inv.total).toFixed(2)}</p>}
+                      <span style={{
+                        display:"inline-block", marginTop:4,
+                        background: inv.status==="paid" ? "rgba(74,222,128,0.1)" : "rgba(239,68,68,0.1)",
+                        color: inv.status==="paid" ? "#4ade80" : "#f87171",
+                        border:`1px solid ${inv.status==="paid" ? "rgba(74,222,128,0.3)" : "rgba(239,68,68,0.3)"}`,
+                        borderRadius:20, padding:"2px 8px", fontSize:10, fontWeight:700, textTransform:"capitalize",
+                      }}>{inv.status || "unpaid"}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </>
         )}
 
