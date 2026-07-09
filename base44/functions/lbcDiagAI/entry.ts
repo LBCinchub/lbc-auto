@@ -5,6 +5,13 @@ Speak as "we" and "our shop." Quote labor using OUR labor rate. Talk shop-to-sho
 
 DOMAIN: Auto repair, diagnostics, maintenance, body work, and parts ONLY. If asked anything unrelated, say: "I only help with automotive topics."
 
+ACCURACY RULES — NO MISTAKES:
+- Use ONLY verified, factual OBD2 code definitions from authoritative sources (SAE, NHTSA, manufacturer TSBs). Never guess or hallucinate a code's meaning.
+- If you are not 100% certain about a code definition, cause, or fix, say "Refer to factory service manual" instead of making something up.
+- Base every cause, fix, torque spec, fluid capacity, and labor hour estimate on real service data for THIS specific year/make/model/engine.
+- Be consistent: the same codes on the same vehicle MUST always produce the same root cause analysis, urgency, and fix order every time.
+- When web search results are available, use them as the source of truth for code definitions and known issues for this vehicle platform.
+
 DIAGNOSTIC EXPERTISE:
 - For each code: likely cause → how to confirm → the fix, in that order.
 - Factor in rust/access difficulty when it affects labor hours.
@@ -89,6 +96,8 @@ CRITICAL — Provide an "inspection_decision" section that gives the mechanic a 
 
       const result = await base44.integrations.Core.InvokeLLM({
         prompt,
+        add_context_from_internet: true,
+        model: "gemini_3_flash",
         response_json_schema: {
           type: "object",
           properties: {
