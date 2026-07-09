@@ -6,17 +6,50 @@ const SOLANA_RPC = "https://api.mainnet-beta.solana.com";
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
+    const requester = await base44.auth.me();
 
-    if (!user) {
+    if (!requester) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { transaction_id, phase, plan_tier } = await req.json();
+    const body = await req.json();
+
+    // Admin-only utility action: mark pre-existing customers (activated under the
+    // old flat-fee model, before setup-fee + monthly tiers existed) as plan_tier
+    // "legacy". Does NOT set setup_fee_paid or next_billing_date, so these
+    // accounts are never pulled into the new recurring billing wall.
+    if (body.action === "migrate_legacy_customers") {
+      if (requester.role !== "admin") {
+        return Response.json({ error: "Admin access required" }, { status: 403 });
+      }
+
+      const allUsers = await base44.asServiceRole.entities.User.list();
+      const candidates = allUsers.filter(
+        (u) => u.subscription_status === "active" && !u.setup_fee_paid && !u.plan_tier
+      );
+
+      const updated = [];
+      for (const u of candidates) {
+        await base44.asServiceRole.entities.User.update(u.id, { plan_tier: "legacy" });
+        updated.push({ id: u.id, email: u.email, business_name: u.business_name });
+      }
+
+      return Response.json({
+        success: true,
+        total_users_scanned: allUsers.length,
+        marked_legacy_count: updated.length,
+        marked_legacy: updated,
+      });
+    }
+
+    // ── Default action: verify a Solana payment (setup fee or monthly renewal) ──
+    const { transaction_id, phase, plan_tier } = body;
 
     if (!transaction_id) {
       return Response.json({ error: "Transaction ID required" }, { status: 400 });
     }
+
+    const user = requester;
 
     // Verify transaction on Solana
     const response = await fetch(SOLANA_RPC, {
@@ -37,18 +70,15 @@ Deno.serve(async (req) => {
       return Response.json({ error: "Transaction not found" }, { status: 400 });
     }
 
-    // Check if transaction is confirmed
     if (!transaction.blockTime) {
       return Response.json({ error: "Transaction not confirmed yet" }, { status: 400 });
     }
 
-    // Verify amount and recipient
     const instructions = transaction.transaction?.message?.instructions || [];
     let isValid = false;
 
     for (const instruction of instructions) {
       if (instruction.program === "spl-token" || instruction.program === "system") {
-        // Check destination is our wallet
         const parsedInfo = instruction.parsed?.info;
         if (parsedInfo?.destination === RECIPIENT_WALLET || parsedInfo?.mint === RECIPIENT_WALLET) {
           isValid = true;
@@ -61,7 +91,6 @@ Deno.serve(async (req) => {
       return Response.json({ error: "Payment not sent to correct wallet" }, { status: 400 });
     }
 
-    // Prevent replaying the exact same transaction signature to unlock again
     if (transaction_id === user.payment_transaction_id) {
       return Response.json({ error: "This transaction has already been used to verify a payment. Please send a new payment." }, { status: 400 });
     }
@@ -84,7 +113,6 @@ Deno.serve(async (req) => {
       updates.setup_fee_paid = true;
       updates.plan_tier = tier;
     }
-    // On renewal, keep the user's existing plan_tier unless they explicitly changed it via Settings/Billing
 
     await base44.auth.updateMe(updates);
 
