@@ -86,6 +86,10 @@
       "type": "string",
       "enum": ["Completed", "Codes Cleared", "Needs Follow-up"],
       "default": "Completed"
+    },
+    "estimate_id": {
+      "type": "string",
+      "description": "Linked Estimate ID if this scan was converted into a customer estimate"
     }
   },
   "required": [

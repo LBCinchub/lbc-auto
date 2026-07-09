@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Bluetooth, BluetoothConnected, Loader2, AlertTriangle, CheckCircle2,
   Gauge, Sparkles, Trash2, Save, RefreshCw, Search, Printer, Send, Package,
-  UserPlus, Car,
+  UserPlus, Car, FileText, ArrowRight,
 } from "lucide-react";
 import PageHeader from "../components/shared/PageHeader";
 import CustomerSearchInput from "../components/shared/CustomerSearchInput";
@@ -13,6 +14,7 @@ import VehicleInfoBanner from "../components/diagnostics/VehicleInfoBanner";
 import QuickAddCustomerDialog from "../components/diagnostics/QuickAddCustomerDialog";
 import QuickAddVehicleDialog from "../components/diagnostics/QuickAddVehicleDialog";
 import { ELM327Client } from "../lib/obd/elm327";
+import { validateRecord, syncCustomerActivity } from "../utils/syncCustomerActivity";
 
 const URGENCY_STYLES = {
   Low: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
@@ -46,6 +48,7 @@ export default function Diagnostics() {
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState("");
+  const [savedScanId, setSavedScanId] = useState(null);
 
   // LBC AI chat state
   const [chatMessages, setChatMessages] = useState([]);
@@ -55,6 +58,13 @@ export default function Diagnostics() {
   // Quick-add dialog state
   const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [showAddVehicle, setShowAddVehicle] = useState(false);
+
+  // Estimate-from-diagnosis state
+  const [creatingEstimate, setCreatingEstimate] = useState(false);
+  const [estimateError, setEstimateError] = useState("");
+  const [createdEstimateId, setCreatedEstimateId] = useState(null);
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
@@ -223,7 +233,7 @@ export default function Diagnostics() {
     setSaving(true);
     setSavedMsg("");
     try {
-      await base44.entities.DiagnosticScan.create({
+      const created = await base44.entities.DiagnosticScan.create({
         customer_id: customerId || undefined,
         customer_name: customerName || undefined,
         vehicle_id: vehicleId,
@@ -240,11 +250,137 @@ export default function Diagnostics() {
         notes: notes || undefined,
         status: clearedMsg ? "Codes Cleared" : (dtcCodes.length ? "Needs Follow-up" : "Completed"),
       });
+      setSavedScanId(created?.id || null);
       setSavedMsg("Scan saved to this vehicle's history.");
     } catch (err) {
       setSavedMsg("Failed to save: " + (err?.message || "unknown error"));
     } finally {
       setSaving(false);
+    }
+  };
+
+  /**
+   * Turns the AI diagnosis findings into a real draft Estimate — one labor
+   * line + parts lines per finding, using the shop's own labor rate and tax
+   * settings. Goes through the same Center Control validation + sync path
+   * as the manual Estimate form so nothing drifts from the standard flow.
+   */
+  const handleCreateEstimate = async () => {
+    if (!vehicleId || !customerId || !analysis?.findings?.length) return;
+    setCreatingEstimate(true);
+    setEstimateError("");
+    try {
+      const dbValidation = await validateRecord({
+        customerId,
+        vehicleId,
+        entityType: "Estimate",
+      });
+      if (!dbValidation.ok) {
+        setEstimateError(dbValidation.errors.join(" "));
+        setCreatingEstimate(false);
+        return;
+      }
+
+      const laborRate = parseFloat(user?.labor_rate) || 120;
+      const taxRate = parseFloat(user?.tax_rate) || 0;
+      const taxAppliesTo = user?.tax_applies_to || "both";
+
+      const laborItems = analysis.findings
+        .filter(f => f.estimated_labor_hours)
+        .map(f => ({
+          description: `${f.code} — ${f.plain_english ? f.plain_english.slice(0, 80) : "Diagnostic repair"}`,
+          hours: parseFloat(f.estimated_labor_hours) || 0,
+          rate: laborRate,
+          total: (parseFloat(f.estimated_labor_hours) || 0) * laborRate,
+        }));
+
+      const partsItems = analysis.findings
+        .flatMap(f => (f.parts_needed || []).map(p => ({
+          name: p.name,
+          part_number: "",
+          quantity: 1,
+          unit_price: parseFloat(p.estimated_cost) || 0,
+          total: parseFloat(p.estimated_cost) || 0,
+        })));
+
+      const laborTotal = laborItems.reduce((s, r) => s + r.total, 0);
+      const partsTotal = partsItems.reduce((s, r) => s + r.total, 0);
+      let taxableAmount = laborTotal + partsTotal;
+      if (taxAppliesTo === "labor") taxableAmount = laborTotal;
+      else if (taxAppliesTo === "parts") taxableAmount = partsTotal;
+      else if (taxAppliesTo === "none") taxableAmount = 0;
+      const taxAmount = taxableAmount * (taxRate / 100);
+      const grandTotal = laborTotal + partsTotal + taxAmount;
+
+      const vehicleInfo = selectedVehicle
+        ? `${selectedVehicle.year || ""} ${selectedVehicle.make || ""} ${selectedVehicle.model || ""}`.trim()
+        : "";
+
+      const notesParts = [];
+      if (analysis.summary) notesParts.push(analysis.summary);
+      if (analysis.root_cause_analysis) notesParts.push("Root cause analysis: " + analysis.root_cause_analysis);
+      notesParts.push("Generated automatically from a Diagnostics AI scan — review before sending to customer.");
+
+      const payload = {
+        estimate_number: `EST-${Date.now().toString().slice(-6)}`,
+        customer_id: customerId,
+        customer_name: customerName || "",
+        vehicle_id: vehicleId,
+        vehicle_info: vehicleInfo,
+        status: "draft",
+        service_reason: `Diagnostic scan follow-up — codes: ${dtcCodes.map(c => c.code).join(", ")}`,
+        notes: notesParts.join("\n\n"),
+        labor_items: laborItems,
+        parts_items: partsItems,
+        labor_total: laborTotal,
+        parts_total: partsTotal,
+        tax_rate: taxRate,
+        tax_applies_to: taxAppliesTo,
+        tax_amount: taxAmount,
+        discount: 0,
+        discount_type: "$",
+        grand_total: grandTotal,
+      };
+
+      const created = await base44.entities.Estimate.create(payload);
+
+      await syncCustomerActivity({
+        customerId,
+        vehicleId,
+        vehicleInfo,
+        customerName: customerName || "",
+        entityType: "Estimate",
+        entityId: created.id,
+      });
+
+      // Link back to (or create) the DiagnosticScan record so history shows the estimate
+      if (savedScanId) {
+        await base44.entities.DiagnosticScan.update(savedScanId, { estimate_id: created.id }).catch(() => {});
+      } else {
+        const scan = await base44.entities.DiagnosticScan.create({
+          customer_id: customerId || undefined,
+          customer_name: customerName || undefined,
+          vehicle_id: vehicleId,
+          vehicle_info: vehicleInfo || undefined,
+          shop_owner_email: user?.email,
+          adapter_name: adapterName || undefined,
+          mileage: selectedVehicle?.mileage || undefined,
+          dtc_codes: dtcCodes,
+          live_data_snapshot: liveData || undefined,
+          ai_analysis: analysis || undefined,
+          codes_cleared: !!clearedMsg,
+          notes: notes || undefined,
+          status: clearedMsg ? "Codes Cleared" : (dtcCodes.length ? "Needs Follow-up" : "Completed"),
+          estimate_id: created.id,
+        }).catch(() => null);
+        if (scan?.id) setSavedScanId(scan.id);
+      }
+
+      setCreatedEstimateId(created.id);
+    } catch (err) {
+      setEstimateError(err?.message || "Failed to create estimate.");
+    } finally {
+      setCreatingEstimate(false);
     }
   };
 
@@ -756,8 +892,29 @@ export default function Diagnostics() {
             <Button onClick={handlePrint} variant="outline" className="border-gray-700 text-gray-300 gap-2">
               <Printer className="w-4 h-4" /> Print Report
             </Button>
+            {analysis?.findings?.length > 0 && !createdEstimateId && (
+              <Button
+                onClick={handleCreateEstimate}
+                disabled={creatingEstimate}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
+              >
+                {creatingEstimate ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+                {creatingEstimate ? "Creating estimate..." : "Create Estimate from Diagnosis"}
+              </Button>
+            )}
+            {createdEstimateId && (
+              <Button
+                onClick={() => navigate(`/EstimateDetail/${createdEstimateId}`)}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
+              >
+                View Draft Estimate <ArrowRight className="w-4 h-4" />
+              </Button>
+            )}
             {savedMsg && <span className="text-sm text-gray-400">{savedMsg}</span>}
           </div>
+          {estimateError && (
+            <p className="text-sm text-red-400">{estimateError}</p>
+          )}
         </div>
       )}
 
