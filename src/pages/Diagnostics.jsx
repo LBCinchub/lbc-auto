@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Bluetooth, BluetoothConnected, Loader2, AlertTriangle, CheckCircle2,
-  Gauge, Sparkles, Trash2, Save, RefreshCw, Search, Printer,
+  Gauge, Sparkles, Trash2, Save, RefreshCw, Search, Printer, Send, Package,
 } from "lucide-react";
 import PageHeader from "../components/shared/PageHeader";
 import CustomerSearchInput from "../components/shared/CustomerSearchInput";
@@ -42,6 +42,11 @@ export default function Diagnostics() {
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState("");
+
+  // LBC AI chat state
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
@@ -154,35 +159,43 @@ export default function Diagnostics() {
         ? `${selectedVehicle.year || ""} ${selectedVehicle.make || ""} ${selectedVehicle.model || ""} ${selectedVehicle.engine_type || ""}`.trim()
         : "Unknown vehicle";
 
-      const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `You are an expert automotive diagnostic technician. A vehicle (${vehicleDesc}) was just scanned and returned these OBD2 trouble codes: ${dtcCodes.map(c => `${c.code} (${c.type})`).join(", ")}.
-${liveData ? `Live data at time of scan: ${JSON.stringify(liveData)}.` : ""}
-For each code, give a plain-English explanation, the most likely causes ordered from most to least probable, an urgency level, and a recommended fix order (cheapest/most-likely-first). Also give a one to two sentence overall summary for the technician.`,
-        response_json_schema: {
-          type: "object",
-          properties: {
-            summary: { type: "string" },
-            findings: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  code: { type: "string" },
-                  plain_english: { type: "string" },
-                  likely_causes: { type: "array", items: { type: "string" } },
-                  urgency: { type: "string", enum: ["Low", "Medium", "High", "Critical"] },
-                  recommended_fix_order: { type: "array", items: { type: "string" } },
-                },
-              },
-            },
-          },
-        },
+      const res = await base44.functions.invoke("lbcDiagAI", {
+        mode: "analyze",
+        codes: dtcCodes,
+        live_data: liveData,
+        vehicle: vehicleDesc,
       });
-      setAnalysis(result);
+      setAnalysis(res.data.analysis);
     } catch (err) {
       setConnError(err?.message || "AI analysis failed.");
     } finally {
       setAnalyzing(false);
+    }
+  };
+
+  const handleChatSend = async () => {
+    const text = chatInput.trim();
+    if (!text || chatLoading) return;
+    setChatInput("");
+    const newMessages = [...chatMessages, { role: "user", content: text }];
+    setChatMessages(newMessages);
+    setChatLoading(true);
+    try {
+      const vehicleDesc = selectedVehicle
+        ? `${selectedVehicle.year || ""} ${selectedVehicle.make || ""} ${selectedVehicle.model || ""} ${selectedVehicle.engine_type || ""}`.trim()
+        : "Unknown vehicle";
+      const res = await base44.functions.invoke("lbcDiagAI", {
+        mode: "chat",
+        codes: dtcCodes,
+        live_data: liveData,
+        vehicle: vehicleDesc,
+        messages: newMessages,
+      });
+      setChatMessages(prev => [...prev, { role: "assistant", content: res.data.reply }]);
+    } catch (err) {
+      setChatMessages(prev => [...prev, { role: "assistant", content: "⚠️ " + (err?.message || "AI couldn't respond.") }]);
+    } finally {
+      setChatLoading(false);
     }
   };
 
@@ -419,6 +432,20 @@ For each code, give a plain-English explanation, the most likely causes ordered 
                   {finding ? (
                     <div className="mt-2 space-y-2 text-sm">
                       <p className="text-gray-300">{finding.plain_english}</p>
+                      {(finding.estimated_labor_hours || finding.estimated_labor_cost) && (
+                        <div className="flex flex-wrap gap-2">
+                          {finding.estimated_labor_hours != null && (
+                            <span className="text-xs bg-sky-500/10 text-sky-400 border border-sky-500/30 rounded-full px-2.5 py-0.5">
+                              ⏱ {finding.estimated_labor_hours} hrs labor
+                            </span>
+                          )}
+                          {finding.estimated_labor_cost != null && (
+                            <span className="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-full px-2.5 py-0.5">
+                              💰 ${finding.estimated_labor_cost.toFixed(2)}
+                            </span>
+                          )}
+                        </div>
+                      )}
                       {finding.likely_causes?.length > 0 && (
                         <div>
                           <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">Likely causes</p>
@@ -435,6 +462,24 @@ For each code, give a plain-English explanation, the most likely causes ordered 
                           </ol>
                         </div>
                       )}
+                      {finding.parts_needed?.length > 0 && (
+                        <div>
+                          <p className="text-gray-500 text-xs uppercase tracking-wide mb-1 flex items-center gap-1">
+                            <Package className="w-3 h-3" /> Parts needed
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {finding.parts_needed.map((p, j) => (
+                              <span key={j} className={`text-xs border rounded-full px-2 py-0.5 ${
+                                p.in_stock
+                                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                                  : "bg-orange-500/10 text-orange-400 border-orange-500/30"
+                              }`}>
+                                {p.name}{p.estimated_cost != null ? ` — $${p.estimated_cost.toFixed(2)}` : ""} {p.in_stock ? "✓ In stock" : "⚠ Order"}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <p className="text-gray-500 text-xs mt-2">Click "AI Analyze" for an explanation and fix guidance.</p>
@@ -449,6 +494,81 @@ For each code, give a plain-English explanation, the most likely causes ordered 
               {analysis.summary}
             </div>
           )}
+
+          {analysis?.shop_advice && (
+            <div className="bg-sky-500/10 border border-sky-500/30 rounded-lg p-4 space-y-2">
+              <h3 className="text-sky-400 font-semibold text-sm flex items-center gap-2">
+                <Sparkles className="w-4 h-4" /> LBC Auto AI — Shop Advice
+              </h3>
+              {analysis.shop_advice.total_estimated_cost != null && (
+                <p className="text-gray-300 text-sm">
+                  <span className="text-gray-500">Total estimated cost:</span>{" "}
+                  <span className="text-white font-bold">${analysis.shop_advice.total_estimated_cost.toFixed(2)}</span>
+                </p>
+              )}
+              {analysis.shop_advice.priority_order && (
+                <p className="text-gray-300 text-sm">
+                  <span className="text-gray-500">Priority:</span> {analysis.shop_advice.priority_order}
+                </p>
+              )}
+              {analysis.shop_advice.recommended_action && (
+                <p className="text-gray-300 text-sm">
+                  <span className="text-gray-500">Tell the customer:</span> {analysis.shop_advice.recommended_action}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* LBC AI Chat — ask follow-up questions about the scan */}
+          <div className="bg-gray-800/40 border border-gray-700 rounded-lg p-4 space-y-3">
+            <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-purple-400" /> Ask LBC Auto AI
+            </h3>
+            <p className="text-xs text-gray-500">Ask follow-up questions about these codes, repair procedures, or parts — the AI knows your shop's labor rate and inventory.</p>
+
+            {chatMessages.length > 0 && (
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {chatMessages.map((m, i) => (
+                  <div key={i} className={m.role === "user" ? "flex justify-end" : "flex justify-start"}>
+                    <div className={`max-w-[85%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap ${
+                      m.role === "user"
+                        ? "bg-sky-500/20 text-sky-100"
+                        : "bg-gray-700/60 text-gray-200"
+                    }`}>
+                      {m.content}
+                    </div>
+                  </div>
+                ))}
+                {chatLoading && (
+                  <div className="flex justify-start">
+                    <div className="bg-gray-700/60 rounded-lg px-3 py-2">
+                      <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleChatSend()}
+                placeholder="e.g. What's the torque spec for the brake caliper bolts?"
+                disabled={chatLoading}
+                className="flex-1 bg-gray-800 border border-gray-700 text-white rounded-md px-3 py-2 text-sm placeholder:text-gray-600 focus:outline-none focus:border-sky-500"
+              />
+              <Button
+                size="sm"
+                onClick={handleChatSend}
+                disabled={chatLoading || !chatInput.trim()}
+                className="bg-purple-500 hover:bg-purple-600 text-white gap-2"
+              >
+                <Send className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 
