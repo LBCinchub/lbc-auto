@@ -556,6 +556,86 @@ export default function Diagnostics() {
             </div>
           )}
 
+          {analysis?.inspection_decision && (
+            <div className={`rounded-lg p-4 space-y-3 ${
+              analysis.inspection_decision.go_no_go === "PROCEED"
+                ? "bg-emerald-500/10 border border-emerald-500/40"
+                : "bg-orange-500/10 border border-orange-500/40"
+            }`}>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <h3 className="text-sm font-bold flex items-center gap-2 uppercase tracking-wide">
+                  {analysis.inspection_decision.go_no_go === "PROCEED"
+                    ? <span className="text-emerald-400 flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> ✅ PROCEED — Inspection Cleared</span>
+                    : <span className="text-orange-400 flex items-center gap-2"><AlertTriangle className="w-4 h-4" /> ⚠️ FURTHER DIAGNOSIS NEEDED</span>}
+                </h3>
+                {analysis.inspection_decision.estimated_total_time != null && (
+                  <span className="text-xs bg-sky-500/10 text-sky-400 border border-sky-500/30 rounded-full px-2.5 py-0.5">
+                    ⏱ Total time est: {analysis.inspection_decision.estimated_total_time} hrs
+                  </span>
+                )}
+              </div>
+              {analysis.inspection_decision.go_no_go_reason && (
+                <p className="text-gray-200 text-sm">{analysis.inspection_decision.go_no_go_reason}</p>
+              )}
+
+              <div className="grid md:grid-cols-2 gap-4 mt-3">
+                {analysis.inspection_decision.verifications_needed?.length > 0 && (
+                  <div className="space-y-1.5">
+                    <p className="text-xs uppercase tracking-wide text-sky-400 font-semibold flex items-center gap-1">
+                      <Search className="w-3 h-3" /> Verify Before Repairing
+                    </p>
+                    <ol className="list-decimal list-inside text-gray-300 text-sm space-y-0.5">
+                      {analysis.inspection_decision.verifications_needed.map((v, j) => <li key={j}>{v}</li>)}
+                    </ol>
+                  </div>
+                )}
+                {analysis.inspection_decision.pre_repair_checklist?.length > 0 && (
+                  <div className="space-y-1.5">
+                    <p className="text-xs uppercase tracking-wide text-purple-400 font-semibold flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" /> Pre-Repair Checklist
+                    </p>
+                    <ol className="list-decimal list-inside text-gray-300 text-sm space-y-0.5">
+                      {analysis.inspection_decision.pre_repair_checklist.map((c, j) => <li key={j}>{c}</li>)}
+                    </ol>
+                  </div>
+                )}
+                {analysis.inspection_decision.tools_needed?.length > 0 && (
+                  <div className="space-y-1.5">
+                    <p className="text-xs uppercase tracking-wide text-amber-400 font-semibold flex items-center gap-1">
+                      <Package className="w-3 h-3" /> Tools Needed
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {analysis.inspection_decision.tools_needed.map((t, j) => (
+                        <span key={j} className="text-xs bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-full px-2 py-0.5">{t}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {analysis.inspection_decision.post_repair_steps?.length > 0 && (
+                  <div className="space-y-1.5">
+                    <p className="text-xs uppercase tracking-wide text-teal-400 font-semibold flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" /> Post-Repair Verification
+                    </p>
+                    <ol className="list-decimal list-inside text-gray-300 text-sm space-y-0.5">
+                      {analysis.inspection_decision.post_repair_steps.map((s, j) => <li key={j}>{s}</li>)}
+                    </ol>
+                  </div>
+                )}
+              </div>
+
+              {analysis.inspection_decision.safety_warnings?.length > 0 && (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-md p-3 mt-2">
+                  <p className="text-xs uppercase tracking-wide text-red-400 font-bold flex items-center gap-1 mb-1">
+                    <AlertTriangle className="w-3 h-3" /> ⚠️ Safety Warnings
+                  </p>
+                  <ul className="list-disc list-inside text-red-200 text-sm space-y-0.5">
+                    {analysis.inspection_decision.safety_warnings.map((w, j) => <li key={j}>{w}</li>)}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
           {analysis?.shop_advice && (
             <div className="bg-sky-500/10 border border-sky-500/30 rounded-lg p-4 space-y-2">
               <h3 className="text-sky-400 font-semibold text-sm flex items-center gap-2">
@@ -744,6 +824,55 @@ export default function Diagnostics() {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {analysis?.inspection_decision && (
+          <div style={{ marginBottom: 16, padding: 12, border: analysis.inspection_decision.go_no_go === "PROCEED" ? "2px solid #16a34a" : "2px solid #ea580c", background: analysis.inspection_decision.go_no_go === "PROCEED" ? "#f0fdf4" : "#fff7ed", fontSize: 13 }}>
+            <strong style={{ fontSize: 14, color: analysis.inspection_decision.go_no_go === "PROCEED" ? "#16a34a" : "#ea580c" }}>
+              {analysis.inspection_decision.go_no_go === "PROCEED" ? "✅ PROCEED — Inspection Cleared" : "⚠️ FURTHER DIAGNOSIS NEEDED"}
+            </strong>
+            {analysis.inspection_decision.go_no_go_reason && <p style={{ margin: "4px 0" }}>{analysis.inspection_decision.go_no_go_reason}</p>}
+            {analysis.inspection_decision.verifications_needed?.length > 0 && (
+              <div style={{ margin: "6px 0" }}>
+                <strong>Verify Before Repairing:</strong>
+                <ol style={{ margin: "2px 0 2px 20px", padding: 0 }}>
+                  {analysis.inspection_decision.verifications_needed.map((v, j) => <li key={j}>{v}</li>)}
+                </ol>
+              </div>
+            )}
+            {analysis.inspection_decision.pre_repair_checklist?.length > 0 && (
+              <div style={{ margin: "6px 0" }}>
+                <strong>Pre-Repair Checklist:</strong>
+                <ol style={{ margin: "2px 0 2px 20px", padding: 0 }}>
+                  {analysis.inspection_decision.pre_repair_checklist.map((c, j) => <li key={j}>{c}</li>)}
+                </ol>
+              </div>
+            )}
+            {analysis.inspection_decision.tools_needed?.length > 0 && (
+              <div style={{ margin: "6px 0" }}>
+                <strong>Tools Needed:</strong> {analysis.inspection_decision.tools_needed.join(", ")}
+              </div>
+            )}
+            {analysis.inspection_decision.safety_warnings?.length > 0 && (
+              <div style={{ margin: "6px 0", color: "#dc2626" }}>
+                <strong>⚠️ Safety Warnings:</strong>
+                <ul style={{ margin: "2px 0 2px 20px", padding: 0 }}>
+                  {analysis.inspection_decision.safety_warnings.map((w, j) => <li key={j}>{w}</li>)}
+                </ul>
+              </div>
+            )}
+            {analysis.inspection_decision.post_repair_steps?.length > 0 && (
+              <div style={{ margin: "6px 0" }}>
+                <strong>Post-Repair Verification:</strong>
+                <ol style={{ margin: "2px 0 2px 20px", padding: 0 }}>
+                  {analysis.inspection_decision.post_repair_steps.map((s, j) => <li key={j}>{s}</li>)}
+                </ol>
+              </div>
+            )}
+            {analysis.inspection_decision.estimated_total_time != null && (
+              <p style={{ margin: "4px 0 0" }}><strong>Estimated Total Time:</strong> {analysis.inspection_decision.estimated_total_time} hours</p>
+            )}
           </div>
         )}
 

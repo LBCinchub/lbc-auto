@@ -74,7 +74,17 @@ CRITICAL — Think holistically about ALL codes together before giving per-code 
 
 Provide a "root_cause_analysis" paragraph (3-5 sentences) that synthesizes the full picture — this must be DISTINCT from the summary. It should explain: the likely single root cause, how the other codes are downstream effects of it, and the recommended fix strategy (fix root cause first, then re-scan to see if secondary codes clear).
 
-Also provide an overall "summary" (1-2 sentences) and a "shop_advice" section with: total_estimated_cost, recommended_action (what to tell the customer), and priority_order (which fix to do first if multiple codes).`;
+Also provide an overall "summary" (1-2 sentences) and a "shop_advice" section with: total_estimated_cost, recommended_action (what to tell the customer), and priority_order (which fix to do first if multiple codes).
+
+CRITICAL — Provide an "inspection_decision" section that gives the mechanic a complete, foolproof pre-repair decision guide so NO mistakes are made and time is saved:
+- go_no_go: "PROCEED" or "FURTHER_DIAGNOSIS_NEEDED" — a clear green-light or hold decision
+- go_no_go_reason: 1-2 sentences explaining the decision
+- verifications_needed: ordered list of confirmation steps the mechanic MUST do before starting repair (e.g., "Check wiring connector X for corrosion", "Perform wiggle test on harness", "Verify voltage at pin Y is 12V with key ON", "Visually inspect vacuum lines for cracks"). Each step should be specific and actionable.
+- pre_repair_checklist: items to visually inspect or verify on the vehicle before touching tools (e.g., "Confirm engine oil level is full", "Check for active recalls on this VIN", "Verify coolant is not contaminated")
+- tools_needed: exact tools required for the repair (e.g., "10mm socket", "torque wrench", "OBD2 scanner for post-repair code clear")
+- safety_warnings: critical safety concerns (e.g., "Battery must be disconnected before removing airbag", "Engine must be cold before draining coolant", "Wear safety glasses when working under vehicle")
+- estimated_total_time: realistic total time including diagnosis + repair + post-repair verification (in hours)
+- post_repair_steps: what the mechanic must verify AFTER the repair (e.g., "Clear codes and road test for 10 mins", "Re-check live data for normal readings", "Confirm check engine light is off")`;
 
       const result = await base44.integrations.Core.InvokeLLM({
         prompt,
@@ -89,6 +99,19 @@ Also provide an overall "summary" (1-2 sentences) and a "shop_advice" section wi
                 total_estimated_cost: { type: "number" },
                 recommended_action: { type: "string" },
                 priority_order: { type: "string" },
+              },
+            },
+            inspection_decision: {
+              type: "object",
+              properties: {
+                go_no_go: { type: "string", enum: ["PROCEED", "FURTHER_DIAGNOSIS_NEEDED"] },
+                go_no_go_reason: { type: "string" },
+                verifications_needed: { type: "array", items: { type: "string" } },
+                pre_repair_checklist: { type: "array", items: { type: "string" } },
+                tools_needed: { type: "array", items: { type: "string" } },
+                safety_warnings: { type: "array", items: { type: "string" } },
+                estimated_total_time: { type: "number" },
+                post_repair_steps: { type: "array", items: { type: "string" } },
               },
             },
             findings: {
