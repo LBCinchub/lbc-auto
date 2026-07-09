@@ -1,10 +1,11 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Wrench, Users, FileText, Calendar, BarChart3, Zap } from "lucide-react";
+import { Wrench, Users, FileText, Calendar, BarChart3, Zap, Gauge } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 
 export default function Landing() {
   const features = [
+    { icon: Gauge, title: "AI Diagnostics", desc: "Plug in a Bluetooth OBD2 scanner, get an AI root-cause diagnosis, and a draft estimate — all in the browser, no extra app" },
     { icon: Wrench, title: "Repair Orders", desc: "Manage jobs from intake to delivery" },
     { icon: Users, title: "Customer Management", desc: "Track customers and their vehicles" },
     { icon: FileText, title: "Invoicing", desc: "Generate and track invoices with payments" },
@@ -24,6 +25,9 @@ export default function Landing() {
           <h1 className="text-5xl font-bold text-white">LBC Auto</h1>
           <p className="text-xl text-gray-400 max-w-2xl mx-auto">
             Complete auto shop management system. Run your business smarter with invoicing, scheduling, and analytics.
+          </p>
+          <p className="text-base text-sky-400 font-medium max-w-2xl mx-auto">
+            Scan the car. AI finds the root cause. The estimate writes itself — before you even close the hood.
           </p>
           <div className="flex gap-4 justify-center">
             <Button
