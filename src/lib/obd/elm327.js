@@ -228,10 +228,19 @@ export class ELM327Client {
     }
   }
 
-  /** Clear Diagnostic Trouble Codes + turn off the check engine light (Mode 04). */
+  /**
+   * Clear Diagnostic Trouble Codes + turn off the check engine light (Mode 04).
+   * ELM327 responds with "44" (mode 04 + 0x40) on success — NOT "OK".
+   * Some adapters also return "OK" or just ">" with no data; treat all
+   * non-error responses as success, since the ECU accepts the clear.
+   */
   async clearDTCs() {
-    const response = await this._sendCommand("04");
-    return /OK/i.test(response);
+    const response = await this._sendCommand("04", 8000);
+    const upper = (response || "").toUpperCase();
+    // "NO DATA" / "UNABLE TO CONNECT" / "ERROR" = failure
+    if (/NO DATA|UNABLE TO CONNECT|ERROR|CAN ERROR/i.test(upper)) return false;
+    // "44" = standard Mode 04 success response, "OK" = some adapters
+    return /44|OK/i.test(upper) || upper.length === 0;
   }
 
   /** Read a batch of common live-data PIDs. Returns partial object — missing PIDs are omitted. */
