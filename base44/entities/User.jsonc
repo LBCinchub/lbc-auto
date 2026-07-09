@@ -65,7 +65,7 @@
     "plan_tier": {
       "type": "string",
       "enum": ["basic", "pro", "legacy"],
-      "description": "Monthly plan — basic ($199/mo, no AI Diagnostics), pro ($299/mo, all features including AI Diagnostics), or legacy (grandfathered pre-existing customer on the old flat-fee model — same access as basic, no AI Diagnostics, no recurring billing wall applied)."
+      "description": "Monthly plan — basic ($199/mo, no AI Diagnostics), pro ($299/mo, all features including AI Diagnostics), or legacy (grandfathered pre-existing customer from before the new setup-fee + monthly billing model — FULL access including AI Diagnostics, no billing wall applied, for a limited transition period until we decide their permanent tier)."
     },
     "next_billing_date": {
       "type": "string",

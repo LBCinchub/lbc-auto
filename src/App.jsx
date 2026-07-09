@@ -40,11 +40,16 @@ const mainPageKey = mainPage ?? Object.keys(Pages)[0];
 const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
 
 // ── One-time "New Update" banner ────────────────────────────────────────────
-const UPDATE_KEY = "lbc_auto_update_v20260628_payment_history";
+const UPDATE_KEY = "lbc_auto_update_v20260709_ai_diagnostics";
 
 const UpdateBanner = ({ user }) => {
   const [visible, setVisible] = useState(false);
   const navigate = useNavigate();
+
+  const isLegacyCustomer = user && (
+    user.plan_tier === "legacy" ||
+    (user.subscription_status === "active" && !user.setup_fee_paid)
+  );
 
   useEffect(() => {
     if (!user) return;
@@ -61,7 +66,7 @@ const UpdateBanner = ({ user }) => {
     setVisible(false);
   };
 
-  const goToSettings = () => { dismiss(); navigate("/Settings"); };
+  const goToDiagnostics = () => { dismiss(); navigate("/Diagnostics"); };
 
   if (!visible) return null;
 
@@ -76,20 +81,21 @@ const UpdateBanner = ({ user }) => {
     }}>
       <div style={{
         background:"linear-gradient(160deg,#0a0f1e 0%,#0f1e35 60%,#0a1628 100%)",
-        border:"1px solid rgba(0,170,255,0.25)",
+        border:"1px solid rgba(217,70,239,0.25)",
         borderRadius:"20px",
         padding:"0",
         maxWidth:"460px",
         width:"100%",
-        boxShadow:"0 30px 80px rgba(0,0,0,0.6), 0 0 40px rgba(0,170,255,0.08)",
-        overflow:"hidden",
+        maxHeight:"88vh",
+        overflowY:"auto",
+        boxShadow:"0 30px 80px rgba(0,0,0,0.6), 0 0 40px rgba(217,70,239,0.08)",
         position:"relative",
       }}>
 
         {/* ── AI Hero Header ── */}
         <div style={{
-          background:"linear-gradient(135deg,#001f3f 0%,#002b55 50%,#001a33 100%)",
-          borderBottom:"1px solid rgba(0,170,255,0.2)",
+          background:"linear-gradient(135deg,#2b0a3f 0%,#3a0e55 50%,#1a0833 100%)",
+          borderBottom:"1px solid rgba(217,70,239,0.2)",
           padding:"24px 24px 20px",
           position:"relative",
           overflow:"hidden",
@@ -98,7 +104,7 @@ const UpdateBanner = ({ user }) => {
           <div style={{
             position:"absolute", top:-40, right:-40,
             width:160, height:160, borderRadius:"50%",
-            background:"radial-gradient(circle,rgba(0,170,255,0.18) 0%,transparent 70%)",
+            background:"radial-gradient(circle,rgba(217,70,239,0.18) 0%,transparent 70%)",
             pointerEvents:"none",
           }}/>
 
@@ -115,70 +121,87 @@ const UpdateBanner = ({ user }) => {
           <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:14 }}>
             <div style={{
               width:52, height:52, borderRadius:14,
-              background:"linear-gradient(135deg,#0066cc,#00aaff)",
-              boxShadow:"0 0 20px rgba(0,170,255,0.5)",
+              background:"linear-gradient(135deg,#a21caf,#e879f9)",
+              boxShadow:"0 0 20px rgba(217,70,239,0.5)",
               display:"flex", alignItems:"center", justifyContent:"center",
               fontSize:26, flexShrink:0,
-            }}>🤖</div>
+            }}>🩺</div>
             <div>
               <div style={{
                 display:"inline-flex", alignItems:"center", gap:6,
-                background:"rgba(0,170,255,0.15)",
-                border:"1px solid rgba(0,170,255,0.3)",
+                background:"rgba(217,70,239,0.15)",
+                border:"1px solid rgba(217,70,239,0.3)",
                 borderRadius:20, padding:"3px 10px",
                 marginBottom:4,
               }}>
                 <div style={{ width:6, height:6, borderRadius:"50%", background:"#00ff88", boxShadow:"0 0 6px #00ff88" }}/>
-                <span style={{ color:"#00aaff", fontSize:11, fontWeight:700, letterSpacing:"0.06em" }}>NOW LIVE</span>
+                <span style={{ color:"#e879f9", fontSize:11, fontWeight:700, letterSpacing:"0.06em" }}>NOW LIVE</span>
               </div>
               <h2 style={{ color:"#f1f5f9", fontSize:17, fontWeight:800, margin:0, lineHeight:1.2 }}>
-                LBC Auto — New Updates
+                AI Diagnostics is here
               </h2>
             </div>
           </div>
 
           <p style={{ color:"#94a3b8", fontSize:13, lineHeight:1.65, margin:0 }}>
-            <strong style={{ color:"#38bdf8" }}>Payment History Manager</strong> is live — edit or delete individual payments directly on any invoice. Plus <strong style={{ color:"#e2e8f0" }}>Send to Repair Order</strong>, AI assistant upgrades, and Center Control v2 syncing.
+            Plug in a <strong style={{ color:"#e879f9" }}>Bluetooth OBD2 scanner</strong> and LBC Auto reads live fault codes right in the browser — no extra hardware or app needed — then <strong style={{ color:"#e2e8f0" }}>AI explains the problem in plain English and drafts the estimate for you</strong>.
           </p>
 
-          {/* Feature chips */}
-          <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginTop:14 }}>
-            {["🔧 Repair Diagnostics","📋 Labor Hours","🦀 Rust Multipliers","⚡ OBD-II Codes","🚗 Vehicle History","💡 Fix Recommendations"].map(chip => (
-              <span key={chip} style={{
-                background:"rgba(0,170,255,0.1)", border:"1px solid rgba(0,170,255,0.2)",
-                borderRadius:20, padding:"4px 10px", fontSize:11, color:"#93c5fd", fontWeight:600,
-              }}>{chip}</span>
+          {/* How it works now — flow steps */}
+          <div style={{ marginTop:16 }}>
+            <p style={{ color:"#64748b", fontSize:10, textTransform:"uppercase", letterSpacing:"0.08em", fontWeight:700, marginBottom:8 }}>
+              How the scan works now
+            </p>
+            {[
+              ["1","Connect", "Open Diagnostics → pair your BLE OBD2 scanner (e.g. Vgate iCar Pro) over Bluetooth, right in Chrome/Edge"],
+              ["2","Scan", "Pull live fault codes (DTCs) and real-time data — RPM, speed, coolant temp — straight off the vehicle"],
+              ["3","AI Explains", "Lumina translates each code into plain-English cause + recommended fix"],
+              ["4","Auto-Estimate", "One click turns the findings into a draft Estimate using your shop's labor rates & parts"],
+            ].map(([n, title, desc]) => (
+              <div key={n} style={{ display:"flex", gap:10, marginBottom:8, alignItems:"flex-start" }}>
+                <div style={{
+                  width:20, height:20, borderRadius:"50%", flexShrink:0,
+                  background:"rgba(217,70,239,0.15)", border:"1px solid rgba(217,70,239,0.3)",
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  color:"#e879f9", fontSize:11, fontWeight:800,
+                }}>{n}</div>
+                <div>
+                  <span style={{ color:"#e2e8f0", fontSize:12, fontWeight:700 }}>{title}</span>
+                  <span style={{ color:"#64748b", fontSize:11, marginLeft:6 }}>{desc}</span>
+                </div>
+              </div>
             ))}
-          </div>
-
-          {/* How to use */}
-          <div style={{
-            marginTop:14, padding:"10px 12px",
-            background:"rgba(0,255,136,0.06)", borderRadius:10,
-            border:"1px solid rgba(0,255,136,0.15)",
-            display:"flex", alignItems:"center", gap:10,
-          }}>
-            <span style={{ fontSize:18 }}>💬</span>
-            <span style={{ color:"#6ee7b7", fontSize:12, lineHeight:1.5 }}>
-              Open any invoice → tap <strong>Edit Payments</strong> to fix, adjust, or remove payment entries. All totals recalculate automatically.
-            </span>
           </div>
         </div>
 
-        {/* ── Platform Updates ── */}
+        {/* ── Body ── */}
         <div style={{ padding:"18px 24px 22px" }}>
+
+          {/* Existing customer reassurance */}
+          {isLegacyCustomer && (
+            <div style={{
+              marginBottom:16, padding:"12px 14px",
+              background:"rgba(0,255,136,0.06)", borderRadius:10,
+              border:"1px solid rgba(0,255,136,0.2)",
+              display:"flex", gap:10, alignItems:"flex-start",
+            }}>
+              <span style={{ fontSize:18 }}>✅</span>
+              <span style={{ color:"#6ee7b7", fontSize:12, lineHeight:1.55 }}>
+                <strong>Nothing changes for your account.</strong> New billing tiers don't apply to you — you keep full access, including AI Diagnostics, at no extra charge, for now. We'll reach out before anything changes.
+              </span>
+            </div>
+          )}
+
           <p style={{ color:"#475569", fontSize:11, textTransform:"uppercase", letterSpacing:"0.08em", fontWeight:700, marginBottom:12 }}>
-            Also in this update
+            Also new
           </p>
 
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:18 }}>
             {[
-              ["📜","Payment History","Edit or delete individual payments on any invoice"],
-              ["🔁","Send to Repair Order","Convert any invoice to a repair order in one click"],
-              ["🤖","LBC Auto AI","Floating AI assistant on every page — ask it anything"],
-              ["💲","Discount: $ or %","Fixed dollar or percentage discount on every job"],
-              ["⚙️","Default Labor Rate","Set once, auto-fills every new labor row"],
-              ["👤","Center Control v2","All record changes sync back to the customer profile"],
+              ["🧾","Billing Tab", "Customers can now see full Estimate & Invoice history in their portal"],
+              ["🔌","Web Bluetooth", "No app to install — scanner pairs directly through the browser"],
+              ["💲","New Plans", "Basic ($199/mo) or Pro ($299/mo, includes AI Diagnostics)"],
+              ["📋","Draft Estimates", "AI-found issues convert straight into a shop estimate"],
             ].map(([icon, title, desc]) => (
               <div key={title} style={{
                 background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.07)",
@@ -193,34 +216,29 @@ const UpdateBanner = ({ user }) => {
 
           {/* CTA */}
           <div style={{ display:"flex", gap:10 }}>
-            {!user?.labor_rate && (
-              <button onClick={goToSettings} style={{
-                flex:1, padding:"11px 0",
-                background:"linear-gradient(135deg,#3b82f6,#06b6d4)",
-                color:"#fff", fontWeight:700, fontSize:13,
-                border:"none", borderRadius:10, cursor:"pointer",
-                boxShadow:"0 4px 15px rgba(59,130,246,0.35)",
-              }}>
-                ⚙️ Set Labor Rate →
-              </button>
-            )}
+            <button onClick={goToDiagnostics} style={{
+              flex:1, padding:"11px 0",
+              background:"linear-gradient(135deg,#a21caf,#e879f9)",
+              color:"#fff", fontWeight:700, fontSize:13,
+              border:"none", borderRadius:10, cursor:"pointer",
+              boxShadow:"0 4px 15px rgba(217,70,239,0.35)",
+            }}>
+              🩺 Try Diagnostics →
+            </button>
             <button onClick={dismiss} style={{
               flex:1, padding:"11px 0",
-              background: user?.labor_rate
-                ? "linear-gradient(135deg,#0066cc,#00aaff)"
-                : "rgba(255,255,255,0.07)",
-              color: user?.labor_rate ? "#fff" : "#94a3b8",
+              background:"rgba(255,255,255,0.07)",
+              color:"#94a3b8",
               fontWeight:700, fontSize:13,
-              border: user?.labor_rate ? "none" : "1px solid rgba(255,255,255,0.1)",
+              border:"1px solid rgba(255,255,255,0.1)",
               borderRadius:10, cursor:"pointer",
-              boxShadow: user?.labor_rate ? "0 4px 15px rgba(0,170,255,0.35)" : "none",
             }}>
-              {user?.labor_rate ? "🚀 Let's Go!" : "Got it"}
+              Got it
             </button>
           </div>
 
           <p style={{ color:"#334155", fontSize:11, textAlign:"center", marginTop:10 }}>
-            Powered by <strong style={{ color:"#0066cc" }}>Lumina</strong> · LBC Network
+            Powered by <strong style={{ color:"#a21caf" }}>Lumina</strong> · LBC Network
           </p>
         </div>
       </div>

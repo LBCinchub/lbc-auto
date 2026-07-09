@@ -393,7 +393,7 @@ export default function Diagnostics() {
     : "—";
 
   // Diagnostics + AI is a Pro-tier feature — Basic plan shops get an upsell instead of the tool.
-  if (user && user.plan_tier !== "pro") {
+  if (user && user.plan_tier !== "pro" && user.plan_tier !== "legacy") {
     return (
       <div className="max-w-lg mx-auto mt-16 text-center space-y-4 bg-gray-900 border border-gray-800 rounded-xl p-8">
         <Gauge className="w-10 h-10 text-fuchsia-400 mx-auto" />

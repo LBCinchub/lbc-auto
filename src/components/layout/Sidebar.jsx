@@ -163,12 +163,12 @@ export default function Sidebar({ currentPage }) {
                           : item.label
                     )}>{item.name}</span>
                   )}
-                  {item.proOnly && user?.plan_tier !== "pro" && !collapsed && (
+                  {item.proOnly && user?.plan_tier !== "pro" && user?.plan_tier !== "legacy" && !collapsed && (
                     <span className="ml-auto text-[9px] font-bold tracking-wide px-1.5 py-0.5 rounded bg-fuchsia-500/20 text-fuchsia-400 border border-fuchsia-500/30 flex-shrink-0">
                       PRO
                     </span>
                   )}
-                  {isActive && !collapsed && !(item.proOnly && user?.plan_tier !== "pro") && (
+                  {isActive && !collapsed && !(item.proOnly && user?.plan_tier !== "pro" && user?.plan_tier !== "legacy") && (
                     <div className={cn("ml-auto w-1.5 h-1.5 rounded-full bg-gradient-to-br flex-shrink-0", item.color.replace("from-", "bg-").split(" ")[0])} />
                   )}
                 </Link>
