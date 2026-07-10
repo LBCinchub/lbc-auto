@@ -9,6 +9,7 @@ import RecentOrders from "../components/dashboard/RecentOrders";
 import RecentEstimates from "../components/dashboard/RecentEstimates";
 import RecentInvoices from "../components/dashboard/RecentInvoices";
 import TodayAppointments from "../components/dashboard/TodayAppointments";
+import WebBookings from "../components/dashboard/WebBookings";
 import KpiCards from "../components/dashboard/KpiCards";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import StatusBadge from "../components/shared/StatusBadge";
@@ -118,6 +119,10 @@ export default function Dashboard() {
 
       {/* KPI Summary */}
       <KpiCards orders={orders} appointments={appointments} invoices={invoices} />
+
+
+      {/* Web Bookings — connected site indicator */}
+      <WebBookings appointments={appointments} />
 
       {/* 4-widget scrollable grid — single source, no duplication */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">

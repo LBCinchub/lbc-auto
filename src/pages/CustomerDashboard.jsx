@@ -168,6 +168,7 @@ export default function CustomerDashboard() {
   };
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
+  const webBookingUnread = notifications.filter(n => !n.is_read && (n.title || "").toLowerCase().includes("web booking")).length;
   const unreadMsgs = messages.filter(m => m.sender === "shop" && !m.read_by_customer).length;
 
   const S = {
@@ -216,6 +217,13 @@ export default function CustomerDashboard() {
                 background:"#ef4444", borderRadius:"50%", fontSize:9, color:"#fff",
                 display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700,
               }}>{unreadCount}</span>
+            )}
+            {webBookingUnread > 0 && (
+              <span style={{
+                position:"absolute", bottom:-1, left:-1, width:9, height:9,
+                background:"#10b981", borderRadius:"50%", border:"2px solid #0a0f1a",
+                display:"flex", alignItems:"center", justifyContent:"center", fontSize:7,
+              }}>🌐</span>
             )}
           </button>
           <button onClick={() => { sessionStorage.removeItem("customer_session"); window.location.href="/CustomerPortal"; }}
@@ -638,15 +646,20 @@ export default function CustomerDashboard() {
                 <Bell style={{ width:36, height:36, color:"#334155", margin:"0 auto 12px" }}/>
                 <p style={{ color:"#475569" }}>No notifications yet.</p>
               </div>
-            ) : notifications.map(n => (
-              <div key={n.id} style={{ ...S.card, borderLeft:`3px solid ${n.is_read ? "#1e293b" : "#38bdf8"}` }}>
+            ) : notifications.map(n => {
+              const isWebBooking = (n.title || "").toLowerCase().includes("web booking");
+              return (
+              <div key={n.id} style={{ ...S.card, borderLeft:`3px solid ${isWebBooking ? "#10b981" : (n.is_read ? "#1e293b" : "#38bdf8")}`, ...(isWebBooking ? { background:"#052e1a", borderColor:"#10b98144" } : {}) }}>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
-                  <p style={{ color: n.is_read ? "#94a3b8" : "#fff", fontSize:14, fontWeight: n.is_read ? 400 : 700, margin:0 }}>{n.title}</p>
+                  <p style={{ color: isWebBooking ? "#34d399" : (n.is_read ? "#94a3b8" : "#fff"), fontSize:14, fontWeight: n.is_read ? 400 : 700, margin:0, display:"flex", alignItems:"center", gap:6 }}>
+                    {isWebBooking && <span style={{ fontSize:15 }}>🌐</span>}{n.title}
+                  </p>
                   <span style={{ color:"#475569", fontSize:10 }}>{timeAgo(n.sent_at)}</span>
                 </div>
-                {n.body && <p style={{ color:"#64748b", fontSize:13, margin:"4px 0 0" }}>{n.body}</p>}
+                {n.body && <p style={{ color: isWebBooking ? "#6ee7b7" : "#64748b", fontSize:13, margin:"4px 0 0" }}>{n.body}</p>}
               </div>
-            ))}
+              );
+            })}
           </>
         )}
       </div>
