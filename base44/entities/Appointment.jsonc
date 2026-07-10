@@ -54,6 +54,24 @@
       ],
       "default": "scheduled",
       "description": "Appointment status"
+    },
+    "source": {
+      "type": "string",
+      "enum": ["dashboard", "web_booking", "phone", "walk_in"],
+      "default": "dashboard",
+      "description": "How this appointment was booked"
+    },
+    "price_estimate": {
+      "type": "number",
+      "description": "AI-quoted price estimate shown to customer at booking time"
+    },
+    "customer_phone": {
+      "type": "string",
+      "description": "Customer phone (for web bookings before customer is fully registered)"
+    },
+    "customer_email_address": {
+      "type": "string",
+      "description": "Customer email (for web bookings — separate from the created_by field)"
     }
   },
   "required": [

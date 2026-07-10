@@ -221,6 +221,16 @@ export default function Appointments() {
                          <div className="flex items-center gap-2 flex-wrap">
                            <span className="text-blue-400 font-medium text-sm capitalize">{a.customer_name}</span>
                            <StatusBadge status={a.status} />
+                           {a.source === "web_booking" && (
+                             <span className="text-[9px] font-bold tracking-wide px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                               🌐 WEB
+                             </span>
+                           )}
+                           {a.price_estimate > 0 && (
+                             <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-400 border border-sky-500/30">
+                               ~${a.price_estimate}
+                             </span>
+                           )}
                          </div>
                          {(() => { const c = customers.find(c => c.id === a.customer_id); return c?.phone ? <p className="text-xs text-amber-400">{formatPhone(c.phone)}{c.email ? ` · ${c.email}` : ""}</p> : null; })()}
                          <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
