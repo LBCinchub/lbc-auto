@@ -29,10 +29,45 @@
         "sent",
         "approved",
         "declined",
-        "expired"
+        "expired",
+        "invoiced"
       ],
       "default": "draft",
       "description": "Estimate status"
+    },
+    "linked_invoice_id": {
+      "type": "string",
+      "description": "ID of the invoice created from this estimate (cashout or convert)"
+    },
+    "linked_invoice_number": {
+      "type": "string",
+      "description": "Invoice number of the linked invoice"
+    },
+    "amount_paid": {
+      "type": "number",
+      "description": "Total amount paid against this estimate",
+      "default": 0
+    },
+    "payment_history": {
+      "type": "array",
+      "description": "Record of all payments made against this estimate",
+      "items": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "number"
+          },
+          "method": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
     },
     "service_reason": {
       "type": "string",
@@ -117,12 +152,15 @@
     },
     "discount": {
       "type": "number",
-      "description": "Discount value — dollar amount or percentage depending on discount_type"
+      "description": "Discount value \u2014 dollar amount or percentage depending on discount_type"
     },
     "discount_type": {
       "type": "string",
-      "description": "Discount type — $ for fixed dollar, % for percentage",
-      "enum": ["$", "%"]
+      "description": "Discount type \u2014 $ for fixed dollar, % for percentage",
+      "enum": [
+        "$",
+        "%"
+      ]
     },
     "grand_total": {
       "type": "number",

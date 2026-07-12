@@ -119,34 +119,62 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
         console.error("Failed to sync Invoice from RepairOrder payment:", e);
       }
     } else if (entityName === "Estimate") {
-      // Auto-create or update a linked Invoice, mark estimate as approved+paid
+      // Auto-create or update a linked Invoice with full line items, mark estimate as invoiced
       const invoiceNum = invoice.linked_invoice_number || `INV-EST-${invoice.id.slice(-6).toUpperCase()}`;
       let invId = invoice.linked_invoice_id;
+
+      // ── Build line_items from estimate labor_items + parts_items (no data loss) ──
+      const line_items = [
+        ...(invoice.labor_items || []).map(item => ({
+          description: item.description || 'Labor',
+          quantity: item.hours || 1,
+          unit_price: item.rate || item.total || 0,
+          total: item.total || 0,
+          type: 'labor'
+        })),
+        ...(invoice.parts_items || []).map(item => ({
+          description: item.name || item.description || 'Part',
+          quantity: item.quantity || 1,
+          unit_price: item.unit_price || 0,
+          total: item.total || 0,
+          type: 'part'
+        })),
+      ];
+
+      const estimateInvoiceFields = {
+        invoice_number: invoiceNum,
+        customer_id: invoice.customer_id || "",
+        customer_name: invoice.customer_name || "",
+        vehicle_info: invoice.vehicle_info || "",
+        estimate_id: invoice.id,
+        line_items,
+        labor_total: invoice.labor_total || invoice.labor_cost || 0,
+        parts_total: invoice.parts_total || invoice.parts_cost || 0,
+        tax_rate: invoice.tax_rate || 0,
+        tax_amount: invoice.tax_amount || 0,
+        tax_applies_to: invoice.tax_applies_to || "both",
+        discount: invoice.discount || 0,
+        discount_type: invoice.discount_type || "$",
+        total: invoice.total || 0,
+        service_reason: invoice.service_reason || "",
+        customer_note: invoice.notes || "",
+      };
+
       if (invId) {
         await base44.entities.Invoice.update(invId, {
+          ...estimateInvoiceFields,
           ...paymentFields,
-          invoice_number: invoiceNum,
-          total: invoice.total || 0,
-          estimate_id: invoice.id,
         });
       } else {
         const created = await base44.entities.Invoice.create({
-          invoice_number: invoiceNum,
-          customer_id: invoice.customer_id || "",
-          customer_name: invoice.customer_name || "",
-          vehicle_info: invoice.vehicle_info || "",
-          estimate_id: invoice.id,
-          total: invoice.total || 0,
-          labor_total: invoice.labor_cost || 0,
-          parts_total: invoice.parts_cost || 0,
-          tax_amount: invoice.tax_amount || 0,
+          ...estimateInvoiceFields,
           ...paymentFields,
         });
         invId = created.id;
       }
-      // Mark estimate as approved and record payment reference
+      // Mark estimate as invoiced and record payment reference
       await base44.entities.Estimate.update(invoice.id, {
-        status: "approved",
+        status: "invoiced",
         amount_paid: newAmountPaid,
         linked_invoice_id: invId,
         linked_invoice_number: invoiceNum,

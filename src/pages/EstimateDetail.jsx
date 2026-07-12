@@ -251,20 +251,21 @@ export default function EstimateDetail() {
   const handleConvertToInvoice = async () => {
     if (!window.confirm("Convert this estimate to an invoice?")) return;
     try {
+      // ── Build line_items from estimate labor_items + parts_items (no data loss) ──
       const lineItems = [
-        ...(estimate.parts_items || []).map(p => ({
-          description: p.name,
-          type: "part",
-          quantity: p.quantity || 1,
-          unit_price: p.unit_price || 0,
-          total: p.total || 0,
+        ...(estimate.labor_items || []).map(item => ({
+          description: item.description || 'Labor',
+          quantity: item.hours || 1,
+          unit_price: item.rate || item.total || 0,
+          total: item.total || 0,
+          type: 'labor'
         })),
-        ...(estimate.labor_items || []).map(l => ({
-          description: l.description || "Labor",
-          type: "labor",
-          quantity: l.hours || 1,
-          unit_price: l.rate || 0,
-          total: l.total || 0,
+        ...(estimate.parts_items || []).map(item => ({
+          description: item.name || item.description || 'Part',
+          quantity: item.quantity || 1,
+          unit_price: item.unit_price || 0,
+          total: item.total || 0,
+          type: 'part'
         })),
       ];
       const inv = await base44.entities.Invoice.create({
@@ -276,13 +277,18 @@ export default function EstimateDetail() {
         parts_total: estimate.parts_total || 0,
         labor_total: estimate.labor_total || 0,
         tax_rate: estimate.tax_rate || 0,
+        tax_applies_to: estimate.tax_applies_to || "both",
         tax_amount: estimate.tax_amount || 0,
+        discount: estimate.discount || 0,
+        discount_type: estimate.discount_type || "$",
         total: estimate.grand_total || 0,
         balance_due: estimate.grand_total || 0,
         amount_paid: 0,
         status: "unpaid",
+        service_reason: estimate.service_reason || "",
+        customer_note: estimate.notes || "",
       });
-      await base44.entities.Estimate.update(estimate.id, { status: "approved" });
+      await base44.entities.Estimate.update(estimate.id, { status: "invoiced" });
       navigate(`/InvoiceDetail/${inv.id}`);
     } catch (error) {
       console.error("Error converting estimate to invoice:", error);
@@ -441,7 +447,8 @@ export default function EstimateDetail() {
             )}
           </div>
           <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-            estimate.status === "approved" ? "bg-green-500/20 text-green-400"
+            estimate.status === "invoiced" ? "bg-emerald-500/20 text-emerald-400"
+            : estimate.status === "approved" ? "bg-green-500/20 text-green-400"
             : estimate.status === "sent" ? "bg-blue-500/20 text-blue-400"
             : estimate.status === "declined" ? "bg-red-500/20 text-red-400"
             : estimate.status === "expired" ? "bg-gray-500/20 text-gray-400"
@@ -691,12 +698,20 @@ export default function EstimateDetail() {
             customer_id: estimate.customer_id || "",
             customer_name: estimate.customer_name,
             vehicle_info: estimate.vehicle_info,
-            total: estimate.total || estimate.grand_total || grandTotal,
-            labor_cost: laborTotal,
-            parts_cost: partsTotal,
+            total: estimate.grand_total || grandTotal,
+            labor_total: laborTotal,
+            parts_total: partsTotal,
+            labor_items: laborItems,
+            parts_items: partsItems,
+            tax_rate: estimate.tax_rate ?? (user?.tax_rate ?? 0),
+            tax_applies_to: taxAppliesTo,
             tax_amount: taxAmount,
+            discount: parseFloat(discount) || 0,
+            discount_type: discountType,
+            service_reason: estimateServiceReason,
+            notes: estimateNotes,
             amount_paid: 0,
-            balance_due: estimate.total || estimate.grand_total || grandTotal,
+            balance_due: estimate.grand_total || grandTotal,
             payment_history: [],
           }}
           entityName="Estimate"
@@ -713,7 +728,8 @@ export default function EstimateDetail() {
         {/* Left: status + financials */}
         <div className="flex items-center gap-3 flex-wrap">
           <span className={`text-xs font-bold px-2.5 py-1 rounded-full border capitalize ${
-            estimate.status === "approved" ? "bg-green-500/10 border-green-500/30 text-green-400"
+            estimate.status === "invoiced" ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+            : estimate.status === "approved" ? "bg-green-500/10 border-green-500/30 text-green-400"
             : estimate.status === "sent" ? "bg-sky-500/10 border-sky-500/30 text-sky-400"
             : estimate.status === "declined" ? "bg-red-500/10 border-red-500/30 text-red-400"
             : "bg-gray-700/40 border-gray-600/40 text-gray-400"

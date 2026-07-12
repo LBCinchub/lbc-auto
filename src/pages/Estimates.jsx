@@ -22,6 +22,7 @@ const STATUS_STYLES = {
   approved: "bg-green-500/20 text-green-400",
   declined: "bg-rose-500/20 text-rose-400",
   expired:  "bg-yellow-500/20 text-yellow-400",
+  invoiced: "bg-emerald-500/20 text-emerald-400",
 };
 
 export default function Estimates() {
@@ -376,9 +377,17 @@ export default function Estimates() {
                         customer_name: est.customer_name,
                         vehicle_info: est.vehicle_info,
                         total: est.grand_total || 0,
-                        labor_cost: est.labor_total || 0,
-                        parts_cost: est.parts_total || 0,
+                        labor_total: est.labor_total || 0,
+                        parts_total: est.parts_total || 0,
+                        labor_items: est.labor_items || [],
+                        parts_items: est.parts_items || [],
+                        tax_rate: est.tax_rate || 0,
+                        tax_applies_to: est.tax_applies_to || "both",
                         tax_amount: est.tax_amount || 0,
+                        discount: est.discount || 0,
+                        discount_type: est.discount_type || "$",
+                        service_reason: est.service_reason || "",
+                        notes: est.notes || "",
                         amount_paid: est.amount_paid || 0,
                         balance_due: (est.grand_total || 0) - (est.amount_paid || 0),
                         payment_history: est.payment_history || [],
