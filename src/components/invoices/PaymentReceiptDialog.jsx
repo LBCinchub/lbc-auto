@@ -50,8 +50,8 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
 
     setSaving(true);
     const today = new Date().toISOString().split("T")[0];
-    const newAmountPaid = (invoice.amount_paid || 0) + totalFromPayments;
-    const newBalance = (invoice.total || 0) - newAmountPaid;
+    const newAmountPaid = Math.round(((invoice.amount_paid || 0) + totalFromPayments) * 100) / 100;
+    const newBalance = Math.round(((invoice.total || 0) - newAmountPaid) * 100) / 100;
     const newStatus = newBalance <= 0.01 ? "paid" : "partial";
 
     // Build payment history entries
@@ -73,7 +73,7 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
 
     const paymentFields = {
       amount_paid: newAmountPaid,
-      balance_due: Math.max(0, newBalance),
+      balance_due: Math.max(0, Math.round(newBalance * 100) / 100),
       status: newStatus,
       payment_method: combinedMethod,
       card_last4: payments.find(p => p.card_last4)?.card_last4 || invoice.card_last4 || undefined,
@@ -86,7 +86,7 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
       await base44.entities.RepairOrder.update(invoice.id, paymentFields);
 
       // Step 2: Auto-create or update a linked Invoice so Analytics always has one source of truth
-      const invoiceNum = invoice.linked_invoice_number || `INV-RO-${invoice.id.slice(-6).toUpperCase()}`;
+      const invoiceNum = invoice.linked_invoice_number || `INV-RO-${invoice.id.slice(-6).toUpperCase()}` || `INV-${Date.now().toString(36).toUpperCase().slice(-8)}`;
       try {
         if (invoice.linked_invoice_id) {
           // Update the already-linked invoice
@@ -120,7 +120,7 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
       }
     } else if (entityName === "Estimate") {
       // Auto-create or update a linked Invoice with full line items, mark estimate as invoiced
-      const invoiceNum = invoice.linked_invoice_number || `INV-EST-${invoice.id.slice(-6).toUpperCase()}`;
+      const invoiceNum = invoice.linked_invoice_number || `INV-EST-${invoice.id.slice(-6).toUpperCase()}` || `INV-${Date.now().toString(36).toUpperCase().slice(-8)}`;
       let invId = invoice.linked_invoice_id;
 
       // ── Build line_items from estimate labor_items + parts_items (no data loss) ──
@@ -148,14 +148,14 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
         vehicle_info: invoice.vehicle_info || "",
         estimate_id: invoice.id,
         line_items,
-        labor_total: invoice.labor_total || invoice.labor_cost || 0,
-        parts_total: invoice.parts_total || invoice.parts_cost || 0,
+        labor_total: Math.round((invoice.labor_total || invoice.labor_cost || 0) * 100) / 100,
+        parts_total: Math.round((invoice.parts_total || invoice.parts_cost || 0) * 100) / 100,
         tax_rate: invoice.tax_rate || 0,
-        tax_amount: invoice.tax_amount || 0,
+        tax_amount: Math.round((invoice.tax_amount || 0) * 100) / 100,
         tax_applies_to: invoice.tax_applies_to || "both",
         discount: invoice.discount || 0,
         discount_type: invoice.discount_type || "$",
-        total: invoice.total || 0,
+        total: Math.round((invoice.total || 0) * 100) / 100,
         service_reason: invoice.service_reason || "",
         customer_note: invoice.notes || "",
       };

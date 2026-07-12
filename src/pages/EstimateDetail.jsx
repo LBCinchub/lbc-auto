@@ -268,21 +268,23 @@ export default function EstimateDetail() {
           type: 'part'
         })),
       ];
+      const r2 = (n) => Math.round((n || 0) * 100) / 100;
       const inv = await base44.entities.Invoice.create({
+        invoice_number: `INV-${Date.now().toString(36).toUpperCase().slice(-8)}`,
         estimate_id: estimate.id,
         customer_id: estimate.customer_id,
         customer_name: estimate.customer_name,
         vehicle_info: estimate.vehicle_info,
         line_items: lineItems,
-        parts_total: estimate.parts_total || 0,
-        labor_total: estimate.labor_total || 0,
+        parts_total: r2(estimate.parts_total),
+        labor_total: r2(estimate.labor_total),
         tax_rate: estimate.tax_rate || 0,
         tax_applies_to: estimate.tax_applies_to || "both",
-        tax_amount: estimate.tax_amount || 0,
+        tax_amount: r2(estimate.tax_amount),
         discount: estimate.discount || 0,
         discount_type: estimate.discount_type || "$",
-        total: estimate.grand_total || 0,
-        balance_due: estimate.grand_total || 0,
+        total: r2(estimate.grand_total),
+        balance_due: r2(estimate.grand_total),
         amount_paid: 0,
         status: "unpaid",
         service_reason: estimate.service_reason || "",

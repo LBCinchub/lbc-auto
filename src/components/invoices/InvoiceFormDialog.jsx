@@ -267,19 +267,20 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
   const laborTotal = laborItems.reduce((s, r) => s + (parseFloat(r.hours) || 0) * (parseFloat(r.rate) || 0), 0);
   const partsTotal = partsItems.reduce((s, r) => s + (parseFloat(r.quantity) || 0) * (parseFloat(r.unit_price) || 0), 0);
 
+  const r2 = (n) => Math.round(n * 100) / 100;
   const calculations = useMemo(() => {
-    const subtotal = laborTotal + partsTotal;
-    const discountAmount = form.discount_type === "percentage"
-      ? subtotal * ((form.discount_value || 0) / 100)
-      : form.discount_type === "fixed" ? (form.discount_value || 0) : 0;
-    const subtotalAfterDiscount = subtotal - discountAmount;
-    let taxableAmount = 0;
-    if (form.apply_tax_labor) taxableAmount += laborTotal;
-    if (form.apply_tax_parts) taxableAmount += partsTotal;
-    const taxAmount = taxableAmount * ((form.tax_rate || 0) / 100);
-    const total = subtotalAfterDiscount + taxAmount;
-    const balanceDue = total - (form.amount_paid || 0);
-    return { subtotal, discountAmount, subtotalAfterDiscount, taxAmount, total, balanceDue };
+  const subtotal = r2(laborTotal + partsTotal);
+  const discountAmount = form.discount_type === "percentage"
+    ? r2(subtotal * ((form.discount_value || 0) / 100))
+    : form.discount_type === "fixed" ? r2(form.discount_value || 0) : 0;
+  const subtotalAfterDiscount = r2(subtotal - discountAmount);
+  let taxableAmount = 0;
+  if (form.apply_tax_labor) taxableAmount += laborTotal;
+  if (form.apply_tax_parts) taxableAmount += partsTotal;
+  const taxAmount = r2(taxableAmount * ((form.tax_rate || 0) / 100));
+  const total = r2(subtotalAfterDiscount + taxAmount);
+  const balanceDue = r2(total - (form.amount_paid || 0));
+  return { subtotal, discountAmount, subtotalAfterDiscount, taxAmount, total, balanceDue };
   }, [laborTotal, partsTotal, form.discount_type, form.discount_value, form.payment_method, form.tax_rate, form.amount_paid, form.apply_tax_labor, form.apply_tax_parts]);
 
   const { subtotal, discountAmount, taxAmount, calculations: _c, ..._ } = calculations;
@@ -372,8 +373,11 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
     let finalStatus = form.status;
     let paidDate = invoice?.paid_date;
     let paymentHistory = form.payment_history || [];
-    const invoiceNum = invoice?.invoice_number || `INV-${Date.now().toString(36).toUpperCase()}`;
+    const invoiceNum = invoice?.invoice_number || `INV-${Date.now().toString(36).toUpperCase().slice(-8)}`;
     const { total: finalTotal, balanceDue: finalBalance, taxAmount: finalTax } = calculations;
+    const safeTotal = Math.round((finalTotal || 0) * 100) / 100;
+    const safeBalance = Math.max(0, Math.round((finalBalance || 0) * 100) / 100);
+    const safeTax = Math.round((finalTax || 0) * 100) / 100;
 
     if (finalBalance <= 0) {
       finalStatus = "paid";
@@ -391,7 +395,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
       if (form.due_date < new Date().toISOString().split("T")[0]) finalStatus = "overdue";
     }
 
-    const data = { ...form, customer_id: resolvedCustomerId, vehicle_id: resolvedVehicleId, invoice_number: invoiceNum, labor_items: laborItems, parts_used, labor_total: laborTotal, parts_total: partsTotal, tax_amount: finalTax, total: finalTotal, balance_due: finalBalance, status: finalStatus, paid_date: paidDate, payment_history: paymentHistory, line_items, estimate_id: form.estimate_id || sourceEstimate?.id || "", technician_notes: form.technician_notes || "" };
+    const data = { ...form, customer_id: resolvedCustomerId, vehicle_id: resolvedVehicleId, invoice_number: invoiceNum, labor_items: laborItems, parts_used, labor_total: Math.round(laborTotal * 100) / 100, parts_total: Math.round(partsTotal * 100) / 100, tax_amount: safeTax, total: safeTotal, balance_due: safeBalance, status: finalStatus, paid_date: paidDate, payment_history: paymentHistory, line_items, estimate_id: form.estimate_id || sourceEstimate?.id || "", technician_notes: form.technician_notes || "" };
 
     if (invoice && invoice.id) {
       await base44.entities.Invoice.update(invoice.id, data);
