@@ -41,206 +41,150 @@ const mainPageKey = mainPage ?? Object.keys(Pages)[0];
 const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
 
 // ── One-time "New Update" banner ────────────────────────────────────────────
-const UPDATE_KEY = "lbc_auto_update_v20260709_ai_diagnostics";
+const UPDATE_KEY = "lbc_banner_dismissed_v20260711";
 
 const UpdateBanner = ({ user }) => {
   const [visible, setVisible] = useState(false);
-  const navigate = useNavigate();
-
-  const isLegacyCustomer = user && (
-    user.plan_tier === "legacy" ||
-    (user.subscription_status === "active" && !user.setup_fee_paid)
-  );
 
   useEffect(() => {
     if (!user) return;
-    const key = `${UPDATE_KEY}_${user.id || user.email || "guest"}`;
-    if (!localStorage.getItem(key)) {
-      const t = setTimeout(() => setVisible(true), 700);
-      return () => clearTimeout(t);
+    if (!localStorage.getItem(UPDATE_KEY)) {
+      setVisible(true);
     }
-  }, [user?.id, user?.email]);
+  }, [user]);
+
+  // Prevent Escape key from closing
+  useEffect(() => {
+    if (!visible) return;
+    const handler = (e) => {
+      if (e.key === "Escape") e.preventDefault();
+    };
+    window.addEventListener("keydown", handler, { capture: true });
+    return () => window.removeEventListener("keydown", handler, { capture: true });
+  }, [visible]);
 
   const dismiss = () => {
-    const key = `${UPDATE_KEY}_${user?.id || user?.email}`;
-    localStorage.setItem(key, "1");
+    localStorage.setItem(UPDATE_KEY, "true");
     setVisible(false);
   };
 
-  const goToDiagnostics = () => { dismiss(); navigate("/Diagnostics"); };
-
   if (!visible) return null;
+
+  const fixes = [
+    { title: "INVOICE FIX", desc: "All service descriptions, parts & labor notes now carry over perfectly when converting an Estimate to Invoice or using Cash Out." },
+    { title: "INVOICE NUMBERS", desc: "Every invoice now gets a unique number automatically — no more missing IDs." },
+    { title: "ESTIMATE STATUS", desc: 'Estimates now correctly update to "Invoiced" after you cash out or convert them.' },
+    { title: "ROUNDING FIXED", desc: "Balance due amounts now show clean numbers (no more $0.0025 rounding errors)." },
+  ];
+
+  const features = [
+    { title: "LBC AUTO AI SCANNER", desc: "Diagnostics fully rebuilt. 3 modes: Scan Mode (full system DTC scan with AI holistic diagnosis), Live Data (16 sensors streaming real-time), Tech Mode (type commands like \"o2 reading\" or \"caliper test\"). Now supports EV/Hybrid vehicles.", badge: "PRO" },
+    { title: "PHOTO & CAMERA IN AI CHAT", desc: "Take a photo or upload one directly in the AI assistant. AI analyzes damage, wear, parts, or DTC codes on your scanner screen." },
+    { title: "CUSTOMER VEHICLE PHOTOS", desc: "Save any AI photo to a customer's profile. Full history — photos, AI notes, linked to estimates and repair orders." },
+    { title: "PRINTABLE VEHICLE HISTORY REPORT", desc: "One click → clean printed report with full service history, photos, open balances. Email it directly to your customer." },
+  ];
 
   return (
     <div style={{
       position:"fixed", inset:0,
-      background:"rgba(0,0,0,0.72)",
-      backdropFilter:"blur(6px)",
-      zIndex:99999,
+      background:"rgba(0,0,0,0.85)",
+      zIndex:9999,
       display:"flex", alignItems:"center", justifyContent:"center",
       padding:"16px",
     }}>
       <div style={{
-        background:"linear-gradient(160deg,#0a0f1e 0%,#0f1e35 60%,#0a1628 100%)",
-        border:"1px solid rgba(217,70,239,0.25)",
-        borderRadius:"20px",
-        padding:"0",
-        maxWidth:"460px",
+        background:"linear-gradient(160deg,#0a0f1e 0%,#111827 50%,#0a0f1e 100%)",
+        border:"1px solid rgba(255,255,255,0.08)",
+        borderRadius:"16px",
+        maxWidth:"560px",
         width:"100%",
-        maxHeight:"88vh",
+        maxHeight:"90vh",
         overflowY:"auto",
-        boxShadow:"0 30px 80px rgba(0,0,0,0.6), 0 0 40px rgba(217,70,239,0.08)",
+        boxShadow:"0 30px 80px rgba(0,0,0,0.6)",
         position:"relative",
       }}>
 
-        {/* ── AI Hero Header ── */}
+        {/* ── Header ── */}
         <div style={{
-          background:"linear-gradient(135deg,#2b0a3f 0%,#3a0e55 50%,#1a0833 100%)",
-          borderBottom:"1px solid rgba(217,70,239,0.2)",
-          padding:"24px 24px 20px",
-          position:"relative",
-          overflow:"hidden",
+          padding:"28px 28px 20px",
+          textAlign:"center",
+          borderBottom:"1px solid rgba(255,255,255,0.06)",
         }}>
-          {/* Glow orb */}
-          <div style={{
-            position:"absolute", top:-40, right:-40,
-            width:160, height:160, borderRadius:"50%",
-            background:"radial-gradient(circle,rgba(217,70,239,0.18) 0%,transparent 70%)",
-            pointerEvents:"none",
-          }}/>
-
-          {/* Close */}
-          <button onClick={dismiss} style={{
-            position:"absolute", top:14, right:16,
-            background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.12)",
-            borderRadius:"50%", width:28, height:28,
-            cursor:"pointer", color:"#94a3b8", fontSize:16, lineHeight:"28px",
-            textAlign:"center", padding:0,
-          }}>×</button>
-
-          {/* AI Icon + badge */}
-          <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:14 }}>
-            <div style={{
-              width:52, height:52, borderRadius:14,
-              background:"linear-gradient(135deg,#a21caf,#e879f9)",
-              boxShadow:"0 0 20px rgba(217,70,239,0.5)",
-              display:"flex", alignItems:"center", justifyContent:"center",
-              fontSize:26, flexShrink:0,
-            }}>🩺</div>
-            <div>
-              <div style={{
-                display:"inline-flex", alignItems:"center", gap:6,
-                background:"rgba(217,70,239,0.15)",
-                border:"1px solid rgba(217,70,239,0.3)",
-                borderRadius:20, padding:"3px 10px",
-                marginBottom:4,
-              }}>
-                <div style={{ width:6, height:6, borderRadius:"50%", background:"#00ff88", boxShadow:"0 0 6px #00ff88" }}/>
-                <span style={{ color:"#e879f9", fontSize:11, fontWeight:700, letterSpacing:"0.06em" }}>NOW LIVE</span>
-              </div>
-              <h2 style={{ color:"#f1f5f9", fontSize:17, fontWeight:800, margin:0, lineHeight:1.2 }}>
-                LBC AUTO AI SCANNER is here
-              </h2>
-            </div>
-          </div>
-
-          <p style={{ color:"#94a3b8", fontSize:13, lineHeight:1.65, margin:0 }}>
-            Plug in a <strong style={{ color:"#e879f9" }}>Bluetooth OBD2 scanner</strong> and LBC Auto reads live fault codes right in the browser — no extra hardware or app needed — then <strong style={{ color:"#e2e8f0" }}>AI explains the problem in plain English and drafts the estimate for you</strong>.
+          <div style={{ fontSize:32, marginBottom:8 }}>⚡</div>
+          <h1 style={{ color:"#f1f5f9", fontSize:20, fontWeight:800, margin:0, letterSpacing:"-0.02em" }}>
+            LBC AUTO — PLATFORM UPDATE
+          </h1>
+          <p style={{ color:"#64748b", fontSize:13, margin:"6px 0 0" }}>July 11, 2026</p>
+          <p style={{ color:"#94a3b8", fontSize:13, lineHeight:1.6, margin:"14px 0 0" }}>
+            We've been working hard behind the scenes. Here's what's new for your shop:
           </p>
-
-          {/* How it works now — flow steps */}
-          <div style={{ marginTop:16 }}>
-            <p style={{ color:"#64748b", fontSize:10, textTransform:"uppercase", letterSpacing:"0.08em", fontWeight:700, marginBottom:8 }}>
-              How the scan works now
-            </p>
-            {[
-              ["1","Connect", "Open Scanner → pair your BLE OBD2 scanner (e.g. Vgate iCar Pro) over Bluetooth, right in Chrome/Edge"],
-              ["2","Scan", "Pull live fault codes (DTCs) and real-time data — RPM, speed, coolant temp — straight off the vehicle"],
-              ["3","AI Explains", "Lumina translates each code into plain-English cause + recommended fix"],
-              ["4","Auto-Estimate", "One click turns the findings into a draft Estimate using your shop's labor rates & parts"],
-            ].map(([n, title, desc]) => (
-              <div key={n} style={{ display:"flex", gap:10, marginBottom:8, alignItems:"flex-start" }}>
-                <div style={{
-                  width:20, height:20, borderRadius:"50%", flexShrink:0,
-                  background:"rgba(217,70,239,0.15)", border:"1px solid rgba(217,70,239,0.3)",
-                  display:"flex", alignItems:"center", justifyContent:"center",
-                  color:"#e879f9", fontSize:11, fontWeight:800,
-                }}>{n}</div>
-                <div>
-                  <span style={{ color:"#e2e8f0", fontSize:12, fontWeight:700 }}>{title}</span>
-                  <span style={{ color:"#64748b", fontSize:11, marginLeft:6 }}>{desc}</span>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
 
         {/* ── Body ── */}
-        <div style={{ padding:"18px 24px 22px" }}>
+        <div style={{ padding:"20px 28px" }}>
 
-          {/* Existing customer reassurance */}
-          {isLegacyCustomer && (
-            <div style={{
-              marginBottom:16, padding:"12px 14px",
-              background:"rgba(0,255,136,0.06)", borderRadius:10,
-              border:"1px solid rgba(0,255,136,0.2)",
-              display:"flex", gap:10, alignItems:"flex-start",
-            }}>
-              <span style={{ fontSize:18 }}>✅</span>
-              <span style={{ color:"#6ee7b7", fontSize:12, lineHeight:1.55 }}>
-                <strong>Nothing changes for your account.</strong> New billing tiers don't apply to you — you keep full access, including AI Diagnostics, at no extra charge, for now. We'll reach out before anything changes.
-              </span>
-            </div>
-          )}
-
-          <p style={{ color:"#475569", fontSize:11, textTransform:"uppercase", letterSpacing:"0.08em", fontWeight:700, marginBottom:12 }}>
-            Also new
-          </p>
-
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:18 }}>
-            {[
-              ["🧾","Billing Tab", "Customers can now see full Estimate & Invoice history in their portal"],
-              ["🔌","Web Bluetooth", "No app to install — scanner pairs directly through the browser"],
-              ["💲","New Plans", "Basic ($199/mo) or Pro ($299/mo, includes AI Diagnostics)"],
-              ["📋","Draft Estimates", "AI-found issues convert straight into a shop estimate"],
-            ].map(([icon, title, desc]) => (
-              <div key={title} style={{
-                background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.07)",
-                borderRadius:10, padding:"10px 12px",
+          {/* Fixes */}
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
+            <span style={{ color:"#10b981", fontSize:16 }}>✅</span>
+            <span style={{ color:"#10b981", fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.06em" }}>Fixes & Improvements</span>
+          </div>
+          <div style={{ space:"8px" }}>
+            {fixes.map((f, i) => (
+              <div key={i} style={{
+                marginBottom:10, paddingLeft:28, position:"relative",
               }}>
-                <div style={{ fontSize:16, marginBottom:4 }}>{icon}</div>
-                <div style={{ color:"#e2e8f0", fontSize:12, fontWeight:700, marginBottom:2 }}>{title}</div>
-                <div style={{ color:"#64748b", fontSize:11, lineHeight:1.4 }}>{desc}</div>
+                <span style={{ position:"absolute", left:0, top:0, color:"#10b981", fontSize:14, fontWeight:700 }}>✓</span>
+                <div style={{ color:"#e2e8f0", fontSize:12, fontWeight:700, marginBottom:2 }}>{f.title}</div>
+                <div style={{ color:"#94a3b8", fontSize:12, lineHeight:1.5 }}>{f.desc}</div>
               </div>
             ))}
           </div>
 
-          {/* CTA */}
-          <div style={{ display:"flex", gap:10 }}>
-            <button onClick={goToDiagnostics} style={{
-              flex:1, padding:"11px 0",
-              background:"linear-gradient(135deg,#a21caf,#e879f9)",
-              color:"#fff", fontWeight:700, fontSize:13,
-              border:"none", borderRadius:10, cursor:"pointer",
-              boxShadow:"0 4px 15px rgba(217,70,239,0.35)",
-            }}>
-              🩺 Try Scanner →
-            </button>
-            <button onClick={dismiss} style={{
-              flex:1, padding:"11px 0",
-              background:"rgba(255,255,255,0.07)",
-              color:"#94a3b8",
-              fontWeight:700, fontSize:13,
-              border:"1px solid rgba(255,255,255,0.1)",
-              borderRadius:10, cursor:"pointer",
-            }}>
-              Got it
-            </button>
-          </div>
+          {/* Divider */}
+          <div style={{ height:1, background:"rgba(255,255,255,0.06)", margin:"16px 0" }} />
 
-          <p style={{ color:"#334155", fontSize:11, textAlign:"center", marginTop:10 }}>
-            Powered by <strong style={{ color:"#a21caf" }}>Lumina</strong> · LBC Network
+          {/* New features */}
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
+            <span style={{ color:"#60a5fa", fontSize:16 }}>✨</span>
+            <span style={{ color:"#60a5fa", fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.06em" }}>New Features</span>
+          </div>
+          {features.map((feat, i) => (
+            <div key={i} style={{
+              marginBottom:12, paddingLeft:28, position:"relative",
+            }}>
+              <span style={{ position:"absolute", left:0, top:0, color:"#60a5fa", fontSize:14, fontWeight:700 }}>🆕</span>
+              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:2 }}>
+                <span style={{ color:"#e2e8f0", fontSize:12, fontWeight:700 }}>{feat.title}</span>
+                {feat.badge && (
+                  <span style={{
+                    background:"rgba(217,70,239,0.15)", color:"#e879f9",
+                    border:"1px solid rgba(217,70,239,0.3)",
+                    borderRadius:4, padding:"1px 6px", fontSize:9, fontWeight:700,
+                  }}>{feat.badge}</span>
+                )}
+              </div>
+              <div style={{ color:"#94a3b8", fontSize:12, lineHeight:1.5 }}>{feat.desc}</div>
+            </div>
+          ))}
+
+          {/* Divider */}
+          <div style={{ height:1, background:"rgba(255,255,255,0.06)", margin:"16px 0" }} />
+
+          {/* Contact */}
+          <p style={{ color:"#64748b", fontSize:12, textAlign:"center", marginBottom:18 }}>
+            Questions? Contact LBC Support: <strong style={{ color:"#94a3b8" }}>613-314-1994</strong>
           </p>
+
+          {/* GOT IT button */}
+          <button onClick={dismiss} style={{
+            width:"100%", padding:"13px 0",
+            background:"#10b981",
+            color:"#fff", fontWeight:700, fontSize:14,
+            border:"none", borderRadius:10, cursor:"pointer",
+            boxShadow:"0 4px 15px rgba(16,185,129,0.3)",
+          }}>
+            ✓ GOT IT — LET'S GO
+          </button>
         </div>
       </div>
     </div>
