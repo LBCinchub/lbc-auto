@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Store, Plus, Trash2, Save, Loader2, CreditCard, X, Download, Share2, Mail, Send, CheckCircle2, Wrench, History } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { formatPhone } from "@/utils/formatPhone";
+import { normalizeDiscountType } from "@/utils/discount";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -133,6 +134,10 @@ export default function InvoiceDetail() {
     setCustomerNote(invoice.customer_note || "");
     setServiceReason(invoice.service_reason || "");
       setTaxAppliesTo(invoice.tax_applies_to || "both");
+      // BUG 1+6: Initialize discount/discountType from invoice data with null-safe fallback
+      const rawDiscountType = normalizeDiscountType(invoice.discount_type);
+      setDiscount(invoice.discount ?? 0);
+      setDiscountType(rawDiscountType === "percent" ? "%" : rawDiscountType === "fixed" ? "$" : "$");
       setInitialized(true);
     }
   }, [invoice, initialized]);
@@ -150,9 +155,16 @@ export default function InvoiceDetail() {
     return qty > 0 ? s + qty * (parseFloat(r.unit_price) || 0) : s;
   }, 0));
   const subtotal = r2(laborTotal + partsTotal);
+  // BUG 1: Normalize discount type before calculating — handles '$', 'fixed', '%', 'percent', null
+  const normDiscountType = normalizeDiscountType(discountType === "%" ? "percent" : discountType === "$" ? "fixed" : discountType);
   const discountValue = parseFloat(discount) || 0;
-  const discountAmount = r2(discountType === "%" ? (subtotal * discountValue / 100) : discountValue);
-  const taxRate = invoice?.tax_rate ?? (user?.tax_rate ?? 0);
+  const discountAmount = normDiscountType === "percent"
+    ? r2(subtotal * discountValue / 100)
+    : normDiscountType === "fixed"
+    ? r2(discountValue)
+    : 0;
+  // BUG 6: Null-safe fallback for tax_rate — legacy invoices may have null
+  const taxRate = invoice?.tax_rate ?? 14.975;
   const taxableBase = taxAppliesTo === "labor" ? laborTotal
     : taxAppliesTo === "parts" ? partsTotal
     : taxAppliesTo === "none" ? 0
@@ -679,39 +691,39 @@ export default function InvoiceDetail() {
               <span>${((parseFloat(row.quantity) || 0) * (parseFloat(row.unit_price) || 0)).toFixed(2)}</span>
             </div>
           ))}
-          {/* Discount — $ or % toggle, always visible */}
+          {/* Discount — $ or % toggle, always visible. BUG 1: Show whenever discount > 0 regardless of type name */}
           <div className="flex items-center justify-between border-t border-gray-700/50 pt-2 gap-3">
-            <span className="text-gray-400 text-sm">Discount</span>
-            <div className="flex items-center gap-1.5">
-              {/* $ / % toggle */}
-              <div className="flex rounded-md overflow-hidden border border-gray-700">
-                {["$", "%"].map(t => (
-                  <button
-                    key={t}
-                    onClick={() => setDiscountType(t)}
-                    className={`px-2.5 py-1 text-xs font-bold transition-colors ${
-                      discountType === t
-                        ? "bg-rose-500 text-white"
-                        : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-                    }`}
-                  >{t}</button>
-                ))}
-              </div>
-              <input
-                type="number"
-                min="0"
-                max={discountType === "%" ? 100 : undefined}
-                step="0.01"
-                value={discount}
-                onChange={e => setDiscount(e.target.value)}
-                onFocus={e => e.target.select()}
-                placeholder="0"
-                className="w-24 rounded-md bg-gray-800 border border-gray-700 text-rose-400 font-semibold text-sm text-right px-2 py-1 focus:border-sky-500 focus:outline-none"
-              />
-              {discountAmount > 0 && (
-                <span className="text-rose-400 text-sm font-semibold whitespace-nowrap">= -${discountAmount.toFixed(2)}</span>
-              )}
-            </div>
+           <span className="text-gray-400 text-sm">Discount{discountAmount > 0 && normDiscountType === "percent" ? ` (${discountValue}%)` : ""}</span>
+           <div className="flex items-center gap-1.5">
+             {/* $ / % toggle */}
+             <div className="flex rounded-md overflow-hidden border border-gray-700">
+               {["$", "%"].map(t => (
+                 <button
+                   key={t}
+                   onClick={() => setDiscountType(t)}
+                   className={`px-2.5 py-1 text-xs font-bold transition-colors ${
+                     discountType === t
+                       ? "bg-rose-500 text-white"
+                       : "bg-gray-800 text-gray-400 hover:bg-gray-700"
+                   }`}
+                 >{t}</button>
+               ))}
+             </div>
+             <input
+               type="number"
+               min="0"
+               max={discountType === "%" ? 100 : undefined}
+               step="0.01"
+               value={discount}
+               onChange={e => setDiscount(e.target.value)}
+               onFocus={e => e.target.select()}
+               placeholder="0"
+               className="w-24 rounded-md bg-gray-800 border border-gray-700 text-rose-400 font-semibold text-sm text-right px-2 py-1 focus:border-sky-500 focus:outline-none"
+             />
+             {discountAmount > 0 && (
+               <span className="text-rose-400 text-sm font-semibold whitespace-nowrap">= -${discountAmount.toFixed(2)}</span>
+             )}
+           </div>
           </div>
           {taxRate > 0 && (
             <div className="flex items-center justify-between border-t border-gray-700/50 pt-2 gap-3">

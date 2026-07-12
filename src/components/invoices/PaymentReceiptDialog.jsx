@@ -54,6 +54,17 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
   const handleSave = async () => {
     if (payments.length === 0) return alert("Please add at least one payment entry.");
 
+    // BUG 2: Block cash-out if any parts_item has unit_price = 0 and quantity > 0
+    if (entityName === "Estimate" && invoice.parts_items) {
+      const zeroPriceParts = invoice.parts_items.filter(p => 
+        (parseFloat(p.unit_price) || 0) === 0 && (parseFloat(p.quantity) || 0) > 0
+      );
+      if (zeroPriceParts.length > 0) {
+        const names = zeroPriceParts.map(p => p.name || "Unknown Part").join(", ");
+        return alert(`Cannot cash out — ${names} has a $0 price. Please update all part prices first.`);
+      }
+    }
+
     setSaving(true);
     const today = new Date().toISOString().split("T")[0];
     // Bug 4: Calculate totalPaid from payment_history to avoid drift between amount_paid and history
@@ -99,7 +110,7 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
       const invoiceNum = invoice.linked_invoice_number || `INV-RO-${invoice.id.slice(-6).toUpperCase()}` || `INV-${Date.now().toString(36).toUpperCase().slice(-8)}`;
       try {
         if (invoice.linked_invoice_id) {
-          // Update the already-linked invoice
+          // Update the already-linked invoice — BUG 7: always set repair_order_id
           await base44.entities.Invoice.update(invoice.linked_invoice_id, {
             ...paymentFields,
             invoice_number: invoiceNum,
@@ -109,7 +120,7 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
             repair_order_id: invoice.id,
           });
         } else {
-          // Create a new linked invoice
+          // Create a new linked invoice — BUG 7: always set repair_order_id
           const created = await base44.entities.Invoice.create({
             invoice_number: invoiceNum,
             customer_id: invoice.customer_id || "",
@@ -122,8 +133,13 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
             tax_amount: invoice.tax_amount || 0,
             ...paymentFields,
           });
-          // Save linked invoice ID back to RepairOrder for future syncs
-          await base44.entities.RepairOrder.update(invoice.id, { linked_invoice_id: created.id, linked_invoice_number: invoiceNum });
+          // Save linked invoice ID back to RepairOrder for future syncs + mark as invoiced
+          await base44.entities.RepairOrder.update(invoice.id, {
+            linked_invoice_id: created.id,
+            linked_invoice_number: invoiceNum,
+            status: "invoiced",
+            notes: (invoice.notes || "") + ` | Invoice: ${invoiceNum}`,
+          });
         }
       } catch (e) {
         console.error("Failed to sync Invoice from RepairOrder payment:", e);
@@ -156,8 +172,13 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
       const _partsTotal = Math.round((Number(invoice.parts_total || invoice.parts_cost || 0)) * 100) / 100;
       const _subtotal = _laborTotal + _partsTotal;
       const _discount = Number(invoice.discount || 0);
-      const _discountType = invoice.discount_type || "$";
-      const _discountAmount = _discountType === "%" ? Math.round((_subtotal * _discount / 100) * 100) / 100 : Math.round(_discount * 100) / 100;
+      // BUG 1: Normalize discount_type — handles '$', 'fixed', '%', 'percent', null
+      const _normDiscType = (!invoice.discount_type || invoice.discount_type === 'none' || invoice.discount_type === 'null') ? 'none'
+        : (invoice.discount_type === '$' || invoice.discount_type === 'fixed') ? 'fixed'
+        : (invoice.discount_type === '%' || invoice.discount_type === 'percent') ? 'percent'
+        : 'none';
+      const _discountType = _normDiscType === 'percent' ? '%' : _normDiscType === 'fixed' ? '$' : '$';
+      const _discountAmount = _normDiscType === 'percent' ? Math.round((_subtotal * _discount / 100) * 100) / 100 : _normDiscType === 'fixed' ? Math.round(_discount * 100) / 100 : 0;
       const _taxRate = Number(invoice.tax_rate || 0);
       const _taxAppliesTo = invoice.tax_applies_to || "both";
       const _taxableBase = _taxAppliesTo === "labor" ? _laborTotal

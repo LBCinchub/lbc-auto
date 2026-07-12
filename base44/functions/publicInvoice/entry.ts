@@ -35,18 +35,38 @@ Deno.serve(async (req) => {
 
     const fmt = (n: any) => `$${(parseFloat(n) || 0).toFixed(2)}`;
 
+    // BUG 1: Normalize discount_type — handles '$', 'fixed', '%', 'percent', null
+    const normalizeDiscountType = (type: any): string => {
+      if (!type || type === 'none' || type === 'null') return 'none';
+      if (type === '$' || type === 'fixed') return 'fixed';
+      if (type === '%' || type === 'percent') return 'percent';
+      return 'none';
+    };
+
+    // BUG 6: Null-safe fallbacks for legacy invoices
+    const rawDiscount = invoice.discount ?? 0;
+    const rawDiscountType = normalizeDiscountType(invoice.discount_type);
+    const rawTaxRate = invoice.tax_rate ?? 14.975;
+
     // Compute subtotal from line_items (do NOT trust invoice.subtotal — field may not exist)
     const lineItems = invoice.line_items || [];
-    const laborTotal = lineItems.filter((i: any) => i.type === 'labor').reduce((s: number, i: any) => s + (parseFloat(i.total) || 0), 0);
-    const partsTotal = lineItems.filter((i: any) => i.type === 'part').reduce((s: number, i: any) => s + (parseFloat(i.total) || 0), 0);
+    const laborTotal = Math.round(lineItems.filter((i: any) => i.type === 'labor').reduce((s: number, i: any) => s + (parseFloat(i.total) || 0), 0) * 100) / 100;
+    const partsTotal = Math.round(lineItems.filter((i: any) => i.type === 'part').reduce((s: number, i: any) => s + (parseFloat(i.total) || 0), 0) * 100) / 100;
     let subtotal = Math.round((laborTotal + partsTotal) * 100) / 100;
     // Fallback if line_items is empty (legacy invoices)
     if (subtotal === 0 && invoice.total) {
       subtotal = Math.round(((parseFloat(invoice.total) || 0) - (parseFloat(invoice.tax_amount) || 0)) * 100) / 100;
     }
 
-    // Back-calculate tax rate for display
-    const taxPct = subtotal > 0 ? Math.round((parseFloat(invoice.tax_amount) || 0) / subtotal * 10000) / 100 : 0;
+    // BUG 1: Calculate discount dollar amount with normalization — discount subtracted BEFORE tax
+    const discountAmount = rawDiscountType === 'percent'
+      ? Math.round(subtotal * (parseFloat(rawDiscount) || 0) / 100 * 100) / 100
+      : rawDiscountType === 'fixed'
+      ? Math.round((parseFloat(rawDiscount) || 0) * 100) / 100
+      : 0;
+
+    // Back-calculate tax rate for display — fallback to 14.975 if null
+    const taxPct = rawTaxRate > 0 ? rawTaxRate : (subtotal > 0 ? Math.round((parseFloat(invoice.tax_amount) || 0) / subtotal * 10000) / 100 : 0);
 
     const statusColor = invoice.status === 'paid' ? '#16a34a' : invoice.status === 'partial' ? '#d97706' : '#dc2626';
     const statusLabel = invoice.status === 'paid' ? 'PAID' : invoice.status === 'partial' ? 'PARTIAL PAYMENT' : 'UNPAID';
@@ -173,7 +193,7 @@ Deno.serve(async (req) => {
         <div class="totals-row"><span>Labour</span><span>${fmt(laborTotal)}</span></div>
         <div class="totals-row"><span>Parts</span><span>${fmt(partsTotal)}</span></div>
         <div class="totals-row sep"><span>Subtotal</span><span>${fmt(subtotal)}</span></div>
-        ${invoice.discount ? `<div class="totals-row"><span>Discount</span><span>-${fmt(invoice.discount)}</span></div>` : ''}
+        ${discountAmount > 0 ? `<div class="totals-row"><span>Discount${rawDiscountType === 'percent' ? ` (${parseFloat(rawDiscount).toFixed(0)}%)` : ''}</span><span>-${fmt(discountAmount)}</span></div>` : ''}
         <div class="totals-row"><span>Tax${taxPct ? ` (${taxPct}%)` : ''}</span><span>${fmt(invoice.tax_amount)}</span></div>
         <div class="totals-row bold sep"><span>Total</span><span>${fmt(invoice.total)}</span></div>
         ${invoice.amount_paid ? `<div class="totals-row" style="color:#16a34a"><span>Amount Paid</span><span>-${fmt(invoice.amount_paid)}</span></div>` : ''}

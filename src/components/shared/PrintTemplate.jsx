@@ -1,4 +1,5 @@
 import { formatPhone } from "@/utils/formatPhone";
+import { normalizeDiscountType } from "@/utils/discount";
 
 function buildPrintHTML(contentHTML, title, isWorker) {
   return `
@@ -50,6 +51,15 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
   } = financials;
 
   const bizName = user?.business_name || "LBC Auto Services";
+
+  // BUG 1: Normalize discount type — handles '$', 'fixed', '%', 'percent', null
+  const normDiscountType = normalizeDiscountType(discountType);
+  // Recalculate the actual discount dollar amount for display
+  const discountDisplayAmount = normDiscountType === "percent"
+    ? Math.round(subtotal * (parseFloat(discount) || 0) / 100 * 100) / 100
+    : normDiscountType === "fixed"
+    ? Math.round((parseFloat(discount) || 0) * 100) / 100
+    : 0;
 
   const openPrint = (hidePrice) => {
     const id = hidePrice ? "print-worker-body" : "print-full-body";
@@ -307,10 +317,10 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
               <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", fontSize: 10, color: "#475569", borderTop: "1px solid #e2e8f0", marginTop: 4 }}>
                 <span>Subtotal</span><span>${subtotal.toFixed(2)}</span>
               </div>
-              {/* Discount — always shown on record */}
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 10, color: discount > 0 ? "#ef4444" : "#94a3b8", fontWeight: discount > 0 ? 600 : 400 }}>
-                <span>Discount{discountType === "%" && discount > 0 ? ` (${parseFloat(discount).toFixed(0)}%)` : ""}</span>
-                <span>{discount > 0 ? `-$${parseFloat(discount).toFixed(2)}` : "$0.00"}</span>
+              {/* Discount — BUG 1: Show whenever discount > 0, regardless of type name stored */}
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 10, color: discountDisplayAmount > 0 ? "#ef4444" : "#94a3b8", fontWeight: discountDisplayAmount > 0 ? 600 : 400 }}>
+                <span>Discount{normDiscountType === "percent" && discountDisplayAmount > 0 ? ` (${parseFloat(discount).toFixed(0)}%)` : ""}</span>
+                <span>{discountDisplayAmount > 0 ? `-$${discountDisplayAmount.toFixed(2)}` : "$0.00"}</span>
               </div>
               {taxRate > 0 && (
                 <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 10, color: "#475569" }}>

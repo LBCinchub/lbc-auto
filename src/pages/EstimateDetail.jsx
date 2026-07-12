@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import PrintTemplate from "@/components/shared/PrintTemplate";
 import PaymentReceiptDialog from "@/components/invoices/PaymentReceiptDialog";
+import { normalizeDiscountType } from "@/utils/discount";
 
 
 // Auto-capitalise: first letter of every word
@@ -97,6 +98,10 @@ export default function EstimateDetail() {
         }))
       );
       setTaxAppliesTo(estimate.tax_applies_to || "both");
+      // BUG 1: Initialize discount/discountType from estimate data with normalization
+      const rawDiscType = normalizeDiscountType(estimate.discount_type);
+      setDiscount(estimate.discount ?? 0);
+      setDiscountType(rawDiscType === "percent" ? "%" : rawDiscType === "fixed" ? "$" : "$");
       setEstimateDate(estimate.estimate_date || estimate.created_date?.split("T")[0] || "");
       setEstimateNotes(estimate.notes || "");
       setEstimateServiceReason(estimate.service_reason || "");
@@ -136,14 +141,21 @@ export default function EstimateDetail() {
     return qty > 0 ? s + qty * (parseFloat(r.unit_price) || 0) : s;
   }, 0));
   const subtotal = r2(laborTotal + partsTotal);
+  // BUG 1: Normalize discount type before calculating
+  const normDiscountType = normalizeDiscountType(discountType === "%" ? "percent" : discountType === "$" ? "fixed" : discountType);
   const taxRate = estimate?.tax_rate ?? (user?.tax_rate ?? 0);
+  const discountValue = parseFloat(discount) || 0;
+  const discountAmount = normDiscountType === "percent"
+    ? r2(subtotal * discountValue / 100)
+    : normDiscountType === "fixed"
+    ? r2(discountValue)
+    : 0;
+  // BUG 1: Discount subtracted BEFORE tax is applied (on "both")
   const taxableBase = taxAppliesTo === "labor" ? laborTotal
     : taxAppliesTo === "parts" ? partsTotal
     : taxAppliesTo === "none" ? 0
-    : laborTotal + partsTotal; // "both"
+    : Math.max(0, (laborTotal + partsTotal) - discountAmount); // "both" after discount
   const taxAmount = r2(taxableBase * (taxRate / 100));
-  const discountValue = parseFloat(discount) || 0;
-  const discountAmount = r2(discountType === "%" ? (subtotal * discountValue / 100) : discountValue);
   const grandTotal = r2(Math.max(0, subtotal - discountAmount + taxAmount));
 
   // ── Share / Print ────────────────────────────────────────────────────────
@@ -184,11 +196,13 @@ export default function EstimateDetail() {
     await base44.entities.Estimate.update(estimateId, {
       labor_items: updatedLaborItems,
       parts_items: updatedPartsItems,
-      labor_total: laborTotal,
-      parts_total: partsTotal,
-      tax_amount: taxAmount,
+      labor_total: r2(laborTotal),
+      parts_total: r2(partsTotal),
+      tax_amount: r2(taxAmount),
       tax_applies_to: taxAppliesTo,
-      grand_total: grandTotal,
+      discount: discountValue,
+      discount_type: normDiscountType === "percent" ? "%" : normDiscountType === "fixed" ? "$" : "$",
+      grand_total: r2(grandTotal),
       estimate_date: estimateDate,
       notes: estimateNotes,
       service_reason: estimateServiceReason,
@@ -440,7 +454,7 @@ export default function EstimateDetail() {
             ...partsItems.map(p => ({ name: p.name || "Part", description: p.part_number ? `Part #: ${p.part_number}` : "", qty: parseFloat(p.quantity) || 0, unit_price: parseFloat(p.unit_price) || 0 }))
           ]}
           paymentHistory={[]}
-          financials={{ laborTotal, partsTotal, subtotal, discount: discountAmount, discountType, taxRate, taxAmount, grandTotal }}
+          financials={{ laborTotal, partsTotal, subtotal, discount: discountValue, discountType: normDiscountType === "percent" ? "%" : "$", taxRate, taxAmount, grandTotal }}
           notes={estimateNotes}
           serviceReason={estimateServiceReason}
           onNavigateCustomer={() => estimate.customer_id && navigate(`/CustomerDetails?id=${estimate.customer_id}`)}
@@ -640,9 +654,9 @@ export default function EstimateDetail() {
               <span>${((parseFloat(row.quantity) || 0) * (parseFloat(row.unit_price) || 0)).toFixed(2)}</span>
             </div>
           ))}
-          {/* Discount — $ or % toggle, always visible */}
+          {/* Discount — $ or % toggle. BUG 1: Show whenever discount > 0 regardless of type */}
           <div className="flex items-center justify-between border-t border-gray-700/50 pt-2 gap-3">
-            <span className="text-gray-400 text-sm">Discount</span>
+            <span className="text-gray-400 text-sm">Discount{discountAmount > 0 && normDiscountType === "percent" ? ` (${discountValue}%)` : ""}</span>
             <div className="flex items-center gap-1.5">
               {/* $ / % toggle */}
               <div className="flex rounded-md overflow-hidden border border-gray-700">

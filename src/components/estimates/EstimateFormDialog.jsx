@@ -829,6 +829,14 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
                         </button>
                       </td>
                       </tr>
+                      {/* BUG 2: Zero-price warning for parts with unit_price = 0 and quantity > 0 */}
+                      {parseFloat(row.unit_price) === 0 && parseFloat(row.quantity) > 0 && (
+                        <tr className="bg-yellow-500/5">
+                          <td colSpan={6} className="px-3 py-1.5">
+                            <p className="text-yellow-500 text-xs font-medium">⚠️ Part price is $0 — enter the actual cost before cashing out</p>
+                          </td>
+                        </tr>
+                      )}
                       </React.Fragment>
                       ))}
                 </tbody>
