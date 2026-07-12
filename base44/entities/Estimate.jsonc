@@ -30,7 +30,8 @@
         "approved",
         "declined",
         "expired",
-        "invoiced"
+        "invoiced",
+        "cancelled"
       ],
       "default": "draft",
       "description": "Estimate status"

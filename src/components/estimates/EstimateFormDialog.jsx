@@ -741,7 +741,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
                         <button onClick={() => removeLabor(idx)} className="text-gray-600 hover:text-rose-400 transition-colors">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
-                        {parseFloat(row.rate) > 0 && parseFloat(row.rate) !== 120 && (
+                        {parseFloat(row.rate) > 0 && ![60, 100, 120].includes(parseFloat(row.rate)) && (
                           <p className="text-yellow-600 text-[10px] mt-1 whitespace-nowrap">⚠️ ${parseFloat(row.rate)}/hr</p>
                         )}
                       </td>

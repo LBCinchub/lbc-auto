@@ -391,8 +391,8 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                 labor_total: estLaborTotal,
                 parts_total: estPartsTotal,
                 tax_rate: form.apply_tax ? userTaxRate : 0,
-                tax_amount: estTaxAmount,
-                grand_total: estLaborTotal + estPartsTotal + estTaxAmount,
+                tax_amount: Math.round(estTaxAmount * 100) / 100,
+                grand_total: Math.round((estLaborTotal + estPartsTotal + estTaxAmount) * 100) / 100,
                 notes: est.notes,
                 labor_items: data.labor_items || est.labor_items,
                 parts_items: data.parts_used?.map(p => ({ name: p.name, part_number: p.part_number || "", quantity: p.quantity, unit_price: p.unit_price, total: p.total })) || est.parts_items,
@@ -632,8 +632,8 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                           items[idx] = { ...items[idx], rate: e.target.value, total: (parseFloat(items[idx].hours) || 0) * (parseFloat(e.target.value) || 0) };
                           setForm(f => ({ ...f, labor_items: items }));
                         }} className={`bg-gray-800 border-0 text-white h-8 text-sm text-right ${parseFloat(row.rate) !== userLaborRate ? "border border-amber-500/50" : ""}`} placeholder="120" step="1" />
-                        {parseFloat(row.rate) !== userLaborRate && row.rate && (
-                          <p className="text-amber-400 text-[10px] mt-0.5">⚠️ Rate differs from shop standard (${userLaborRate}/hr)</p>
+                        {parseFloat(row.rate) > 0 && ![60, 100, 120].includes(parseFloat(row.rate)) && (
+                          <p className="text-amber-400 text-[10px] mt-0.5">⚠️ Non-standard rate (${parseFloat(row.rate)}/hr)</p>
                         )}
                       </td>
                       <td className="px-3 py-1.5 text-right text-gray-300 font-medium">${((parseFloat(row.hours) || 0) * (parseFloat(row.rate) || 120)).toFixed(2)}</td>

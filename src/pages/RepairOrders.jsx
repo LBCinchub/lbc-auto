@@ -248,7 +248,14 @@ export default function RepairOrders() {
                   {/* Top row: order # + status */}
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs text-gray-500 font-mono">#{order.order_number}</span>
-                    <StatusBadge status={order.status} />
+                    <div className="flex items-center gap-1.5">
+                      {(order.total_cost || 0) === 0 && (!order.labor_items || order.labor_items.length === 0) && (
+                        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-yellow-500/15 text-yellow-500 border border-yellow-500/30">
+                          ⚠️ Empty
+                        </span>
+                      )}
+                      <StatusBadge status={order.status} />
+                    </div>
                   </div>
 
                   {/* Vehicle — most prominent */}

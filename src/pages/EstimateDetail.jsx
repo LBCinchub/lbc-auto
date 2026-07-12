@@ -69,6 +69,13 @@ export default function EstimateDetail() {
     enabled: !!estimate?.vehicle_id,
   });
 
+  // Fetch linked RepairOrder to show "Approved → In Progress" indicator
+  const { data: linkedRO } = useQuery({
+    queryKey: ["linkedRO", estimateId],
+    queryFn: () => base44.entities.RepairOrder.filter({ estimate_id: estimateId }).then(ros => ros[0] || null),
+    enabled: !!estimateId,
+  });
+
   // Initialize editable state from estimate data once loaded
   useEffect(() => {
     if (estimate && !initialized) {
@@ -456,16 +463,24 @@ export default function EstimateDetail() {
               <p className="text-gray-500 text-xs mt-0.5 font-mono">VIN: {vehicleRecord.vin.toUpperCase()}</p>
             )}
           </div>
-          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-            estimate.status === "invoiced" ? "bg-emerald-500/20 text-emerald-400"
-            : estimate.status === "approved" ? "bg-green-500/20 text-green-400"
-            : estimate.status === "sent" ? "bg-blue-500/20 text-blue-400"
-            : estimate.status === "declined" ? "bg-red-500/20 text-red-400"
-            : estimate.status === "expired" ? "bg-gray-500/20 text-gray-400"
-            : "bg-gray-500/20 text-gray-400"
-          }`}>
-            {estimate.status}
-          </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+              estimate.status === "invoiced" ? "bg-emerald-500/20 text-emerald-400"
+              : estimate.status === "approved" ? "bg-green-500/20 text-green-400"
+              : estimate.status === "sent" ? "bg-blue-500/20 text-blue-400"
+              : estimate.status === "declined" ? "bg-red-500/20 text-red-400"
+              : estimate.status === "expired" ? "bg-gray-500/20 text-gray-400"
+              : estimate.status === "cancelled" ? "bg-red-500/20 text-red-400"
+              : "bg-gray-500/20 text-gray-400"
+            }`}>
+              {estimate.status}
+            </span>
+            {estimate.status === "approved" && linkedRO && linkedRO.status !== "waiting" && (
+              <span className="px-3 py-1 rounded-full text-xs font-medium bg-sky-500/20 text-sky-400 border border-sky-500/30">
+                → In Progress (RO: {linkedRO.status})
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Editable Date / Reason / Notes */}

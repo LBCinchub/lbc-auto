@@ -17,12 +17,13 @@ import PaymentReceiptDialog from "../components/invoices/PaymentReceiptDialog";
 import DateFilter, { applyDateFilter } from "../components/shared/DateFilter";
 
 const STATUS_STYLES = {
-  draft:    "bg-gray-700/50 text-gray-300",
-  sent:     "bg-blue-500/20 text-blue-400",
-  approved: "bg-green-500/20 text-green-400",
-  declined: "bg-rose-500/20 text-rose-400",
-  expired:  "bg-yellow-500/20 text-yellow-400",
-  invoiced: "bg-emerald-500/20 text-emerald-400",
+  draft:     "bg-gray-700/50 text-gray-300",
+  sent:      "bg-blue-500/20 text-blue-400",
+  approved:  "bg-green-500/20 text-green-400",
+  declined:  "bg-rose-500/20 text-rose-400",
+  expired:   "bg-yellow-500/20 text-yellow-400",
+  invoiced:  "bg-emerald-500/20 text-emerald-400",
+  cancelled: "bg-red-500/20 text-red-400",
 };
 
 export default function Estimates() {
@@ -278,6 +279,11 @@ export default function Estimates() {
                   <span className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${STATUS_STYLES[est.status] || STATUS_STYLES.draft}`}>
                     {est.status}
                   </span>
+                  {est.status === "draft" && (est.grand_total || 0) === 0 && (
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-yellow-500/15 text-yellow-500 border border-yellow-500/30">
+                      ⚠️ Empty — no items
+                    </span>
+                  )}
                 </div>
                 <p className="text-sm text-green-400 mt-0.5 capitalize">{est.vehicle_info}</p>
                 {(() => {
