@@ -11,6 +11,7 @@ import RecentInvoices from "../components/dashboard/RecentInvoices";
 import TodayAppointments from "../components/dashboard/TodayAppointments";
 import WebBookings from "../components/dashboard/WebBookings";
 import KpiCards from "../components/dashboard/KpiCards";
+import FinancialSummary from "../components/dashboard/FinancialSummary";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import StatusBadge from "../components/shared/StatusBadge";
 
@@ -116,6 +117,9 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* Financial Summary Widget */}
+      <FinancialSummary invoices={invoices} orders={orders} />
 
       {/* KPI Summary */}
       <KpiCards orders={orders} appointments={appointments} invoices={invoices} />

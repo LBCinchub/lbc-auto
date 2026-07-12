@@ -14,6 +14,7 @@ import { Search, User, Plus, Loader2, X, ClipboardList, Wrench, FileText } from 
 import { useNavigate } from "react-router-dom";
 import { useNhtsaVinDecode } from "@/hooks/useNhtsaVinDecode";
 import { capWords } from "@/utils/capitalize";
+import AppointmentConfirmModal from "./AppointmentConfirmModal";
 
 const timeSlots = [
   "8:00 AM", "8:30 AM", "9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM",
@@ -42,6 +43,7 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
   });
   const [saving, setSaving] = useState(false);
   const [shopEmail, setShopEmail] = useState("");
+  const [confirmAppt, setConfirmAppt] = useState(null);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -220,7 +222,8 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
     }
     setSaving(true);
     const payload = { ...form, shop_email: shopEmail };
-    if (appointment && appointment.id && !appointment._prefillCustomerId) {
+    const isNew = !(appointment && appointment.id && !appointment._prefillCustomerId);
+    if (!isNew) {
       await base44.entities.Appointment.update(appointment.id, payload);
     } else {
       await base44.entities.Appointment.create(payload);
@@ -239,6 +242,10 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
       });
     onSaved();
     onClose();
+    // ── Show confirmation modal for new appointments ──
+    if (isNew) {
+      setConfirmAppt({ ...form });
+    }
   };
 
   return (
@@ -450,6 +457,7 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
           </div>
         </div>
       </DialogContent>
+      {confirmAppt && <AppointmentConfirmModal appointment={confirmAppt} onClose={() => setConfirmAppt(null)} />}
     </Dialog>
   );
 }

@@ -480,14 +480,26 @@ export default function InvoiceDetail() {
               </a>
             )}
           </div>
-          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-            invoice.status === "paid" ? "bg-green-500/20 text-green-400"
-            : invoice.status === "partial" ? "bg-yellow-500/20 text-yellow-400"
-            : invoice.status === "overdue" ? "bg-red-500/20 text-red-400"
-            : "bg-gray-500/20 text-gray-400"
-          }`}>
-            {invoice.status}
-          </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+              invoice.status === "paid" ? "bg-green-500/20 text-green-400"
+              : invoice.status === "partial" ? "bg-yellow-500/20 text-yellow-400"
+              : invoice.status === "overdue" ? "bg-red-500/20 text-red-400"
+              : "bg-gray-500/20 text-gray-400"
+            }`}>
+              {invoice.status}
+            </span>
+            {(invoice.tax_amount || 0) === 0 && (invoice.total || 0) > 60 && (
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                Tax: $0 — verify
+              </span>
+            )}
+            {(invoice.balance_due || 0) >= 200 && invoice.status !== "paid" && (
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30">
+                ⚠️ FOLLOW UP
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Info Grid */}

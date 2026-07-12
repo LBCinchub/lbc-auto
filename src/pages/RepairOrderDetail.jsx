@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, FileText, Plus, Trash2, MoreVertical, Clock, History, Wrench, PenLine, CheckCircle2, XCircle, Printer, ShoppingCart } from "lucide-react";
+import { ArrowLeft, FileText, Plus, Trash2, MoreVertical, Clock, History, Wrench, PenLine, CheckCircle2, XCircle, Printer, ShoppingCart, Loader2 } from "lucide-react";
 import { formatPhone } from "@/utils/formatPhone";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -30,6 +30,7 @@ export default function RepairOrderDetail() {
   const [showOrderedPartDialog, setShowOrderedPartDialog] = useState(false);
   const [showHistoryManager, setShowHistoryManager] = useState(false);
   const [newOrderedPart, setNewOrderedPart] = useState({ name: "", part_number: "", supplier: "", quantity: "", unit_price: "", notes: "" });
+  const [generatingInvoice, setGeneratingInvoice] = useState(false);
 
   const { data: order, isLoading } = useQuery({
     queryKey: ["repairOrder", orderId],
@@ -154,6 +155,65 @@ export default function RepairOrderDetail() {
 
   const previousOrders = allOrders.filter(o => o.id !== orderId);
 
+  const handleQuickGenerateInvoice = async () => {
+    setGeneratingInvoice(true);
+    try {
+      const currentUser = await base44.auth.me();
+      const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+      const laborItems = order.labor_items || [];
+      const partsUsed = order.parts_used || [];
+      const laborTotal = r2(laborItems.reduce((s, l) => s + (parseFloat(l.hours) || 0) * (parseFloat(l.rate) || 0), 0));
+      const partsTotal = r2(partsUsed.reduce((s, p) => s + (parseFloat(p.quantity) || 0) * (parseFloat(p.unit_price) || 0), 0));
+      const subtotal = r2(laborTotal + partsTotal);
+      const taxRate = currentUser?.tax_rate || 0;
+      const taxAmount = r2(subtotal * (taxRate / 100));
+      const total = r2(subtotal + taxAmount);
+
+      const lineItems = [
+        ...laborItems.map(l => ({
+          description: l.description || "Labor",
+          type: "labor",
+          quantity: parseFloat(l.hours) || 1,
+          unit_price: parseFloat(l.rate) || 0,
+          total: r2((parseFloat(l.hours) || 0) * (parseFloat(l.rate) || 0)),
+        })),
+        ...partsUsed.map(p => ({
+          description: p.name || "Part",
+          type: "part",
+          quantity: parseFloat(p.quantity) || 1,
+          unit_price: parseFloat(p.unit_price) || 0,
+          total: r2((parseFloat(p.quantity) || 0) * (parseFloat(p.unit_price) || 0)),
+        })),
+      ];
+
+      const inv = await base44.entities.Invoice.create({
+        invoice_number: `INV-${Date.now().toString(36).toUpperCase().slice(-8)}`,
+        repair_order_id: order.id,
+        customer_id: order.customer_id || "",
+        customer_name: order.customer_name || "",
+        vehicle_info: order.vehicle_info || "",
+        line_items: lineItems,
+        parts_total: partsTotal,
+        labor_total: laborTotal,
+        tax_rate: taxRate,
+        tax_applies_to: "both",
+        tax_amount: taxAmount,
+        total,
+        balance_due: total,
+        amount_paid: 0,
+        status: "unpaid",
+        service_reason: order.description || "",
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      navigate(`/InvoiceDetail/${inv.id}`);
+    } catch (err) {
+      alert("Could not generate invoice: " + (err?.message || err));
+    } finally {
+      setGeneratingInvoice(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -187,13 +247,19 @@ export default function RepairOrderDetail() {
             <Plus className="w-4 h-4" /> Create Estimate
           </Button>
           {linkedInvoicesList.length === 0 ? (
-            <Button onClick={() => setShowInvoiceDialog(true)}
-              className={`gap-2 ${order.status === "completed" || order.status === "delivered"
-                ? "bg-emerald-500 hover:bg-emerald-600 text-white ring-2 ring-emerald-400/40"
-                : "bg-purple-600 hover:bg-purple-700"}`}>
-              <FileText className="w-4 h-4" />
-              {order.status === "completed" || order.status === "delivered" ? "Create Invoice ✓" : "Create Invoice"}
-            </Button>
+            <>
+              <Button onClick={handleQuickGenerateInvoice} disabled={generatingInvoice}
+                className={`gap-2 ${order.status === "completed" || order.status === "delivered"
+                  ? "bg-emerald-500 hover:bg-emerald-600 text-white ring-2 ring-emerald-400/40"
+                  : "bg-purple-600 hover:bg-purple-700"}`}>
+                {generatingInvoice ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+                {generatingInvoice ? "Generating..." : "Generate Invoice"}
+              </Button>
+              <Button onClick={() => setShowInvoiceDialog(true)} variant="outline"
+                className="gap-2 border-gray-700 text-gray-300 hover:text-white">
+                <FileText className="w-4 h-4" /> Custom Invoice
+              </Button>
+            </>
           ) : (
             <>
               <Button onClick={() => navigate(`/InvoiceDetail/${linkedInvoicesList[0].id}`)} className="bg-purple-600 hover:bg-purple-700 gap-2">

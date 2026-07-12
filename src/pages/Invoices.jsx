@@ -112,6 +112,8 @@ export default function Invoices() {
     enabled: !!user,
   });
 
+  const isFollowUp = (inv) => (inv.balance_due || 0) >= 200 && inv.status !== "paid";
+
   const filtered = applyDateFilter(
     invoices
       .filter(i => statusFilter === "all" || i.status === statusFilter || (statusFilter === "unpaid" && i.status === "partial"))
@@ -121,6 +123,13 @@ export default function Invoices() {
         if (searchField === "vehicle") return fuzzyMatch(search, [i.vehicle_info]);
         const customer = customers.find(c => c.id === i.customer_id);
         return fuzzyMatch(search, [i.invoice_number, i.customer_name, i.vehicle_info, customer?.phone, customer?.email]);
+      })
+      .sort((a, b) => {
+        // Sort follow-up invoices (balance_due >= $200, not paid) to the top
+        const fa = isFollowUp(a) ? 0 : 1;
+        const fb = isFollowUp(b) ? 0 : 1;
+        if (fa !== fb) return fa - fb;
+        return 0; // preserve original order within groups
       }),
     dateRange,
     r => r.created_date
@@ -400,6 +409,17 @@ export default function Invoices() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="text-white font-semibold">{inv.invoice_number}</h3>
                     <StatusBadge status={inv.status} />
+                    {isFollowUp(inv) && (
+                      <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30">⚠️ FOLLOW UP</span>
+                    )}
+                    {(inv.tax_amount || 0) === 0 && (inv.total || 0) > 60 && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setEditingInvoice(inv); setDialogOpen(true); }}
+                        className="text-xs font-medium px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 border border-orange-500/30 hover:bg-orange-500/30 transition-colors cursor-pointer"
+                        title="No tax applied — click to verify">
+                        Tax: $0 — verify
+                      </button>
+                    )}
                     {inv.status === "unpaid" && new Date(inv.created_date) < new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) && (
                       <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30">OVERDUE</span>
                     )}

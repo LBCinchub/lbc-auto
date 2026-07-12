@@ -50,6 +50,7 @@ export default function RepairOrders() {
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [dateRange, setDateRange] = useState(null);
   const [user, setUser] = useState(null);
+  const [generatingInvoice, setGeneratingInvoice] = useState(null);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -139,6 +140,64 @@ export default function RepairOrders() {
 
   const refreshParts = () => {
     queryClient.invalidateQueries({ queryKey: ["parts"] });
+  };
+
+  const handleGenerateInvoice = async (order) => {
+    setGeneratingInvoice(order.id);
+    try {
+      const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+      const laborItems = order.labor_items || [];
+      const partsUsed = order.parts_used || [];
+      const laborTotal = r2(laborItems.reduce((s, l) => s + (parseFloat(l.hours) || 0) * (parseFloat(l.rate) || 0), 0));
+      const partsTotal = r2(partsUsed.reduce((s, p) => s + (parseFloat(p.quantity) || 0) * (parseFloat(p.unit_price) || 0), 0));
+      const subtotal = r2(laborTotal + partsTotal);
+      const taxRate = user?.tax_rate || 0;
+      const taxAmount = r2(subtotal * (taxRate / 100));
+      const total = r2(subtotal + taxAmount);
+
+      const lineItems = [
+        ...laborItems.map(l => ({
+          description: l.description || "Labor",
+          type: "labor",
+          quantity: parseFloat(l.hours) || 1,
+          unit_price: parseFloat(l.rate) || 0,
+          total: r2((parseFloat(l.hours) || 0) * (parseFloat(l.rate) || 0)),
+        })),
+        ...partsUsed.map(p => ({
+          description: p.name || "Part",
+          type: "part",
+          quantity: parseFloat(p.quantity) || 1,
+          unit_price: parseFloat(p.unit_price) || 0,
+          total: r2((parseFloat(p.quantity) || 0) * (parseFloat(p.unit_price) || 0)),
+        })),
+      ];
+
+      const inv = await base44.entities.Invoice.create({
+        invoice_number: `INV-${Date.now().toString(36).toUpperCase().slice(-8)}`,
+        repair_order_id: order.id,
+        customer_id: order.customer_id || "",
+        customer_name: order.customer_name || "",
+        vehicle_info: order.vehicle_info || "",
+        line_items: lineItems,
+        parts_total: partsTotal,
+        labor_total: laborTotal,
+        tax_rate: taxRate,
+        tax_applies_to: "both",
+        tax_amount: taxAmount,
+        total,
+        balance_due: total,
+        amount_paid: 0,
+        status: "unpaid",
+        service_reason: order.description || "",
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      navigate(`/InvoiceDetail/${inv.id}`);
+    } catch (err) {
+      alert("Could not generate invoice: " + (err?.message || err));
+    } finally {
+      setGeneratingInvoice(null);
+    }
   };
 
 
@@ -342,9 +401,12 @@ export default function RepairOrders() {
                       })}>
                       <CreditCard className="w-3.5 h-3.5" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-emerald-400" title="Create Invoice"
-                      onClick={() => { setInvoiceOrder(order); setInvoiceDialogOpen(true); }}>
-                      <FileText className="w-3.5 h-3.5" />
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-emerald-400" title="Generate Invoice (1-click)"
+                      onClick={() => handleGenerateInvoice(order)}
+                      disabled={generatingInvoice === order.id}>
+                      {generatingInvoice === order.id
+                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        : <FileText className="w-3.5 h-3.5" />}
                     </Button>
                     <div className="flex-1" />
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-white" title="Edit"
