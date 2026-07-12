@@ -57,7 +57,12 @@
     },
     "source": {
       "type": "string",
-      "enum": ["dashboard", "web_booking", "phone", "walk_in"],
+      "enum": [
+        "dashboard",
+        "web_booking",
+        "phone",
+        "walk_in"
+      ],
       "default": "dashboard",
       "description": "How this appointment was booked"
     },
@@ -71,7 +76,11 @@
     },
     "customer_email_address": {
       "type": "string",
-      "description": "Customer email (for web bookings — separate from the created_by field)"
+      "description": "Customer email (for web bookings \u2014 separate from the created_by field)"
+    },
+    "shop_email": {
+      "type": "string",
+      "description": "Shop owner email \u2014 tenant scoping for cross-tenant isolation"
     }
   },
   "required": [
@@ -84,13 +93,34 @@
   "rls": {
     "create": true,
     "read": {
-      "created_by": "{{user.email}}"
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "data.shop_email": "{{user.email}}"
+        }
+      ]
     },
     "update": {
-      "created_by": "{{user.email}}"
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "data.shop_email": "{{user.email}}"
+        }
+      ]
     },
     "delete": {
-      "created_by": "{{user.email}}"
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "data.shop_email": "{{user.email}}"
+        }
+      ]
     }
   }
 }
