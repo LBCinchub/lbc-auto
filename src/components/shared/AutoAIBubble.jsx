@@ -146,6 +146,7 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
     try {
       // Call LBC AI function
       const result = await base44.functions.invoke("lbcAutoAI", {
+        mode: "owner",
         messages: history,
         vehicle: vehicle || "",
         description: description || "",

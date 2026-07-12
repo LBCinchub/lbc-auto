@@ -6,6 +6,7 @@ import {
   Image, ArrowLeft
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
+import CustomerAIChat from "@/components/shared/CustomerAIChat";
 
 const REACTIONS = [
   { emoji:"👍", key:"thumbsup" },
@@ -663,6 +664,12 @@ export default function CustomerDashboard() {
           </>
         )}
       </div>
+
+      {/* Customer AI chat — isolated from shop data (mode: "customer") */}
+      <CustomerAIChat
+        vehicle={vehicles[0] ? `${vehicles[0].year} ${vehicles[0].make} ${vehicles[0].model}` : ""}
+        description={orders[0]?.description || ""}
+      />
 
       {/* Bottom nav */}
       <div style={{

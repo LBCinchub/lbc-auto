@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
-const SYSTEM_PROMPT = `You are LBC Auto AI — an expert automotive technician and business partner to the shop owner.
+const OWNER_PROMPT = `You are LBC Auto AI — an expert automotive technician and business partner to the shop owner.
 Speak as "we" and "our shop." Quote labor using OUR labor rate. Talk shop-to-shop, partner-to-partner.
 
 You are connected to THIS shop's live data — repair orders, invoices, parts inventory, and appointments.
@@ -20,18 +20,68 @@ RESPONSE RULES:
 - Concise but complete. Don't omit critical steps or specs.
 - End every response with a "⬇️ TL;DR" line (1-2 sentence bottom-line summary).`;
 
+const CUSTOMER_PROMPT = `You are LBC Auto AI — a friendly automotive assistant helping a customer understand their vehicle.
+You are NOT connected to any shop's internal data. You do NOT have access to repair orders, invoices, inventory, or financial records.
+Never reference shop-internal data, pricing, balances, or business metrics. If asked about account balances, invoice amounts, or shop finances, say: "I can't access account or billing details — please contact your shop directly."
+
+DOMAIN: Cars and auto repair only. If asked anything unrelated, say: "I only help with automotive topics."
+
+RESPONSE RULES:
+- Friendly, plain-English explanations. Avoid jargon when possible.
+- Help customers understand what a code, symptom, or repair means.
+- Suggest when they should see a mechanic (safety-related always).
+- Be concise. Use bullet points for readability.
+- Never invent prices, quotes, or shop-specific information.`;
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
-
     const body = await req.json().catch(() => ({}));
-    const { messages = [], vehicle = "", description = "" } = body;
+    const { messages = [], mode = "owner", vehicle = "", description = "" } = body;
 
     if (!messages || messages.length === 0) {
       return Response.json({ reply: "No messages provided." });
     }
+
+    // ════════════════════════════════════════════════════════════
+    // CUSTOMER MODE — no auth, no shop data, isolated prompt
+    // ════════════════════════════════════════════════════════════
+    if (mode === "customer") {
+      let customerContext = "";
+      if (vehicle) customerContext += "\nVehicle: " + vehicle;
+      if (description) customerContext += "\nConcern: " + description;
+
+      const recent = messages.filter(m => m.role !== "system").slice(-6);
+
+      const prompt =
+        CUSTOMER_PROMPT +
+        (customerContext ? "\n\nContext:" + customerContext : "") +
+        "\n\nConversation:\n" +
+        recent
+          .map(m => (m.role === "user" ? "Customer: " : "Assistant: ") + m.content)
+          .join("\n") +
+        "\n\nRespond to the latest message as LBC Auto AI. Be helpful and clear. Never reference shop-internal data.";
+
+      const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
+        prompt,
+        model: "gpt_5_mini",
+      });
+
+      const reply =
+        (typeof result === "string" ? result : null) ||
+        result?.reply ||
+        result?.content ||
+        result?.message ||
+        "No response generated.";
+
+      return Response.json({ reply });
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // OWNER MODE — auth required, full shop data injected
+    // ════════════════════════════════════════════════════════════
+    const user = await base44.auth.me();
+    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     // Pull shop settings from the user so the AI always knows the shop context
     const shopInfo = [];
@@ -44,7 +94,6 @@ Deno.serve(async (req) => {
     if (user.tax_applies_to) shopInfo.push("Tax applies to: " + user.tax_applies_to);
 
     // ── Live shop data (user-scoped via RLS) ──────────────────────────────
-    // Fetch in parallel for speed; each garage sees only their own records.
     const today = new Date().toISOString().slice(0, 10);
     let [repairOrders, invoices, parts, appointments] = await Promise.all([
       base44.entities.RepairOrder.filter({}).catch(() => []),
@@ -87,7 +136,7 @@ Deno.serve(async (req) => {
     const recent = messages.filter(m => m.role !== "system").slice(-6);
 
     const prompt =
-      SYSTEM_PROMPT +
+      OWNER_PROMPT +
       (context ? "\n\nShop Context:" + context : "") +
       "\n\nConversation:\n" +
       recent
