@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
+// Double-submit guard ref — prevents duplicate estimate creation on rapid clicks (mobile/slow connections)
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,6 +48,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
   const [loadingVehicles, setLoadingVehicles] = useState(false);
   const { toast } = useToast();
   const searchDebounce = useRef(null);
+  const submittingRef = useRef(false); // Synchronous guard — prevents double-submit before React re-renders
 
   useEffect(() => {
     // Load user's saved tax rate
@@ -318,7 +320,9 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
   };
 
   const handleSave = async () => {
-    if (saving) return; // prevent double-submit
+    if (submittingRef.current) return; // synchronous guard — prevents double-submit before React re-renders
+    submittingRef.current = true;
+    setSaving(true);
     const errors = {};
     if (!form.customer_id) errors.customer = "Please select a customer";
     if (!form.vehicle_id) errors.vehicle = "Please select a vehicle";
@@ -341,10 +345,11 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
     });
     if (!dbValidation.ok) {
       setValidationErrors({ customer: dbValidation.errors.join(" ") });
+      submittingRef.current = false;
+      setSaving(false);
       return;
     }
 
-    setSaving(true);
     try {
       const estNum = estimate?.estimate_number || `EST-${Date.now().toString().slice(-6)}`;
       const payload = {
@@ -416,6 +421,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
         toast({ title: "Estimate saved successfully" });
       }
 
+      submittingRef.current = false;
       setSaving(false);
       // ── Unified sync: Customer.last_visit + Vehicle.customer_id ──
       await syncCustomerActivity({
@@ -428,6 +434,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
       onSaved();
       onClose();
     } catch (err) {
+      submittingRef.current = false;
       setSaving(false);
       setSaveError("Failed to save — please try again");
     }
@@ -910,8 +917,17 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
               customer_name: estimate.customer_name || form.customer_name,
               vehicle_info: estimate.vehicle_info || form.vehicle_info,
               total: grandTotal,
-              labor_cost: laborTotal,
-              parts_cost: partsTotal,
+              labor_total: laborTotal,
+              parts_total: partsTotal,
+              labor_items: form.labor_items.map(r => ({ description: r.description, hours: parseFloat(r.hours) || 0, rate: parseFloat(r.rate) || 0, total: (parseFloat(r.hours) || 0) * (parseFloat(r.rate) || 0) })),
+              parts_items: form.parts_items.map(r => ({ name: r.name, part_number: r.part_number || "", quantity: parseFloat(r.quantity) || 0, unit_price: parseFloat(r.unit_price) || 0, total: (parseFloat(r.quantity) || 0) * (parseFloat(r.unit_price) || 0) })),
+              tax_rate: parseFloat(form.tax_rate) || 0,
+              tax_applies_to: form.tax_applies_to || "both",
+              tax_amount: taxAmount,
+              discount: form.discount_value || 0,
+              discount_type: form.discount_type === "percentage" ? "%" : form.discount_type === "fixed" ? "$" : "$",
+              service_reason: form.service_reason || "",
+              notes: form.notes || "",
               amount_paid: 0,
               balance_due: grandTotal,
               payment_history: [],

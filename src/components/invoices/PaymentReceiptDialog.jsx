@@ -126,20 +126,36 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
       // ── Build line_items from estimate labor_items + parts_items (no data loss) ──
       const line_items = [
         ...(invoice.labor_items || []).map(item => ({
-          description: item.description || 'Labor',
-          quantity: item.hours || 1,
-          unit_price: item.rate || item.total || 0,
-          total: item.total || 0,
+          description: item.description || 'Labour',
+          quantity: Number(item.hours) || 1,
+          unit_price: Number(item.rate) || 0,
+          total: Math.round((Number(item.total) || 0) * 100) / 100,
           type: 'labor'
         })),
         ...(invoice.parts_items || []).map(item => ({
           description: item.name || item.description || 'Part',
-          quantity: item.quantity || 1,
-          unit_price: item.unit_price || 0,
-          total: item.total || 0,
+          quantity: Number(item.quantity) || 1,
+          unit_price: Number(item.unit_price) || 0,
+          total: Math.round((Number(item.total) || 0) * 100) / 100,
           type: 'part'
         })),
       ];
+
+      // Recalculate tax_amount and total with proper rounding to fix floating point errors
+      const _laborTotal = Math.round((Number(invoice.labor_total || invoice.labor_cost || 0)) * 100) / 100;
+      const _partsTotal = Math.round((Number(invoice.parts_total || invoice.parts_cost || 0)) * 100) / 100;
+      const _subtotal = _laborTotal + _partsTotal;
+      const _discount = Number(invoice.discount || 0);
+      const _discountType = invoice.discount_type || "$";
+      const _discountAmount = _discountType === "%" ? Math.round((_subtotal * _discount / 100) * 100) / 100 : Math.round(_discount * 100) / 100;
+      const _taxRate = Number(invoice.tax_rate || 0);
+      const _taxAppliesTo = invoice.tax_applies_to || "both";
+      const _taxableBase = _taxAppliesTo === "labor" ? _laborTotal
+        : _taxAppliesTo === "parts" ? _partsTotal
+        : _taxAppliesTo === "none" ? 0
+        : Math.max(0, _subtotal - _discountAmount);
+      const _taxAmount = Math.round(_taxableBase * (_taxRate / 100) * 100) / 100;
+      const _total = Math.round(Math.max(0, _subtotal - _discountAmount + _taxAmount) * 100) / 100;
 
       const estimateInvoiceFields = {
         invoice_number: invoiceNum,
@@ -148,14 +164,14 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
         vehicle_info: invoice.vehicle_info || "",
         estimate_id: invoice.id,
         line_items,
-        labor_total: Math.round((invoice.labor_total || invoice.labor_cost || 0) * 100) / 100,
-        parts_total: Math.round((invoice.parts_total || invoice.parts_cost || 0) * 100) / 100,
-        tax_rate: invoice.tax_rate || 0,
-        tax_amount: Math.round((invoice.tax_amount || 0) * 100) / 100,
-        tax_applies_to: invoice.tax_applies_to || "both",
-        discount: invoice.discount || 0,
-        discount_type: invoice.discount_type || "$",
-        total: Math.round((invoice.total || 0) * 100) / 100,
+        labor_total: _laborTotal,
+        parts_total: _partsTotal,
+        tax_rate: _taxRate,
+        tax_amount: _taxAmount,
+        tax_applies_to: _taxAppliesTo,
+        discount: _discount,
+        discount_type: _discountType,
+        total: _total,
         service_reason: invoice.service_reason || "",
         customer_note: invoice.notes || "",
       };

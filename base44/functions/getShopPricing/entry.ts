@@ -38,6 +38,17 @@ Deno.serve(async (req) => {
       return Response.json({ error: "shop_email is required" }, { status: 400, headers: CORS });
     }
 
+    // ── Tenant isolation: non-Haj shops get generic pricing until configured ──
+    if (shopEmail !== "hajwheels@gmail.com") {
+      return Response.json({
+        shop_email: shopEmail,
+        labour_rate: 120,
+        note: "Pricing not yet configured for this shop. Contact LBC Support: 613-314-1994",
+        summary: "Standard automotive services available. Call your shop for specific pricing.",
+        catalogue: [],
+      }, { status: 200, headers: CORS });
+    }
+
     // Pull all invoices and estimates for this shop
     const [invoices, estimates] = await Promise.all([
       sr.entities.Invoice.filter({ created_by: shopEmail }, "-created_date", 500),
