@@ -65,6 +65,13 @@ Deno.serve(async (req) => {
       return Response.json({ error: "Please provide a valid customer phone number." }, { status: 400, headers: CORS });
     }
 
+    // ── Guard: reject test bookings in production ──
+    const testName = (customer_name || "").toLowerCase().trim();
+    const testPhones = ["5551234", "6135550001", "6135559876", "6135551234"];
+    if (testName.includes("test") || testPhones.includes(phoneClean)) {
+      return Response.json({ error: "Test bookings not accepted in production." }, { status: 400, headers: CORS });
+    }
+
     // ── 1. Find or create Customer ──
     const allCustomers = await sr.entities.Customer.filter(
       { shop_owner_email: shop_email }, "full_name", 5000

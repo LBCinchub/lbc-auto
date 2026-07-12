@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation} from 'react-router-dom';
-import { Users, Phone, Mail, Car, Pencil, Trash2, DollarSign } from "lucide-react";
+import { Users, Phone, Mail, Car, Pencil, Trash2, DollarSign, AlertTriangle } from "lucide-react";
 import CustomerProfileDialog from "../components/customers/CustomerProfileDialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -302,11 +302,16 @@ export default function Customers() {
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <h3
-                              className="text-white font-bold capitalize leading-tight cursor-pointer hover:text-sky-400 transition-colors"
-                              onClick={e => { e.stopPropagation(); navigate(`/CustomerProfile/${customer.id}`); }}
+                           <h3
+                               className="text-white font-bold capitalize leading-tight cursor-pointer hover:text-sky-400 transition-colors"
+                               onClick={e => { e.stopPropagation(); navigate(`/CustomerProfile/${customer.id}`); }}
                             >{customer.full_name}</h3>
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${statusText[activity]} border ${statusBorder[activity]}`} title={statusLabel[activity]} />
+                           {/^(19|20)\d{2}\s/.test(customer.full_name?.trim() || "") && (
+                             <span title="Name looks like a vehicle — verify customer info" className="text-amber-400">
+                               <AlertTriangle className="w-3.5 h-3.5" />
+                             </span>
+                           )}
+                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${statusText[activity]} border ${statusBorder[activity]}`} title={statusLabel[activity]} />
                         </div>
                         {customer.address && (
                           <p className="text-xs text-gray-500 truncate max-w-[160px]">{customer.address}</p>

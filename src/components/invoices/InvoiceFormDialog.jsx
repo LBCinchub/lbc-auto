@@ -391,11 +391,16 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         paymentHistory = [...paymentHistory, { date: new Date().toISOString().substring(0, 10), amount: form.amount_paid, method: form.payment_method, note: "Partial payment received" }];
       }
     }
+    // ── BUG 22/23: Enforce consistency between status and balance_due ──
+    if (finalStatus === "paid") {
+      // BUG 22: paid invoices must always have balance_due = 0
+      data.balance_due = 0;
+    }
     if (finalStatus !== "paid" && form.due_date) {
       if (form.due_date < new Date().toISOString().split("T")[0]) finalStatus = "overdue";
     }
 
-    const data = { ...form, customer_id: resolvedCustomerId, vehicle_id: resolvedVehicleId, invoice_number: invoiceNum, labor_items: laborItems, parts_used, labor_total: Math.round(laborTotal * 100) / 100, parts_total: Math.round(partsTotal * 100) / 100, tax_amount: safeTax, total: safeTotal, balance_due: safeBalance, status: finalStatus, paid_date: paidDate, payment_history: paymentHistory, line_items, estimate_id: form.estimate_id || sourceEstimate?.id || "", technician_notes: form.technician_notes || "" };
+    const data = { ...form, customer_id: resolvedCustomerId, vehicle_id: resolvedVehicleId, invoice_number: invoiceNum, labor_items: laborItems, parts_used, labor_total: Math.round(laborTotal * 100) / 100, parts_total: Math.round(partsTotal * 100) / 100, tax_amount: safeTax, total: safeTotal, balance_due: finalStatus === "paid" ? 0 : safeBalance, status: finalStatus, paid_date: paidDate, payment_history: paymentHistory, line_items, estimate_id: form.estimate_id || sourceEstimate?.id || "", technician_notes: form.technician_notes || "" };
 
     if (invoice && invoice.id) {
       await base44.entities.Invoice.update(invoice.id, data);

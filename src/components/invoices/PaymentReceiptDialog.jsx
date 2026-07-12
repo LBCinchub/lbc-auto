@@ -52,7 +52,9 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
     const today = new Date().toISOString().split("T")[0];
     const newAmountPaid = Math.round(((invoice.amount_paid || 0) + totalFromPayments) * 100) / 100;
     const newBalance = Math.round(((invoice.total || 0) - newAmountPaid) * 100) / 100;
+    // BUG 22: if paid, balance_due must be exactly 0. BUG 23: if balance is 0, status must be "paid"
     const newStatus = newBalance <= 0.01 ? "paid" : "partial";
+    const safeBalance = newStatus === "paid" ? 0 : Math.max(0, newBalance);
 
     // Build payment history entries
     const newPaymentHistory = payments.map(p => ({
@@ -73,7 +75,7 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
 
     const paymentFields = {
       amount_paid: newAmountPaid,
-      balance_due: Math.max(0, Math.round(newBalance * 100) / 100),
+      balance_due: safeBalance,
       status: newStatus,
       payment_method: combinedMethod,
       card_last4: payments.find(p => p.card_last4)?.card_last4 || invoice.card_last4 || undefined,

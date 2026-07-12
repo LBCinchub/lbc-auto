@@ -22,10 +22,10 @@ Deno.serve(async (req) => {
 
     const cleanedNorm = normalize(cleaned);
 
-    // asServiceRole bypasses RLS — reads all customers for this shop via shop_owner_email
+    // asServiceRole bypasses RLS — reads all customers for this shop via created_by (shop owner email)
     const customers = await base44.asServiceRole.entities.Customer.filter(
-      { shop_owner_email: shop_email.toLowerCase().trim() },
-      "full_name phone email shop_owner_email",
+      { created_by: shop_email.toLowerCase().trim() },
+      "full_name phone email",
       5000
     );
 
