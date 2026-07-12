@@ -1,0 +1,82 @@
+{
+  "name": "VehiclePhoto",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string",
+      "description": "Linked customer ID"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Customer name for display"
+    },
+    "vehicle_id": {
+      "type": "string",
+      "description": "Linked vehicle ID"
+    },
+    "vehicle_info": {
+      "type": "string",
+      "description": "Vehicle year make model for display"
+    },
+    "photo_url": {
+      "type": "string",
+      "description": "Uploaded public URL of the photo"
+    },
+    "photo_base64": {
+      "type": "string",
+      "description": "Base64 data URL fallback if no URL available"
+    },
+    "label": {
+      "type": "string",
+      "description": "Description of what the photo shows"
+    },
+    "ai_analysis": {
+      "type": "string",
+      "description": "AI analysis text for this photo"
+    },
+    "linked_repair_order_id": {
+      "type": "string",
+      "description": "Optional linked repair order ID"
+    },
+    "linked_estimate_id": {
+      "type": "string",
+      "description": "Optional linked estimate ID"
+    },
+    "taken_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the photo was taken or saved"
+    },
+    "shop_email": {
+      "type": "string",
+      "description": "Shop owner email \u2014 tenant scoping"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "ai_chat",
+        "scanner",
+        "manual_upload"
+      ],
+      "default": "manual_upload",
+      "description": "Where the photo originated"
+    }
+  },
+  "required": [
+    "customer_id",
+    "vehicle_id",
+    "shop_email"
+  ],
+  "rls": {
+    "create": true,
+    "read": {
+      "data.shop_email": "{{user.email}}"
+    },
+    "update": {
+      "data.shop_email": "{{user.email}}"
+    },
+    "delete": {
+      "data.shop_email": "{{user.email}}"
+    }
+  }
+}

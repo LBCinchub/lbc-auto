@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Bot, Send, Loader2, Wrench, Camera, Paperclip, X } from "lucide-react";
+import { Bot, Send, Loader2, Wrench, Camera, Paperclip, X, Pin } from "lucide-react";
 import { base44 } from "@/api/base44Client";
+import SavePhotoToProfile from "@/components/photos/SavePhotoToProfile";
 
 
 const QUICK_PROMPTS = [
@@ -122,7 +123,8 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput]     = useState("");
   const [loading, setLoading] = useState(false);
-  const [pendingImage, setPendingImage] = useState(null); // base64 data URL
+  const [pendingImage, setPendingImage] = useState(null); // { file, preview }
+  const [savePhoto, setSavePhoto] = useState(null); // { photoUrl, aiAnalysis }
   const endRef   = useRef(null);
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -185,7 +187,12 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
       setPendingImage(null);
 
       const reply = result?.data?.reply || result?.reply || "No response generated.";
-      setMessages(prev => [...prev, { role: "assistant", content: reply }]);
+      const assistantMsg = { role: "assistant", content: reply };
+      if (imageUrl) {
+        assistantMsg.imageUrl = imageUrl;
+        assistantMsg.saveable = true;
+      }
+      setMessages(prev => [...prev, assistantMsg]);
     } catch (e) {
       console.error("AutoAI error:", e);
       setMessages(prev => [...prev, { role: "assistant", content: "⚠️ AI unavailable right now. Try again in a moment." }]);
@@ -270,6 +277,21 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
                     <img src={m.image} alt="upload" style={{ width:"100%", borderRadius:6, marginBottom: m.content ? 6 : 0, display:"block" }} />
                   )}
                   {m.content}
+                  {m.saveable && (
+                    <button
+                      onClick={() => setSavePhoto({ photoUrl: m.imageUrl, aiAnalysis: m.content })}
+                      style={{
+                        marginTop: 6, display: "inline-flex", alignItems: "center", gap: 4,
+                        fontSize: 10, padding: "3px 8px", borderRadius: 20, cursor: "pointer",
+                        background: "#0a2a1a", border: "1px solid #00ff8844",
+                        color: "#00ff88", transition: "all 0.15s",
+                      }}
+                      onMouseOver={e => { e.target.style.background = "#0e3a26"; e.target.style.borderColor = "#00ff88"; }}
+                      onMouseOut={e => { e.target.style.background = "#0a2a1a"; e.target.style.borderColor = "#00ff8844"; }}
+                    >
+                      <Pin style={{ width: 10, height: 10 }} /> Save to Customer Profile
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -363,6 +385,17 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
           </div>
 
         </div>
+      )}
+
+      {/* ── Save Photo Dialog ── */}
+      {savePhoto && (
+        <SavePhotoToProfile
+          open={true}
+          onClose={() => setSavePhoto(null)}
+          photoUrl={savePhoto.photoUrl}
+          aiAnalysis={savePhoto.aiAnalysis}
+          source="ai_chat"
+        />
       )}
 
       {/* ── LED Floating Toggle Button ── */}

@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft, Phone, Mail, MapPin, FileText, Car, Calendar, ChevronDown, ChevronRight,
   ClipboardList, Pencil, Wrench, DollarSign,
-  Clock, Plus, StickyNote, CalendarPlus, Trash2, Lock
+  Clock, Plus, StickyNote, CalendarPlus, Trash2, Lock, Printer, Loader2, Camera
 } from "lucide-react";
 import { formatPhone } from "@/utils/formatPhone";
 import CustomerFormDialog from "../components/customers/CustomerFormDialog";
@@ -17,6 +17,8 @@ import RepairOrderFormDialog from "../components/orders/RepairOrderFormDialog";
 import AppointmentFormDialog from "../components/appointments/AppointmentFormDialog";
 import EstimateFormDialog from "../components/estimates/EstimateFormDialog";
 import VehicleFormDialog from "../components/vehicles/VehicleFormDialog";
+import VehiclePhotosTab from "@/components/photos/VehiclePhotosTab";
+import VehicleHistoryReport from "@/components/reports/VehicleHistoryReport";
 import { useQueryClient } from "@tanstack/react-query";
 
 const AVATAR_COLORS = [
@@ -206,6 +208,10 @@ export default function CustomerDetails() {
   const [repairOrders, setRepairOrders] = useState([]);
   const [mechanics, setMechanics] = useState([]);
   const [allVehicles, setAllVehicles] = useState([]);
+  const [vehiclePhotos, setVehiclePhotos] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailResult, setEmailResult] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
   const [roOpen, setRoOpen] = useState(false);
@@ -238,7 +244,9 @@ export default function CustomerDetails() {
       base44.entities.Mechanic.list("-created_date", 200),
       base44.entities.Vehicle.list("-created_date", 500),
       base44.entities.RepairOrder.filter({ customer_id: customerId }),
-    ]).then(([customers, veh, inv, est, appt, mech, allVeh, ros]) => {
+      base44.entities.VehiclePhoto.filter({ customer_id: customerId }),
+      base44.auth.me().catch(() => null),
+    ]).then(([customers, veh, inv, est, appt, mech, allVeh, ros, photos, me]) => {
       setCustomer(customers[0] || null);
       setVehicles(veh);
       setInvoices(inv);
@@ -247,6 +255,8 @@ export default function CustomerDetails() {
       setMechanics(mech);
       setAllVehicles(allVeh);
       setRepairOrders(ros);
+      setVehiclePhotos(photos);
+      setCurrentUser(me);
       setNotesValue(customers[0]?.notes || "");
     }).finally(() => setLoading(false));
   }, [customerId]);
@@ -260,15 +270,41 @@ export default function CustomerDetails() {
       base44.entities.Estimate.filter({ customer_id: customerId }),
       base44.entities.Appointment.filter({ customer_id: customerId }),
       base44.entities.RepairOrder.filter({ customer_id: customerId }),
-    ]).then(([customers, veh, inv, est, appt, ros]) => {
+      base44.entities.VehiclePhoto.filter({ customer_id: customerId }),
+    ]).then(([customers, veh, inv, est, appt, ros, photos]) => {
       setCustomer(customers[0] || null);
       setVehicles(veh);
       setInvoices(inv);
       setEstimates(est);
       setAppointments(appt);
       setRepairOrders(ros);
+      setVehiclePhotos(photos);
       setNotesValue(customers[0]?.notes || "");
     }).finally(() => setLoading(false));
+  };
+
+  const refetchPhotos = () => {
+    base44.entities.VehiclePhoto.filter({ customer_id: customerId }).then(setVehiclePhotos).catch(() => {});
+  };
+
+  const handlePrintReport = () => window.print();
+
+  const handleEmailReport = async () => {
+    if (!customer?.email) { setEmailResult({ ok: false, msg: "No email on file for this customer." }); return; }
+    setEmailSending(true);
+    setEmailResult(null);
+    try {
+      const res = await base44.functions.invoke("sendVehicleHistoryReport", { customer_id: customerId, to: customer.email });
+      if (res?.data?.success || res?.success) {
+        setEmailResult({ ok: true, msg: `✅ Report emailed to ${customer.email}` });
+      } else {
+        setEmailResult({ ok: false, msg: res?.data?.error || res?.error || "Failed to send email." });
+      }
+    } catch (e) {
+      setEmailResult({ ok: false, msg: e?.message || "Failed to send email." });
+    }
+    setEmailSending(false);
+    setTimeout(() => setEmailResult(null), 5000);
   };
 
   const verifyPortalAccess = async (testPhone) => {
@@ -436,8 +472,24 @@ export default function CustomerDetails() {
             </div>
           </div>
 
+          {/* Report Actions */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button onClick={handlePrintReport} variant="outline" className="border-gray-600 text-gray-300 hover:text-white gap-2 no-print">
+              <Printer className="w-4 h-4" /> Print Report
+            </Button>
+            <Button onClick={handleEmailReport} disabled={emailSending} variant="outline" className="border-sky-500/40 bg-sky-500/10 text-sky-400 hover:bg-sky-500/20 hover:text-sky-300 gap-2 no-print">
+              {emailSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+              {emailSending ? "Sending..." : "Email Report to Customer"}
+            </Button>
+            {emailResult && (
+              <span className={`text-xs ${emailResult.ok ? "text-emerald-400" : "text-rose-400"}`}>
+                {emailResult.msg}
+              </span>
+            )}
+          </div>
+
           {/* Quick Actions Bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 no-print">
             <Button
               onClick={async () => { const v = await base44.entities.Vehicle.filter({ customer_id: customerId }); setVehicles(v); setApptOpen(true); }}
               variant="outline"
@@ -488,6 +540,9 @@ export default function CustomerDetails() {
               </TabsTrigger>
               <TabsTrigger value="notes" className="gap-1.5 data-[state=active]:bg-gray-800">
                 <StickyNote className="w-3.5 h-3.5" /> Notes
+              </TabsTrigger>
+              <TabsTrigger value="photos" className="gap-1.5 data-[state=active]:bg-gray-800">
+                <Camera className="w-3.5 h-3.5" /> Photos ({vehiclePhotos.length})
               </TabsTrigger>
             </TabsList>
 
@@ -696,8 +751,33 @@ export default function CustomerDetails() {
                 )}
               </div>
             </TabsContent>
-          </Tabs>
+
+            {/* Vehicle Photos */}
+            <TabsContent value="photos" className="mt-4">
+              <VehiclePhotosTab
+                photos={vehiclePhotos}
+                repairOrders={repairOrders}
+                estimates={estimates}
+                onRefetch={refetchPhotos}
+              />
+            </TabsContent>
+            </Tabs>
+
+          {/* Vehicle Photos Tab Content */}
         </>
+      )}
+
+      {/* Printable Vehicle History Report — hidden on screen, visible when printing */}
+      {customer && (
+        <VehicleHistoryReport
+          customer={customer}
+          vehicles={vehicles}
+          invoices={invoices}
+          repairOrders={repairOrders}
+          vehiclePhotos={vehiclePhotos}
+          shopName={currentUser?.business_name || ""}
+          shopLogo={currentUser?.logo_url || ""}
+        />
       )}
 
       {/* Edit Customer Dialog */}
