@@ -41,8 +41,15 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
     time_slot: "", notes: "", status: "scheduled"
   });
   const [saving, setSaving] = useState(false);
+  const [shopEmail, setShopEmail] = useState("");
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    base44.auth.me().then(u => {
+      if (u?.email) setShopEmail(u.email);
+    });
+  }, []);
   const { decoding: decodingVin, vinError: vinDecodeError, decodeVin: nhtsaDecode, setVinError: setVinDecodeError } = useNhtsaVinDecode();
 
   useEffect(() => {
@@ -212,10 +219,11 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
       }
     }
     setSaving(true);
+    const payload = { ...form, shop_email: shopEmail };
     if (appointment && appointment.id && !appointment._prefillCustomerId) {
-      await base44.entities.Appointment.update(appointment.id, form);
+      await base44.entities.Appointment.update(appointment.id, payload);
     } else {
-      await base44.entities.Appointment.create(form);
+      await base44.entities.Appointment.create(payload);
     }
     setSaving(false);
       // ── Unified sync: link vehicle → customer, but don't mark as visited yet ──

@@ -305,6 +305,7 @@ export default function EstimateDetail() {
     try {
       const ro = await base44.entities.RepairOrder.create({
         estimate_id: estimate.id,
+        order_number: `RO-${Date.now().toString(36).toUpperCase().slice(-8)}`,
         customer_id: estimate.customer_id,
         customer_name: estimate.customer_name,
         vehicle_id: estimate.vehicle_id,

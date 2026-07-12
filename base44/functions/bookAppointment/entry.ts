@@ -124,10 +124,8 @@ Deno.serve(async (req) => {
       price_estimate: price_estimate ? Number(price_estimate) : undefined,
       customer_phone: phoneClean,
       customer_email_address: customer_email || undefined,
+      shop_email: shop_email,
     });
-
-    // Set created_by to shop owner so it shows up in their dashboard
-    await sr.entities.Appointment.update(appointment.id, { created_by: shop_email });
 
     // ── 4. Create dashboard Notification ──
     try {
@@ -198,6 +196,9 @@ Deno.serve(async (req) => {
 
   } catch (err) {
     console.error("bookAppointment error:", err);
-    return Response.json({ error: (err as any).message || "Something went wrong" }, { status: 500, headers: CORS });
+    const errorMsg = shop_email === 'hajwheels@gmail.com'
+      ? 'Booking failed. Please call 613-672-2727 directly.'
+      : 'Booking failed. Please call your shop directly.';
+    return Response.json({ error: (err as any).message || errorMsg }, { status: 500, headers: CORS });
   }
 });

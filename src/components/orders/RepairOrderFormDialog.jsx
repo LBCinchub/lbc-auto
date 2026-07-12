@@ -616,7 +616,10 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                           const items = [...(form.labor_items || [])];
                           items[idx] = { ...items[idx], rate: e.target.value, total: (parseFloat(items[idx].hours) || 0) * (parseFloat(e.target.value) || 0) };
                           setForm(f => ({ ...f, labor_items: items }));
-                        }} className="bg-gray-800 border-0 text-white h-8 text-sm text-right" placeholder="120" step="1" />
+                        }} className={`bg-gray-800 border-0 text-white h-8 text-sm text-right ${parseFloat(row.rate) !== userLaborRate ? "border border-amber-500/50" : ""}`} placeholder="120" step="1" />
+                        {parseFloat(row.rate) !== userLaborRate && row.rate && (
+                          <p className="text-amber-400 text-[10px] mt-0.5">⚠️ Rate differs from shop standard (${userLaborRate}/hr)</p>
+                        )}
                       </td>
                       <td className="px-3 py-1.5 text-right text-gray-300 font-medium">${((parseFloat(row.hours) || 0) * (parseFloat(row.rate) || 120)).toFixed(2)}</td>
                       <td className="pr-2 py-1.5">
