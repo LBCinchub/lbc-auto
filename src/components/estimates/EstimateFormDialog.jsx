@@ -332,6 +332,8 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
     if (!hasLineItem) errors.lineItems = "Please add at least one labor or parts row";
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
+      submittingRef.current = false;
+      setSaving(false);
       return;
     }
     setValidationErrors({});
@@ -363,10 +365,10 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
         discount_amount: discountAmount,
         labor_items: form.labor_items.map(r => ({ ...r, hours: parseFloat(r.hours) || 0, rate: parseFloat(r.rate) || 120 })),
         parts_items: form.parts_items.map(r => ({ ...r, quantity: parseFloat(r.quantity) || 0, unit_price: parseFloat(r.unit_price) || 0 })),
-        labor_total: laborTotal,
-        parts_total: partsTotal,
-        tax_amount: taxAmount,
-        grand_total: grandTotal,
+        labor_total: Math.round(laborTotal * 100) / 100,
+        parts_total: Math.round(partsTotal * 100) / 100,
+        tax_amount: Math.round(taxAmount * 100) / 100,
+        grand_total: Math.round(grandTotal * 100) / 100,
       };
 
       if (estimate && estimate.id) {
@@ -396,7 +398,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
           const linkedInvs = await base44.entities.Invoice.filter({ estimate_id: estimate.id });
           const inv = linkedInvs[0] || null;
           if (inv) {
-            const newBalanceDue = payload.grand_total - (inv.amount_paid || 0);
+            const newBalanceDue = Math.round((payload.grand_total - (inv.amount_paid || 0)) * 100) / 100;
             await base44.entities.Invoice.update(inv.id, {
               customer_name: payload.customer_name,
               vehicle_info: payload.vehicle_info,

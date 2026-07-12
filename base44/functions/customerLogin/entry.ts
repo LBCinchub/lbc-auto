@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
     const cleanedNorm = normalize(cleaned);
 
     const customers = await base44.asServiceRole.entities.Customer.filter(
-      { created_by: shop_email.toLowerCase().trim() },
+      { shop_owner_email: shop_email.toLowerCase().trim() },
       "full_name phone email",
       5000
     );

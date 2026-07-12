@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 import { Input } from "@/components/ui/input";
@@ -30,6 +30,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [showCashout, setShowCashout] = useState(false);
+  const submittingRef = useRef(false);
   const [fetchedVehicles, setFetchedVehicles] = useState([]);
   const [loadingVehicles, setLoadingVehicles] = useState(false);
   const { decoding: decodingVin, vinError: vinDecodeError, decodeVin: nhtsaDecode, setVinError: setVinDecodeError } = useNhtsaVinDecode();
@@ -336,7 +337,8 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
 
 
   const handleSave = async () => {
-    if (saving) return; // prevent double-submit
+    if (submittingRef.current) return; // synchronous guard — prevents double-submit before React re-renders
+    submittingRef.current = true;
 
     // ── CENTER CONTROL: Validate before any DB write ──────────────────────
     if (form.customer_id) {

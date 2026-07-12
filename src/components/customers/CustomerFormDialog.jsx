@@ -60,7 +60,11 @@ export default function CustomerFormDialog({ open, onClose, customer, onSaved, o
 
       if (customer) {
         // ── EDIT: save customer first, then propagate in background ──
-        await base44.entities.Customer.update(customer.id, form);
+        const user = await base44.auth.me();
+        await base44.entities.Customer.update(customer.id, {
+          ...form,
+          shop_owner_email: user?.email || undefined,
+        });
         newCustomer = { id: customer.id, ...form };
 
         const customerChanged =
@@ -100,7 +104,11 @@ export default function CustomerFormDialog({ open, onClose, customer, onSaved, o
 
       } else {
         // ── NEW CUSTOMER: create immediately, vehicle in parallel ──
-        newCustomer = await base44.entities.Customer.create(form);
+        const user = await base44.auth.me();
+        newCustomer = await base44.entities.Customer.create({
+          ...form,
+          shop_owner_email: user?.email || undefined,
+        });
 
         let createdVehicleData = null;
         if (addVehicle && vehicleForm.make && vehicleForm.model && vehicleForm.year) {

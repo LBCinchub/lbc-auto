@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { fuzzyMatch } from "@/utils/fuzzySearch";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -49,6 +49,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
   const { decoding: decodingVin, vinError: vinDecodeError, decodeVin: nhtsaDecode, setVinError: setVinDecodeError } = useNhtsaVinDecode();
   const [userTaxRate, setUserTaxRate] = useState(0);
   const [userLaborRate, setUserLaborRate] = useState(120);
+  const submittingRef = useRef(false);
   const [localVehicles, setLocalVehicles] = useState([]);
   const [fetchedVehicles, setFetchedVehicles] = useState([]);
   const [loadingVehicles, setLoadingVehicles] = useState(false);
@@ -269,9 +270,11 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
   };
 
   const handleSave = async () => {
-    if (saving) return; // prevent double-submit
+    if (submittingRef.current) return; // synchronous guard — prevents double-submit before React re-renders
+    submittingRef.current = true;
     if (!form.customer_id || !form.vehicle_id || !form.description) {
       alert('Please fill in Customer, Vehicle, and Description fields');
+      submittingRef.current = false;
       return;
     }
 
@@ -300,9 +303,9 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
       let taxableBase = afterDiscount;
       if (taxAppliesTo === "labor") taxableBase = laborCost;
       else if (taxAppliesTo === "parts") taxableBase = partsCost;
-      const taxAmt = form.apply_tax ? taxableBase * (userTaxRate / 100) : 0;
-      const calculatedTotal = afterDiscount + taxAmt;
-      const finalTotal = form.custom_total ? Number(form.total_cost) || 0 : calculatedTotal;
+      const taxAmt = Math.round((form.apply_tax ? taxableBase * (userTaxRate / 100) : 0) * 100) / 100;
+      const calculatedTotal = Math.round((afterDiscount + taxAmt) * 100) / 100;
+      const finalTotal = form.custom_total ? Math.round((Number(form.total_cost) || 0) * 100) / 100 : calculatedTotal;
 
       const timestamp = new Date().toISOString();
       let userEmail = 'system';
@@ -317,8 +320,8 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
       const data = {
         ...form,
         labor_hours: laborHours,
-        labor_cost: laborCost,
-        parts_cost: partsCost,
+        labor_cost: Math.round(laborCost * 100) / 100,
+        parts_cost: Math.round(partsCost * 100) / 100,
         total_cost: finalTotal,
         custom_total: form.custom_total,
         order_number: order?.order_number || `RO-${Date.now().toString(36).toUpperCase()}`,
