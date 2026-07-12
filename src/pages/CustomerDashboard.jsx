@@ -665,11 +665,8 @@ export default function CustomerDashboard() {
         )}
       </div>
 
-      {/* Customer AI chat — isolated from shop data (mode: "customer") */}
-      <CustomerAIChat
-        vehicle={vehicles[0] ? `${vehicles[0].year} ${vehicles[0].make} ${vehicles[0].model}` : ""}
-        description={orders[0]?.description || ""}
-      />
+      {/* Customer AI chat — sends ONLY { messages, mode: "customer" }, no shop data */}
+      <CustomerAIChat />
 
       {/* Bottom nav */}
       <div style={{

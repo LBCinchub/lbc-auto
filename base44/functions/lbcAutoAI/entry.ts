@@ -20,18 +20,7 @@ RESPONSE RULES:
 - Concise but complete. Don't omit critical steps or specs.
 - End every response with a "⬇️ TL;DR" line (1-2 sentence bottom-line summary).`;
 
-const CUSTOMER_PROMPT = `You are LBC Auto AI — a friendly automotive assistant helping a customer understand their vehicle.
-You are NOT connected to any shop's internal data. You do NOT have access to repair orders, invoices, inventory, or financial records.
-Never reference shop-internal data, pricing, balances, or business metrics. If asked about account balances, invoice amounts, or shop finances, say: "I can't access account or billing details — please contact your shop directly."
-
-DOMAIN: Cars and auto repair only. If asked anything unrelated, say: "I only help with automotive topics."
-
-RESPONSE RULES:
-- Friendly, plain-English explanations. Avoid jargon when possible.
-- Help customers understand what a code, symptom, or repair means.
-- Suggest when they should see a mechanic (safety-related always).
-- Be concise. Use bullet points for readability.
-- Never invent prices, quotes, or shop-specific information.`;
+const CUSTOMER_PROMPT = `You are the booking assistant for Haj Rims & Tires. Quote prices directly: Oil change $100 (standard) / $120 (3.5L+ or European) / $150 (diesel). Alignment $120 cars/$160 trucks. Brakes $150 per end. Labor $120/hr. Use NAPA parts with Worldpac warranty. Keep replies under 3 sentences. Always end with 📞 613-672-2727. NEVER mention repair orders, invoices, finances, or any internal shop data.`;
 
 Deno.serve(async (req) => {
   try {
@@ -47,20 +36,15 @@ Deno.serve(async (req) => {
     // CUSTOMER MODE — no auth, no shop data, isolated prompt
     // ════════════════════════════════════════════════════════════
     if (mode === "customer") {
-      let customerContext = "";
-      if (vehicle) customerContext += "\nVehicle: " + vehicle;
-      if (description) customerContext += "\nConcern: " + description;
-
       const recent = messages.filter(m => m.role !== "system").slice(-6);
 
       const prompt =
         CUSTOMER_PROMPT +
-        (customerContext ? "\n\nContext:" + customerContext : "") +
         "\n\nConversation:\n" +
         recent
           .map(m => (m.role === "user" ? "Customer: " : "Assistant: ") + m.content)
           .join("\n") +
-        "\n\nRespond to the latest message as LBC Auto AI. Be helpful and clear. Never reference shop-internal data.";
+        "\n\nRespond to the latest message as the booking assistant.";
 
       const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
         prompt,

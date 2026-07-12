@@ -5,12 +5,11 @@ import { base44 } from "@/api/base44Client";
 /**
  * Customer-facing AI chat widget.
  *
- * SECURITY: This component ONLY sends { mode: "customer", messages, vehicle?, description? }
- * to the lbcAutoAI backend. It NEVER sends shop_context, repair order counts,
- * invoice data, or any internal financial data. The backend's customer mode
- * strips all shop-internal context from the AI prompt.
+ * SECURITY: This component sends ONLY { messages, mode: "customer" } to the
+ * lbcAutoAI backend. No vehicle, description, shop_context, RO counts,
+ * invoice data, or any internal financial data is ever transmitted.
  */
-export default function CustomerAIChat({ vehicle = "", description = "" }) {
+export default function CustomerAIChat() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
@@ -37,13 +36,10 @@ export default function CustomerAIChat({ vehicle = "", description = "" }) {
     setLoading(true);
 
     try {
-      // ── SECURITY: only pass mode, messages, and optional vehicle/description ──
-      // No shop_context, no RO counts, no invoice/financial data is ever sent.
+      // ── SECURITY: send ONLY { messages, mode } — no shop data of any kind ──
       const result = await base44.functions.invoke("lbcAutoAI", {
         mode: "customer",
         messages: history,
-        vehicle: vehicle || "",
-        description: description || "",
       });
 
       const reply = result?.data?.reply || result?.reply || "No response generated.";
@@ -105,7 +101,7 @@ export default function CustomerAIChat({ vehicle = "", description = "" }) {
               <div style={{ textAlign: "center", padding: "20px 0" }}>
                 <MessageCircle style={{ width: 28, height: 28, color: "#1e3a5f", margin: "0 auto 8px" }} />
                 <div style={{ color: "#60a5fa", fontSize: 11, lineHeight: 1.5 }}>
-                  {vehicle ? `Ask about your ${vehicle}…` : "Ask about check engine lights, noises, maintenance…"}
+                  Ask about check engine lights, noises, maintenance…
                 </div>
               </div>
             )}
@@ -166,7 +162,7 @@ export default function CustomerAIChat({ vehicle = "", description = "" }) {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKey}
-              placeholder={vehicle ? `Ask about your ${vehicle}…` : "Ask about your car…"}
+              placeholder="Ask about your car…"
               style={{
                 flex: 1, background: "#0f1e33", border: "1px solid rgba(59,130,246,0.3)",
                 borderRadius: 8, padding: "7px 12px", fontSize: 12, color: "#e0f2fe",
