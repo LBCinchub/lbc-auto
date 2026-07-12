@@ -31,6 +31,12 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
   const addPaymentEntry = () => {
     const amount = Number(currentPayment.amount);
     if (!amount || amount <= 0) return alert("Please enter a valid payment amount.");
+    // Bug 9: Prevent overpayment
+    const remainingBalance = Math.max(0, balanceDue - totalFromPayments);
+    if (amount > remainingBalance + 0.01) {
+      alert(`Payment $${amount.toFixed(2)} exceeds remaining balance $${remainingBalance.toFixed(2)}. Please check the amount.`);
+      return;
+    }
     setPayments([...payments, { ...currentPayment, amount }]);
     setCurrentPayment({ amount: "", payment_method: "card", card_last4: "" });
   };
@@ -50,7 +56,9 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
 
     setSaving(true);
     const today = new Date().toISOString().split("T")[0];
-    const newAmountPaid = Math.round(((invoice.amount_paid || 0) + totalFromPayments) * 100) / 100;
+    // Bug 4: Calculate totalPaid from payment_history to avoid drift between amount_paid and history
+    const existingHistoryTotal = (invoice.payment_history || []).reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
+    const newAmountPaid = Math.round((existingHistoryTotal + totalFromPayments) * 100) / 100;
     const newBalance = Math.round(((invoice.total || 0) - newAmountPaid) * 100) / 100;
     // BUG 22: if paid, balance_due must be exactly 0. BUG 23: if balance is 0, status must be "paid"
     const newStatus = newBalance <= 0.01 ? "paid" : "partial";
@@ -202,6 +210,20 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
       // Standard Invoice update
       await base44.entities.Invoice.update(invoice.id, paymentFields);
     }
+
+    // Bug 2: Update customer visit stats on payment
+    try {
+      if (invoice.customer_id) {
+        const cust = await base44.entities.Customer.get(invoice.customer_id);
+        if (cust) {
+          await base44.entities.Customer.update(cust.id, {
+            total_visits: (cust.total_visits || 0) + 1,
+            last_visit: today,
+            last_vehicle_info: invoice.vehicle_info || cust.last_vehicle_info,
+          });
+        }
+      }
+    } catch (e) { console.warn("Customer visit update failed:", e); }
 
     setSaving(false);
     onSaved();

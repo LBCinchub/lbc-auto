@@ -55,9 +55,41 @@ export default function Customers() {
     base44.auth.me().then(setUser);
   }, []);
 
+  // ── One-time migration: backfill shop_owner_email on all customers missing it ──
+  useEffect(() => {
+    if (!user) return;
+    const ran = localStorage.getItem("shop_email_migration_v1");
+    if (ran) return;
+    const runMigration = async () => {
+      try {
+        const all = await base44.entities.Customer.filter({ created_by: user.email }, "-created_date", 500);
+        const needsFix = all.filter(c => !c.shop_owner_email);
+        for (const c of needsFix) {
+          await base44.entities.Customer.update(c.id, { shop_owner_email: user.email });
+        }
+        localStorage.setItem("shop_email_migration_v1", "done");
+        queryClient.invalidateQueries({ queryKey: ["customers"] });
+      } catch (e) { console.warn("Migration failed:", e); }
+    };
+    runMigration();
+  }, [user]);
+
   const { data: customers = [], isLoading } = useQuery({
     queryKey: ["customers", user?.email],
-    queryFn: () => user ? base44.entities.Customer.filter({ created_by: user.email }, "-created_date", 10000) : Promise.resolve([]),
+    queryFn: async () => {
+      if (!user) return [];
+      const [byCreated, byShopEmail] = await Promise.all([
+        base44.entities.Customer.filter({ created_by: user.email }, "-created_date", 10000),
+        base44.entities.Customer.filter({ shop_owner_email: user.email }, "-created_date", 10000),
+      ]);
+      const seen = new Set();
+      const merged = [...byCreated, ...byShopEmail].filter(c => {
+        if (seen.has(c.id)) return false;
+        seen.add(c.id);
+        return true;
+      });
+      return merged.sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+    },
     enabled: !!user,
   });
 
