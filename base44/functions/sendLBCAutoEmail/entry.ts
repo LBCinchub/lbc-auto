@@ -339,19 +339,29 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { type, to, customer_name, record } = await req.json();
+    const { type, to, customer_name, record, shop_email } = await req.json();
     if (!to || !type || !record) {
       return Response.json({ error: "Missing required fields: type, to, record" }, { status: 400 });
     }
 
-    // Get shop info from user profile
+    // ── Tenant-aware shop info ──────────────────────────────────
+    // If shop_email is provided and differs from the auth user, look up
+    // the shop's profile by email (service role). Falls back to auth user.
+    let shopUser: any = user;
+    if (shop_email && shop_email !== user.email) {
+      try {
+        const matched = await base44.asServiceRole.entities.User.filter({ email: shop_email }, null, 1);
+        if (matched && matched.length) shopUser = matched[0];
+      } catch (e) { /* fall back to auth user */ }
+    }
+
     const shopInfo = {
-      business_name: user.business_name || "",
-      phone:         user.phone         || "",
-      address:       user.address       || "",
-      email:         user.email         || "",
-      logo_url:      user.logo_url      || "",
-      google_review_link: user.google_review_link || "",
+      business_name: shopUser.business_name || "",
+      phone:         shopUser.phone         || "",
+      address:       shopUser.address       || "",
+      email:         shopUser.email         || "",
+      logo_url:      shopUser.logo_url      || "",
+      google_review_link: shopUser.google_review_link || "",
     };
 
     const { accessToken } = await base44.asServiceRole.connectors.getConnection("gmail");

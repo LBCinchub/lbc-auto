@@ -116,25 +116,28 @@ export default function EstimateDetail() {
     );
   }
 
+  // Rounding helper — all currency values rounded to exactly 2 decimal places
+  const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+
   // Calculations — zero-qty items are "Recommended" and excluded from all totals
-  const laborTotal = laborItems.reduce((s, r) => {
+  const laborTotal = r2(laborItems.reduce((s, r) => {
     const qty = parseFloat(r.hours) || 0;
     return qty > 0 ? s + qty * (parseFloat(r.rate) || 0) : s;
-  }, 0);
-  const partsTotal = partsItems.reduce((s, r) => {
+  }, 0));
+  const partsTotal = r2(partsItems.reduce((s, r) => {
     const qty = parseFloat(r.quantity) || 0;
     return qty > 0 ? s + qty * (parseFloat(r.unit_price) || 0) : s;
-  }, 0);
-  const subtotal = laborTotal + partsTotal;
+  }, 0));
+  const subtotal = r2(laborTotal + partsTotal);
   const taxRate = estimate?.tax_rate ?? (user?.tax_rate ?? 0);
   const taxableBase = taxAppliesTo === "labor" ? laborTotal
     : taxAppliesTo === "parts" ? partsTotal
     : taxAppliesTo === "none" ? 0
     : laborTotal + partsTotal; // "both"
-  const taxAmount = taxableBase * (taxRate / 100);
+  const taxAmount = r2(taxableBase * (taxRate / 100));
   const discountValue = parseFloat(discount) || 0;
-  const discountAmount = discountType === "%" ? (subtotal * discountValue / 100) : discountValue;
-  const grandTotal = Math.max(0, subtotal - discountAmount + taxAmount);
+  const discountAmount = r2(discountType === "%" ? (subtotal * discountValue / 100) : discountValue);
+  const grandTotal = r2(Math.max(0, subtotal - discountAmount + taxAmount));
 
   // ── Share / Print ────────────────────────────────────────────────────────
   const handleShare = async () => {
@@ -213,7 +216,7 @@ export default function EstimateDetail() {
       ];
       for (const inv of linkedInvoices) {
         const newTotal = grandTotal;
-        const newBalanceDue = newTotal - (inv.amount_paid || 0);
+        const newBalanceDue = r2(newTotal - (inv.amount_paid || 0));
         await base44.entities.Invoice.update(inv.id, {
           customer_name: estimate.customer_name,
           vehicle_info: estimate.vehicle_info,
@@ -254,17 +257,17 @@ export default function EstimateDetail() {
       // ── Build line_items from estimate labor_items + parts_items (no data loss) ──
       const lineItems = [
         ...(estimate.labor_items || []).map(item => ({
-          description: item.description || 'Labor',
-          quantity: item.hours || 1,
-          unit_price: item.rate || item.total || 0,
-          total: item.total || 0,
+          description: item.description || 'Labour',
+          quantity: Number(item.hours) || 1,
+          unit_price: Number(item.rate) || 0,
+          total: Math.round((Number(item.total) || 0) * 100) / 100,
           type: 'labor'
         })),
         ...(estimate.parts_items || []).map(item => ({
           description: item.name || item.description || 'Part',
-          quantity: item.quantity || 1,
-          unit_price: item.unit_price || 0,
-          total: item.total || 0,
+          quantity: Number(item.quantity) || 1,
+          unit_price: Number(item.unit_price) || 0,
+          total: Math.round((Number(item.total) || 0) * 100) / 100,
           type: 'part'
         })),
       ];

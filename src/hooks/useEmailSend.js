@@ -34,11 +34,19 @@ export function useEmailSend() {
         return;
       }
 
+      // Pass shop_email for tenant-aware email rendering (shop name, phone, logo)
+      let shop_email = "";
+      try {
+        const currentUser = await base44.auth.me();
+        shop_email = currentUser?.email || "";
+      } catch (e) { /* non-fatal — backend falls back to auth user */ }
+
       await base44.functions.invoke("sendLBCAutoEmail", {
         type,
         to: email,
         customer_name: customerName,
         record,
+        shop_email,
       });
 
       toast({ title: `✅ Email sent to ${email}` });

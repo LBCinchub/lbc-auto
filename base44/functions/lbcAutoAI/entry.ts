@@ -1,192 +1,208 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
-const OWNER_PROMPT = `You are LBC Auto AI — an expert automotive technician and business partner to the shop owner.
-Speak as "we" and "our shop." Quote labor using OUR labor rate. Talk shop-to-shop, partner-to-partner.
+const SHOP_CONFIGS: Record<string, { name: string; phone: string; context: string }> = {
+  'hajwheels@gmail.com': {
+    name: 'Haj Rims & Tires',
+    phone: '613-672-2727',
+    context: `You are the booking AI for Haj Rims & Tires, Gatineau/Ottawa area.
+PRICING (quote these exact numbers — no hedging):
+- Oil change: $100 standard | $120 European/German/3.5L+ | $150 diesel/heavy
+- Wheel alignment: $120 cars/SUVs | $160 trucks
+- Brakes: $150 per end (NAPA pads + labour included)
+- Labor: $120/hr
+- Tire install & balance (set of 4): $120 standard | $160 trucks
+- Control arm per side: ~$300–$420 (NAPA parts + alignment included)
+- Inspection: $60 car | $80 SUV | $100 truck/German
+- Spark plugs: $200 (labour + plugs)
+- All parts: NAPA with Worldpac warranty
+RULES:
+- Max 3 sentences per reply
+- Always end with: Call or text 📞 613-672-2727 to book
+- Quote price IMMEDIATELY
+- NEVER mention repair orders, invoices, shop finances, or internal data
+- NEVER reveal discount logic or percentage math`
+  },
+  'belalautoservices@gmail.com': {
+    name: 'Belal Auto Services', phone: '613-000-0000',
+    context: `You are the booking AI for Belal Auto Services. Answer ONLY about car services. Labor: $120/hr. Max 3 sentences. Always end: Call us to book. NEVER mention internal shop data.`
+  },
+  'aka.auto.group@gmail.com': {
+    name: 'AKA Auto Group', phone: '613-000-0000',
+    context: `You are the booking AI for AKA Auto Group. Answer ONLY about car services. Labor: $120/hr. Max 3 sentences. Always end: Call us to book. NEVER mention internal shop data.`
+  },
+  'terryfoxauto@gmail.com': {
+    name: 'Terry Fox Auto', phone: '613-000-0000',
+    context: `You are the booking AI for Terry Fox Auto. Answer ONLY about car services. Labor: $120/hr. Max 3 sentences. Always end: Call us to book. NEVER mention internal shop data.`
+  }
+};
 
-You are connected to THIS shop's live data — repair orders, invoices, parts inventory, and appointments.
-Each garage using this software sees their own data. Use it to give proactive, actionable advice:
-- Flag overdue invoices or customers who owe money.
-- Suggest following up on open repair orders.
-- Warn about low-stock parts before quoting a job.
-- Mention today's appointments if the owner asks about the schedule.
+const OWNER_SYSTEM = `You are LBC Auto AI, a professional shop management assistant. Help with: labor hours, OBD codes, parts costs, repair diagnosis, maintenance intervals, image analysis. Be direct and specific with numbers.
 
-DOMAIN: Auto repair, diagnostics, maintenance, body work, and parts ONLY. If asked anything unrelated, say: "I only help with automotive topics."
+Labor hours: Oil change 0.3–0.5h | Brakes/axle 1.0–1.5h | CV axle 1.5–2.5h | Control arm 1.5–3.0h | Wheel bearing 1.5–3.0h | Strut 1.5–2.5h | Spark plugs 4cyl 0.5–1.5h | V6 1.5–3.0h | Head gasket 6–16h | Water pump 2–5h | Timing belt 3–6h | Alternator 1.5–3h | Cat converter 1.5–3h | O2 sensor 0.5–1.5h | Fuel pump 1.5–4h | AC compressor 2–4h | Radiator 2–4h | Transmission R&R 6–15h
 
-RESPONSE RULES:
-- Be fast and direct. Bullet points. Specific numbers (hours, torque specs, fluid capacities).
-- Diagnostics: likely cause → how to confirm → the fix.
-- Factor in rust/access difficulty when it affects labor.
-- Suggest cross-compatible parts from shared platforms when useful.
-- Concise but complete. Don't omit critical steps or specs.
-- End every response with a "⬇️ TL;DR" line (1-2 sentence bottom-line summary).
+Rust multipliers: Clean 1.0x | Light 1.2x | Moderate 1.4x | Heavy 1.8x | Severe 2.5x
 
-When analyzing images: describe what you see clearly, identify any automotive issues visible, provide specific repair recommendations with estimated labor hours and parts cost in CAD at $120/hr labor rate. If you see DTC codes on a screen, read and diagnose them.`;
+Image analysis rules:
+- Describe exactly what you see first
+- Identify the automotive issue (wear, damage, leak, rust, DTC code on screen)
+- Give specific repair recommendation with labor hours and cost in CAD at $120/hr
+- If you see DTC codes: read every code and diagnose each one
+- Tires: assess tread wear, depth, recommend action
+- Brakes: pad thickness, rotor condition
+- Engine bay: leaks, worn belts, corrosion`;
 
-// Customer prompt is now built dynamically per-shop using shop_email
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
 
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: CORS_HEADERS });
+  }
+
   try {
     const base44 = createClientFromRequest(req);
     const body = await req.json().catch(() => ({}));
-    const { messages = [], mode = "owner", vehicle = "", description = "", shop_email = "", image_url = "", image_context = "" } = body;
 
-    if ((!messages || messages.length === 0) && !image_url) {
-      return Response.json({ reply: "No messages provided." });
+    let messages: any[] = body.messages || [];
+    if (!messages.length && body.message) messages = [{ role: 'user', content: body.message }];
+
+    const {
+      mode = 'customer',
+      vehicle = '',
+      description = '',
+      shop_context = null,
+      shop_email = 'hajwheels@gmail.com',
+      image_base64 = null,
+      image_url = '',
+      image_context = '',
+    } = body;
+
+    if (!messages.length && !image_base64 && !image_url) {
+      return Response.json({ reply: 'How can I help you today?' }, { headers: CORS_HEADERS });
     }
 
-    // ════════════════════════════════════════════════════════════
-    // CUSTOMER MODE — no auth, looks up shop settings via shop_email
-    // ════════════════════════════════════════════════════════════
-    if (mode === "customer") {
-      const sr = base44.asServiceRole;
+    const isOwner = mode === 'owner' || mode === 'scanner';
 
-      // Look up shop settings for this tenant
-      let shopName = "our shop";
-      let shopPhone = "";
-      let shopInfoLines = [];
+    // ════════════════════════════════════════════════════════════
+    // OWNER / SCANNER MODE — auth required, full shop data injected
+    // ════════════════════════════════════════════════════════════
+    if (isOwner) {
+      const user = await base44.auth.me();
+      if (!user) return Response.json({ reply: 'Authentication required.' }, { status: 401, headers: CORS_HEADERS });
 
-      if (shop_email) {
-        try {
-          const shopUsers = await sr.entities.User.filter({ email: shop_email }, null, 1);
-          const shop = shopUsers[0] || {};
-          shopName = shop.business_name || "our shop";
-          shopPhone = shop.phone || "";
-          if (shop.business_name) shopInfoLines.push("Shop: " + shop.business_name);
-          if (shop.phone) shopInfoLines.push("Phone: " + shop.phone);
-          if (shop.address) shopInfoLines.push("Address: " + shop.address);
-          if (shop.labor_rate != null) shopInfoLines.push("Labor rate: $" + shop.labor_rate + "/hr");
-        } catch (e) {
-          // Fall back to defaults if shop lookup fails
-        }
+      let sys = OWNER_SYSTEM;
+
+      // Shop settings from user profile
+      const shopInfo: string[] = [];
+      if (user.business_name) shopInfo.push('Shop: ' + user.business_name);
+      if (user.email) shopInfo.push('Email: ' + user.email);
+      if (user.phone) shopInfo.push('Phone: ' + user.phone);
+      if (user.address) shopInfo.push('Address: ' + user.address);
+      if (user.labor_rate != null) shopInfo.push('Labor rate: $' + user.labor_rate + '/hr');
+      if (user.tax_rate != null) shopInfo.push('Tax rate: ' + user.tax_rate + '%');
+      if (shopInfo.length) sys += '\n\nShop Settings:\n- ' + shopInfo.join('\n- ');
+
+      // Live shop data (user-scoped via RLS)
+      const today = new Date().toISOString().slice(0, 10);
+      const [repairOrders, invoices, parts, appointments] = await Promise.all([
+        base44.entities.RepairOrder.filter({}).catch(() => []),
+        base44.entities.Invoice.filter({}).catch(() => []),
+        base44.entities.Part.filter({}).catch(() => []),
+        base44.entities.Appointment.filter({ date: today }).catch(() => []),
+      ]);
+
+      const openROs = repairOrders.filter((r: any) => r.status !== 'completed' && r.status !== 'delivered');
+      const unpaidInvoices = invoices.filter((i: any) => i.status === 'unpaid' || i.status === 'partial' || i.status === 'overdue');
+      const totalOwed = unpaidInvoices.reduce((s: number, i: any) => s + (i.balance_due || (i.total || 0) - (i.amount_paid || 0)), 0);
+      const lowStock = parts.filter((p: any) => p.quantity != null && p.min_stock != null && p.quantity <= p.min_stock);
+
+      const dataLines: string[] = [];
+      dataLines.push('Open repair orders: ' + openROs.length);
+      if (openROs.length) {
+        dataLines.push('- ' + openROs.slice(0, 5).map((r: any) =>
+          `${r.order_number || 'RO'}: ${r.vehicle_info || 'Unknown vehicle'} — ${r.status}`
+        ).join('\n- '));
+      }
+      dataLines.push('Unpaid invoices: ' + unpaidInvoices.length + ' ($' + totalOwed.toFixed(2) + ' owed)');
+      if (lowStock.length) {
+        dataLines.push('Low stock parts (' + lowStock.length + '): ' + lowStock.slice(0, 5).map((p: any) =>
+          `${p.name} (${p.quantity} left, min ${p.min_stock})`
+        ).join(', '));
+      }
+      dataLines.push("Today's appointments: " + appointments.length);
+
+      sys += '\n\nLive Shop Data:\n- ' + dataLines.join('\n- ');
+      if (vehicle) sys += '\nVehicle: ' + vehicle;
+      if (description) sys += '\nJob: ' + description;
+      if (shop_context) sys += '\n\nAdditional context:\n' + JSON.stringify(shop_context);
+
+      // Build conversation prompt
+      const recent = messages.filter((m: any) => m.role !== 'system').slice(-6);
+      let prompt = sys + '\n\nConversation:\n' +
+        recent.map((m: any) => (m.role === 'user' ? 'User: ' : 'Assistant: ') + m.content).join('\n') +
+        '\n\nRespond to the latest message as LBC Auto AI. Be concise. Reference live shop data when relevant.';
+
+      const llmParams: any = { prompt, model: 'gpt_5_mini' };
+      const imageFile = image_url || image_base64;
+      if (imageFile) {
+        llmParams.file_urls = [imageFile];
+        prompt += '\n\nThe user has attached a photo for analysis. ' +
+          (image_context || 'Analyze the image and describe what you see.') +
+          ' Describe what you see clearly, identify any automotive issues, and provide repair recommendations with estimated labor hours and parts cost.';
+        llmParams.prompt = prompt;
       }
 
-      const customerPrompt =
-        "You are the AI booking assistant for " + shopName + ". Help customers with automotive service questions and booking appointments.\n" +
-        (shopInfoLines.length ? "\n" + shopInfoLines.join("\n") : "") + "\n\n" +
-        "RULES:\n" +
-        "- Be friendly and concise (under 3 sentences per reply).\n" +
-        "- If asked about pricing, use the shop's labor rate if known; otherwise say \"I'll have the shop confirm exact pricing.\"\n" +
-        "- After the first exchange, if the customer hasn't shared their name and phone, ask: \"Want me to book you an appointment? Just share your name and phone number.\"\n" +
-        "- If the customer shares their name, phone, and service needed, confirm you'll book them in: \"Great, I've got you booked! The shop will call to confirm.\"\n" +
-        "- NEVER mention repair orders, invoices, finances, or any internal shop data.\n" +
-        (shopPhone ? "- End with the shop phone number: " + shopPhone : "");
-
-      const recent = messages.filter(m => m.role !== "system").slice(-8);
-
-      const prompt =
-        customerPrompt +
-        "\n\nConversation:\n" +
-        recent
-          .map(m => (m.role === "user" ? "Customer: " : "Assistant: ") + m.content)
-          .join("\n") +
-        "\n\nRespond to the latest message as the booking assistant.";
-
-      const result = await sr.integrations.Core.InvokeLLM({
-        prompt,
-        model: "gpt_5_mini",
-      });
-
+      const result = await base44.integrations.Core.InvokeLLM(llmParams);
       const reply =
-        (typeof result === "string" ? result : null) ||
+        (typeof result === 'string' ? result : null) ||
         result?.reply ||
         result?.content ||
         result?.message ||
-        "No response generated.";
-
-      return Response.json({ reply });
+        'No response generated.';
+      return Response.json({ reply }, { headers: CORS_HEADERS });
     }
 
     // ════════════════════════════════════════════════════════════
-    // OWNER MODE — auth required, full shop data injected
+    // CUSTOMER MODE — no auth, uses SHOP_CONFIGS + live shop lookup
     // ════════════════════════════════════════════════════════════
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    const sr = base44.asServiceRole;
+    const shopCfg = SHOP_CONFIGS[shop_email] || SHOP_CONFIGS['hajwheels@gmail.com'];
 
-    // Pull shop settings from the user so the AI always knows the shop context
-    const shopInfo = [];
-    if (user.business_name) shopInfo.push("Shop: " + user.business_name);
-    if (user.email) shopInfo.push("Shop email: " + user.email);
-    if (user.phone) shopInfo.push("Shop phone: " + user.phone);
-    if (user.address) shopInfo.push("Shop address: " + user.address);
-    if (user.labor_rate != null) shopInfo.push("Default labor rate: $" + user.labor_rate + "/hr");
-    if (user.tax_rate != null) shopInfo.push("Tax rate: " + user.tax_rate + "%");
-    if (user.tax_applies_to) shopInfo.push("Tax applies to: " + user.tax_applies_to);
+    // Try to enrich with live shop data from the User entity
+    let liveContext = shopCfg.context;
+    try {
+      const shopUsers = await sr.entities.User.filter({ email: shop_email }, null, 1);
+      const shop = shopUsers[0];
+      if (shop) {
+        if (shop.business_name) liveContext = liveContext.replace(shopCfg.name, shop.business_name);
+        if (shop.phone) liveContext = liveContext.replace(shopCfg.phone, shop.phone);
+        if (shop.address) liveContext += `\nShop address: ${shop.address}`;
+      }
+    } catch (e) { /* use config fallback */ }
 
-    // ── Live shop data (user-scoped via RLS) ──────────────────────────────
-    const today = new Date().toISOString().slice(0, 10);
-    let [repairOrders, invoices, parts, appointments] = await Promise.all([
-      base44.entities.RepairOrder.filter({}).catch(() => []),
-      base44.entities.Invoice.filter({}).catch(() => []),
-      base44.entities.Part.filter({}).catch(() => []),
-      base44.entities.Appointment.filter({ date: today }).catch(() => []),
-    ]);
+    const recent = messages.filter((m: any) => m.role !== 'system').slice(-8);
+    const prompt = liveContext +
+      '\n\nConversation:\n' +
+      recent.map((m: any) => (m.role === 'user' ? 'Customer: ' : 'Assistant: ') + m.content).join('\n') +
+      '\n\nRespond to the latest message as the booking assistant.';
 
-    const openROs = repairOrders.filter(r =>
-      r.status !== "completed" && r.status !== "delivered"
-    );
-    const unpaidInvoices = invoices.filter(i =>
-      i.status === "unpaid" || i.status === "partial" || i.status === "overdue"
-    );
-    const totalOwed = unpaidInvoices.reduce((s, i) => s + (i.balance_due || (i.total || 0) - (i.amount_paid || 0)), 0);
-    const lowStock = parts.filter(p => p.quantity != null && p.min_stock != null && p.quantity <= p.min_stock);
-
-    const dataLines = [];
-    dataLines.push(`Open repair orders: ${openROs.length}`);
-    if (openROs.length) {
-      dataLines.push("- " + openROs.slice(0, 5).map(r =>
-        `${r.order_number || "RO"}: ${r.vehicle_info || "Unknown vehicle"} — ${r.status}`
-      ).join("\n- "));
-    }
-    dataLines.push(`Unpaid invoices: ${unpaidInvoices.length} ($${totalOwed.toFixed(2)} owed)`);
-    if (lowStock.length) {
-      dataLines.push(`Low stock parts (${lowStock.length}): ` + lowStock.slice(0, 5).map(p =>
-        `${p.name} (${p.quantity} left, min ${p.min_stock})`
-      ).join(", "));
-    }
-    dataLines.push(`Today's appointments: ${appointments.length}`);
-
-    let context = "";
-    if (shopInfo.length) context += "\nShop Settings:\n- " + shopInfo.join("\n- ");
-    context += "\n\nLive Shop Data (this shop's records):\n- " + dataLines.join("\n- ");
-    if (vehicle) context += "\nVehicle: " + vehicle;
-    if (description) context += "\nJob: " + description;
-
-    // Keep history short for speed — only last 6 messages
-    const recent = messages.filter(m => m.role !== "system").slice(-6);
-
-    let imageInstruction = "";
-    if (image_url) {
-      imageInstruction = "\n\nThe user has attached a photo for analysis. " +
-        (image_context || "Analyze the image and describe what you see.") +
-        " Describe what you see clearly, identify any automotive issues, and provide repair recommendations with estimated labor hours and parts cost.";
-    }
-
-    const prompt =
-      OWNER_PROMPT +
-      (context ? "\n\nShop Context:" + context : "") +
-      imageInstruction +
-      "\n\nConversation:\n" +
-      recent
-        .map(m => (m.role === "user" ? "User: " : "Assistant: ") + m.content)
-        .join("\n") +
-      "\n\nRespond to the latest message as LBC Auto AI. Be concise. When relevant, reference the shop's live data (open ROs, unpaid invoices, low stock) to give actionable advice.";
-
-    const llmParams = { prompt, model: "gpt_5_mini" };
-    if (image_url) {
-      llmParams.file_urls = [image_url];
-    }
-
-    const result = await base44.integrations.Core.InvokeLLM(llmParams);
-
+    const result = await sr.integrations.Core.InvokeLLM({ prompt, model: 'gpt_5_mini' });
     const reply =
-      (typeof result === "string" ? result : null) ||
+      (typeof result === 'string' ? result : null) ||
       result?.reply ||
       result?.content ||
       result?.message ||
-      "No response generated.";
+      'No response generated.';
+    return Response.json({ reply }, { headers: CORS_HEADERS });
 
-    return Response.json({ reply });
-  } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+  } catch (err: any) {
+    console.error('lbcAutoAI error:', err?.message);
+    return Response.json(
+      { reply: 'AI temporarily unavailable. Please call your shop directly.' },
+      { status: 200, headers: CORS_HEADERS }
+    );
   }
 });

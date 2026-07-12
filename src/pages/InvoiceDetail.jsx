@@ -137,25 +137,28 @@ export default function InvoiceDetail() {
     }
   }, [invoice, initialized]);
 
+  // Rounding helper — all currency values rounded to exactly 2 decimal places
+  const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+
   // Calculations — zero-qty items are "Recommended" and excluded from all totals
-  const laborTotal = laborItems.reduce((s, r) => {
+  const laborTotal = r2(laborItems.reduce((s, r) => {
     const qty = parseFloat(r.hours) || 0;
     return qty > 0 ? s + qty * (parseFloat(r.rate) || 0) : s;
-  }, 0);
-  const partsTotal = partsItems.reduce((s, r) => {
+  }, 0));
+  const partsTotal = r2(partsItems.reduce((s, r) => {
     const qty = parseFloat(r.quantity) || 0;
     return qty > 0 ? s + qty * (parseFloat(r.unit_price) || 0) : s;
-  }, 0);
-  const subtotal = laborTotal + partsTotal;
+  }, 0));
+  const subtotal = r2(laborTotal + partsTotal);
   const discountValue = parseFloat(discount) || 0;
-  const discountAmount = discountType === "%" ? (subtotal * discountValue / 100) : discountValue;
+  const discountAmount = r2(discountType === "%" ? (subtotal * discountValue / 100) : discountValue);
   const taxRate = invoice?.tax_rate ?? (user?.tax_rate ?? 0);
   const taxableBase = taxAppliesTo === "labor" ? laborTotal
     : taxAppliesTo === "parts" ? partsTotal
     : taxAppliesTo === "none" ? 0
     : Math.max(0, (laborTotal + partsTotal) - discountAmount); // "both" after discount
-  const taxAmount = taxableBase * (taxRate / 100);
-  const grandTotal = Math.max(0, subtotal - discountAmount + taxAmount);
+  const taxAmount = r2(taxableBase * (taxRate / 100));
+  const grandTotal = r2(Math.max(0, subtotal - discountAmount + taxAmount));
 
   // ── Share ─────────────────────────────────────────────────────────────────
   const handleShare = async () => {
@@ -239,22 +242,24 @@ export default function InvoiceDetail() {
         description: r.description,
         quantity: parseFloat(r.hours) || 0,
         unit_price: parseFloat(r.rate) || 0,
-        total: (parseFloat(r.hours) || 0) * (parseFloat(r.rate) || 0),
+        total: r2((parseFloat(r.hours) || 0) * (parseFloat(r.rate) || 0)),
       })),
       ...partsItems.map(r => ({
         type: "part",
         description: r.name,
         quantity: parseFloat(r.quantity) || 1,
         unit_price: parseFloat(r.unit_price) || 0,
-        total: (parseFloat(r.quantity) || 1) * (parseFloat(r.unit_price) || 0),
+        total: r2((parseFloat(r.quantity) || 1) * (parseFloat(r.unit_price) || 0)),
       })),
     ];
-    const newTax = taxableBase * (taxRate / 100);
-    const newTotal = Math.max(0, subtotal - discountAmount + newTax);
+    const newTax = r2(taxableBase * (taxRate / 100));
+    const newTotal = r2(Math.max(0, subtotal - discountAmount + newTax));
     const amountPaid = invoice.amount_paid || 0;
+    const invoice_number = invoice.invoice_number || `INV-${Date.now().toString(36).toUpperCase().slice(-8)}`;
 
     // ── Save Invoice ──────────────────────────────────────────────────────────
     await base44.entities.Invoice.update(invoiceId, {
+      invoice_number,
       line_items,
       labor_total: laborTotal,
       parts_total: partsTotal,
@@ -263,7 +268,7 @@ export default function InvoiceDetail() {
       discount: discountValue,
       discount_type: discountType,
       total: newTotal,
-      balance_due: Math.max(0, newTotal - amountPaid),
+      balance_due: r2(Math.max(0, newTotal - amountPaid)),
       parts_used: partsUsed,
       technician_notes: techNotes,
       invoice_date: invoiceDate,
