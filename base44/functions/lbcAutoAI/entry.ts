@@ -20,33 +20,66 @@ RESPONSE RULES:
 - Concise but complete. Don't omit critical steps or specs.
 - End every response with a "⬇️ TL;DR" line (1-2 sentence bottom-line summary).`;
 
-const CUSTOMER_PROMPT = `You are the booking assistant for Haj Rims & Tires. Quote prices directly: Oil change $100 (standard) / $120 (3.5L+ or European) / $150 (diesel). Alignment $120 cars/$160 trucks. Brakes $150 per end. Labor $120/hr. Use NAPA parts with Worldpac warranty. Keep replies under 3 sentences. Always end with 📞 613-672-2727. NEVER mention repair orders, invoices, finances, or any internal shop data.`;
+// Customer prompt is now built dynamically per-shop using shop_email
 
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const body = await req.json().catch(() => ({}));
-    const { messages = [], mode = "owner", vehicle = "", description = "" } = body;
+    const { messages = [], mode = "owner", vehicle = "", description = "", shop_email = "" } = body;
 
     if (!messages || messages.length === 0) {
       return Response.json({ reply: "No messages provided." });
     }
 
     // ════════════════════════════════════════════════════════════
-    // CUSTOMER MODE — no auth, no shop data, isolated prompt
+    // CUSTOMER MODE — no auth, looks up shop settings via shop_email
     // ════════════════════════════════════════════════════════════
     if (mode === "customer") {
-      const recent = messages.filter(m => m.role !== "system").slice(-6);
+      const sr = base44.asServiceRole;
+
+      // Look up shop settings for this tenant
+      let shopName = "our shop";
+      let shopPhone = "";
+      let shopInfoLines = [];
+
+      if (shop_email) {
+        try {
+          const shopUsers = await sr.entities.User.filter({ email: shop_email }, null, 1);
+          const shop = shopUsers[0] || {};
+          shopName = shop.business_name || "our shop";
+          shopPhone = shop.phone || "";
+          if (shop.business_name) shopInfoLines.push("Shop: " + shop.business_name);
+          if (shop.phone) shopInfoLines.push("Phone: " + shop.phone);
+          if (shop.address) shopInfoLines.push("Address: " + shop.address);
+          if (shop.labor_rate != null) shopInfoLines.push("Labor rate: $" + shop.labor_rate + "/hr");
+        } catch (e) {
+          // Fall back to defaults if shop lookup fails
+        }
+      }
+
+      const customerPrompt =
+        "You are the AI booking assistant for " + shopName + ". Help customers with automotive service questions and booking appointments.\n" +
+        (shopInfoLines.length ? "\n" + shopInfoLines.join("\n") : "") + "\n\n" +
+        "RULES:\n" +
+        "- Be friendly and concise (under 3 sentences per reply).\n" +
+        "- If asked about pricing, use the shop's labor rate if known; otherwise say \"I'll have the shop confirm exact pricing.\"\n" +
+        "- After the first exchange, if the customer hasn't shared their name and phone, ask: \"Want me to book you an appointment? Just share your name and phone number.\"\n" +
+        "- If the customer shares their name, phone, and service needed, confirm you'll book them in: \"Great, I've got you booked! The shop will call to confirm.\"\n" +
+        "- NEVER mention repair orders, invoices, finances, or any internal shop data.\n" +
+        (shopPhone ? "- End with the shop phone number: " + shopPhone : "");
+
+      const recent = messages.filter(m => m.role !== "system").slice(-8);
 
       const prompt =
-        CUSTOMER_PROMPT +
+        customerPrompt +
         "\n\nConversation:\n" +
         recent
           .map(m => (m.role === "user" ? "Customer: " : "Assistant: ") + m.content)
           .join("\n") +
         "\n\nRespond to the latest message as the booking assistant.";
 
-      const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
+      const result = await sr.integrations.Core.InvokeLLM({
         prompt,
         model: "gpt_5_mini",
       });

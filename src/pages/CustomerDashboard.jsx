@@ -667,7 +667,7 @@ export default function CustomerDashboard() {
       </div>
 
       {/* Customer AI chat — sends ONLY { messages, mode: "customer" }, no shop data */}
-      <CustomerAIChat />
+      <CustomerAIChat shop_email={session?.shop_email} />
 
       {/* Bottom nav */}
       <div style={{

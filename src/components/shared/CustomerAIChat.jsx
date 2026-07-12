@@ -9,7 +9,7 @@ import { base44 } from "@/api/base44Client";
  * lbcAutoAI backend. No vehicle, description, shop_context, RO counts,
  * invoice data, or any internal financial data is ever transmitted.
  */
-export default function CustomerAIChat() {
+export default function CustomerAIChat({ shop_email }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
@@ -39,6 +39,7 @@ export default function CustomerAIChat() {
       // ── SECURITY: send ONLY { messages, mode } — no shop data of any kind ──
       const result = await base44.functions.invoke("lbcAutoAI", {
         mode: "customer",
+        shop_email: shop_email || "",
         messages: history,
       });
 

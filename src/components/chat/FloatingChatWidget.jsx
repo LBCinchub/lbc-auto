@@ -231,6 +231,10 @@ export default function FloatingChatWidget({ shop_email, shop_name }) {
               }
             </button>
           </div>
+
+          <div style={{ padding: "6px 12px", textAlign: "center", fontSize: 10, color: "#475569", background: "#0f1729", borderTop: "1px solid rgba(14,165,233,0.05)" }}>
+            Powered by <a href="https://lbchub.tech" target="_blank" rel="noopener noreferrer" style={{ color: "#0ea5e9", textDecoration: "none", fontWeight: 600 }}>LBC Auto AI</a>
+          </div>
         </div>
       )}
 

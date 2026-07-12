@@ -32,43 +32,19 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ── 1. Look up shop info ──────────────────────────────────────────
-    const shopUsers = await sr.entities.User.filter({ email: shop_email }, null, 1);
-    const shop = shopUsers[0] || {};
-    const shopName = shop.business_name || "our shop";
-    const shopPhone = shop.phone || "";
-
-    // ── 2. Build shop-specific customer prompt ────────────────────────
-    const shopInfoLines = [];
-    if (shop.business_name) shopInfoLines.push("Shop: " + shop.business_name);
-    if (shop.phone) shopInfoLines.push("Phone: " + shop.phone);
-    if (shop.address) shopInfoLines.push("Address: " + shop.address);
-    if (shop.labor_rate != null) shopInfoLines.push("Labor rate: $" + shop.labor_rate + "/hr");
-
-    const customerPrompt = `You are the AI booking assistant for ${shopName}. Help customers with automotive service questions and booking appointments.
-${shopInfoLines.length ? "\n" + shopInfoLines.join("\n") : ""}
-
-RULES:
-- Be friendly and concise (under 3 sentences per reply).
-- If asked about pricing, use the shop's labor rate if known; otherwise say "I'll have the shop confirm exact pricing."
-- After the first exchange, if the customer hasn't shared their name and phone, ask: "Want me to book you an appointment? Just share your name and phone number."
-- If the customer shares their name, phone, and service needed, confirm you'll book them in and say something like "Great, I've got you booked! The shop will call to confirm."
-- NEVER mention repair orders, invoices, finances, or any internal shop data.
-- End with the shop phone number if available: ${shopPhone}`;
-
-    // ── 3. Call LLM ────────────────────────────────────────────────────
+    // ── 1. Call lbcAutoAI with mode="customer" + shop_email ────────────
     const allMessages = [...conversation_history, { role: "user", content: customer_message }];
-    const recent = allMessages.filter((m: any) => m.role !== "system").slice(-8);
 
-    const prompt = customerPrompt +
-      "\n\nConversation:\n" +
-      recent.map((m: any) => (m.role === "user" ? "Customer: " : "Assistant: ") + m.content).join("\n") +
-      "\n\nRespond to the latest customer message.";
+    const aiResult = await sr.functions.invoke("lbcAutoAI", {
+      mode: "customer",
+      shop_email,
+      messages: allMessages,
+    });
 
-    const result = await sr.integrations.Core.InvokeLLM({ prompt, model: "gpt_5_mini" });
-    const reply = (typeof result === "string" ? result : null) ||
-      result?.reply || result?.content || result?.message ||
+    const reply = aiResult?.data?.reply || aiResult?.reply ||
       "I'm sorry, I didn't catch that. Could you repeat?";
+
+    const recent = allMessages.filter((m: any) => m.role !== "system").slice(-8);
 
     // ── 4. Save customer message to ChatMessage ───────────────────────
     await sr.entities.ChatMessage.create({
