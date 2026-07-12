@@ -35,6 +35,7 @@ import CustomerDetails from './pages/CustomerDetails';
 import MissingPhones from './pages/MissingPhones';
 import Diagnostics from './pages/Diagnostics';
 import ChatInbox from './pages/ChatInbox';
+import OnboardingFlow from './components/onboarding/OnboardingFlow';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -261,6 +262,16 @@ const AuthenticatedApp = () => {
       if (now > nextBillingDate) {
         return <Routes><Route path="*" element={<PaymentWall />} /></Routes>;
       }
+    }
+  }
+
+  // Onboarding flow — new users only (before dashboard)
+  // Existing users who already set up their shop profile are auto-skipped.
+  if (user && !localStorage.getItem('lbc_onboarding_complete')) {
+    if (user.business_name) {
+      localStorage.setItem('lbc_onboarding_complete', 'true');
+    } else {
+      return <OnboardingFlow user={user} onComplete={() => window.location.reload()} />;
     }
   }
 

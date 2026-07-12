@@ -22,6 +22,14 @@
       "type": "string",
       "description": "Shop address"
     },
+    "city": {
+      "type": "string",
+      "description": "Shop city"
+    },
+    "province": {
+      "type": "string",
+      "description": "Shop province/state"
+    },
     "gst_number": {
       "type": "string",
       "description": "GST registration number"
@@ -33,6 +41,11 @@
     "tax_rate": {
       "type": "number",
       "description": "Default tax rate percentage applied to invoices and estimates",
+      "default": 0
+    },
+    "labor_rate": {
+      "type": "number",
+      "description": "Default hourly labor rate for estimates and repair orders",
       "default": 0
     },
     "trial_started_date": {
@@ -64,12 +77,16 @@
     },
     "plan_tier": {
       "type": "string",
-      "enum": ["basic", "pro", "legacy"],
-      "description": "Monthly plan — basic ($199/mo, no AI Diagnostics), pro ($299/mo, all features including AI Diagnostics), or legacy (grandfathered pre-existing customer from before the new setup-fee + monthly billing model — FULL access including AI Diagnostics, no billing wall applied, for a limited transition period until we decide their permanent tier)."
+      "enum": [
+        "basic",
+        "pro",
+        "legacy"
+      ],
+      "description": "Monthly plan \u2014 basic ($199/mo, no AI Diagnostics), pro ($299/mo, all features including AI Diagnostics), or legacy (grandfathered pre-existing customer from before the new setup-fee + monthly billing model \u2014 FULL access including AI Diagnostics, no billing wall applied, for a limited transition period until we decide their permanent tier)."
     },
     "next_billing_date": {
       "type": "string",
-      "description": "Date the next monthly payment is due — access is gated back to the payment wall if this passes without renewal"
+      "description": "Date the next monthly payment is due \u2014 access is gated back to the payment wall if this passes without renewal"
     },
     "training_extension_days": {
       "type": "number",
@@ -124,9 +141,9 @@
       "type": "string",
       "description": "Shop logo URL displayed in email header"
     },
-    "email": {
+    "business_logo": {
       "type": "string",
-      "description": "Shop contact email shown on documents and emails"
+      "description": "Shop logo data URL or URL displayed in the app"
     }
   },
   "required": [
