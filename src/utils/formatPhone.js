@@ -1,6 +1,6 @@
 /**
- * Formats a phone number to (613) 413-4575 style.
- * Handles 10-digit numbers with or without country code.
+ * Formats a phone number to 613-672-2727 style.
+ * Handles 10-digit numbers and 11-digit with leading 1.
  */
 export function formatPhone(phone) {
   if (!phone) return "";
@@ -10,5 +10,8 @@ export function formatPhone(phone) {
   if (d.length === 10) {
     return `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}`;
   }
-  return phone; // return as-is if not a standard 10-digit number
+  if (d.length === 11) {
+    return `${d.slice(0, 1)}-${d.slice(1, 4)}-${d.slice(4, 7)}-${d.slice(7)}`;
+  }
+  return phone; // return as-is if not a standard format
 }

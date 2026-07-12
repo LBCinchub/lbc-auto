@@ -576,7 +576,19 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-gray-800 border-gray-700">
-                  {statuses.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                  {(() => {
+                    // POLISH 7: Enforce valid status transitions
+                    const VALID_NEXT = {
+                      waiting: ["waiting", "in_progress"],
+                      in_progress: ["in_progress", "waiting_for_parts", "completed"],
+                      waiting_for_parts: ["waiting_for_parts", "in_progress", "completed"],
+                      completed: ["completed", "delivered"],
+                      delivered: ["delivered", "invoiced"],
+                      invoiced: ["invoiced"],
+                    };
+                    const allowed = VALID_NEXT[form.status] || statuses.map(s => s.value);
+                    return statuses.filter(s => allowed.includes(s.value)).map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>);
+                  })()}
                 </SelectContent>
               </Select>
             </div>

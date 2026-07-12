@@ -72,6 +72,19 @@ export default function PaymentHistoryManager({ open, onClose, invoice, onSaved 
         paid_date:       newStatus === "paid" ? (invoice.paid_date || new Date().toISOString().split("T")[0]) : null,
       };
       await base44.entities.Invoice.update(invoice.id, patch);
+      // Bug 2: Update customer visit stats on payment edit
+      try {
+        if (invoice.customer_id) {
+          const cust = await base44.entities.Customer.get(invoice.customer_id);
+          if (cust) {
+            await base44.entities.Customer.update(cust.id, {
+              total_visits: (cust.total_visits || 0) + 1,
+              last_visit: new Date().toISOString().split("T")[0],
+              last_vehicle_info: invoice.vehicle_info || cust.last_vehicle_info,
+            });
+          }
+        }
+      } catch (e) { console.warn("Customer visit update failed:", e); }
       onSaved?.();
       onClose();
     } catch(e) {

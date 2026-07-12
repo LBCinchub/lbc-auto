@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  ArrowLeft, Phone, Mail, MapPin, FileText, Car, Calendar, ChevronDown, ChevronRight,
+  ArrowLeft, Phone, Mail, MapPin, FileText, Car, ChevronRight,
   ClipboardList, Pencil, Wrench, DollarSign,
-  Clock, Plus, StickyNote, CalendarPlus, Trash2, Lock, Printer, Loader2, Camera
+  Clock, Plus, StickyNote, CalendarPlus, Trash2, Lock, Printer, Loader2, Camera, AlertTriangle
 } from "lucide-react";
 import { formatPhone } from "@/utils/formatPhone";
 import CustomerFormDialog from "../components/customers/CustomerFormDialog";
@@ -21,9 +21,7 @@ import VehiclePhotosTab from "@/components/photos/VehiclePhotosTab";
 import VehicleHistoryReport from "@/components/reports/VehicleHistoryReport";
 import { useQueryClient } from "@tanstack/react-query";
 
-const AVATAR_COLORS = [
-  "bg-sky-500","bg-violet-500","bg-emerald-500","bg-amber-500","bg-rose-500","bg-indigo-500"
-];
+const AVATAR_COLORS = ["bg-sky-500","bg-violet-500","bg-emerald-500","bg-amber-500","bg-rose-500","bg-indigo-500"];
 function getAvatarColor(name = "") {
   const idx = name.charCodeAt(0) % AVATAR_COLORS.length;
   return AVATAR_COLORS[idx] || "bg-sky-500";
@@ -50,14 +48,7 @@ const statusColors = {
   waiting: "bg-gray-500/20 text-gray-400",
   waiting_for_parts: "bg-orange-500/20 text-orange-400",
   delivered: "bg-teal-500/20 text-teal-400",
-};
-
-const roStatusDot = {
-  waiting: "bg-gray-400",
-  in_progress: "bg-amber-400",
-  waiting_for_parts: "bg-orange-400",
-  completed: "bg-emerald-400",
-  delivered: "bg-teal-400",
+  invoiced: "bg-emerald-500/20 text-emerald-400",
 };
 
 function VehicleTimeline({ vehicle, repairOrders, defaultOpen = false }) {
@@ -65,127 +56,62 @@ function VehicleTimeline({ vehicle, repairOrders, defaultOpen = false }) {
   const vehicleOrders = repairOrders
     .filter(ro => ro.vehicle_id === vehicle.id)
     .sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
-
   const totalSpent = vehicleOrders.reduce((sum, ro) => sum + (ro.total_cost || 0), 0);
 
   return (
     <div className="rounded-xl border border-gray-800 bg-gray-900/50 overflow-hidden">
-      {/* ── Vehicle Card — always visible, full info ── */}
       <div className="px-4 pt-4 pb-3 bg-gray-800/40">
         <div className="flex items-start gap-3">
-          {/* Car icon */}
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500/20 to-blue-600/20 border border-sky-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
             <Car className="w-4 h-4 text-sky-400" />
           </div>
-
-          {/* All vehicle info always visible */}
           <div className="flex-1 min-w-0">
-            {/* Title row */}
             <div className="font-bold text-white text-base capitalize">
               {[vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ") || "Unknown Vehicle"}
             </div>
-
-            {/* Detail pills row 1: color + plate */}
             <div className="flex flex-wrap gap-2 mt-1.5 items-center">
-              {vehicle.color && (
-                <span className="text-xs text-gray-300 bg-gray-700/60 px-2 py-0.5 rounded-full capitalize">● {vehicle.color}</span>
-              )}
-              {vehicle.license_plate && (
-                <span className="text-xs font-mono font-bold text-white bg-blue-900/40 border border-blue-700/40 px-2 py-0.5 rounded tracking-widest">
-                  🪪 {vehicle.license_plate.toUpperCase()}
-                </span>
-              )}
-              {vehicle.engine_type && (
-                <span className="text-xs text-amber-300 bg-amber-900/20 px-2 py-0.5 rounded-full">⚙ {vehicle.engine_type}</span>
-              )}
+              {vehicle.color && <span className="text-xs text-gray-300 bg-gray-700/60 px-2 py-0.5 rounded-full capitalize">● {vehicle.color}</span>}
+              {vehicle.license_plate && <span className="text-xs font-mono font-bold text-white bg-blue-900/40 border border-blue-700/40 px-2 py-0.5 rounded tracking-widest">🪪 {vehicle.license_plate.toUpperCase()}</span>}
+              {vehicle.engine_type && <span className="text-xs text-amber-300 bg-amber-900/20 px-2 py-0.5 rounded-full">⚙ {vehicle.engine_type}</span>}
             </div>
-
-            {/* VIN — full, always visible */}
-            {vehicle.vin && (
-              <div className="mt-1.5 font-mono text-xs text-gray-400 bg-gray-900/60 rounded px-2 py-1 tracking-wider">
-                VIN: <span className="text-gray-200 font-semibold uppercase">{vehicle.vin}</span>
-              </div>
-            )}
-
-            {/* Mileage if set */}
-            {vehicle.mileage && (
-              <div className="text-xs text-gray-500 mt-1">🛣 {Number(vehicle.mileage).toLocaleString()} km</div>
-            )}
+            {vehicle.vin && <div className="mt-1.5 font-mono text-xs text-gray-400 bg-gray-900/60 rounded px-2 py-1 tracking-wider">VIN: <span className="text-gray-200 font-semibold uppercase">{vehicle.vin}</span></div>}
+            {vehicle.mileage && <div className="text-xs text-gray-500 mt-1">🛣 {Number(vehicle.mileage).toLocaleString()} km</div>}
           </div>
-
-          {/* Stats + collapse toggle */}
           <div className="flex flex-col items-end gap-1 flex-shrink-0">
             {vehicleOrders.length > 0 && (
               <>
-                <div className="text-right">
-                  <div className="text-xs text-gray-500">Spent</div>
-                  <div className="text-sm font-bold text-emerald-400">${totalSpent.toFixed(0)}</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-xs text-gray-500">Jobs</div>
-                  <div className="text-sm font-bold text-white">{vehicleOrders.length}</div>
-                </div>
+                <div className="text-right"><div className="text-xs text-gray-500">Spent</div><div className="text-sm font-bold text-emerald-400">${totalSpent.toFixed(0)}</div></div>
+                <div className="text-right"><div className="text-xs text-gray-500">Jobs</div><div className="text-sm font-bold text-white">{vehicleOrders.length}</div></div>
               </>
             )}
-            <button
-              onClick={() => setOpen(v => !v)}
-              className="mt-1 flex items-center gap-1 text-xs text-gray-500 hover:text-gray-300 transition-colors"
-            >
+            <button onClick={() => setOpen(v => !v)} className="mt-1 flex items-center gap-1 text-xs text-gray-500 hover:text-gray-300 transition-colors">
               {open ? "Hide history" : "Show history"}
-              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+              <ChevronRight className={`w-3.5 h-3.5 transition-transform duration-200 ${open ? "rotate-90" : ""}`} />
             </button>
           </div>
         </div>
       </div>
-
-      {/* ── Expandable History ── */}
       {open && (
         <div className="border-t border-gray-800">
-          {/* Mobile stats */}
-          {vehicleOrders.length > 0 && (
-            <div className="flex gap-4 px-4 py-2 bg-gray-900/30 sm:hidden border-b border-gray-800/50">
-              <span className="text-xs text-gray-500">Jobs: <strong className="text-white">{vehicleOrders.length}</strong></span>
-              <span className="text-xs text-gray-500">Total: <strong className="text-emerald-400">${totalSpent.toFixed(0)}</strong></span>
-            </div>
-          )}
           {vehicleOrders.length === 0 ? (
             <div className="text-gray-600 text-sm py-6 text-center">No repair history for this vehicle.</div>
           ) : (
-            <div className="p-4">
-              <div className="relative">
-                <div className="absolute left-3 top-2 bottom-2 w-px bg-gray-700/60" />
-                <div className="space-y-3">
-                  {vehicleOrders.map((ro) => (
-                    <div key={ro.id} className="relative flex gap-4 pl-8">
-                      <div className={`absolute left-0 top-1.5 w-6 h-6 rounded-full border-2 border-gray-900 flex items-center justify-center ${statusColors[ro.status] || "bg-gray-700"}`}>
-                        <div className="w-2 h-2 rounded-full bg-gray-900" />
-                      </div>
-                      <div
-                        className="flex-1 rounded-lg border border-gray-800 bg-gray-800/30 p-3 cursor-pointer hover:border-sky-500/40 hover:bg-gray-800/60 transition-all"
-                        onClick={() => window.location.href = `/RepairOrderDetail/${ro.id}`}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium text-white truncate">{ro.description || "Repair Order"}</div>
-                            <div className="text-xs text-gray-500 mt-0.5">
-                              {new Date(ro.created_date).toLocaleDateString("en-CA")}
-                              {ro.order_number && <span className="ml-2 text-gray-600">#{ro.order_number}</span>}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            {ro.total_cost > 0 && (
-                              <span className="text-sm font-bold text-white">${(ro.total_cost || 0).toFixed(2)}</span>
-                            )}
-                            <Badge className={`${statusColors[ro.status] || "bg-gray-700 text-gray-300"} text-xs capitalize border-0`}>
-                              {ro.status?.replace(/_/g, " ")}
-                            </Badge>
-                          </div>
-                        </div>
-                      </div>
+            <div className="p-4 space-y-2">
+              {vehicleOrders.map(ro => (
+                <div key={ro.id} onClick={() => window.location.href = `/RepairOrderDetail/${ro.id}`}
+                  className="rounded-lg border border-gray-800 bg-gray-800/30 p-3 cursor-pointer hover:border-sky-500/40 hover:bg-gray-800/60 transition-all">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-white truncate">{ro.description || "Repair Order"}</div>
+                      <div className="text-xs text-gray-500 mt-0.5">{new Date(ro.created_date).toLocaleDateString("en-CA")}{ro.order_number && <span className="ml-2 text-gray-600">#{ro.order_number}</span>}</div>
                     </div>
-                  ))}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {ro.total_cost > 0 && <span className="text-sm font-bold text-white">${(ro.total_cost || 0).toFixed(2)}</span>}
+                      <Badge className={`${statusColors[ro.status] || "bg-gray-700 text-gray-300"} text-xs capitalize border-0`}>{ro.status?.replace(/_/g, " ")}</Badge>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
           )}
         </div>
@@ -207,7 +133,6 @@ export default function CustomerDetails() {
   const [appointments, setAppointments] = useState([]);
   const [repairOrders, setRepairOrders] = useState([]);
   const [mechanics, setMechanics] = useState([]);
-  const [allVehicles, setAllVehicles] = useState([]);
   const [vehiclePhotos, setVehiclePhotos] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [emailSending, setEmailSending] = useState(false);
@@ -219,16 +144,6 @@ export default function CustomerDetails() {
   const [estimateOpen, setEstimateOpen] = useState(false);
   const [vehicleDialogOpen, setVehicleDialogOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState(null);
-
-  // Portal access verification
-  const [verifyLoading, setVerifyLoading] = useState(false);
-  const [verifyResult, setVerifyResult] = useState(null); // { ok: bool, message: string }
-
-  // Notes state
-  const [notesValue, setNotesValue] = useState("");
-  const [notesSaving, setNotesSaving] = useState(false);
-  const [notesSaved, setNotesSaved] = useState(false);
-  // Private notes log
   const [newNote, setNewNote] = useState("");
   const [savingNote, setSavingNote] = useState(false);
 
@@ -242,22 +157,19 @@ export default function CustomerDetails() {
       base44.entities.Estimate.filter({ customer_id: customerId }),
       base44.entities.Appointment.filter({ customer_id: customerId }),
       base44.entities.Mechanic.list("-created_date", 200),
-      base44.entities.Vehicle.list("-created_date", 500),
       base44.entities.RepairOrder.filter({ customer_id: customerId }),
       base44.entities.VehiclePhoto.filter({ customer_id: customerId }),
       base44.auth.me().catch(() => null),
-    ]).then(([customers, veh, inv, est, appt, mech, allVeh, ros, photos, me]) => {
-      setCustomer(customers[0] || null);
+    ]).then(([custs, veh, inv, est, appt, mech, ros, photos, me]) => {
+      setCustomer(custs[0] || null);
       setVehicles(veh);
       setInvoices(inv);
       setEstimates(est);
       setAppointments(appt);
       setMechanics(mech);
-      setAllVehicles(allVeh);
       setRepairOrders(ros);
       setVehiclePhotos(photos);
       setCurrentUser(me);
-      setNotesValue(customers[0]?.notes || "");
     }).finally(() => setLoading(false));
   }, [customerId]);
 
@@ -271,23 +183,20 @@ export default function CustomerDetails() {
       base44.entities.Appointment.filter({ customer_id: customerId }),
       base44.entities.RepairOrder.filter({ customer_id: customerId }),
       base44.entities.VehiclePhoto.filter({ customer_id: customerId }),
-    ]).then(([customers, veh, inv, est, appt, ros, photos]) => {
-      setCustomer(customers[0] || null);
+    ]).then(([custs, veh, inv, est, appt, ros, photos]) => {
+      setCustomer(custs[0] || null);
       setVehicles(veh);
       setInvoices(inv);
       setEstimates(est);
       setAppointments(appt);
       setRepairOrders(ros);
       setVehiclePhotos(photos);
-      setNotesValue(customers[0]?.notes || "");
     }).finally(() => setLoading(false));
   };
 
   const refetchPhotos = () => {
     base44.entities.VehiclePhoto.filter({ customer_id: customerId }).then(setVehiclePhotos).catch(() => {});
   };
-
-  const handlePrintReport = () => window.print();
 
   const handleEmailReport = async () => {
     if (!customer?.email) { setEmailResult({ ok: false, msg: "No email on file for this customer." }); return; }
@@ -307,40 +216,10 @@ export default function CustomerDetails() {
     setTimeout(() => setEmailResult(null), 5000);
   };
 
-  const verifyPortalAccess = async (testPhone) => {
-    if (!customer) return;
-    setVerifyLoading(true);
-    setVerifyResult(null);
-    try {
-      const cleaned = (testPhone || customer.phone || "").replace(/\D/g, "");
-      const res = await base44.functions.invoke("customerLogin", {
-        shop_email: (customer.created_by || "").trim().toLowerCase(),
-        phone: cleaned,
-      });
-      if (res?.success && res?.customer) {
-        setVerifyResult({ ok: true, message: `Match found: "${res.customer.full_name}" — this exact number will log in to the Customer Portal.` });
-      } else {
-        setVerifyResult({ ok: false, message: `No match. (${res?.debug_count ?? "?"} records checked under ${customer.created_by || "this shop"}). The phone on file for this customer is "${customer.phone || "(none saved)"}" — the customer must enter it exactly (digits only, country code optional).` });
-      }
-    } catch (e) {
-      setVerifyResult({ ok: false, message: "Error: " + (e?.message || String(e)) });
-    }
-    setVerifyLoading(false);
-  };
-
-  const saveNotes = async () => {
-    if (!customer) return;
-    setNotesSaving(true);
-    await base44.entities.Customer.update(customer.id, { notes: notesValue });
-    setNotesSaving(false);
-    setNotesSaved(true);
-    setTimeout(() => setNotesSaved(false), 2000);
-  };
-
   const addNote = async () => {
     if (!newNote.trim() || !customer) return;
     setSavingNote(true);
-    const entry = { text: newNote.trim(), created_at: new Date().toISOString() };
+    const entry = { text: newNote.trim(), created_at: new Date().toISOString(), author: currentUser?.email || "" };
     const updatedLog = [entry, ...(customer.notes_log || [])];
     await base44.entities.Customer.update(customer.id, { notes_log: updatedLog });
     setCustomer(prev => ({ ...prev, notes_log: updatedLog }));
@@ -358,36 +237,34 @@ export default function CustomerDetails() {
   const fmtDate = (d) => d ? new Date(d).toLocaleDateString("en-CA") : "—";
   const fmt = (n) => `$${(parseFloat(n) || 0).toFixed(2)}`;
 
-  // Computed stats
   const totalSpend = invoices
     .filter(inv => inv.status === "paid" || inv.amount_paid > 0)
     .reduce((sum, inv) => sum + (parseFloat(inv.amount_paid) || parseFloat(inv.total) || 0), 0);
 
-  const lastVisitDate = repairOrders.length > 0
-    ? repairOrders.reduce((latest, ro) => {
-        const d = new Date(ro.created_date);
-        return d > latest ? d : latest;
-      }, new Date(0))
-    : null;
+  const lastVisitDate = customer?.last_visit
+    ? new Date(customer.last_visit)
+    : repairOrders.length > 0
+      ? repairOrders.reduce((latest, ro) => { const d = new Date(ro.created_date); return d > latest ? d : latest; }, new Date(0))
+      : null;
 
   const daysSinceLastVisit = lastVisitDate && lastVisitDate.getTime() > 0
     ? Math.floor((new Date() - lastVisitDate) / (1000 * 60 * 60 * 24))
     : null;
 
+  // Deduplicated vehicles from invoice records
+  const allVehicleInfos = [...new Set([
+    ...invoices.map(i => i.vehicle_info).filter(Boolean),
+    ...vehicles.map(v => [v.year, v.make, v.model].filter(Boolean).join(" ")).filter(Boolean),
+  ])].filter(v => v && v.trim() !== "—" && v.trim() !== "");
+
   if (!customerId) {
-    return (
-      <div className="flex items-center justify-center h-64 text-gray-400">
-        No customer selected.
-      </div>
-    );
+    return <div className="flex items-center justify-center h-64 text-gray-400">No customer selected.</div>;
   }
 
   return (
     <div className="space-y-6">
-      {/* Back button */}
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={() => navigate(-1)}
-          className="text-gray-400 hover:text-white gap-2">
+        <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="text-gray-400 hover:text-white gap-2">
           <ArrowLeft className="w-4 h-4" /> Back
         </Button>
       </div>
@@ -401,14 +278,12 @@ export default function CustomerDetails() {
         <div className="text-gray-400 text-center py-20">Customer not found.</div>
       ) : (
         <>
-          {/* Customer Info Card */}
+          {/* ── HEADER CARD ── */}
           <div className="rounded-xl border border-gray-800 bg-gray-900/60 p-6">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-4">
                 <div className={`w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0 ${getAvatarColor(customer.full_name)}`}>
-                  <span className="text-white font-bold text-xl">
-                    {customer.full_name?.charAt(0)?.toUpperCase()}
-                  </span>
+                  <span className="text-white font-bold text-xl">{customer.full_name?.charAt(0)?.toUpperCase()}</span>
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold text-white capitalize">{customer.full_name}</h1>
@@ -417,16 +292,6 @@ export default function CustomerDetails() {
                       <a href={`tel:${customer.phone}`} className="flex items-center gap-1.5 text-sm text-amber-400 hover:text-amber-300">
                         <Phone className="w-3.5 h-3.5" /> {formatPhone(customer.phone)}
                       </a>
-                    )}
-                    {customer.phone && (
-                      <button
-                        type="button"
-                        onClick={() => verifyPortalAccess(customer.phone)}
-                        disabled={verifyLoading}
-                        className="flex items-center gap-1.5 text-xs text-sky-400 hover:text-sky-300 border border-sky-800 rounded-full px-2.5 py-0.5 disabled:opacity-50"
-                      >
-                        <Lock className="w-3 h-3" /> {verifyLoading ? "Checking…" : "Verify Portal Access"}
-                      </button>
                     )}
                     {customer.email && (
                       <a href={`mailto:${customer.email}`} className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-sky-400">
@@ -439,190 +304,92 @@ export default function CustomerDetails() {
                       </span>
                     )}
                   </div>
-
-                  {verifyResult && (
-                    <div className={`mt-2 text-xs rounded-lg px-3 py-2 border ${verifyResult.ok ? "bg-emerald-500/10 border-emerald-800 text-emerald-400" : "bg-rose-500/10 border-rose-800 text-rose-400"}`}>
-                      {verifyResult.message}
-                    </div>
-                  )}
-
-                  {/* Stats row */}
                   <div className="flex flex-wrap gap-4 mt-3">
                     <div className="flex items-center gap-1.5 text-sm text-emerald-400">
                       <DollarSign className="w-3.5 h-3.5" />
                       <span className="font-semibold">{fmt(totalSpend)}</span>
                       <span className="text-gray-500 text-xs">total spent</span>
                     </div>
+                    <div className="flex items-center gap-1.5 text-sm text-sky-400">
+                      <ClipboardList className="w-3.5 h-3.5" />
+                      <span className="font-semibold">{customer.total_visits || invoices.length || 0}</span>
+                      <span className="text-gray-500 text-xs">visits</span>
+                    </div>
                     {daysSinceLastVisit !== null && (
-                      <div className="flex items-center gap-1.5 text-sm text-sky-400">
+                      <div className="flex items-center gap-1.5 text-sm text-gray-400">
                         <Clock className="w-3.5 h-3.5" />
-                        <span className="font-semibold">
-                          {daysSinceLastVisit === 0 ? "Today" : `${daysSinceLastVisit}d ago`}
-                        </span>
+                        <span className="font-semibold">{daysSinceLastVisit === 0 ? "Today" : `${daysSinceLastVisit}d ago`}</span>
                         <span className="text-gray-500 text-xs">last visit</span>
+                      </div>
+                    )}
+                    {customer.last_vehicle_info && (
+                      <div className="flex items-center gap-1.5 text-sm text-gray-400">
+                        <Car className="w-3.5 h-3.5" />
+                        <span className="capitalize">{customer.last_vehicle_info}</span>
                       </div>
                     )}
                   </div>
                 </div>
               </div>
-              <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}
-                className="border-gray-700 text-gray-300 hover:text-white gap-1.5 flex-shrink-0">
-                <Pencil className="w-3.5 h-3.5" /> Edit
-              </Button>
+              <div className="flex flex-col gap-2 flex-shrink-0">
+                <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}
+                  className="border-gray-700 text-gray-300 hover:text-white gap-1.5">
+                  <Pencil className="w-3.5 h-3.5" /> Edit
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleEmailReport} disabled={emailSending}
+                  className="border-sky-500/40 bg-sky-500/10 text-sky-400 hover:bg-sky-500/20 gap-1.5">
+                  {emailSending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
+                  {emailSending ? "Sending..." : "Email Report"}
+                </Button>
+                {emailResult && (
+                  <span className={`text-xs ${emailResult.ok ? "text-emerald-400" : "text-rose-400"}`}>{emailResult.msg}</span>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Report Actions */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button onClick={handlePrintReport} variant="outline" className="border-gray-600 text-gray-300 hover:text-white gap-2 no-print">
-              <Printer className="w-4 h-4" /> Print Report
-            </Button>
-            <Button onClick={handleEmailReport} disabled={emailSending} variant="outline" className="border-sky-500/40 bg-sky-500/10 text-sky-400 hover:bg-sky-500/20 hover:text-sky-300 gap-2 no-print">
-              {emailSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
-              {emailSending ? "Sending..." : "Email Report to Customer"}
-            </Button>
-            {emailResult && (
-              <span className={`text-xs ${emailResult.ok ? "text-emerald-400" : "text-rose-400"}`}>
-                {emailResult.msg}
-              </span>
-            )}
-          </div>
-
-          {/* Quick Actions Bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 no-print">
-            <Button
-              onClick={async () => { const v = await base44.entities.Vehicle.filter({ customer_id: customerId }); setVehicles(v); setApptOpen(true); }}
-              variant="outline"
-              className="border-sky-500/40 bg-sky-500/10 text-sky-400 hover:bg-sky-500/20 hover:text-sky-300 gap-2"
-            >
+          {/* ── Quick Actions ── */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <Button onClick={async () => { const v = await base44.entities.Vehicle.filter({ customer_id: customerId }); setVehicles(v); setApptOpen(true); }}
+              variant="outline" className="border-sky-500/40 bg-sky-500/10 text-sky-400 hover:bg-sky-500/20 gap-2">
               <CalendarPlus className="w-4 h-4" /> New Appointment
             </Button>
-            <Button
-              onClick={async () => { const v = await base44.entities.Vehicle.filter({ customer_id: customerId }); setVehicles(v); setRoOpen(true); }}
-              variant="outline"
-              className="border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 hover:text-amber-300 gap-2"
-            >
+            <Button onClick={async () => { const v = await base44.entities.Vehicle.filter({ customer_id: customerId }); setVehicles(v); setRoOpen(true); }}
+              variant="outline" className="border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 gap-2">
               <Wrench className="w-4 h-4" /> New Repair Order
             </Button>
-            <Button
-              onClick={async () => { const v = await base44.entities.Vehicle.filter({ customer_id: customerId }); setVehicles(v); setEstimateOpen(true); }}
-              variant="outline"
-              className="border-purple-500/40 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 hover:text-purple-300 gap-2"
-            >
+            <Button onClick={async () => { const v = await base44.entities.Vehicle.filter({ customer_id: customerId }); setVehicles(v); setEstimateOpen(true); }}
+              variant="outline" className="border-purple-500/40 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 gap-2">
               <ClipboardList className="w-4 h-4" /> New Estimate
             </Button>
-            <Button
-              onClick={() => navigate(`/Invoices?customerId=${customer.id}&customerName=${encodeURIComponent(customer.full_name)}`)}
-              variant="outline"
-              className="border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 hover:text-emerald-300 gap-2"
-            >
-              <FileText className="w-4 h-4" /> Send Invoice
+            <Button onClick={() => navigate(`/Invoices?customerId=${customer.id}&customerName=${encodeURIComponent(customer.full_name)}`)}
+              variant="outline" className="border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 gap-2">
+              <FileText className="w-4 h-4" /> New Invoice
             </Button>
           </div>
 
-          {/* Tabs */}
-          <Tabs defaultValue="vehicles">
+          {/* ── TABS: Estimates / Repair Orders / Invoices ── */}
+          <Tabs defaultValue="estimates">
             <TabsList className="bg-gray-900 border border-gray-800 flex-wrap h-auto gap-1 p-1">
-              <TabsTrigger value="vehicles" className="gap-1.5 data-[state=active]:bg-gray-800">
-                <Car className="w-3.5 h-3.5" /> Vehicles ({vehicles.length})
-              </TabsTrigger>
-              <TabsTrigger value="invoices" className="gap-1.5 data-[state=active]:bg-gray-800">
-                <FileText className="w-3.5 h-3.5" /> Invoices ({invoices.length})
-              </TabsTrigger>
               <TabsTrigger value="estimates" className="gap-1.5 data-[state=active]:bg-gray-800">
                 <ClipboardList className="w-3.5 h-3.5" /> Estimates ({estimates.length})
-              </TabsTrigger>
-              <TabsTrigger value="appointments" className="gap-1.5 data-[state=active]:bg-gray-800">
-                <Calendar className="w-3.5 h-3.5" /> Appointments ({appointments.length})
               </TabsTrigger>
               <TabsTrigger value="repairorders" className="gap-1.5 data-[state=active]:bg-gray-800">
                 <Wrench className="w-3.5 h-3.5" /> Repair Orders ({repairOrders.length})
               </TabsTrigger>
-              <TabsTrigger value="notes" className="gap-1.5 data-[state=active]:bg-gray-800">
-                <StickyNote className="w-3.5 h-3.5" /> Notes
-              </TabsTrigger>
-              <TabsTrigger value="photos" className="gap-1.5 data-[state=active]:bg-gray-800">
-                <Camera className="w-3.5 h-3.5" /> Photos ({vehiclePhotos.length})
+              <TabsTrigger value="invoices" className="gap-1.5 data-[state=active]:bg-gray-800">
+                <FileText className="w-3.5 h-3.5" /> Invoices ({invoices.length})
               </TabsTrigger>
             </TabsList>
 
-            {/* Vehicles with Timeline */}
-            <TabsContent value="vehicles" className="mt-4">
-              <div className="flex items-center justify-between mb-3">
-                {vehicles.length > 1 ? (
-                  <p className="text-xs text-gray-500 italic">
-                    {vehicles.length} vehicles · tap any to expand history
-                  </p>
-                ) : <span />}
-                <Button size="sm" variant="outline"
-                  className="border-sky-500/40 bg-sky-500/10 text-sky-400 hover:bg-sky-500/20 hover:text-sky-300 h-8 gap-1.5 text-xs"
-                  onClick={() => { setEditingVehicle(null); setVehicleDialogOpen(true); }}>
-                  <Plus className="w-3.5 h-3.5" /> Add Vehicle
-                </Button>
-              </div>
-              {vehicles.length === 0 ? (
-                <div className="text-gray-500 text-sm py-8 text-center">No vehicles on file.</div>
-              ) : (
-                <div className="space-y-2">
-                  {vehicles.map((v) => (
-                    <div key={v.id} className="relative group">
-                      <div className="absolute top-3 right-10 flex gap-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button size="icon" variant="ghost" className="h-7 w-7 text-gray-500 hover:text-white hover:bg-gray-700"
-                          onClick={(e) => { e.stopPropagation(); setEditingVehicle(v); setVehicleDialogOpen(true); }}>
-                          <Pencil className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="h-7 w-7 text-gray-500 hover:text-rose-400 hover:bg-rose-500/10"
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            if (window.confirm(`Delete ${v.year} ${v.make} ${v.model}?`)) {
-                              await base44.entities.Vehicle.delete(v.id);
-                              setVehicles(prev => prev.filter(x => x.id !== v.id));
-                            }
-                          }}>
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
-                      <VehicleTimeline vehicle={v} repairOrders={repairOrders} defaultOpen={vehicles.length === 1} />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-
-            {/* Invoices */}
-            <TabsContent value="invoices" className="mt-4">
-              {invoices.length === 0 ? (
-                <div className="text-gray-500 text-sm py-8 text-center">No invoices found.</div>
-              ) : (
-                <div className="space-y-2">
-                  {invoices.map(inv => (
-                    <div key={inv.id}
-                      onClick={() => navigate(`/InvoiceDetail/${inv.id}`)}
-                      className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 flex items-center justify-between cursor-pointer hover:border-sky-500/30 hover:bg-gray-800/50 transition-all">
-                      <div>
-                        <div className="font-semibold text-white">{inv.invoice_number || inv.id.slice(0,8)}</div>
-                        <div className="text-xs text-gray-400 mt-0.5">{fmtDate(inv.created_date)} · {inv.vehicle_info || "—"}</div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="font-bold text-white">{fmt(inv.total)}</span>
-                        <Badge className={statusColors[inv.status] || "bg-gray-700 text-gray-300"}>{inv.status}</Badge>
-                        <ChevronRight className="w-4 h-4 text-gray-600" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-
-            {/* Estimates */}
+            {/* Estimates Tab */}
             <TabsContent value="estimates" className="mt-4">
               {estimates.length === 0 ? (
-                <div className="text-gray-500 text-sm py-8 text-center">No estimates found.</div>
+                <div className="text-gray-500 text-sm py-8 text-center">No estimates found for this customer.</div>
               ) : (
                 <div className="space-y-2">
                   {estimates.map(est => (
-                    <div key={est.id}
-                      onClick={() => navigate(`/EstimateDetail/${est.id}`)}
+                    <div key={est.id} onClick={() => navigate(`/EstimateDetail/${est.id}`)}
                       className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 flex items-center justify-between cursor-pointer hover:border-sky-500/30 hover:bg-gray-800/50 transition-all">
                       <div>
                         <div className="font-semibold text-white">{est.estimate_number || est.id.slice(0,8)}</div>
@@ -639,43 +406,14 @@ export default function CustomerDetails() {
               )}
             </TabsContent>
 
-            {/* Appointments */}
-            <TabsContent value="appointments" className="mt-4">
-              {appointments.length === 0 ? (
-                <div className="text-gray-500 text-sm py-8 text-center">No appointments found.</div>
-              ) : (
-                <div className="space-y-2">
-                  {appointments.map(appt => (
-                    <div key={appt.id}
-                      className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 flex items-center justify-between">
-                      <div>
-                        <div className="font-semibold text-white">{appt.service_type}</div>
-                        <div className="text-xs text-gray-400 mt-0.5">{appt.date} at {appt.time_slot} · {appt.vehicle_info || "—"}</div>
-                        {appt.mechanic_name && <div className="text-xs text-gray-500 mt-0.5">Mechanic: {appt.mechanic_name}</div>}
-                      </div>
-                      <Badge className={statusColors[appt.status] || "bg-gray-700 text-gray-300"}>{appt.status}</Badge>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-
-            {/* Repair Orders */}
+            {/* Repair Orders Tab */}
             <TabsContent value="repairorders" className="mt-4">
-              <div className="flex justify-end mb-3">
-                <Button size="sm" variant="outline"
-                  className="border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 hover:text-amber-300 gap-1.5"
-                  onClick={async () => { const v = await base44.entities.Vehicle.filter({ customer_id: customerId }); setVehicles(v); setRoOpen(true); }}>
-                  <Plus className="w-3.5 h-3.5" /> New Repair Order
-                </Button>
-              </div>
               {repairOrders.length === 0 ? (
-                <div className="text-gray-500 text-sm py-8 text-center">No repair orders found.</div>
+                <div className="text-gray-500 text-sm py-8 text-center">No repair orders found for this customer.</div>
               ) : (
                 <div className="space-y-2">
                   {repairOrders.map(ro => (
-                    <div key={ro.id}
-                      onClick={() => navigate(`/RepairOrderDetail/${ro.id}`)}
+                    <div key={ro.id} onClick={() => navigate(`/RepairOrderDetail/${ro.id}`)}
                       className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 flex items-center justify-between cursor-pointer hover:border-sky-500/30 hover:bg-gray-800/50 transition-all">
                       <div>
                         <div className="font-semibold text-white">{ro.order_number || ro.id.slice(0,8)}</div>
@@ -692,92 +430,171 @@ export default function CustomerDetails() {
               )}
             </TabsContent>
 
-            {/* Notes */}
-            <TabsContent value="notes" className="mt-4 space-y-4">
-              <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-5 space-y-4">
-                {/* Header */}
-                <div className="flex items-center gap-2">
-                  <Lock className="w-3.5 h-3.5 text-amber-400" />
-                  <span className="text-sm font-semibold text-gray-300">Private Customer Notes</span>
-                  <span className="text-xs text-gray-600 ml-1">— shop staff only, never shown to customer</span>
-                </div>
-
-                {/* New note input */}
+            {/* Invoices Tab */}
+            <TabsContent value="invoices" className="mt-4">
+              {invoices.length === 0 ? (
+                <div className="text-gray-500 text-sm py-8 text-center">No invoices found for this customer.</div>
+              ) : (
                 <div className="space-y-2">
-                  <Textarea
-                    value={newNote}
-                    onChange={e => setNewNote(e.target.value)}
-                    placeholder="Type a note about this customer..."
-                    className="bg-gray-800 border-gray-700 text-white min-h-[100px] resize-none"
-                    rows={4}
-                  />
-                  <div className="flex justify-end">
-                    <Button
-                      onClick={addNote}
-                      disabled={savingNote || !newNote.trim()}
-                      className="bg-sky-600 hover:bg-sky-500"
-                    >
-                      {savingNote ? "Saving..." : "Add Note"}
+                  {invoices.map(inv => (
+                    <div key={inv.id} onClick={() => navigate(`/InvoiceDetail/${inv.id}`)}
+                      className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 flex items-center justify-between cursor-pointer hover:border-sky-500/30 hover:bg-gray-800/50 transition-all">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-white">{inv.invoice_number || inv.id.slice(0,8)}</span>
+                          {(inv.status === "unpaid" || inv.status === "partial" || inv.status === "overdue") && (
+                            <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
+                          )}
+                        </div>
+                        <div className="text-xs text-gray-400 mt-0.5">{fmtDate(inv.created_date)} · {inv.vehicle_info || "—"}</div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="font-bold text-white">{fmt(inv.total)}</span>
+                        {(inv.status === "partial" || inv.status === "unpaid") && inv.balance_due > 0 && (
+                          <span className="text-sm font-bold text-yellow-400">{fmt(inv.balance_due)}</span>
+                        )}
+                        <Badge className={statusColors[inv.status] || "bg-gray-700 text-gray-300"}>{inv.status}</Badge>
+                        <ChevronRight className="w-4 h-4 text-gray-600" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+
+          {/* ── NOTES SECTION ── */}
+          <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-5 space-y-4">
+            <div className="flex items-center gap-2">
+              <Lock className="w-3.5 h-3.5 text-amber-400" />
+              <span className="text-sm font-semibold text-gray-300">Private Customer Notes</span>
+              <span className="text-xs text-gray-600 ml-1">— shop staff only, never shown to customer</span>
+            </div>
+            <div className="space-y-2">
+              <Textarea
+                value={newNote}
+                onChange={e => setNewNote(e.target.value)}
+                placeholder="Add a note about this customer..."
+                className="bg-gray-800 border-gray-700 text-white min-h-[100px] resize-none"
+                rows={4}
+              />
+              <div className="flex justify-end">
+                <Button onClick={addNote} disabled={savingNote || !newNote.trim()} className="bg-sky-600 hover:bg-sky-500">
+                  {savingNote ? "Saving..." : "Add Note"}
+                </Button>
+              </div>
+            </div>
+            {(customer.notes_log || []).length === 0 ? (
+              <div className="text-gray-600 text-sm text-center py-4 border-t border-gray-800 pt-4">No notes yet. Add your first note above.</div>
+            ) : (
+              <div className="space-y-2 border-t border-gray-800 pt-4">
+                {(customer.notes_log || []).map((note, idx) => (
+                  <div key={idx} className="flex gap-3 rounded-lg border border-gray-800 bg-gray-800/40 p-3 group">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-white whitespace-pre-wrap">{note.text}</p>
+                      <p className="text-xs text-gray-600 mt-1">
+                        {new Date(note.created_at).toLocaleString("en-CA", { dateStyle: "medium", timeStyle: "short" })}
+                        {note.author && <span className="ml-2">· {note.author}</span>}
+                      </p>
+                    </div>
+                    <Button size="icon" variant="ghost" className="h-7 w-7 text-gray-600 hover:text-rose-400 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => deleteNote(idx)}>
+                      <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   </div>
-                </div>
+                ))}
+              </div>
+            )}
+          </div>
 
-                {/* Saved notes list */}
-                {(customer.notes_log || []).length === 0 ? (
-                  <div className="text-gray-600 text-sm text-center py-4 border-t border-gray-800 pt-4">
-                    No notes yet. Add your first note above.
-                  </div>
-                ) : (
-                  <div className="space-y-2 border-t border-gray-800 pt-4">
-                    {(customer.notes_log || []).map((note, idx) => (
-                      <div key={idx} className="flex gap-3 rounded-lg border border-gray-800 bg-gray-800/40 p-3 group">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-white whitespace-pre-wrap">{note.text}</p>
-                          <p className="text-xs text-gray-600 mt-1">
-                            {new Date(note.created_at).toLocaleString("en-CA", { dateStyle: "medium", timeStyle: "short" })}
-                          </p>
-                        </div>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-7 w-7 text-gray-600 hover:text-rose-400 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => deleteNote(idx)}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
+          {/* ── VEHICLE HISTORY ── */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-gray-300 flex items-center gap-2">
+                <Car className="w-4 h-4 text-sky-400" /> Vehicle History ({vehicles.length})
+              </h2>
+              <Button size="sm" variant="outline"
+                className="border-sky-500/40 bg-sky-500/10 text-sky-400 hover:bg-sky-500/20 h-8 gap-1.5 text-xs"
+                onClick={() => { setEditingVehicle(null); setVehicleDialogOpen(true); }}>
+                <Plus className="w-3.5 h-3.5" /> Add Vehicle
+              </Button>
+            </div>
+            {vehicles.length === 0 ? (
+              <div className="text-gray-500 text-sm py-8 text-center border border-gray-800 rounded-lg bg-gray-900/30">
+                No vehicles on file.
+                {allVehicleInfos.length > 0 && (
+                  <div className="mt-3 space-y-1">
+                    <p className="text-xs text-gray-600">Vehicles referenced in invoices:</p>
+                    {allVehicleInfos.map((v, i) => (
+                      <p key={i} className="text-xs text-gray-400 capitalize">{v}</p>
                     ))}
                   </div>
                 )}
               </div>
-            </TabsContent>
+            ) : (
+              <div className="space-y-2">
+                {vehicles.map(v => (
+                  <div key={v.id} className="relative group">
+                    <div className="absolute top-3 right-10 flex gap-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button size="icon" variant="ghost" className="h-7 w-7 text-gray-500 hover:text-white hover:bg-gray-700"
+                        onClick={e => { e.stopPropagation(); setEditingVehicle(v); setVehicleDialogOpen(true); }}>
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button size="icon" variant="ghost" className="h-7 w-7 text-gray-500 hover:text-rose-400 hover:bg-rose-500/10"
+                        onClick={async e => { e.stopPropagation(); if (window.confirm(`Delete ${v.year} ${v.make} ${v.model}?`)) { await base44.entities.Vehicle.delete(v.id); setVehicles(prev => prev.filter(x => x.id !== v.id)); } }}>
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                    <VehicleTimeline vehicle={v} repairOrders={repairOrders} defaultOpen={vehicles.length === 1} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
-            {/* Vehicle Photos */}
-            <TabsContent value="photos" className="mt-4">
-              <VehiclePhotosTab
-                photos={vehiclePhotos}
-                repairOrders={repairOrders}
-                estimates={estimates}
-                onRefetch={refetchPhotos}
-              />
-            </TabsContent>
-            </Tabs>
+          {/* ── APPOINTMENTS ── */}
+          {appointments.length > 0 && (
+            <div>
+              <h2 className="text-sm font-semibold text-gray-300 flex items-center gap-2 mb-3">
+                <CalendarPlus className="w-4 h-4 text-sky-400" /> Appointments ({appointments.length})
+              </h2>
+              <div className="space-y-2">
+                {appointments.map(appt => (
+                  <div key={appt.id} className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 flex items-center justify-between">
+                    <div>
+                      <div className="font-semibold text-white">{appt.service_type}</div>
+                      <div className="text-xs text-gray-400 mt-0.5">{appt.date} at {appt.time_slot} · {appt.vehicle_info || "—"}</div>
+                    </div>
+                    <Badge className={statusColors[appt.status] || "bg-gray-700 text-gray-300"}>{appt.status}</Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
-          {/* Vehicle Photos Tab Content */}
+          {/* ── VEHICLE PHOTOS ── */}
+          {vehiclePhotos.length > 0 && (
+            <div>
+              <h2 className="text-sm font-semibold text-gray-300 flex items-center gap-2 mb-3">
+                <Camera className="w-4 h-4 text-sky-400" /> Photos ({vehiclePhotos.length})
+              </h2>
+              <VehiclePhotosTab photos={vehiclePhotos} repairOrders={repairOrders} estimates={estimates} onRefetch={refetchPhotos} />
+            </div>
+          )}
+
+          {/* Printable Vehicle History Report */}
+          {customer && (
+            <VehicleHistoryReport
+              customer={customer}
+              vehicles={vehicles}
+              invoices={invoices}
+              repairOrders={repairOrders}
+              vehiclePhotos={vehiclePhotos}
+              shopName={currentUser?.business_name || ""}
+              shopLogo={currentUser?.logo_url || ""}
+            />
+          )}
         </>
-      )}
-
-      {/* Printable Vehicle History Report — hidden on screen, visible when printing */}
-      {customer && (
-        <VehicleHistoryReport
-          customer={customer}
-          vehicles={vehicles}
-          invoices={invoices}
-          repairOrders={repairOrders}
-          vehiclePhotos={vehiclePhotos}
-          shopName={currentUser?.business_name || ""}
-          shopLogo={currentUser?.logo_url || ""}
-        />
       )}
 
       {/* Edit Customer Dialog */}
@@ -787,7 +604,6 @@ export default function CustomerDetails() {
           onClose={() => setEditOpen(false)}
           customer={customer}
           onSaved={async (updatedCustomer) => {
-            // CENTER CONTROL — fan out name/phone/email to all linked records
             if (customer?.id) {
               const fresh = updatedCustomer || customer;
               await propagateCustomerUpdate(customer.id, {
@@ -856,7 +672,6 @@ export default function CustomerDetails() {
           onSaved={async () => {
             setVehicleDialogOpen(false);
             setEditingVehicle(null);
-            // Re-fetch vehicles immediately so all open dialogs get the fresh list
             const freshVehicles = await base44.entities.Vehicle.filter({ customer_id: customerId });
             setVehicles(freshVehicles);
           }}

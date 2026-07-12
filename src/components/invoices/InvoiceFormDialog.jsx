@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 import { Input } from "@/components/ui/input";
@@ -27,6 +28,7 @@ const emptyLaborRow = () => ({ description: "", hours: 1, rate: 0, total: 0 });
 const emptyPartRow = () => ({ name: "", quantity: 1, unit_price: 0, total: 0 });
 
 export default function InvoiceFormDialog({ open, onClose, invoice, orders, customers, vehicles = [], invoices = [], estimates = [], onSaved, initialOrderId, sourceEstimate }) {
+  const navigate = useNavigate();
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [showCashout, setShowCashout] = useState(false);
@@ -422,7 +424,13 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         } catch (e) {}
       }
     } else {
-      await base44.entities.Invoice.create(data);
+      const created = await base44.entities.Invoice.create(data);
+      submittingRef.current = false;
+      setSaving(false);
+      onSaved();
+      onClose();
+      navigate(`/InvoiceDetail/${created.id}`);
+      return;
     }
     setSaving(false);
       // ── Unified sync: Customer.last_visit + Vehicle.customer_id ──

@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation} from 'react-router-dom';
-import { Calendar, Pencil, Trash2, User, Car, Wrench, Send, Loader2 } from "lucide-react";
+import { Calendar, Pencil, Trash2, User, Car, Wrench, Send, Loader2, ClipboardList } from "lucide-react";
+import EstimateFormDialog from "../components/estimates/EstimateFormDialog";
 import { useEmailSend } from "@/hooks/useEmailSend";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -30,6 +31,8 @@ export default function Appointments() {
   const [editing, setEditing] = useState(null);
   const [roPrompt, setRoPrompt] = useState(null); // appointment to create RO from
   const [roDialogOpen, setRoDialogOpen] = useState(false);
+  const [estimateDialogOpen, setEstimateDialogOpen] = useState(false);
+  const [estimateFromAppt, setEstimateFromAppt] = useState(null);
   const [dateRange, setDateRange] = useState(null);
   const [user, setUser] = useState(null);
   const queryClient = useQueryClient();
@@ -243,6 +246,12 @@ export default function Appointments() {
                        </div>
                      </button>
                      <div className="flex gap-1 flex-shrink-0 items-center">
+                       {a.status === "scheduled" && (
+                         <Button variant="ghost" size="icon" className="h-8 w-8 text-purple-400 hover:text-purple-300" title="Create Estimate"
+                           onClick={async e => { e.stopPropagation(); await base44.entities.Appointment.update(a.id, { status: "in_progress" }); queryClient.invalidateQueries({ queryKey: ["appointments"] }); setEstimateFromAppt({ customer_id: a.customer_id, customer_name: a.customer_name, vehicle_id: a.vehicle_id, vehicle_info: a.vehicle_info, service_reason: a.service_type, notes: a.notes }); setEstimateDialogOpen(true); }}>
+                           <ClipboardList className="w-3.5 h-3.5" />
+                         </Button>
+                       )}
                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-sky-400" title="Send Confirmation Email" onClick={e => sendAppointmentEmail(e, a)} disabled={sendingEmail === a.id}>
                          {sendingEmail === a.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                        </Button>
@@ -284,6 +293,16 @@ export default function Appointments() {
         customers={customers}
         vehicles={vehicles}
         mechanics={mechanics}
+      />
+
+      <EstimateFormDialog
+        open={estimateDialogOpen}
+        onClose={() => { setEstimateDialogOpen(false); setEstimateFromAppt(null); }}
+        estimate={estimateFromAppt}
+        customers={customers}
+        vehicles={vehicles}
+        parts={[]}
+        onSaved={() => { setEstimateDialogOpen(false); setEstimateFromAppt(null); queryClient.invalidateQueries({ queryKey: ["estimates"] }); }}
       />
 
       {roPrompt && (

@@ -456,6 +456,8 @@ export default function InvoiceDetail() {
           }}
           notes={[customerNote, techNotes].filter(Boolean).join("\n\n")}
           serviceReason={serviceReason}
+          onNavigateCustomer={() => invoice.customer_id && navigate(`/CustomerDetails?id=${invoice.customer_id}`)}
+          onNavigateVehicle={() => invoice.vehicle_id && navigate(`/VehicleTimeline/${invoice.vehicle_id}`)}
         />
       </div>
 

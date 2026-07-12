@@ -205,7 +205,13 @@ export default function RepairOrderDetail() {
         service_reason: order.description || "",
       });
 
+      // Bug 3: Link the invoice back to the RO
+      await base44.entities.RepairOrder.update(order.id, {
+        linked_invoice_id: inv.id,
+        linked_invoice_number: inv.invoice_number,
+      });
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["invoices", "byRO", orderId] });
       navigate(`/InvoiceDetail/${inv.id}`);
     } catch (err) {
       alert("Could not generate invoice: " + (err?.message || err));

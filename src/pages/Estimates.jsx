@@ -375,7 +375,7 @@ export default function Estimates() {
                       title="Convert to Invoice">
                       <FileText className="w-3.5 h-3.5" /> → Invoice
                     </button>
-                    {/* 💳 Cashout */}
+                    {/* 💵 Quick Cash Out */}
                     <button
                       onClick={e => { e.stopPropagation(); setCashoutEstimate({
                         id: est.id,
@@ -401,9 +401,9 @@ export default function Estimates() {
                         linked_invoice_number: est.linked_invoice_number || null,
                         _source: "estimate",
                       }); }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25 transition-colors"
-                      title="Cashout this estimate">
-                      <CreditCard className="w-3.5 h-3.5" /> Cashout
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500/30 transition-colors"
+                      title="Quick Cash Out — create invoice + record payment">
+                      💵 Cash Out
                     </button>
                     {/* icon-only row */}
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-500 hover:text-sky-400" title="Email" onClick={e => sendEstimateEmail(e, est)} disabled={sendingEmail === est.id}>

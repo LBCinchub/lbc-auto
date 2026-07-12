@@ -844,7 +844,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
               className="w-full mt-1 rounded-md bg-gray-800 border border-gray-700 text-white text-sm px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-sky-500" />
           </div>
 
-          {/* Summary */}
+          {/* Summary — live recalculation (POLISH 2) */}
           <div className="rounded-xl border border-gray-700 bg-gray-800/40 p-4 space-y-2 text-sm">
             <div className="flex justify-between text-gray-400"><span>Labor Subtotal</span><span>${laborTotal.toFixed(2)}</span></div>
             <div className="flex justify-between text-gray-400"><span>Parts Subtotal</span><span>${partsTotal.toFixed(2)}</span></div>
@@ -859,6 +859,16 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
               <span>Tax ({parseFloat(form.tax_rate) || 0}%)</span>
               <span className={form.apply_tax ? "" : "line-through opacity-50"}>{form.apply_tax ? `$${taxAmount.toFixed(2)}` : "Not applied"}</span>
             </div>
+            {form.apply_tax && taxAppliesTo === "parts" && partsTotal === 0 && (
+              <div className="flex items-center gap-1.5 text-yellow-400 text-xs bg-yellow-500/10 border border-yellow-500/30 rounded px-2 py-1.5">
+                ⚠️ Tax applies to parts only — no parts added, so tax is $0. Is this correct?
+              </div>
+            )}
+            {form.apply_tax && taxAppliesTo === "labor" && laborTotal === 0 && (
+              <div className="flex items-center gap-1.5 text-yellow-400 text-xs bg-yellow-500/10 border border-yellow-500/30 rounded px-2 py-1.5">
+                ⚠️ Tax applies to labor only — no labor added, so tax is $0. Is this correct?
+              </div>
+            )}
             <div className="flex justify-between font-bold border-t border-gray-700 pt-2 mt-2" style={{ fontSize: "18px", color: "#00d4ff" }}>
               <span>Grand Total</span>
               <span>${grandTotal.toFixed(2)}</span>

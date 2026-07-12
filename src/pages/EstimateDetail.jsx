@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { syncCustomerActivity } from "@/utils/syncCustomerActivity";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, CreditCard, CheckCircle2, Plus, Trash2, Save, Loader2, Share2, History } from "lucide-react";
+import { ArrowLeft, CreditCard, CheckCircle2, Plus, Trash2, Save, Loader2, Share2, History, FileText } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import PaymentHistoryManager from "@/components/invoices/PaymentHistoryManager";
 import { Button } from "@/components/ui/button";
@@ -397,7 +397,13 @@ export default function EstimateDetail() {
             {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
             {saving ? "Saving..." : "Save Changes"}
           </Button>
-          {estimate.status === "approved" && (
+          {estimate.linked_invoice_id && (
+            <Button size="sm" onClick={() => navigate(`/InvoiceDetail/${estimate.linked_invoice_id}`)}
+              className="bg-purple-600 hover:bg-purple-700 text-white gap-1.5 h-9 text-xs">
+              <FileText className="w-3.5 h-3.5" /> View Invoice
+            </Button>
+          )}
+          {estimate.status === "approved" && !estimate.linked_invoice_id && (
             <Button size="sm" onClick={handleConvertToInvoice}
               className="bg-emerald-500 hover:bg-emerald-600 text-white gap-1.5 h-9 text-xs">
               <CheckCircle2 className="w-3.5 h-3.5" /> Convert to Invoice

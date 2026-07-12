@@ -125,11 +125,29 @@ export default function Invoices() {
         return fuzzyMatch(search, [i.invoice_number, i.customer_name, i.vehicle_info, customer?.phone, customer?.email]);
       })
       .sort((a, b) => {
-        // Sort follow-up invoices (balance_due >= $200, not paid) to the top
-        const fa = isFollowUp(a) ? 0 : 1;
-        const fb = isFollowUp(b) ? 0 : 1;
-        if (fa !== fb) return fa - fb;
-        return 0; // preserve original order within groups
+        // POLISH 4: Smarter sort — unpaid first by balance DESC, then partial by balance DESC, then paid by paid_date DESC
+        const aBalance = parseFloat(a.balance_due) || 0;
+        const bBalance = parseFloat(b.balance_due) || 0;
+        const aUnpaid = a.status === "unpaid" && aBalance > 0;
+        const bUnpaid = b.status === "unpaid" && bBalance > 0;
+        const aPartial = a.status === "partial" && aBalance > 0;
+        const bPartial = b.status === "partial" && bBalance > 0;
+        const aFollowUp = isFollowUp(a);
+        const bFollowUp = isFollowUp(b);
+        // Follow-up (>= $200) always first
+        if (aFollowUp && !bFollowUp) return -1;
+        if (!aFollowUp && bFollowUp) return 1;
+        // Unpaid before partial before paid
+        if (aUnpaid && !bUnpaid) return -1;
+        if (!aUnpaid && bUnpaid) return 1;
+        if (aPartial && !bPartial) return -1;
+        if (!aPartial && bPartial) return 1;
+        // Within same tier, sort by balance DESC
+        if (aUnpaid || aPartial) return bBalance - aBalance;
+        // Paid invoices — sort by paid_date DESC
+        const aPaid = a.paid_date ? new Date(a.paid_date).getTime() : 0;
+        const bPaid = b.paid_date ? new Date(b.paid_date).getTime() : 0;
+        return bPaid - aPaid;
       }),
     dateRange,
     r => r.created_date
@@ -425,7 +443,7 @@ export default function Invoices() {
                     )}
                   </div>
                   <p className="text-sm mt-0.5">
-                   <span className="text-blue-400 capitalize">{inv.customer_name}</span> · <span className="text-green-400 capitalize">{inv.vehicle_info}</span>
+                    <span className="text-blue-400 capitalize cursor-pointer hover:text-sky-300" onClick={e => { e.stopPropagation(); if (inv.customer_id) navigate(`/CustomerDetails?id=${inv.customer_id}`); }}>{inv.customer_name}</span> · <span className="text-green-400 capitalize">{inv.vehicle_info}</span>
                   </p>
                   {(() => {
                     const customer = customers.find(c => c.id === inv.customer_id);
