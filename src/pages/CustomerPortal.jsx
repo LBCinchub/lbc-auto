@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Search, Phone, Store, AlertCircle, CheckCircle2, Users } from "lucide-react";
+import FloatingChatWidget from "@/components/chat/FloatingChatWidget";
 
 export default function CustomerPortal() {
   const [step, setStep] = useState("shop");
@@ -208,6 +209,7 @@ export default function CustomerPortal() {
         )}
       </div>
       <p style={S.footer}>Powered by LBC Auto · lbc.network</p>
+      {shopEmail && <FloatingChatWidget shop_email={shopEmail} shop_name={shopName} />}
     </div>
   );
 }

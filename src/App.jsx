@@ -34,6 +34,7 @@ import ImportCustomers from './pages/ImportCustomers';
 import CustomerDetails from './pages/CustomerDetails';
 import MissingPhones from './pages/MissingPhones';
 import Diagnostics from './pages/Diagnostics';
+import ChatInbox from './pages/ChatInbox';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -357,6 +358,7 @@ const AuthenticatedApp = () => {
         <Route path="/CustomerDetails" element={<LayoutWrapper currentPageName="Customers"><CustomerDetails /></LayoutWrapper>} />
         <Route path="/MissingPhones" element={<LayoutWrapper currentPageName="MissingPhones"><MissingPhones /></LayoutWrapper>} />
         <Route path="/Diagnostics" element={<LayoutWrapper currentPageName="Diagnostics"><Diagnostics /></LayoutWrapper>} />
+        <Route path="/ChatInbox" element={<LayoutWrapper currentPageName="ChatInbox"><ChatInbox /></LayoutWrapper>} />
         <Route path="/PaymentWall" element={<PaymentWall />} />
         <Route path="/landing" element={<Landing />} />
         <Route path="/TechPortal" element={<TechPortal />} />

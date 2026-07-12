@@ -30,7 +30,8 @@ import {
   Search,
   Tablet,
   Store,
-  Gauge
+  Gauge,
+  MessageSquare
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/lib/ThemeContext";
@@ -53,12 +54,14 @@ const navItems = [
   { name: "Analytics",     icon: BarChart3,       page: "Analytics",        color: "from-purple-500 to-violet-600", light: "bg-purple-50 text-purple-700 border-purple-200",  dark: "bg-purple-500/15 text-purple-400 border-purple-500/30", label: "text-purple-400" },
   { name: "Import",        icon: FileUp,          page: "ImportCustomers",  color: "from-gray-500 to-slate-600",    light: "bg-gray-50 text-gray-700 border-gray-200",        dark: "bg-gray-500/15 text-gray-400 border-gray-500/30",    label: "text-slate-400", path: "/ImportCustomers" },
   { name: "Customer Hub",  icon: Store,           page: "CustomerHub",      color: "from-sky-400 to-cyan-500",      light: "bg-sky-500/20",   text: "text-sky-400" },
+  { name: "Chat Inbox",   icon: MessageSquare,   page: "ChatInbox",        color: "from-cyan-500 to-blue-500",     light: "bg-cyan-50 text-cyan-700 border-cyan-200",   dark: "bg-cyan-500/15 text-cyan-400 border-cyan-500/30", label: "text-cyan-400", path: "/ChatInbox" },
 ];
 
 export default function Sidebar({ currentPage }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [user, setUser] = useState(null);
+  const [unreadCount, setUnreadCount] = useState(0);
   const { theme, toggleTheme } = useTheme();
   const isLight = theme === "light";
 
@@ -70,6 +73,19 @@ export default function Sidebar({ currentPage }) {
     loadUser();
     window.addEventListener("lbc:settings-saved", loadUser);
     return () => window.removeEventListener("lbc:settings-saved", loadUser);
+  }, []);
+
+  // Poll unread chat messages every 30s
+  useEffect(() => {
+    const loadUnread = async () => {
+      try {
+        const unread = await base44.entities.ChatMessage.filter({ is_read: false }, null, 100);
+        setUnreadCount(unread.length);
+      } catch {}
+    };
+    loadUnread();
+    const interval = setInterval(loadUnread, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -133,7 +149,7 @@ export default function Sidebar({ currentPage }) {
                   to={item.path || createPageUrl(item.page)}
                   onClick={() => setMobileOpen(false)}
                   className={cn(
-                    "flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm font-medium transition-all duration-150 border",
+                    "relative flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm font-medium transition-all duration-150 border",
                     isActive
                       ? isLight ? item.light : item.dark
                       : isLight
@@ -168,7 +184,18 @@ export default function Sidebar({ currentPage }) {
                       PRO
                     </span>
                   )}
-                  {isActive && !collapsed && !(item.proOnly && user?.plan_tier !== "pro" && user?.plan_tier !== "legacy") && (
+                  {item.name === "Chat Inbox" && unreadCount > 0 ? (
+                    <>
+                      {!collapsed && (
+                        <span className="ml-auto bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 flex-shrink-0">
+                          {unreadCount > 99 ? "99+" : unreadCount}
+                        </span>
+                      )}
+                      {collapsed && (
+                        <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full flex-shrink-0 border border-gray-950" />
+                      )}
+                    </>
+                  ) : isActive && !collapsed && !(item.proOnly && user?.plan_tier !== "pro" && user?.plan_tier !== "legacy") && (
                     <div className={cn("ml-auto w-1.5 h-1.5 rounded-full bg-gradient-to-br flex-shrink-0", item.color.replace("from-", "bg-").split(" ")[0])} />
                   )}
                 </Link>

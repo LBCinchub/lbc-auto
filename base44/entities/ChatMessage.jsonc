@@ -1,0 +1,94 @@
+{
+  "name": "ChatMessage",
+  "type": "object",
+  "properties": {
+    "shop_email": {
+      "type": "string",
+      "description": "Tenant identifier \u2014 scopes all messages per shop"
+    },
+    "session_id": {
+      "type": "string",
+      "description": "Groups messages into a conversation thread"
+    },
+    "sender_type": {
+      "type": "string",
+      "enum": [
+        "customer",
+        "ai",
+        "owner"
+      ],
+      "description": "Who sent the message"
+    },
+    "sender_name": {
+      "type": "string",
+      "description": "Customer name, 'AI', or owner name"
+    },
+    "message": {
+      "type": "string",
+      "description": "The message text"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Customer name (persisted on each message for thread grouping)"
+    },
+    "customer_phone": {
+      "type": "string",
+      "description": "Customer phone"
+    },
+    "customer_email": {
+      "type": "string",
+      "description": "Customer email"
+    },
+    "vehicle_info": {
+      "type": "string",
+      "description": "Vehicle info discussed"
+    },
+    "service_requested": {
+      "type": "string",
+      "description": "Service the customer asked about"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "ai_handled",
+        "owner_replied",
+        "resolved"
+      ],
+      "default": "open",
+      "description": "Thread status"
+    },
+    "is_read": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the shop owner has read this message"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "widget",
+        "dashboard"
+      ],
+      "default": "widget",
+      "description": "Where the message originated"
+    }
+  },
+  "required": [
+    "shop_email",
+    "session_id",
+    "sender_type",
+    "message"
+  ],
+  "rls": {
+    "create": true,
+    "read": {
+      "data.shop_email": "{{user.email}}"
+    },
+    "update": {
+      "data.shop_email": "{{user.email}}"
+    },
+    "delete": {
+      "data.shop_email": "{{user.email}}"
+    }
+  }
+}

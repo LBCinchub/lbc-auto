@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import CustomerAIChat from "@/components/shared/CustomerAIChat";
+import FloatingChatWidget from "@/components/chat/FloatingChatWidget";
 
 const REACTIONS = [
   { emoji:"👍", key:"thumbsup" },
@@ -693,6 +694,7 @@ export default function CustomerDashboard() {
           </button>
         ))}
       </div>
+      {session?.shop_email && <FloatingChatWidget shop_email={session.shop_email} shop_name={session.shop_name} />}
     </div>
   );
 }
