@@ -251,6 +251,9 @@ export default function CustomerFormDialog({ open, onClose, customer, onSaved, o
             <Label htmlFor="cf-full-name" className="text-gray-400">Full Name *</Label>
             <Input id="cf-full-name" ref={fullNameRef} value={form.full_name} autoCapitalize="words" onChange={e => capWords(e, setForm, "full_name")}
               className="bg-gray-800 border-gray-700 text-white mt-1" />
+            {/^\d{4}\s/.test(form.full_name?.trim() || "") && (
+              <p className="text-yellow-600 text-xs mt-1">⚠️ Name looks like a vehicle — please enter the customer's name instead.</p>
+            )}
           </div>
           <div>
             <Label htmlFor="cf-phone" className="text-gray-400">Phone *</Label>

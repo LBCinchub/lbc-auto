@@ -737,10 +737,13 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
                           className="bg-gray-800 border-0 text-white h-8 text-sm text-right" placeholder="120" step="1" />
                       </td>
                       <td className="px-3 py-1.5 text-right text-gray-300 font-medium">${((parseFloat(row.hours)||0)*(parseFloat(row.rate)||0)).toFixed(2)}</td>
-                      <td className="pr-2 py-1.5">
+                      <td className="pr-2 py-1.5 align-top">
                         <button onClick={() => removeLabor(idx)} className="text-gray-600 hover:text-rose-400 transition-colors">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
+                        {parseFloat(row.rate) > 0 && parseFloat(row.rate) !== 120 && (
+                          <p className="text-yellow-600 text-[10px] mt-1 whitespace-nowrap">⚠️ ${parseFloat(row.rate)}/hr</p>
+                        )}
                       </td>
                     </tr>
                   ))}

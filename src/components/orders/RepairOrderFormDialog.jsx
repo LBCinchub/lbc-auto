@@ -411,6 +411,18 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         savedOrderId = created.id;
       }
       
+      // ── Deduct parts from inventory ──
+      try {
+        const partsToDeduct = (data.parts_used || []).filter(p => p.part_id && p.quantity > 0);
+        for (const p of partsToDeduct) {
+          const invPart = await base44.entities.Part.get(p.part_id);
+          if (invPart) {
+            const newQty = Math.max(0, (invPart.quantity || 0) - (p.quantity || 0));
+            await base44.entities.Part.update(p.part_id, { quantity: newQty });
+          }
+        }
+      } catch (e) { console.warn("Inventory deduction failed:", e); }
+
       // ── Unified sync: Customer.last_visit + Vehicle.customer_id ──
       await syncCustomerActivity({
         customerId: form.customer_id,

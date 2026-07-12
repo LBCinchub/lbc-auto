@@ -36,7 +36,7 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
   const [fetchedVehicles, setFetchedVehicles] = useState([]);
   const [loadingVehicles, setLoadingVehicles] = useState(false);
   const [form, setForm] = useState({
-    customer_id: "", customer_name: "", customer_phone: "", vehicle_id: "", vehicle_info: "",
+    customer_id: "", customer_name: "", customer_phone: "", customer_email_address: "", vehicle_id: "", vehicle_info: "",
     mechanic_id: "", mechanic_name: "", service_type: "", date: "",
     time_slot: "", notes: "", status: "scheduled"
   });
@@ -118,7 +118,7 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
         }
     } else {
       setForm({
-        customer_id: "", customer_name: "", customer_phone: "", vehicle_id: "", vehicle_info: "",
+        customer_id: "", customer_name: "", customer_phone: "", customer_email_address: "", vehicle_id: "", vehicle_info: "",
         mechanic_id: "", mechanic_name: "", service_type: "", date: "",
         time_slot: "", notes: "", status: "scheduled"
       });
@@ -135,7 +135,7 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
 
   const handleCustomerChange = (id) => {
     const c = allCustomers.find(c => c.id === id);
-    setForm({ ...form, customer_id: id, customer_name: c?.full_name || "", customer_phone: c?.phone || "", vehicle_id: "", vehicle_info: "" });
+    setForm({ ...form, customer_id: id, customer_name: c?.full_name || "", customer_phone: c?.phone || "", customer_email_address: c?.email || "", vehicle_id: "", vehicle_info: "" });
     setCustomerSearch("");
   };
 

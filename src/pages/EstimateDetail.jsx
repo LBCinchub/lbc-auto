@@ -293,7 +293,11 @@ export default function EstimateDetail() {
         service_reason: estimate.service_reason || "",
         customer_note: estimate.notes || "",
       });
-      await base44.entities.Estimate.update(estimate.id, { status: "invoiced" });
+      await base44.entities.Estimate.update(estimate.id, {
+        status: "invoiced",
+        linked_invoice_id: inv.id,
+        linked_invoice_number: inv.invoice_number,
+      });
       navigate(`/InvoiceDetail/${inv.id}`);
     } catch (error) {
       console.error("Error converting estimate to invoice:", error);
