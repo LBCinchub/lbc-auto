@@ -97,15 +97,30 @@ export class ELM327Client {
     );
 
     // Standard ELM327 init sequence
+    this._adapterInfo = { name: this.device.name || "OBD2 Adapter", protocol: "", voltage: "" };
     await this._sendCommand("ATZ", 2000);   // reset
     await this._sendCommand("ATE0");        // echo off
     await this._sendCommand("ATL0");        // linefeeds off
     await this._sendCommand("ATS0");        // spaces off
     await this._sendCommand("ATH0");        // headers off
     await this._sendCommand("ATSP0", 5000);  // auto-detect protocol
+    await this._sendCommand("ATAT1");        // adaptive timing
     await this._sendCommand("0100", 5000);  // test connection
 
-    return { name: this.device.name || "OBD2 Adapter" };
+    // Try to grab protocol + voltage for the connection banner
+    try {
+      this._adapterInfo.protocol = await this._sendCommand("ATDP", 3000);
+    } catch (e) { /* not critical */ }
+    try {
+      this._adapterInfo.voltage = await this._sendCommand("ATRV", 3000);
+    } catch (e) { /* not critical */ }
+
+    return this._adapterInfo;
+  }
+
+  /** Returns adapter info (name, protocol, voltage) gathered during init */
+  getAdapterInfo() {
+    return this._adapterInfo || { name: this.device?.name || "OBD2 Adapter", protocol: "", voltage: "" };
   }
 
   async disconnect() {
@@ -269,6 +284,117 @@ export class ELM327Client {
     }
 
     return results;
+  }
+
+  /**
+   * Send a raw OBD2/AT command and return the raw response string.
+   * Used by Tech Mode for direct ECU commands.
+   */
+  async sendRaw(command, timeoutMs = 5000) {
+    return await this._sendCommand(command, timeoutMs);
+  }
+
+  /**
+   * Send a single PID request and return the raw response string.
+   * Used by Live Data mode for individual PID polling.
+   */
+  async readPID(pid) {
+    return await this._sendCommand(pid, 3000);
+  }
+
+  /**
+   * Parse a PID response into data bytes.
+   * Exposed publicly so Live Data mode can decode responses.
+   */
+  parsePIDResponse(response, pidSent) {
+    return parseOBDDataBytes(response, pidSent);
+  }
+
+  /** Request VIN via Mode 09 PID 02. Returns a 17-char VIN string or null. */
+  async readVIN() {
+    try {
+      const response = await this._sendCommand("0902", 5000);
+      if (/NO DATA|UNABLE TO CONNECT|ERROR/i.test(response)) return null;
+      // VIN is multi-frame — response contains "49 02 01" followed by hex-encoded ASCII
+      const clean = response.replace(/\s+/g, "").replace(/SEARCHING\.*/gi, "").trim();
+      const hex = clean.replace(/^4902[0-9A-Fa-f]*/i, "");
+      // Each frame starts with a frame index byte, then hex-encoded ASCII chars
+      let vinHex = "";
+      // Try to extract just the VIN bytes (skip frame index bytes)
+      const frames = response.split(/[\r\n]+/).filter(l => /49\s*02/i.test(l));
+      for (const frame of frames) {
+        const f = frame.replace(/\s+/g, "");
+        // Skip "4902" + frame index (1 byte), rest is VIN hex
+        const vinPart = f.replace(/^4902[0-9A-Fa-f]{2}/i, "");
+        vinHex += vinPart;
+      }
+      if (vinHex) {
+        let vin = "";
+        for (let i = 0; i + 2 <= vinHex.length; i += 2) {
+          vin += String.fromCharCode(parseInt(vinHex.slice(i, i + 2), 16));
+        }
+        return vin.replace(/[^A-Z0-9]/gi, "").slice(0, 17) || null;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /** Full system scan — sends the complete init + DTC + VIN sequence with progress. */
+  async fullSystemScan(onProgress) {
+    const steps = [
+      { cmd: "ATZ", label: "Resetting adapter...", delay: 2000 },
+      { cmd: "ATE0", label: "Configuring adapter..." },
+      { cmd: "ATL0", label: "Configuring adapter..." },
+      { cmd: "ATS0", label: "Configuring adapter..." },
+      { cmd: "ATSP0", label: "Auto-detecting protocol...", delay: 5000 },
+      { cmd: "ATAT1", label: "Setting adaptive timing..." },
+      { cmd: "0100", label: "Checking supported PIDs...", delay: 5000 },
+      { cmd: "0902", label: "Requesting VIN...", delay: 5000 },
+      { cmd: "03", label: "Reading confirmed fault codes...", delay: 15000 },
+      { cmd: "07", label: "Reading pending fault codes...", delay: 15000 },
+      { cmd: "0A", label: "Reading permanent fault codes...", delay: 15000 },
+    ];
+
+    const vin = null;
+    let stored = [], pending = [], permanent = [];
+
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i];
+      if (onProgress) onProgress(step.label, Math.round((i / steps.length) * 100));
+
+      if (step.cmd === "0902") {
+        const v = await this.readVIN().catch(() => null);
+        if (v) this._adapterInfo = { ...this._adapterInfo, vin: v };
+      } else if (step.cmd === "03") {
+        stored = await this.readDTCs().catch(() => []);
+      } else if (step.cmd === "07") {
+        pending = await this.readPendingDTCs().catch(() => []);
+      } else if (step.cmd === "0A") {
+        permanent = await this.readPermanentDTCs().catch(() => []);
+      } else {
+        await this._sendCommand(step.cmd, step.delay || 4000).catch(() => {});
+      }
+    }
+
+    if (onProgress) onProgress("Scan complete", 100);
+
+    // Merge with type tags
+    const seen = new Set();
+    const merged = [];
+    const addCodes = (arr, type) => {
+      for (const c of arr) {
+        if (seen.has(c.code)) continue;
+        seen.add(c.code);
+        merged.push({ ...c, type });
+      }
+    };
+    addCodes(stored, "stored");
+    addCodes(pending, "pending");
+    addCodes(permanent, "permanent");
+
+    return { codes: merged, vin: this._adapterInfo?.vin || null };
   }
 }
 
