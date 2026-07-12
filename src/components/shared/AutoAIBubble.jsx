@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Bot, Send, Loader2, Wrench } from "lucide-react";
+import { Bot, Send, Loader2, Wrench, Camera, Paperclip, X } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 
 
@@ -122,8 +122,11 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput]     = useState("");
   const [loading, setLoading] = useState(false);
+  const [pendingImage, setPendingImage] = useState(null); // base64 data URL
   const endRef   = useRef(null);
   const inputRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
 
   useEffect(() => {
     if (open && endRef.current) endRef.current.scrollIntoView({ behavior: "smooth" });
@@ -133,24 +136,53 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
     if (open) setTimeout(() => inputRef.current?.focus(), 120);
   }, [open]);
 
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = () => setPendingImage({ file, preview: reader.result });
+    reader.readAsDataURL(file);
+    e.target.value = ""; // reset so same file can be re-selected
+  };
+
+  const removePendingImage = () => setPendingImage(null);
+
   const sendMessage = async (text) => {
     const q = (text || input).trim();
-    if (!q || loading) return;
+    if ((!q && !pendingImage) || loading) return;
     setInput("");
 
-    const userMsg = { role: "user", content: q };
+    const preview = pendingImage?.preview || null;
+    const userMsg = { role: "user", content: q || "Please analyze this image.", image: preview };
     const history = [...messages, userMsg];
     setMessages(history);
     setLoading(true);
 
     try {
-      // Call LBC AI function
-      const result = await base44.functions.invoke("lbcAutoAI", {
+      let imageUrl = null;
+      if (pendingImage) {
+        try {
+          const uploadRes = await base44.integrations.Core.UploadFile({ file: pendingImage.file });
+          imageUrl = uploadRes?.file_url || null;
+        } catch (uploadErr) {
+          console.error("Image upload failed:", uploadErr);
+        }
+      }
+
+      const payload = {
         mode: "owner",
-        messages: history,
+        messages: history.map(m => ({ role: m.role, content: m.content })),
         vehicle: vehicle || "",
         description: description || "",
-      });
+      };
+      if (imageUrl) {
+        payload.image_url = imageUrl;
+        payload.image_context = "User uploaded a photo for AI analysis";
+      }
+
+      const result = await base44.functions.invoke("lbcAutoAI", payload);
+      setPendingImage(null);
 
       const reply = result?.data?.reply || result?.reply || "No response generated.";
       setMessages(prev => [...prev, { role: "assistant", content: reply }]);
@@ -234,6 +266,9 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
                   border: m.role==="user" ? "1px solid #00aaff55" : "1px solid #00aaff22",
                   color: m.role==="user" ? "#b0e0ff" : "#c8e8f8",
                 }}>
+                  {m.image && (
+                    <img src={m.image} alt="upload" style={{ width:"100%", borderRadius:6, marginBottom: m.content ? 6 : 0, display:"block" }} />
+                  )}
                   {m.content}
                 </div>
               </div>
@@ -261,21 +296,64 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
             <div ref={endRef} />
           </div>
 
+          {/* Pending image preview */}
+          {pendingImage && (
+            <div style={{ position:"relative", padding:"8px 12px 0", background:"#01111f" }}>
+              <img src={pendingImage.preview} alt="preview" style={{ height:60, borderRadius:6, border:"1px solid #00aaff55" }} />
+              <button onClick={removePendingImage} style={{
+                position:"absolute", top:10, left:64,
+                width:20, height:20, borderRadius:"50%", border:"1px solid #ff4444",
+                background:"#330000", color:"#ff6666", cursor:"pointer",
+                display:"flex", alignItems:"center", justifyContent:"center", padding:0,
+              }}>
+                <X style={{ width:12, height:12 }} />
+              </button>
+            </div>
+          )}
+
+          {/* Hidden file inputs */}
+          <input ref={fileInputRef} type="file" accept="image/*" style={{ display:"none" }} onChange={handleFileSelect} />
+          <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" style={{ display:"none" }} onChange={handleFileSelect} />
+
           {/* Input row */}
           <div className="lbc-ai-input-row">
+            <button
+              onClick={() => cameraInputRef.current?.click()}
+              disabled={loading}
+              title="Take photo"
+              style={{
+                width:32, height:32, borderRadius:8, flexShrink:0, cursor:loading?"not-allowed":"pointer",
+                background:"#001829", border:"1px solid #00aaff44", display:"flex",
+                alignItems:"center", justifyContent:"center", padding:0, opacity:loading?0.4:1,
+              }}
+            >
+              <Camera style={{ width:15, height:15, color:"#60b8d4" }} />
+            </button>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={loading}
+              title="Upload photo"
+              style={{
+                width:32, height:32, borderRadius:8, flexShrink:0, cursor:loading?"not-allowed":"pointer",
+                background:"#001829", border:"1px solid #00aaff44", display:"flex",
+                alignItems:"center", justifyContent:"center", padding:0, opacity:loading?0.4:1,
+              }}
+            >
+              <Paperclip style={{ width:15, height:15, color:"#60b8d4" }} />
+            </button>
             <input
               ref={inputRef}
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKey}
-              placeholder={vehicle ? `Ask about ${vehicle}…` : "Ask about labor hours, rust, codes…"}
+              placeholder={pendingImage ? "Add a note (optional)…" : (vehicle ? `Ask about ${vehicle}…` : "Ask about labor hours, rust, codes…")}
               className="lbc-ai-input"
               disabled={loading}
             />
             <button
               className="lbc-ai-send"
               onClick={() => sendMessage()}
-              disabled={!input.trim() || loading}
+              disabled={(!input.trim() && !pendingImage) || loading}
             >
               {loading
                 ? <Loader2 style={{ width:14, height:14, color:"#fff", animation:"spin 1s linear infinite" }} />

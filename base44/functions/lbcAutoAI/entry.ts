@@ -18,7 +18,9 @@ RESPONSE RULES:
 - Factor in rust/access difficulty when it affects labor.
 - Suggest cross-compatible parts from shared platforms when useful.
 - Concise but complete. Don't omit critical steps or specs.
-- End every response with a "⬇️ TL;DR" line (1-2 sentence bottom-line summary).`;
+- End every response with a "⬇️ TL;DR" line (1-2 sentence bottom-line summary).
+
+When analyzing images: describe what you see clearly, identify any automotive issues visible, provide specific repair recommendations with estimated labor hours and parts cost in CAD at $120/hr labor rate. If you see DTC codes on a screen, read and diagnose them.`;
 
 // Customer prompt is now built dynamically per-shop using shop_email
 
@@ -26,9 +28,9 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const body = await req.json().catch(() => ({}));
-    const { messages = [], mode = "owner", vehicle = "", description = "", shop_email = "" } = body;
+    const { messages = [], mode = "owner", vehicle = "", description = "", shop_email = "", image_url = "", image_context = "" } = body;
 
-    if (!messages || messages.length === 0) {
+    if ((!messages || messages.length === 0) && !image_url) {
       return Response.json({ reply: "No messages provided." });
     }
 
@@ -152,19 +154,29 @@ Deno.serve(async (req) => {
     // Keep history short for speed — only last 6 messages
     const recent = messages.filter(m => m.role !== "system").slice(-6);
 
+    let imageInstruction = "";
+    if (image_url) {
+      imageInstruction = "\n\nThe user has attached a photo for analysis. " +
+        (image_context || "Analyze the image and describe what you see.") +
+        " Describe what you see clearly, identify any automotive issues, and provide repair recommendations with estimated labor hours and parts cost.";
+    }
+
     const prompt =
       OWNER_PROMPT +
       (context ? "\n\nShop Context:" + context : "") +
+      imageInstruction +
       "\n\nConversation:\n" +
       recent
         .map(m => (m.role === "user" ? "User: " : "Assistant: ") + m.content)
         .join("\n") +
       "\n\nRespond to the latest message as LBC Auto AI. Be concise. When relevant, reference the shop's live data (open ROs, unpaid invoices, low stock) to give actionable advice.";
 
-    const result = await base44.integrations.Core.InvokeLLM({
-      prompt,
-      model: "gpt_5_mini",
-    });
+    const llmParams = { prompt, model: "gpt_5_mini" };
+    if (image_url) {
+      llmParams.file_urls = [image_url];
+    }
+
+    const result = await base44.integrations.Core.InvokeLLM(llmParams);
 
     const reply =
       (typeof result === "string" ? result : null) ||
