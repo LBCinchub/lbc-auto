@@ -4,24 +4,20 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Bluetooth, BluetoothConnected, Loader2, AlertTriangle, CheckCircle2,
-  Gauge, Sparkles, Trash2, Save, RefreshCw, Search, Printer, Send, Package,
-  UserPlus, Car, FileText, ArrowRight,
+  Loader2, AlertTriangle, CheckCircle2, Gauge, Sparkles, Save,
+  RefreshCw, Printer, FileText, ArrowRight, Type, Microscope, Trash2,
 } from "lucide-react";
-import PageHeader from "../components/shared/PageHeader";
-import CustomerSearchInput from "../components/shared/CustomerSearchInput";
-import VehicleInfoBanner from "../components/diagnostics/VehicleInfoBanner";
-import QuickAddCustomerDialog from "../components/diagnostics/QuickAddCustomerDialog";
-import QuickAddVehicleDialog from "../components/diagnostics/QuickAddVehicleDialog";
-import { ELM327Client } from "../lib/obd/elm327";
-import { validateRecord, syncCustomerActivity } from "../utils/syncCustomerActivity";
-
-const URGENCY_STYLES = {
-  Low: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
-  Medium: "bg-amber-500/15 text-amber-400 border-amber-500/30",
-  High: "bg-orange-500/15 text-orange-400 border-orange-500/30",
-  Critical: "bg-red-500/15 text-red-400 border-red-500/30",
-};
+import QuickAddCustomerDialog from "@/components/diagnostics/QuickAddCustomerDialog";
+import QuickAddVehicleDialog from "@/components/diagnostics/QuickAddVehicleDialog";
+import { ELM327Client } from "@/lib/obd/elm327";
+import { lookupDtc, parseDtcInput } from "@/lib/dtcDatabase";
+import ConnectionPanel from "@/components/scanner/ConnectionPanel";
+import VehiclePanel from "@/components/scanner/VehiclePanel";
+import ManualCodeEntry from "@/components/scanner/ManualCodeEntry";
+import DtcCard from "@/components/scanner/DtcCard";
+import InspectionDecision from "@/components/scanner/InspectionDecision";
+import ScannerChat from "@/components/scanner/ScannerChat";
+import ScannerPrintReport from "@/components/scanner/ScannerPrintReport";
 
 export default function Diagnostics() {
   const [user, setUser] = useState(null);
@@ -31,7 +27,7 @@ export default function Diagnostics() {
   const [vehicles, setVehicles] = useState([]);
   const [vehicleId, setVehicleId] = useState("");
 
-  const [connState, setConnState] = useState("disconnected"); // disconnected | connecting | connected
+  const [connState, setConnState] = useState("disconnected");
   const [adapterName, setAdapterName] = useState("");
   const [connError, setConnError] = useState("");
   const clientRef = useRef(null);
@@ -45,24 +41,22 @@ export default function Diagnostics() {
 
   const [analyzing, setAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState(null);
+  const [dtcLookupResults, setDtcLookupResults] = useState({});
+  const lookedUpRef = useRef(new Set());
+
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState("");
   const [savedScanId, setSavedScanId] = useState(null);
 
-  // LBC AI chat state
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
 
-  // Quick-add dialog state
   const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [showAddVehicle, setShowAddVehicle] = useState(false);
-
-  // Estimate-from-diagnosis state
-  const [creatingEstimate, setCreatingEstimate] = useState(false);
-  const [estimateError, setEstimateError] = useState("");
-  const [createdEstimateId, setCreatedEstimateId] = useState(null);
+  const [showManualEntry, setShowManualEntry] = useState(false);
+  const [creatingAction, setCreatingAction] = useState({});
 
   const navigate = useNavigate();
 
@@ -78,7 +72,48 @@ export default function Diagnostics() {
   }, [customerId]);
 
   const selectedVehicle = vehicles.find(v => v.id === vehicleId);
+  const bleSupported = ELM327Client.isSupported();
+  const laborRate = parseFloat(user?.labor_rate) || 120;
 
+  // Lookup unknown DTC codes via AI (only for codes not in DTC_DATABASE)
+  useEffect(() => {
+    if (!dtcCodes.length) return;
+    const vehicleDesc = selectedVehicle
+      ? `${selectedVehicle.year || ""} ${selectedVehicle.make || ""} ${selectedVehicle.model || ""}`.trim()
+      : "Unknown vehicle";
+
+    dtcCodes.forEach(async (c) => {
+      if (lookupDtc(c.code) || lookedUpRef.current.has(c.code)) return;
+      lookedUpRef.current.add(c.code);
+      try {
+        const result = await base44.integrations.Core.InvokeLLM({
+          prompt: `You are LBC AUTO AI SCANNER. Look up this OBD2 code: ${c.code} for a ${vehicleDesc}. Return ONLY: code name, system, severity (HIGH/MEDIUM/LOW), top 3 likely causes, labor hours range, and estimated repair cost range in CAD. Be consistent — same code always gets same answer.`,
+          add_context_from_internet: true,
+          model: "gemini_3_flash",
+          response_json_schema: {
+            type: "object",
+            properties: {
+              name: { type: "string" },
+              system: { type: "string" },
+              severity: { type: "string", enum: ["HIGH", "MEDIUM", "LOW"] },
+              causes: { type: "array", items: { type: "string" } },
+              labor_min: { type: "number" },
+              labor_max: { type: "number" },
+              cost_min: { type: "number" },
+              cost_max: { type: "number" },
+            },
+          },
+        });
+        const isAxios = result && typeof result === "object" && "status" in result && "headers" in result;
+        const data = isAxios ? result.data : result;
+        setDtcLookupResults(prev => ({ ...prev, [c.code]: data }));
+      } catch (e) {
+        setDtcLookupResults(prev => ({ ...prev, [c.code]: null }));
+      }
+    });
+  }, [dtcCodes]);
+
+  // ── BLE handlers ──────────────────────────────────────────────────────
   const handleConnect = async () => {
     setConnError("");
     setConnState("connecting");
@@ -89,7 +124,7 @@ export default function Diagnostics() {
       setAdapterName(info.name);
       setConnState("connected");
     } catch (err) {
-      setConnState("disconnected");
+      setConnState("error");
       setConnError(err?.message || "Couldn't connect to the adapter.");
     }
   };
@@ -109,18 +144,13 @@ export default function Diagnostics() {
     setReading(true);
     setConnError("");
     setClearedMsg("");
+    setAnalysis(null);
     setReadProgress("Talking to the vehicle's computer...");
     try {
-      // Run sequentially — both share one Bluetooth write/notify pipe, and the
-      // adapter can only handle one in-flight command at a time. First query
-      // can take up to ~75s on some clone adapters while it auto-detects the
-      // vehicle's OBD protocol — this is normal, not stuck.
       const stored = await clientRef.current.readDTCs((attempt, total) => {
-        setReadProgress(
-          attempt === 1
-            ? "Talking to the vehicle's computer..."
-            : `Still trying (attempt ${attempt}/${total})... this can take up to a minute on first connect.`
-        );
+        setReadProgress(attempt === 1
+          ? "Talking to the vehicle's computer..."
+          : `Still trying (attempt ${attempt}/${total})... this can take up to a minute on first connect.`);
       });
       setReadProgress("Checking for pending codes...");
       const pending = await clientRef.current.readPendingDTCs();
@@ -129,7 +159,6 @@ export default function Diagnostics() {
       setReadProgress("Pulling live sensor data...");
       const live = await clientRef.current.readLiveData();
 
-      // Merge all codes, tagging each with its type; dedupe by code (stored wins)
       const seen = new Set();
       const merged = [];
       const addCodes = (arr, type) => {
@@ -145,7 +174,6 @@ export default function Diagnostics() {
 
       setDtcCodes(merged);
       setLiveData(live);
-      setAnalysis(null);
     } catch (err) {
       setConnError(err?.message || "Failed to read codes from the vehicle.");
     } finally {
@@ -156,11 +184,11 @@ export default function Diagnostics() {
 
   const handleClearCodes = async () => {
     if (!clientRef.current) return;
-    if (!window.confirm("Clear all trouble codes and turn off the check engine light? Make sure the AI analysis has been reviewed/saved first.")) return;
+    if (!window.confirm("Clear all trouble codes and turn off the check engine light?")) return;
     setClearing(true);
     try {
       const ok = await clientRef.current.clearDTCs();
-      setClearedMsg(ok ? "Codes cleared successfully." : "Adapter didn't confirm — codes may not have cleared.");
+      setClearedMsg(ok ? "✓ Codes cleared. Run engine and rescan to verify." : "Adapter didn't confirm — codes may not have cleared.");
       if (ok) setDtcCodes([]);
     } catch (err) {
       setConnError(err?.message || "Failed to clear codes.");
@@ -169,19 +197,31 @@ export default function Diagnostics() {
     }
   };
 
+  const handleManualEntry = (codes) => {
+    const seen = new Set(dtcCodes.map(c => c.code));
+    const merged = [...dtcCodes];
+    for (const code of codes) {
+      if (!seen.has(code)) {
+        seen.add(code);
+        merged.push({ code, type: "manual", raw: code });
+      }
+    }
+    setDtcCodes(merged);
+    setShowManualEntry(false);
+    setAnalysis(null);
+    setClearedMsg("");
+  };
+
+  // ── AI holistic analysis ──────────────────────────────────────────────
   const handleAnalyze = async () => {
-    if (dtcCodes.length === 0) return;
+    if (!dtcCodes.length) return;
     setAnalyzing(true);
     try {
       const vehicleDesc = selectedVehicle
         ? `${selectedVehicle.year || ""} ${selectedVehicle.make || ""} ${selectedVehicle.model || ""} ${selectedVehicle.engine_type || ""}`.trim()
         : "Unknown vehicle";
-
       const res = await base44.functions.invoke("lbcDiagAI", {
-        mode: "analyze",
-        codes: dtcCodes,
-        live_data: liveData,
-        vehicle: vehicleDesc,
+        mode: "analyze", codes: dtcCodes, live_data: liveData, vehicle: vehicleDesc,
       });
       setAnalysis(res.data.analysis);
     } catch (err) {
@@ -203,11 +243,7 @@ export default function Diagnostics() {
         ? `${selectedVehicle.year || ""} ${selectedVehicle.make || ""} ${selectedVehicle.model || ""} ${selectedVehicle.engine_type || ""}`.trim()
         : "Unknown vehicle";
       const res = await base44.functions.invoke("lbcDiagAI", {
-        mode: "chat",
-        codes: dtcCodes,
-        live_data: liveData,
-        vehicle: vehicleDesc,
-        messages: newMessages,
+        mode: "chat", codes: dtcCodes, live_data: liveData, vehicle: vehicleDesc, messages: newMessages,
       });
       setChatMessages(prev => [...prev, { role: "assistant", content: res.data.reply }]);
     } catch (err) {
@@ -217,29 +253,20 @@ export default function Diagnostics() {
     }
   };
 
-  const handleCustomerCreated = (newCustomer) => {
-    setCustomers(prev => [newCustomer, ...prev]);
-    setCustomerId(newCustomer.id);
-    setCustomerName(newCustomer.full_name);
-  };
-
-  const handleVehicleCreated = (newVehicle) => {
-    setVehicles(prev => [newVehicle, ...prev]);
-    setVehicleId(newVehicle.id);
-  };
-
+  // ── Save / Print ───────────────────────────────────────────────────────
   const handleSave = async () => {
     if (!vehicleId) return;
     setSaving(true);
     setSavedMsg("");
     try {
+      const vehicleInfo = selectedVehicle
+        ? `${selectedVehicle.year || ""} ${selectedVehicle.make || ""} ${selectedVehicle.model || ""}`.trim()
+        : undefined;
       const created = await base44.entities.DiagnosticScan.create({
         customer_id: customerId || undefined,
         customer_name: customerName || undefined,
         vehicle_id: vehicleId,
-        vehicle_info: selectedVehicle
-          ? `${selectedVehicle.year || ""} ${selectedVehicle.make || ""} ${selectedVehicle.model || ""}`.trim()
-          : undefined,
+        vehicle_info: vehicleInfo,
         shop_owner_email: user?.email,
         adapter_name: adapterName || undefined,
         mileage: selectedVehicle?.mileage || undefined,
@@ -259,79 +286,40 @@ export default function Diagnostics() {
     }
   };
 
-  /**
-   * Turns the AI diagnosis findings into a real draft Estimate — one labor
-   * line + parts lines per finding, using the shop's own labor rate and tax
-   * settings. Goes through the same Center Control validation + sync path
-   * as the manual Estimate form so nothing drifts from the standard flow.
-   */
-  const handleCreateEstimate = async () => {
-    if (!vehicleId || !customerId || !analysis?.findings?.length) return;
-    setCreatingEstimate(true);
-    setEstimateError("");
-    try {
-      const dbValidation = await validateRecord({
-        customerId,
-        vehicleId,
-        entityType: "Estimate",
-      });
-      if (!dbValidation.ok) {
-        setEstimateError(dbValidation.errors.join(" "));
-        setCreatingEstimate(false);
-        return;
-      }
+  const handlePrint = () => window.print();
 
-      const laborRate = parseFloat(user?.labor_rate) || 120;
+  // ── Per-card Create Estimate / Add to Repair Order ────────────────────
+  const handleCreateEstimateFromCard = async (code, dtcInfo) => {
+    if (!vehicleId || !customerId || !dtcInfo) return;
+    setCreatingAction(prev => ({ ...prev, [code]: "estimate" }));
+    try {
       const taxRate = parseFloat(user?.tax_rate) || 0;
       const taxAppliesTo = user?.tax_applies_to || "both";
-
-      const laborItems = analysis.findings
-        .filter(f => f.estimated_labor_hours)
-        .map(f => ({
-          description: `${f.code} — ${f.plain_english ? f.plain_english.slice(0, 80) : "Diagnostic repair"}`,
-          hours: parseFloat(f.estimated_labor_hours) || 0,
-          rate: laborRate,
-          total: (parseFloat(f.estimated_labor_hours) || 0) * laborRate,
-        }));
-
-      const partsItems = analysis.findings
-        .flatMap(f => (f.parts_needed || []).map(p => ({
-          name: p.name,
-          part_number: "",
-          quantity: 1,
-          unit_price: parseFloat(p.estimated_cost) || 0,
-          total: parseFloat(p.estimated_cost) || 0,
-        })));
-
-      const laborTotal = laborItems.reduce((s, r) => s + r.total, 0);
-      const partsTotal = partsItems.reduce((s, r) => s + r.total, 0);
-      let taxableAmount = laborTotal + partsTotal;
+      const avgLabor = (dtcInfo.labor_min + dtcInfo.labor_max) / 2;
+      const avgCost = (dtcInfo.cost_min + dtcInfo.cost_max) / 2;
+      const laborTotal = avgLabor * laborRate;
+      const partsTotal = Math.max(0, avgCost - laborTotal);
+      let taxableAmount = 0;
       if (taxAppliesTo === "labor") taxableAmount = laborTotal;
       else if (taxAppliesTo === "parts") taxableAmount = partsTotal;
-      else if (taxAppliesTo === "none") taxableAmount = 0;
+      else if (taxAppliesTo === "both") taxableAmount = laborTotal + partsTotal;
       const taxAmount = taxableAmount * (taxRate / 100);
       const grandTotal = laborTotal + partsTotal + taxAmount;
 
       const vehicleInfo = selectedVehicle
-        ? `${selectedVehicle.year || ""} ${selectedVehicle.make || ""} ${selectedVehicle.model || ""}`.trim()
-        : "";
+        ? `${selectedVehicle.year || ""} ${selectedVehicle.make || ""} ${selectedVehicle.model || ""}`.trim() : "";
 
-      const notesParts = [];
-      if (analysis.summary) notesParts.push(analysis.summary);
-      if (analysis.root_cause_analysis) notesParts.push("Root cause analysis: " + analysis.root_cause_analysis);
-      notesParts.push("Generated automatically from a Diagnostics AI scan — review before sending to customer.");
-
-      const payload = {
+      const created = await base44.entities.Estimate.create({
         estimate_number: `EST-${Date.now().toString().slice(-6)}`,
         customer_id: customerId,
         customer_name: customerName || "",
         vehicle_id: vehicleId,
         vehicle_info: vehicleInfo,
         status: "draft",
-        service_reason: `Diagnostic scan follow-up — codes: ${dtcCodes.map(c => c.code).join(", ")}`,
-        notes: notesParts.join("\n\n"),
-        labor_items: laborItems,
-        parts_items: partsItems,
+        service_reason: `${code} — ${dtcInfo.name}`,
+        notes: `Generated from LBC AUTO AI SCANNER.\n\nLikely causes:\n${dtcInfo.causes.map(c => `- ${c}`).join("\n")}\n\nEstimated repair: $${dtcInfo.cost_min} – $${dtcInfo.cost_max}\nEstimated labor: ${dtcInfo.labor_min} – ${dtcInfo.labor_max} hrs @ $${laborRate}/hr`,
+        labor_items: [{ description: `${code} — ${dtcInfo.name}`, hours: avgLabor, rate: laborRate, total: laborTotal }],
+        parts_items: [],
         labor_total: laborTotal,
         parts_total: partsTotal,
         tax_rate: taxRate,
@@ -340,78 +328,82 @@ export default function Diagnostics() {
         discount: 0,
         discount_type: "$",
         grand_total: grandTotal,
-      };
-
-      const created = await base44.entities.Estimate.create(payload);
-
-      await syncCustomerActivity({
-        customerId,
-        vehicleId,
-        vehicleInfo,
-        customerName: customerName || "",
-        entityType: "Estimate",
-        entityId: created.id,
       });
-
-      // Link back to (or create) the DiagnosticScan record so history shows the estimate
-      if (savedScanId) {
-        await base44.entities.DiagnosticScan.update(savedScanId, { estimate_id: created.id }).catch(() => {});
-      } else {
-        const scan = await base44.entities.DiagnosticScan.create({
-          customer_id: customerId || undefined,
-          customer_name: customerName || undefined,
-          vehicle_id: vehicleId,
-          vehicle_info: vehicleInfo || undefined,
-          shop_owner_email: user?.email,
-          adapter_name: adapterName || undefined,
-          mileage: selectedVehicle?.mileage || undefined,
-          dtc_codes: dtcCodes,
-          live_data_snapshot: liveData || undefined,
-          ai_analysis: analysis || undefined,
-          codes_cleared: !!clearedMsg,
-          notes: notes || undefined,
-          status: clearedMsg ? "Codes Cleared" : (dtcCodes.length ? "Needs Follow-up" : "Completed"),
-          estimate_id: created.id,
-        }).catch(() => null);
-        if (scan?.id) setSavedScanId(scan.id);
-      }
-
-      setCreatedEstimateId(created.id);
+      navigate(`/EstimateDetail/${created.id}`);
     } catch (err) {
-      setEstimateError(err?.message || "Failed to create estimate.");
+      setConnError(err?.message || "Failed to create estimate.");
     } finally {
-      setCreatingEstimate(false);
+      setCreatingAction(prev => ({ ...prev, [code]: null }));
     }
   };
 
-  const bleSupported = ELM327Client.isSupported();
+  const handleAddToRepairOrderFromCard = async (code, dtcInfo) => {
+    if (!vehicleId || !customerId || !dtcInfo) return;
+    setCreatingAction(prev => ({ ...prev, [code]: "ro" }));
+    try {
+      const avgLabor = (dtcInfo.labor_min + dtcInfo.labor_max) / 2;
+      const laborCost = avgLabor * laborRate;
+      const vehicleInfo = selectedVehicle
+        ? `${selectedVehicle.year || ""} ${selectedVehicle.make || ""} ${selectedVehicle.model || ""}`.trim() : "";
 
-  const handlePrint = () => window.print();
+      const created = await base44.entities.RepairOrder.create({
+        order_number: `RO-${Date.now().toString().slice(-6)}`,
+        customer_id: customerId,
+        customer_name: customerName || "",
+        vehicle_id: vehicleId,
+        vehicle_info: vehicleInfo,
+        description: `${code} — ${dtcInfo.name}`,
+        status: "waiting",
+        labor_items: [{ description: `${code} — ${dtcInfo.name}`, hours: avgLabor, rate: laborRate, total: laborCost }],
+        labor_hours: avgLabor,
+        labor_cost: laborCost,
+        parts_used: [],
+        parts_cost: 0,
+        total_cost: laborCost,
+      });
+      navigate(`/RepairOrderDetail/${created.id}`);
+    } catch (err) {
+      setConnError(err?.message || "Failed to create repair order.");
+    } finally {
+      setCreatingAction(prev => ({ ...prev, [code]: null }));
+    }
+  };
+
+  const handleCustomerCreated = (newCustomer) => {
+    setCustomers(prev => [newCustomer, ...prev]);
+    setCustomerId(newCustomer.id);
+    setCustomerName(newCustomer.full_name);
+  };
+
+  const handleVehicleCreated = (newVehicle) => {
+    setVehicles(prev => [newVehicle, ...prev]);
+    setVehicleId(newVehicle.id);
+  };
 
   const reportVehicleInfo = selectedVehicle
     ? `${selectedVehicle.year || ""} ${selectedVehicle.make || ""} ${selectedVehicle.model || ""}`.trim()
     : "—";
 
-  // Diagnostics + AI is a Pro-tier feature — Basic plan shops get an upsell instead of the tool.
+  // ── Pro gate ───────────────────────────────────────────────────────────
   if (user && user.plan_tier !== "pro" && user.plan_tier !== "legacy") {
     return (
-      <div className="max-w-lg mx-auto mt-16 text-center space-y-4 bg-gray-900 border border-gray-800 rounded-xl p-8">
-        <Gauge className="w-10 h-10 text-fuchsia-400 mx-auto" />
-        <h2 className="text-xl font-bold text-white">AI Diagnostics is a Pro feature</h2>
-        <p className="text-gray-400 text-sm">
-          Live Bluetooth OBD2 scanning, AI root-cause analysis, and one-click estimate
-          generation are included on the Pro plan ($299/mo). You're currently on Basic.
+      <div className="max-w-lg mx-auto mt-16 text-center space-y-4 bg-gray-900 border border-gray-800 rounded-xl p-8 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-fuchsia-500/5 to-transparent pointer-events-none" />
+        <Microscope className="w-10 h-10 text-fuchsia-400 mx-auto relative" />
+        <h2 className="text-xl font-bold text-white relative">LBC AUTO AI SCANNER</h2>
+        <p className="text-fuchsia-400 text-sm font-semibold relative">Pro Feature</p>
+        <p className="text-gray-400 text-sm relative">
+          Live Bluetooth OBD2 scanning, AI-powered diagnosis with consistent results, and one-click
+          estimate generation are included on the Pro plan ($299/mo). You're currently on Basic.
         </p>
-        <Button
-          onClick={() => (window.location.href = "/Billing")}
-          className="bg-fuchsia-600 hover:bg-fuchsia-700 text-white"
-        >
+        <Button onClick={() => (window.location.href = "/Billing")} className="bg-fuchsia-600 hover:bg-fuchsia-700 text-white relative">
           Upgrade to Pro
         </Button>
       </div>
     );
   }
 
+  // ── Main render ────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
       <style>{`
@@ -422,144 +414,82 @@ export default function Diagnostics() {
           .no-print { display: none !important; }
         }
       `}</style>
-      <PageHeader
-        title="Diagnostics"
-        subtitle="Read live OBD2 trouble codes with a Bluetooth adapter, get AI-powered fix guidance, and save the scan to the vehicle's history."
-      />
+
+      {/* ── Header ── */}
+      <div className="bg-gradient-to-br from-gray-900 to-gray-950 border border-gray-800 rounded-xl p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+              <Microscope className="w-6 h-6 text-fuchsia-400" />
+              LBC AUTO AI SCANNER
+            </h1>
+            <p className="text-sm text-gray-400 mt-1">Powered by LBC Auto AI</p>
+          </div>
+          <span className="bg-fuchsia-500/15 text-fuchsia-400 border border-fuchsia-500/30 rounded-full px-3 py-1 text-xs font-bold">
+            PRO
+          </span>
+        </div>
+      </div>
 
       {!bleSupported && (
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
           <div className="text-sm text-amber-200">
-            Your browser doesn't support Web Bluetooth. Use Chrome or Edge on Android or desktop — this feature isn't supported on iOS Safari.
+            Your browser doesn't support Web Bluetooth. Use Chrome or Edge on Android or desktop — not supported on iOS Safari.
           </div>
         </div>
       )}
 
-      {/* Vehicle selection */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
-        <h2 className="text-white font-semibold text-sm flex items-center gap-2">
-          <Search className="w-4 h-4 text-sky-400" /> Select customer & vehicle
-        </h2>
-        <div className="grid sm:grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <CustomerSearchInput
-              customers={customers}
-              value={customerId}
-              onChange={(id, name) => { setCustomerId(id); setCustomerName(name); }}
-            />
-            <button
-              onClick={() => setShowAddCustomer(true)}
-              className="text-xs text-sky-400 hover:text-sky-300 flex items-center gap-1"
-            >
-              <UserPlus className="w-3 h-3" /> New customer
-            </button>
-          </div>
-          <div className="space-y-1.5">
-            <select
-              value={vehicleId}
-              onChange={(e) => setVehicleId(e.target.value)}
-              disabled={!customerId}
-              className="bg-gray-800 border border-gray-700 text-white rounded-md px-3 py-2 text-sm disabled:opacity-50 w-full"
-            >
-              <option value="">{customerId ? "Select a vehicle..." : "Select a customer first"}</option>
-              {vehicles.map(v => (
-                <option key={v.id} value={v.id}>
-                  {v.year} {v.make} {v.model} {v.license_plate ? `— ${v.license_plate}` : ""}
-                </option>
-              ))}
-            </select>
-            <button
-              onClick={() => setShowAddVehicle(true)}
-              disabled={!customerId}
-              className="text-xs text-sky-400 hover:text-sky-300 flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <Car className="w-3 h-3" /> {customerId ? "Add vehicle to this customer" : "Select a customer first"}
-            </button>
-          </div>
-        </div>
+      {/* ── Vehicle + Connection ── */}
+      <div className="grid lg:grid-cols-2 gap-4">
+        <VehiclePanel
+          customers={customers}
+          customerId={customerId}
+          customerName={customerName}
+          vehicles={vehicles}
+          vehicleId={vehicleId}
+          selectedVehicle={selectedVehicle}
+          onCustomerChange={(id, name) => { setCustomerId(id); setCustomerName(name); }}
+          onVehicleChange={setVehicleId}
+          onAddCustomer={() => setShowAddCustomer(true)}
+          onAddVehicle={() => setShowAddVehicle(true)}
+        />
+        <ConnectionPanel
+          connState={connState}
+          adapterName={adapterName}
+          connError={connError}
+          readProgress={readProgress}
+          bleSupported={bleSupported}
+          onConnect={handleConnect}
+          onDisconnect={handleDisconnect}
+        />
       </div>
 
-      {/* Always-visible vehicle info banner */}
-      {selectedVehicle && (
-        <VehicleInfoBanner vehicle={selectedVehicle} customerName={customerName} />
+      {/* ── Action bar ── */}
+      <div className="flex gap-3 flex-wrap no-print">
+        <Button
+          onClick={handleReadCodes}
+          disabled={reading || connState !== "connected"}
+          className="bg-teal-500 hover:bg-teal-600 text-white gap-2"
+        >
+          {reading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+          LIVE SCAN
+        </Button>
+        <Button
+          onClick={() => setShowManualEntry(!showManualEntry)}
+          variant="outline"
+          className="border-gray-700 text-gray-300 gap-2"
+        >
+          <Type className="w-4 h-4" /> ENTER CODE MANUALLY
+        </Button>
+      </div>
+
+      {/* ── Manual entry ── */}
+      {showManualEntry && (
+        <ManualCodeEntry onSubmit={handleManualEntry} />
       )}
 
-      {/* Connection panel */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <h2 className="text-white font-semibold text-sm flex items-center gap-2">
-            {connState === "connected"
-              ? <BluetoothConnected className="w-4 h-4 text-emerald-400" />
-              : <Bluetooth className="w-4 h-4 text-sky-400" />}
-            OBD2 Adapter
-          </h2>
-          {connState === "connected" ? (
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 rounded-full px-3 py-1">
-                Connected — {adapterName}
-              </span>
-              <Button size="sm" variant="outline" onClick={handleDisconnect} className="border-gray-700 text-gray-300">
-                Disconnect
-              </Button>
-            </div>
-          ) : (
-            <Button
-              size="sm"
-              onClick={handleConnect}
-              disabled={!bleSupported || connState === "connecting"}
-              className="bg-sky-500 hover:bg-sky-600 text-white gap-2"
-            >
-              {connState === "connecting" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bluetooth className="w-4 h-4" />}
-              {connState === "connecting" ? "Connecting..." : "Connect Adapter"}
-            </Button>
-          )}
-        </div>
-
-        {connError && (
-          <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/30 rounded-md p-3">
-            {connError}
-          </div>
-        )}
-
-        {connState === "connected" && (
-          <div className="flex flex-col gap-2">
-          <div className="flex flex-wrap gap-3">
-            <Button
-              size="sm"
-              onClick={handleReadCodes}
-              disabled={reading}
-              className="bg-teal-500 hover:bg-teal-600 text-white gap-2"
-            >
-              {reading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-              {reading ? "Reading vehicle..." : "Read Codes & Live Data"}
-            </Button>
-            {dtcCodes.length > 0 && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleClearCodes}
-                disabled={clearing}
-                className="border-red-500/40 text-red-400 hover:bg-red-500/10 gap-2"
-              >
-                {clearing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                Clear Codes
-              </Button>
-            )}
-          </div>
-          {readProgress && (
-            <p className="text-xs text-muted-foreground italic">{readProgress}</p>
-          )}
-          </div>
-        )}
-        {clearedMsg && (
-          <div className="text-sm text-emerald-400 flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4" /> {clearedMsg}
-          </div>
-        )}
-      </div>
-
-      {/* Live data */}
+      {/* ── Live data ── */}
       {liveData && (
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
           <h2 className="text-white font-semibold text-sm flex items-center gap-2 mb-4">
@@ -576,327 +506,145 @@ export default function Diagnostics() {
         </div>
       )}
 
-      {/* DTC codes */}
-      {dtcCodes.length > 0 && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-white font-semibold text-sm flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-amber-400" /> Trouble Codes ({dtcCodes.length})
-              <span className="text-xs text-gray-500 font-normal">
-                {dtcCodes.filter(c => c.type === "stored").length} stored ·{" "}
+      {/* ── Scan results ── */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4 no-print">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <h2 className="text-white font-semibold text-sm flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-400" />
+            SCAN RESULTS
+            {dtcCodes.length > 0 && (
+              <span className="text-xs text-gray-500 font-normal ml-1">
+                ({dtcCodes.length} codes — {dtcCodes.filter(c => c.type === "stored").length} stored ·{" "}
                 {dtcCodes.filter(c => c.type === "pending").length} pending ·{" "}
-                {dtcCodes.filter(c => c.type === "permanent").length} permanent
+                {dtcCodes.filter(c => c.type === "permanent").length} permanent)
               </span>
-            </h2>
-            <Button
-              size="sm"
-              onClick={handleAnalyze}
-              disabled={analyzing}
-              className="bg-purple-500 hover:bg-purple-600 text-white gap-2"
-            >
-              {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-              {analyzing ? "Analyzing..." : "AI Analyze"}
-            </Button>
-          </div>
+            )}
+          </h2>
+          {dtcCodes.length > 0 && (
+            <div className="flex gap-2">
+              <Button onClick={handleAnalyze} disabled={analyzing} size="sm" className="bg-purple-500 hover:bg-purple-600 text-white gap-2">
+                {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                {analyzing ? "Analyzing..." : "AI ANALYZE"}
+              </Button>
+              <Button onClick={handleClearCodes} disabled={clearing} variant="outline" size="sm" className="border-red-500/40 text-red-400 hover:bg-red-500/10 gap-2">
+                {clearing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                Clear Codes
+              </Button>
+            </div>
+          )}
+        </div>
 
+        {clearedMsg && (
+          <div className="text-sm text-emerald-400 flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4" /> {clearedMsg}
+          </div>
+        )}
+
+        {dtcCodes.length === 0 ? (
+          <div className="bg-gray-800/40 border border-gray-700 border-dashed rounded-lg p-8 text-center">
+            <Microscope className="w-8 h-8 text-gray-600 mx-auto mb-2" />
+            <p className="text-gray-500 text-sm">No scan performed yet. Connect Vgate BLE and click LIVE SCAN, or enter codes manually.</p>
+          </div>
+        ) : (
           <div className="space-y-3">
             {dtcCodes.map((c, i) => {
-              const finding = analysis?.findings?.find(f => f.code === c.code);
+              const dbInfo = lookupDtc(c.code);
+              const aiInfo = dtcLookupResults[c.code];
+              const dtcInfo = dbInfo || aiInfo || null;
+              const loading = !dbInfo && !(c.code in dtcLookupResults);
               return (
-                <div key={i} className="bg-gray-800/60 border border-gray-700 rounded-lg p-4">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-white font-mono font-semibold">{c.code}</span>
-                      {c.type !== "stored" && (
-                        <span className={`text-[10px] uppercase tracking-wide border rounded-full px-2 py-0.5 ${
-                          c.type === "pending"
-                            ? "bg-yellow-500/15 text-yellow-400 border-yellow-500/30"
-                            : "bg-blue-500/15 text-blue-400 border-blue-500/30"
-                        }`}>
-                          {c.type}
-                        </span>
-                      )}
-                    </div>
-                    {finding?.urgency && (
-                      <span className={`text-xs border rounded-full px-2.5 py-0.5 ${URGENCY_STYLES[finding.urgency] || ""}`}>
-                        {finding.urgency}
-                      </span>
-                    )}
-                  </div>
-                  {finding ? (
-                    <div className="mt-2 space-y-2 text-sm">
-                      <p className="text-gray-300">{finding.plain_english}</p>
-                      {(finding.estimated_labor_hours || finding.estimated_labor_cost) && (
-                        <div className="flex flex-wrap gap-2">
-                          {finding.estimated_labor_hours != null && (
-                            <span className="text-xs bg-sky-500/10 text-sky-400 border border-sky-500/30 rounded-full px-2.5 py-0.5">
-                              ⏱ {finding.estimated_labor_hours} hrs labor
-                            </span>
-                          )}
-                          {finding.estimated_labor_cost != null && (
-                            <span className="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-full px-2.5 py-0.5">
-                              💰 ${finding.estimated_labor_cost.toFixed(2)}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                      {(finding.is_root_cause || finding.is_symptom) && (
-                        <div className="flex gap-1.5 flex-wrap">
-                          {finding.is_root_cause && (
-                            <span className="text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-full px-2 py-0.5">
-                              ⚡ ROOT CAUSE
-                            </span>
-                          )}
-                          {finding.is_symptom && (
-                            <span className="text-xs font-semibold bg-slate-500/20 text-slate-400 border border-slate-500/40 rounded-full px-2 py-0.5">
-                              ↓ Symptom (triggered by root cause)
-                            </span>
-                          )}
-                        </div>
-                      )}
-                       {finding.likely_causes?.length > 0 && (
-                         <div>
-                           <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">Likely causes</p>
-                          <ul className="list-disc list-inside text-gray-300 space-y-0.5">
-                            {finding.likely_causes.map((cause, j) => <li key={j}>{cause}</li>)}
-                          </ul>
-                        </div>
-                      )}
-                      {finding.recommended_fix_order?.length > 0 && (
-                        <div>
-                          <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">Recommended fix order</p>
-                          <ol className="list-decimal list-inside text-gray-300 space-y-0.5">
-                            {finding.recommended_fix_order.map((step, j) => <li key={j}>{step}</li>)}
-                          </ol>
-                        </div>
-                      )}
-                      {finding.parts_needed?.length > 0 && (
-                        <div>
-                          <p className="text-gray-500 text-xs uppercase tracking-wide mb-1 flex items-center gap-1">
-                            <Package className="w-3 h-3" /> Parts needed
-                          </p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {finding.parts_needed.map((p, j) => (
-                              <span key={j} className={`text-xs border rounded-full px-2 py-0.5 ${
-                                p.in_stock
-                                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-                                  : "bg-orange-500/10 text-orange-400 border-orange-500/30"
-                              }`}>
-                                {p.name}{p.estimated_cost != null ? ` — $${p.estimated_cost.toFixed(2)}` : ""} {p.in_stock ? "✓ In stock" : "⚠ Order"}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-gray-500 text-xs mt-2">Click "AI Analyze" for an explanation and fix guidance.</p>
-                  )}
-                </div>
+                <DtcCard
+                  key={i}
+                  codeObj={c}
+                  dtcInfo={dtcInfo}
+                  loading={loading}
+                  laborRate={laborRate}
+                  canCreate={!!vehicleId && !!customerId}
+                  creating={creatingAction[c.code]}
+                  onCreateEstimate={() => handleCreateEstimateFromCard(c.code, dtcInfo)}
+                  onAddToRepairOrder={() => handleAddToRepairOrderFromCard(c.code, dtcInfo)}
+                />
               );
             })}
           </div>
+        )}
+      </div>
 
-          {analysis?.summary && (
-            <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4 text-sm text-purple-200">
-              {analysis.summary}
-            </div>
-          )}
+      {/* ── AI Diagnosis ── */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4 no-print">
+        <h2 className="text-white font-semibold text-sm flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-purple-400" /> AI DIAGNOSIS
+        </h2>
 
-          {analysis?.root_cause_analysis && (
-            <div className="bg-amber-500/10 border border-amber-500/40 rounded-lg p-4 space-y-1">
-              <h3 className="text-amber-400 font-bold text-sm flex items-center gap-2 uppercase tracking-wide">
-                ⚡ Root Cause Analysis
-              </h3>
-              <p className="text-gray-200 text-sm leading-relaxed whitespace-pre-wrap">{analysis.root_cause_analysis}</p>
-            </div>
-          )}
+        {!analysis && !analyzing && (
+          <div className="bg-gray-800/40 border border-gray-700 border-dashed rounded-lg p-8 text-center">
+            <Sparkles className="w-8 h-8 text-gray-600 mx-auto mb-2" />
+            <p className="text-gray-500 text-sm">
+              {dtcCodes.length > 0
+                ? "Click AI ANALYZE above for a holistic root-cause analysis of all codes."
+                : "AI analysis will appear here after a scan."}
+            </p>
+          </div>
+        )}
 
-          {analysis?.inspection_decision && (
-            <div className={`rounded-lg p-4 space-y-3 ${
-              analysis.inspection_decision.go_no_go === "PROCEED"
-                ? "bg-emerald-500/10 border border-emerald-500/40"
-                : "bg-orange-500/10 border border-orange-500/40"
-            }`}>
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <h3 className="text-sm font-bold flex items-center gap-2 uppercase tracking-wide">
-                  {analysis.inspection_decision.go_no_go === "PROCEED"
-                    ? <span className="text-emerald-400 flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> ✅ PROCEED — Inspection Cleared</span>
-                    : <span className="text-orange-400 flex items-center gap-2"><AlertTriangle className="w-4 h-4" /> ⚠️ FURTHER DIAGNOSIS NEEDED</span>}
+        {analyzing && (
+          <div className="flex items-center justify-center gap-2 py-8">
+            <Loader2 className="w-5 h-5 text-purple-400 animate-spin" />
+            <span className="text-gray-400 text-sm">Analyzing codes...</span>
+          </div>
+        )}
+
+        {analysis && !analyzing && (
+          <>
+            {analysis.summary && (
+              <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4 text-sm text-purple-200">
+                {analysis.summary}
+              </div>
+            )}
+            {analysis.root_cause_analysis && (
+              <div className="bg-amber-500/10 border border-amber-500/40 rounded-lg p-4 space-y-1">
+                <h3 className="text-amber-400 font-bold text-sm flex items-center gap-2 uppercase tracking-wide">
+                  ⚡ Root Cause Analysis
                 </h3>
-                {analysis.inspection_decision.estimated_total_time != null && (
-                  <span className="text-xs bg-sky-500/10 text-sky-400 border border-sky-500/30 rounded-full px-2.5 py-0.5">
-                    ⏱ Total time est: {analysis.inspection_decision.estimated_total_time} hrs
-                  </span>
-                )}
+                <p className="text-gray-200 text-sm leading-relaxed whitespace-pre-wrap">{analysis.root_cause_analysis}</p>
               </div>
-              {analysis.inspection_decision.go_no_go_reason && (
-                <p className="text-gray-200 text-sm">{analysis.inspection_decision.go_no_go_reason}</p>
-              )}
-
-              <div className="grid md:grid-cols-2 gap-4 mt-3">
-                {analysis.inspection_decision.verifications_needed?.length > 0 && (
-                  <div className="space-y-1.5">
-                    <p className="text-xs uppercase tracking-wide text-sky-400 font-semibold flex items-center gap-1">
-                      <Search className="w-3 h-3" /> Verify Before Repairing
-                    </p>
-                    <ol className="list-decimal list-inside text-gray-300 text-sm space-y-0.5">
-                      {analysis.inspection_decision.verifications_needed.map((v, j) => <li key={j}>{v}</li>)}
-                    </ol>
-                  </div>
-                )}
-                {analysis.inspection_decision.pre_repair_checklist?.length > 0 && (
-                  <div className="space-y-1.5">
-                    <p className="text-xs uppercase tracking-wide text-purple-400 font-semibold flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3" /> Pre-Repair Checklist
-                    </p>
-                    <ol className="list-decimal list-inside text-gray-300 text-sm space-y-0.5">
-                      {analysis.inspection_decision.pre_repair_checklist.map((c, j) => <li key={j}>{c}</li>)}
-                    </ol>
-                  </div>
-                )}
-                {analysis.inspection_decision.tools_needed?.length > 0 && (
-                  <div className="space-y-1.5">
-                    <p className="text-xs uppercase tracking-wide text-amber-400 font-semibold flex items-center gap-1">
-                      <Package className="w-3 h-3" /> Tools Needed
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {analysis.inspection_decision.tools_needed.map((t, j) => (
-                        <span key={j} className="text-xs bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-full px-2 py-0.5">{t}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {analysis.inspection_decision.post_repair_steps?.length > 0 && (
-                  <div className="space-y-1.5">
-                    <p className="text-xs uppercase tracking-wide text-teal-400 font-semibold flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3" /> Post-Repair Verification
-                    </p>
-                    <ol className="list-decimal list-inside text-gray-300 text-sm space-y-0.5">
-                      {analysis.inspection_decision.post_repair_steps.map((s, j) => <li key={j}>{s}</li>)}
-                    </ol>
-                  </div>
-                )}
-              </div>
-
-              {analysis.inspection_decision.live_data_checks?.length > 0 && (
-                <div className="bg-sky-500/10 border border-sky-500/30 rounded-md p-3 mt-2">
-                  <p className="text-xs uppercase tracking-wide text-sky-400 font-bold flex items-center gap-1 mb-2">
-                    <Gauge className="w-3 h-3" /> Live Data — Sensors to Check
+            )}
+            {analysis.inspection_decision && (
+              <InspectionDecision decision={analysis.inspection_decision} />
+            )}
+            {analysis.shop_advice && (
+              <div className="bg-sky-500/10 border border-sky-500/30 rounded-lg p-4 space-y-2">
+                <h3 className="text-sky-400 font-semibold text-sm flex items-center gap-2">
+                  <Sparkles className="w-4 h-4" /> LBC Auto AI — Shop Advice
+                </h3>
+                {analysis.shop_advice.total_estimated_cost != null && (
+                  <p className="text-gray-300 text-sm">
+                    <span className="text-gray-500">Total estimated cost:</span>{" "}
+                    <span className="text-white font-bold">${analysis.shop_advice.total_estimated_cost.toFixed(2)}</span>
                   </p>
-                  <div className="space-y-2">
-                    {analysis.inspection_decision.live_data_checks.map((check, j) => (
-                      <div key={j} className="bg-gray-800/40 border border-gray-700 rounded-md p-2.5">
-                        <div className="flex items-center justify-between flex-wrap gap-2 mb-1">
-                          <span className="text-white text-sm font-semibold">{check.sensor}</span>
-                          {check.normal_range && (
-                            <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-full px-2 py-0.5">
-                              Normal: {check.normal_range}
-                            </span>
-                          )}
-                        </div>
-                        {check.what_to_look_for && (
-                          <p className="text-gray-300 text-xs">📋 {check.what_to_look_for}</p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {analysis.inspection_decision.safety_warnings?.length > 0 && (
-                <div className="bg-red-500/10 border border-red-500/30 rounded-md p-3 mt-2">
-                  <p className="text-xs uppercase tracking-wide text-red-400 font-bold flex items-center gap-1 mb-1">
-                    <AlertTriangle className="w-3 h-3" /> ⚠️ Safety Warnings
-                  </p>
-                  <ul className="list-disc list-inside text-red-200 text-sm space-y-0.5">
-                    {analysis.inspection_decision.safety_warnings.map((w, j) => <li key={j}>{w}</li>)}
-                  </ul>
-                </div>
-              )}
-            </div>
-          )}
-
-          {analysis?.shop_advice && (
-            <div className="bg-sky-500/10 border border-sky-500/30 rounded-lg p-4 space-y-2">
-              <h3 className="text-sky-400 font-semibold text-sm flex items-center gap-2">
-                <Sparkles className="w-4 h-4" /> LBC Auto AI — Shop Advice
-              </h3>
-              {analysis.shop_advice.total_estimated_cost != null && (
-                <p className="text-gray-300 text-sm">
-                  <span className="text-gray-500">Total estimated cost:</span>{" "}
-                  <span className="text-white font-bold">${analysis.shop_advice.total_estimated_cost.toFixed(2)}</span>
-                </p>
-              )}
-              {analysis.shop_advice.priority_order && (
-                <p className="text-gray-300 text-sm">
-                  <span className="text-gray-500">Priority:</span> {analysis.shop_advice.priority_order}
-                </p>
-              )}
-              {analysis.shop_advice.recommended_action && (
-                <p className="text-gray-300 text-sm">
-                  <span className="text-gray-500">Tell the customer:</span> {analysis.shop_advice.recommended_action}
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* LBC AI Chat — ask follow-up questions about the scan */}
-          <div className="bg-gray-800/40 border border-gray-700 rounded-lg p-4 space-y-3">
-            <h3 className="text-white font-semibold text-sm flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-purple-400" /> Ask LBC Auto AI
-            </h3>
-            <p className="text-xs text-gray-500">Ask follow-up questions about these codes, repair procedures, or parts — the AI knows your shop's labor rate and inventory.</p>
-
-            {chatMessages.length > 0 && (
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {chatMessages.map((m, i) => (
-                  <div key={i} className={m.role === "user" ? "flex justify-end" : "flex justify-start"}>
-                    <div className={`max-w-[85%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap ${
-                      m.role === "user"
-                        ? "bg-sky-500/20 text-sky-100"
-                        : "bg-gray-700/60 text-gray-200"
-                    }`}>
-                      {m.content}
-                    </div>
-                  </div>
-                ))}
-                {chatLoading && (
-                  <div className="flex justify-start">
-                    <div className="bg-gray-700/60 rounded-lg px-3 py-2">
-                      <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
-                    </div>
-                  </div>
+                )}
+                {analysis.shop_advice.priority_order && (
+                  <p className="text-gray-300 text-sm"><span className="text-gray-500">Priority:</span> {analysis.shop_advice.priority_order}</p>
+                )}
+                {analysis.shop_advice.recommended_action && (
+                  <p className="text-gray-300 text-sm"><span className="text-gray-500">Tell the customer:</span> {analysis.shop_advice.recommended_action}</p>
                 )}
               </div>
             )}
+            <ScannerChat
+              messages={chatMessages}
+              input={chatInput}
+              loading={chatLoading}
+              onInputChange={setChatInput}
+              onSend={handleChatSend}
+            />
+          </>
+        )}
+      </div>
 
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleChatSend()}
-                placeholder="e.g. What's the torque spec for the brake caliper bolts?"
-                disabled={chatLoading}
-                className="flex-1 bg-gray-800 border border-gray-700 text-white rounded-md px-3 py-2 text-sm placeholder:text-gray-600 focus:outline-none focus:border-sky-500"
-              />
-              <Button
-                size="sm"
-                onClick={handleChatSend}
-                disabled={chatLoading || !chatInput.trim()}
-                className="bg-purple-500 hover:bg-purple-600 text-white gap-2"
-              >
-                <Send className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Save */}
+      {/* ── Save / Print ── */}
       {(dtcCodes.length > 0 || liveData) && vehicleId && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-3">
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-3 no-print">
           <Textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
@@ -912,38 +660,13 @@ export default function Diagnostics() {
             <Button onClick={handlePrint} variant="outline" className="border-gray-700 text-gray-300 gap-2">
               <Printer className="w-4 h-4" /> Print Report
             </Button>
-            {analysis?.findings?.length > 0 && !createdEstimateId && (
-              <Button
-                onClick={handleCreateEstimate}
-                disabled={creatingEstimate}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
-              >
-                {creatingEstimate ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
-                {creatingEstimate ? "Creating estimate..." : "Create Estimate from Diagnosis"}
-              </Button>
-            )}
-            {createdEstimateId && (
-              <Button
-                onClick={() => navigate(`/EstimateDetail/${createdEstimateId}`)}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
-              >
-                View Draft Estimate <ArrowRight className="w-4 h-4" />
-              </Button>
-            )}
             {savedMsg && <span className="text-sm text-gray-400">{savedMsg}</span>}
           </div>
-          {estimateError && (
-            <p className="text-sm text-red-400">{estimateError}</p>
-          )}
         </div>
       )}
 
-      {/* Quick-add dialogs */}
-      <QuickAddCustomerDialog
-        open={showAddCustomer}
-        onClose={() => setShowAddCustomer(false)}
-        onSaved={handleCustomerCreated}
-      />
+      {/* ── Quick-add dialogs ── */}
+      <QuickAddCustomerDialog open={showAddCustomer} onClose={() => setShowAddCustomer(false)} onSaved={handleCustomerCreated} />
       <QuickAddVehicleDialog
         open={showAddVehicle}
         onClose={() => setShowAddVehicle(false)}
@@ -951,180 +674,17 @@ export default function Diagnostics() {
         customer={customerId ? { id: customerId, full_name: customerName } : null}
       />
 
-      {/* ── Print-only diagnostic report (hidden on screen) ── */}
-      <div id="diag-print-report" style={{ display: "none" }}>
-        <style>{`@media print { #diag-print-report { display: block !important; } }`}</style>
-
-        <div style={{ borderBottom: "2px solid #000", paddingBottom: 12, marginBottom: 16 }}>
-          <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>Diagnostic Scan Report</h1>
-          <p style={{ fontSize: 13, color: "#666", margin: "4px 0 0" }}>
-            Generated {new Date().toLocaleString()}
-          </p>
-        </div>
-
-        <table style={{ width: "100%", fontSize: 13, marginBottom: 16 }}>
-          <tbody>
-            <tr><td style={{ fontWeight: 700, width: 120, padding: "3px 0" }}>Customer:</td><td style={{ padding: "3px 0" }}>{customerName || "—"}</td></tr>
-            <tr><td style={{ fontWeight: 700, padding: "3px 0" }}>Vehicle:</td><td style={{ padding: "3px 0" }}>{reportVehicleInfo}</td></tr>
-            {selectedVehicle?.vin && <tr><td style={{ fontWeight: 700, padding: "3px 0" }}>VIN:</td><td style={{ padding: "3px 0" }}>{selectedVehicle.vin}</td></tr>}
-            {selectedVehicle?.license_plate && <tr><td style={{ fontWeight: 700, padding: "3px 0" }}>Plate:</td><td style={{ padding: "3px 0" }}>{selectedVehicle.license_plate}</td></tr>}
-            {selectedVehicle?.mileage !== undefined && <tr><td style={{ fontWeight: 700, padding: "3px 0" }}>Mileage:</td><td style={{ padding: "3px 0" }}>{selectedVehicle.mileage?.toLocaleString()} km</td></tr>}
-            {adapterName && <tr><td style={{ fontWeight: 700, padding: "3px 0" }}>Adapter:</td><td style={{ padding: "3px 0" }}>{adapterName}</td></tr>}
-          </tbody>
-        </table>
-
-        {liveData && (
-          <div style={{ marginBottom: 16 }}>
-            <h2 style={{ fontSize: 15, fontWeight: 700, borderBottom: "1px solid #ccc", paddingBottom: 4, marginBottom: 8 }}>Live Data Snapshot</h2>
-            <table style={{ width: "100%", fontSize: 13 }}>
-              <tbody>
-                {liveData.rpm !== undefined && <tr><td style={{ padding: "2px 0", width: 180 }}>RPM</td><td style={{ padding: "2px 0" }}>{Math.round(liveData.rpm)}</td></tr>}
-                {liveData.speed_kph !== undefined && <tr><td style={{ padding: "2px 0" }}>Speed</td><td style={{ padding: "2px 0" }}>{liveData.speed_kph} km/h</td></tr>}
-                {liveData.coolant_temp_c !== undefined && <tr><td style={{ padding: "2px 0" }}>Coolant Temp</td><td style={{ padding: "2px 0" }}>{liveData.coolant_temp_c}°C</td></tr>}
-                {liveData.intake_temp_c !== undefined && <tr><td style={{ padding: "2px 0" }}>Intake Temp</td><td style={{ padding: "2px 0" }}>{liveData.intake_temp_c}°C</td></tr>}
-                {liveData.engine_load_pct !== undefined && <tr><td style={{ padding: "2px 0" }}>Engine Load</td><td style={{ padding: "2px 0" }}>{liveData.engine_load_pct}%</td></tr>}
-                {liveData.fuel_level_pct !== undefined && <tr><td style={{ padding: "2px 0" }}>Fuel Level</td><td style={{ padding: "2px 0" }}>{liveData.fuel_level_pct}%</td></tr>}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {dtcCodes.length > 0 && (
-          <div style={{ marginBottom: 16 }}>
-            <h2 style={{ fontSize: 15, fontWeight: 700, borderBottom: "1px solid #ccc", paddingBottom: 4, marginBottom: 8 }}>
-              Trouble Codes ({dtcCodes.length})
-            </h2>
-            {dtcCodes.map((c, i) => {
-              const finding = analysis?.findings?.find(f => f.code === c.code);
-              return (
-                <div key={i} style={{ marginBottom: 12, paddingBottom: 12, borderBottom: "1px solid #eee" }}>
-                  <div style={{ fontWeight: 700, fontSize: 14 }}>
-                    {c.code} <span style={{ fontSize: 11, textTransform: "uppercase", color: "#666" }}>[{c.type}]</span>
-                  </div>
-                  {finding && (
-                    <div style={{ fontSize: 13, marginTop: 4 }}>
-                      <p style={{ margin: "2px 0" }}>{finding.plain_english}</p>
-                      {finding.urgency && <p style={{ margin: "2px 0" }}><strong>Urgency:</strong> {finding.urgency}</p>}
-                      {finding.likely_causes?.length > 0 && (
-                        <div style={{ margin: "4px 0" }}>
-                          <strong>Likely causes:</strong>
-                          <ol style={{ margin: "2px 0 2px 20px", padding: 0 }}>
-                            {finding.likely_causes.map((cause, j) => <li key={j}>{cause}</li>)}
-                          </ol>
-                        </div>
-                      )}
-                      {finding.recommended_fix_order?.length > 0 && (
-                        <div style={{ margin: "4px 0" }}>
-                          <strong>Recommended fix order:</strong>
-                          <ol style={{ margin: "2px 0 2px 20px", padding: 0 }}>
-                            {finding.recommended_fix_order.map((step, j) => <li key={j}>{step}</li>)}
-                          </ol>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {analysis?.inspection_decision && (
-          <div style={{ marginBottom: 16, padding: 12, border: analysis.inspection_decision.go_no_go === "PROCEED" ? "2px solid #16a34a" : "2px solid #ea580c", background: analysis.inspection_decision.go_no_go === "PROCEED" ? "#f0fdf4" : "#fff7ed", fontSize: 13 }}>
-            <strong style={{ fontSize: 14, color: analysis.inspection_decision.go_no_go === "PROCEED" ? "#16a34a" : "#ea580c" }}>
-              {analysis.inspection_decision.go_no_go === "PROCEED" ? "✅ PROCEED — Inspection Cleared" : "⚠️ FURTHER DIAGNOSIS NEEDED"}
-            </strong>
-            {analysis.inspection_decision.go_no_go_reason && <p style={{ margin: "4px 0" }}>{analysis.inspection_decision.go_no_go_reason}</p>}
-            {analysis.inspection_decision.verifications_needed?.length > 0 && (
-              <div style={{ margin: "6px 0" }}>
-                <strong>Verify Before Repairing:</strong>
-                <ol style={{ margin: "2px 0 2px 20px", padding: 0 }}>
-                  {analysis.inspection_decision.verifications_needed.map((v, j) => <li key={j}>{v}</li>)}
-                </ol>
-              </div>
-            )}
-            {analysis.inspection_decision.pre_repair_checklist?.length > 0 && (
-              <div style={{ margin: "6px 0" }}>
-                <strong>Pre-Repair Checklist:</strong>
-                <ol style={{ margin: "2px 0 2px 20px", padding: 0 }}>
-                  {analysis.inspection_decision.pre_repair_checklist.map((c, j) => <li key={j}>{c}</li>)}
-                </ol>
-              </div>
-            )}
-            {analysis.inspection_decision.tools_needed?.length > 0 && (
-              <div style={{ margin: "6px 0" }}>
-                <strong>Tools Needed:</strong> {analysis.inspection_decision.tools_needed.join(", ")}
-              </div>
-            )}
-            {analysis.inspection_decision.safety_warnings?.length > 0 && (
-              <div style={{ margin: "6px 0", color: "#dc2626" }}>
-                <strong>⚠️ Safety Warnings:</strong>
-                <ul style={{ margin: "2px 0 2px 20px", padding: 0 }}>
-                  {analysis.inspection_decision.safety_warnings.map((w, j) => <li key={j}>{w}</li>)}
-                </ul>
-              </div>
-            )}
-            {analysis.inspection_decision.post_repair_steps?.length > 0 && (
-              <div style={{ margin: "6px 0" }}>
-                <strong>Post-Repair Verification:</strong>
-                <ol style={{ margin: "2px 0 2px 20px", padding: 0 }}>
-                  {analysis.inspection_decision.post_repair_steps.map((s, j) => <li key={j}>{s}</li>)}
-                </ol>
-              </div>
-            )}
-            {analysis.inspection_decision.live_data_checks?.length > 0 && (
-              <div style={{ margin: "6px 0" }}>
-                <strong>Live Data — Sensors to Check:</strong>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-                  <thead>
-                    <tr style={{ borderBottom: "1px solid #ccc" }}>
-                      <th style={{ textAlign: "left", padding: "2px 4px" }}>Sensor</th>
-                      <th style={{ textAlign: "left", padding: "2px 4px" }}>What to Look For</th>
-                      <th style={{ textAlign: "left", padding: "2px 4px" }}>Normal Range</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {analysis.inspection_decision.live_data_checks.map((c, j) => (
-                      <tr key={j} style={{ borderBottom: "1px solid #eee" }}>
-                        <td style={{ padding: "3px 4px", fontWeight: 600 }}>{c.sensor}</td>
-                        <td style={{ padding: "3px 4px" }}>{c.what_to_look_for}</td>
-                        <td style={{ padding: "3px 4px" }}>{c.normal_range || "—"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            {analysis.inspection_decision.estimated_total_time != null && (
-              <p style={{ margin: "4px 0 0" }}><strong>Estimated Total Time:</strong> {analysis.inspection_decision.estimated_total_time} hours</p>
-            )}
-          </div>
-        )}
-
-        {analysis?.summary && (
-          <div style={{ marginBottom: 16, padding: 12, border: "1px solid #ccc", fontSize: 13 }}>
-            <strong>Summary:</strong> {analysis.summary}
-          </div>
-        )}
-
-        {analysis?.root_cause_analysis && (
-          <div style={{ marginBottom: 16, padding: 12, border: "2px solid #f59e0b", background: "#fffbeb", fontSize: 13 }}>
-            <strong style={{ color: "#b45309", textTransform: "uppercase", letterSpacing: "0.05em" }}>⚡ Root Cause Analysis</strong>
-            <p style={{ margin: "6px 0 0", whiteSpace: "pre-wrap" }}>{analysis.root_cause_analysis}</p>
-          </div>
-        )}
-
-        {notes && (
-          <div style={{ marginBottom: 16 }}>
-            <h2 style={{ fontSize: 15, fontWeight: 700, borderBottom: "1px solid #ccc", paddingBottom: 4, marginBottom: 8 }}>Technician Notes</h2>
-            <p style={{ fontSize: 13, whiteSpace: "pre-wrap" }}>{notes}</p>
-          </div>
-        )}
-
-        <div style={{ marginTop: 24, paddingTop: 12, borderTop: "1px solid #ccc", fontSize: 11, color: "#999", textAlign: "center" }}>
-          LBC Auto · Diagnostic Report
-        </div>
-      </div>
+      {/* ── Print report ── */}
+      <ScannerPrintReport
+        customerName={customerName}
+        vehicleInfo={reportVehicleInfo}
+        selectedVehicle={selectedVehicle}
+        adapterName={adapterName}
+        liveData={liveData}
+        dtcCodes={dtcCodes}
+        analysis={analysis}
+        notes={notes}
+      />
     </div>
   );
 }

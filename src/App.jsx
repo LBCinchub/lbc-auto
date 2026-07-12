@@ -139,7 +139,7 @@ const UpdateBanner = ({ user }) => {
                 <span style={{ color:"#e879f9", fontSize:11, fontWeight:700, letterSpacing:"0.06em" }}>NOW LIVE</span>
               </div>
               <h2 style={{ color:"#f1f5f9", fontSize:17, fontWeight:800, margin:0, lineHeight:1.2 }}>
-                AI Diagnostics is here
+                LBC AUTO AI SCANNER is here
               </h2>
             </div>
           </div>
@@ -154,7 +154,7 @@ const UpdateBanner = ({ user }) => {
               How the scan works now
             </p>
             {[
-              ["1","Connect", "Open Diagnostics → pair your BLE OBD2 scanner (e.g. Vgate iCar Pro) over Bluetooth, right in Chrome/Edge"],
+              ["1","Connect", "Open Scanner → pair your BLE OBD2 scanner (e.g. Vgate iCar Pro) over Bluetooth, right in Chrome/Edge"],
               ["2","Scan", "Pull live fault codes (DTCs) and real-time data — RPM, speed, coolant temp — straight off the vehicle"],
               ["3","AI Explains", "Lumina translates each code into plain-English cause + recommended fix"],
               ["4","Auto-Estimate", "One click turns the findings into a draft Estimate using your shop's labor rates & parts"],
@@ -224,7 +224,7 @@ const UpdateBanner = ({ user }) => {
               border:"none", borderRadius:10, cursor:"pointer",
               boxShadow:"0 4px 15px rgba(217,70,239,0.35)",
             }}>
-              🩺 Try Diagnostics →
+              🩺 Try Scanner →
             </button>
             <button onClick={dismiss} style={{
               flex:1, padding:"11px 0",

@@ -27,11 +27,11 @@ const KNOWN_UART_PROFILES = [
     write: "6e400002-b5a3-f393-e0a9-e50e24dcca9e",
     notify: "6e400003-b5a3-f393-e0a9-e50e24dcca9e",
   },
-  // Generic "FFF0" service — many HC-08/JDY based OBD BLE readers
+  // Vgate iCar Pro 2S / HC-08 / JDY OBD BLE readers (FFF0 service)
   {
     service: "0000fff0-0000-1000-8000-00805f9b34fb",
-    write: "0000fff2-0000-1000-8000-00805f9b34fb",
-    notify: "0000fff1-0000-1000-8000-00805f9b34fb",
+    write: "0000fff1-0000-1000-8000-00805f9b34fb",
+    notify: "0000fff2-0000-1000-8000-00805f9b34fb",
   },
 ];
 
@@ -100,8 +100,10 @@ export class ELM327Client {
     await this._sendCommand("ATZ", 2000);   // reset
     await this._sendCommand("ATE0");        // echo off
     await this._sendCommand("ATL0");        // linefeeds off
+    await this._sendCommand("ATS0");        // spaces off
     await this._sendCommand("ATH0");        // headers off
     await this._sendCommand("ATSP0", 5000);  // auto-detect protocol
+    await this._sendCommand("0100", 5000);  // test connection
 
     return { name: this.device.name || "OBD2 Adapter" };
   }
