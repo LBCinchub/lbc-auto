@@ -126,7 +126,7 @@ export default function Dashboard() {
 
 
       {/* Web Bookings — connected site indicator */}
-      <WebBookings appointments={appointments} />
+      <WebBookings appointments={appointments} user={user} />
 
       {/* 4-widget scrollable grid — single source, no duplication */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
