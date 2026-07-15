@@ -12,6 +12,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, Loader2, X, Search, CheckCircle2, CreditCard, Save } from "lucide-react";
 import { useNhtsaVinDecode } from "@/hooks/useNhtsaVinDecode";
 import { useToast } from "@/components/ui/use-toast";
+import { toTitleCase, capitalizeFields, capitalizeArrayItems } from "@/utils/capitalize";
 
 const emptyLaborRow = () => ({ description: "", hours: "", rate: "120", total: 0 });
 const emptyPartRow  = () => ({ name: "", part_number: "", quantity: "", unit_price: "", total: 0 });
@@ -272,7 +273,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
   const saveNewCustomer = async () => {
     if (!newCustomerForm?.full_name || !newCustomerForm?.phone) return;
     const created = await base44.entities.Customer.create({
-      full_name: newCustomerForm.full_name,
+      full_name: toTitleCase(newCustomerForm.full_name || ""),
       phone: newCustomerForm.phone,
       email: newCustomerForm.email || "",
     });
@@ -305,12 +306,12 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
       customer_id: form.customer_id,
       customer_name: form.customer_name,
       vin: newVehicleForm.vin || "",
-      make: newVehicleForm.make,
-      model: newVehicleForm.model,
+      make: toTitleCase(newVehicleForm.make || ""),
+      model: toTitleCase(newVehicleForm.model || ""),
       year: Number(newVehicleForm.year),
       license_plate: newVehicleForm.license_plate || "",
-      color: newVehicleForm.color || "",
-      engine_type: newVehicleForm.engine_type || "",
+      color: toTitleCase(newVehicleForm.color || ""),
+      engine_type: toTitleCase(newVehicleForm.engine_type || ""),
     });
     setLocalVehicles(prev => [...prev, created]);
     setForm(f => ({ ...f, vehicle_id: created.id, vehicle_info: `${created.year} ${created.make} ${created.model}` }));
@@ -370,6 +371,10 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
         tax_amount: Math.round(taxAmount * 100) / 100,
         grand_total: Math.round(grandTotal * 100) / 100,
       };
+      // Capitalize text fields
+      Object.assign(payload, capitalizeFields(payload, ["customer_name", "vehicle_info", "service_reason", "notes"]));
+      payload.labor_items = capitalizeArrayItems(payload.labor_items, ["description"]);
+      payload.parts_items = capitalizeArrayItems(payload.parts_items, ["name"]);
 
       if (estimate && estimate.id) {
         await base44.entities.Estimate.update(estimate.id, payload);

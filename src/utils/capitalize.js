@@ -15,3 +15,29 @@ export function capWords(e, setter, field) {
     setter(capped);
   }
 }
+
+// Capitalize specified string fields in a data object (returns shallow copy)
+export function capitalizeFields(data, fields) {
+  const result = { ...data };
+  for (const f of fields) {
+    if (typeof result[f] === "string" && result[f].trim()) {
+      result[f] = toTitleCase(result[f]);
+    }
+  }
+  return result;
+}
+
+// Capitalize specified string fields in each item of an array (returns new array)
+export function capitalizeArrayItems(arr, fields) {
+  if (!Array.isArray(arr)) return arr;
+  return arr.map(item => {
+    if (!item || typeof item !== "object") return item;
+    const result = { ...item };
+    for (const f of fields) {
+      if (typeof result[f] === "string" && result[f].trim()) {
+        result[f] = toTitleCase(result[f]);
+      }
+    }
+    return result;
+  });
+}

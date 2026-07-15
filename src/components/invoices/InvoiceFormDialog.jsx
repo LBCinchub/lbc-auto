@@ -14,6 +14,7 @@ import { useNhtsaVinDecode } from "@/hooks/useNhtsaVinDecode";
 import { fuzzyMatch } from "@/utils/fuzzySearch";
 import TechnicianNotes from "@/components/invoices/TechnicianNotes";
 import PaymentReceiptDialog from "@/components/invoices/PaymentReceiptDialog";
+import { capitalizeFields, capitalizeArrayItems } from "@/utils/capitalize";
 
 const emptyForm = {
   repair_order_id: "", estimate_id: "", customer_id: "", customer_name: "", customer_phone: "", vehicle_info: "",
@@ -405,6 +406,10 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
     }
 
     const data = { ...form, customer_id: resolvedCustomerId, vehicle_id: resolvedVehicleId, invoice_number: invoiceNum, labor_items: laborItems, parts_used, labor_total: Math.round(laborTotal * 100) / 100, parts_total: Math.round(partsTotal * 100) / 100, tax_amount: safeTax, total: safeTotal, balance_due: finalStatus === "paid" ? 0 : safeBalance, status: finalStatus, paid_date: paidDate, payment_history: paymentHistory, line_items, estimate_id: form.estimate_id || sourceEstimate?.id || "", technician_notes: form.technician_notes || "" };
+    // Capitalize text fields
+    Object.assign(data, capitalizeFields(data, ["customer_name", "vehicle_info", "service_reason", "customer_note", "technician_notes"]));
+    data.line_items = capitalizeArrayItems(data.line_items, ["description"]);
+    data.parts_used = capitalizeArrayItems(data.parts_used, ["name"]);
 
     if (invoice && invoice.id) {
       await base44.entities.Invoice.update(invoice.id, data);

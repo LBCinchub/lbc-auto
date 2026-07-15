@@ -17,7 +17,7 @@ import { useNhtsaVinDecode } from "@/hooks/useNhtsaVinDecode";
 import { useToast } from "@/components/ui/use-toast";
 
 import CustomerSearchInput from "@/components/shared/CustomerSearchInput";
-import { capWords } from "@/utils/capitalize";
+import { capWords, toTitleCase, capitalizeFields, capitalizeArrayItems } from "@/utils/capitalize";
 
 const statuses = [
   { value: "waiting", label: "Waiting" },
@@ -27,9 +27,6 @@ const statuses = [
   { value: "delivered", label: "Delivered" },
 ];
 
-
-// Auto-capitalise: first letter of every word
-const toTitleCase = (str) => str.replace(/\b\w/g, c => c.toUpperCase());
 
 export default function RepairOrderFormDialog({ open, onClose, order, onSaved, onPartAdded, customers, vehicles, mechanics, parts }) {
   const [form, setForm] = useState({
@@ -326,6 +323,10 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         custom_total: form.custom_total,
         order_number: order?.order_number || `RO-${Date.now().toString(36).toUpperCase()}`,
       };
+      // Capitalize text fields
+      Object.assign(data, capitalizeFields(data, ["customer_name", "vehicle_info", "description", "notes"]));
+      data.labor_items = capitalizeArrayItems(data.labor_items, ["description"]);
+      data.parts_used = capitalizeArrayItems(data.parts_used, ["name"]);
 
       let savedOrderId = order?.id;
       if (order && order.id) {

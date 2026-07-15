@@ -14,7 +14,7 @@ import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
 import { FileText, Wrench, Receipt, CheckCircle2, CalendarDays } from "lucide-react";
 import { useNhtsaVinDecode } from "@/hooks/useNhtsaVinDecode";
-import { capWords } from "@/utils/capitalize";
+import { capWords, capitalizeFields } from "@/utils/capitalize";
 
 export default function CustomerFormDialog({ open, onClose, customer, onSaved, onQuickAction }) {
   const navigate = useNavigate();
@@ -57,26 +57,27 @@ export default function CustomerFormDialog({ open, onClose, customer, onSaved, o
     setSaving(true);
     try {
       let newCustomer;
+      const cappedForm = capitalizeFields(form, ["full_name", "address"]);
 
       if (customer) {
         // ── EDIT: save customer first, then propagate in background ──
         const user = await base44.auth.me();
         await base44.entities.Customer.update(customer.id, {
-          ...form,
+          ...cappedForm,
           shop_owner_email: user?.email || undefined,
         });
-        newCustomer = { id: customer.id, ...form };
+        newCustomer = { id: customer.id, ...cappedForm };
 
         const customerChanged =
-          customer.full_name !== form.full_name ||
-          customer.phone     !== form.phone ||
-          customer.email     !== form.email;
+          customer.full_name !== cappedForm.full_name ||
+          customer.phone     !== cappedForm.phone ||
+          customer.email     !== cappedForm.email;
 
         if (customerChanged) {
           const recordUpdate = {
-            customer_name:  form.full_name,
-            customer_phone: form.phone  || "",
-            customer_email: form.email  || "",
+            customer_name:  cappedForm.full_name,
+            customer_phone: cappedForm.phone  || "",
+            customer_email: cappedForm.email  || "",
           };
           // Fire propagation in background — don't block the save
           (async () => {
@@ -106,18 +107,19 @@ export default function CustomerFormDialog({ open, onClose, customer, onSaved, o
         // ── NEW CUSTOMER: create immediately, vehicle in parallel ──
         const user = await base44.auth.me();
         newCustomer = await base44.entities.Customer.create({
-          ...form,
+          ...cappedForm,
           shop_owner_email: user?.email || undefined,
         });
 
         let createdVehicleData = null;
         if (addVehicle && vehicleForm.make && vehicleForm.model && vehicleForm.year) {
           try {
+            const cappedVehicleForm = capitalizeFields(vehicleForm, ["make", "model", "color", "engine_type"]);
             createdVehicleData = await base44.entities.Vehicle.create({
-              ...vehicleForm,
+              ...cappedVehicleForm,
               year: Number(vehicleForm.year),
               customer_id: newCustomer.id,
-              customer_name: form.full_name,
+              customer_name: cappedForm.full_name,
             });
           } catch (_) {}
         }

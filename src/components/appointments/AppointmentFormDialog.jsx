@@ -13,7 +13,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Search, User, Plus, Loader2, X, ClipboardList, Wrench, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useNhtsaVinDecode } from "@/hooks/useNhtsaVinDecode";
-import { capWords } from "@/utils/capitalize";
+import { capWords, toTitleCase, capitalizeFields } from "@/utils/capitalize";
 import AppointmentConfirmModal from "./AppointmentConfirmModal";
 
 const timeSlots = [
@@ -160,7 +160,7 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
   const saveNewCustomer = async () => {
     if (!newCustomerForm?.full_name || !newCustomerForm?.phone) return;
     const created = await base44.entities.Customer.create({
-      full_name: newCustomerForm.full_name,
+      full_name: toTitleCase(newCustomerForm.full_name || ""),
       phone: newCustomerForm.phone,
       email: newCustomerForm.email || "",
     });
@@ -192,12 +192,12 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
       customer_id: form.customer_id,
       customer_name: form.customer_name,
       vin: newVehicleForm.vin || "",
-      make: newVehicleForm.make,
-      model: newVehicleForm.model,
+      make: toTitleCase(newVehicleForm.make || ""),
+      model: toTitleCase(newVehicleForm.model || ""),
       year: Number(newVehicleForm.year),
       license_plate: newVehicleForm.license_plate || "",
-      color: newVehicleForm.color || "",
-      engine_type: newVehicleForm.engine_type || "",
+      color: toTitleCase(newVehicleForm.color || ""),
+      engine_type: toTitleCase(newVehicleForm.engine_type || ""),
     });
     // Add to local cache so vehicle appears in dropdown immediately
     setLocalVehicles(prev => [...prev, created]);
@@ -221,7 +221,7 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
       }
     }
     setSaving(true);
-    const payload = { ...form, shop_email: shopEmail };
+    const payload = capitalizeFields({ ...form, shop_email: shopEmail }, ["customer_name", "vehicle_info", "service_type", "notes", "mechanic_name"]);
     const isNew = !(appointment && appointment.id && !appointment._prefillCustomerId);
     if (!isNew) {
       await base44.entities.Appointment.update(appointment.id, payload);

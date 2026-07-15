@@ -170,25 +170,41 @@ export default function Analytics() {
   }).filter(m => !filterMechanic || m.id === filterMechanic);
 
   // Daily cash vs card vs e-transfer report
-  // Always use amount_paid per invoice (never sum payment_history entries — that causes double counting).
-  // Use paid_date for the date bucket and payment_method for the method breakdown.
+  // Iterate individual payment_history entries so only payments made on a given
+  // day are counted — not the full amount_paid which includes previous down payments.
   const dailyPayments = {};
   invoices.forEach(inv => {
     if (inv.status !== "paid" && inv.status !== "partial") return;
-    const amount = inv.amount_paid || 0;
-    if (amount <= 0) return;
-
-    const day = inv.paid_date || inv.created_date?.substring(0, 10);
-    if (!day) return;
-    if (!dailyPayments[day]) dailyPayments[day] = { date: day, cash: 0, card: 0, etransfer: 0 };
-
-    const method = inv.payment_method?.toLowerCase() || "";
-    if (method === "e-transfer" || method === "etransfer") {
-      dailyPayments[day].etransfer += amount;
-    } else if (method === "card" || inv.card_last4) {
-      dailyPayments[day].card += amount;
-    } else {
-      dailyPayments[day].cash += amount;
+    const history = inv.payment_history || [];
+    if (history.length > 0) {
+      history.forEach(p => {
+        const amount = parseFloat(p.amount) || 0;
+        if (amount <= 0) return;
+        const day = (p.date || "").split("T")[0];
+        if (!day) return;
+        if (!dailyPayments[day]) dailyPayments[day] = { date: day, cash: 0, card: 0, etransfer: 0 };
+        const method = (p.method || "").toLowerCase();
+        if (method === "e-transfer" || method === "etransfer") {
+          dailyPayments[day].etransfer += amount;
+        } else if (method === "card") {
+          dailyPayments[day].card += amount;
+        } else {
+          dailyPayments[day].cash += amount;
+        }
+      });
+    } else if (inv.amount_paid > 0 && inv.paid_date) {
+      // Fallback for legacy records without payment_history
+      const day = inv.paid_date.split("T")[0];
+      const amount = parseFloat(inv.amount_paid) || 0;
+      if (!dailyPayments[day]) dailyPayments[day] = { date: day, cash: 0, card: 0, etransfer: 0 };
+      const method = inv.payment_method?.toLowerCase() || "";
+      if (method === "e-transfer" || method === "etransfer") {
+        dailyPayments[day].etransfer += amount;
+      } else if (method === "card" || inv.card_last4) {
+        dailyPayments[day].card += amount;
+      } else {
+        dailyPayments[day].cash += amount;
+      }
     }
   });
   const today = new Date().toISOString().substring(0, 10);
@@ -1373,40 +1389,51 @@ export default function Analytics() {
             </DialogTitle>
           </DialogHeader>
           {(() => {
-            // All paid/partial invoices for the selected day
-            const dayInvoices = invoices.filter(inv => {
-              if (inv.status !== "paid" && inv.status !== "partial") return false;
-              const day = inv.paid_date || inv.created_date?.substring(0, 10);
-              return day === selectedDay;
+            // Flatten individual payment_history entries for the selected day
+            const dayPayments = [];
+            invoices.forEach(inv => {
+              if (inv.status !== "paid" && inv.status !== "partial") return;
+              const history = inv.payment_history || [];
+              if (history.length > 0) {
+                history.forEach(p => {
+                  const day = (p.date || "").split("T")[0];
+                  if (day !== selectedDay) return;
+                  const amount = parseFloat(p.amount) || 0;
+                  if (amount <= 0) return;
+                  const m = (p.method || "").toLowerCase();
+                  const methodKey = m === "e-transfer" || m === "etransfer" ? "etransfer" : m === "card" ? "card" : "cash";
+                  dayPayments.push({ invoice: inv, amount, method: methodKey });
+                });
+              } else if (inv.amount_paid > 0 && inv.paid_date) {
+                const day = inv.paid_date.split("T")[0];
+                if (day !== selectedDay) return;
+                const amount = parseFloat(inv.amount_paid) || 0;
+                if (amount <= 0) return;
+                const m = inv.payment_method?.toLowerCase() || "";
+                const methodKey = m === "e-transfer" || m === "etransfer" ? "etransfer" : (m === "card" || inv.card_last4) ? "card" : "cash";
+                dayPayments.push({ invoice: inv, amount, method: methodKey });
+              }
             });
-
-            // Classify each invoice into a method bucket
-            const classify = (inv) => {
-              const m = inv.payment_method?.toLowerCase() || "";
-              if (m === "e-transfer" || m === "etransfer") return "etransfer";
-              if (m === "card" || inv.card_last4) return "card";
-              return "cash";
-            };
 
             // Filter by selected method (or show all grouped)
             const filtered = paymentMethodModal === "all"
-              ? dayInvoices
-              : dayInvoices.filter(inv => classify(inv) === paymentMethodModal);
+              ? dayPayments
+              : dayPayments.filter(p => p.method === paymentMethodModal);
 
             if (filtered.length === 0) {
-              return <p className="text-gray-400 text-sm py-4 text-center">No invoices found for this date / method.</p>;
+              return <p className="text-gray-400 text-sm py-4 text-center">No payments found for this date / method.</p>;
             }
 
             // Group by method for "all" view; single group otherwise
             const groups = paymentMethodModal === "all"
               ? [
-                  { key: "cash",      label: "Cash 💵",       invoices: filtered.filter(i => classify(i) === "cash") },
-                  { key: "card",      label: "Card 💳",       invoices: filtered.filter(i => classify(i) === "card") },
-                  { key: "etransfer", label: "E-Transfer 📧", invoices: filtered.filter(i => classify(i) === "etransfer") },
-                ].filter(g => g.invoices.length > 0)
-              : [{ key: paymentMethodModal, label: paymentMethodModal === "etransfer" ? "E-Transfer 📧" : paymentMethodModal === "card" ? "Card 💳" : "Cash 💵", invoices: filtered }];
+                  { key: "cash",      label: "Cash 💵",       payments: filtered.filter(p => p.method === "cash") },
+                  { key: "card",      label: "Card 💳",       payments: filtered.filter(p => p.method === "card") },
+                  { key: "etransfer", label: "E-Transfer 📧", payments: filtered.filter(p => p.method === "etransfer") },
+                ].filter(g => g.payments.length > 0)
+              : [{ key: paymentMethodModal, label: paymentMethodModal === "etransfer" ? "E-Transfer 📧" : paymentMethodModal === "card" ? "Card 💳" : "Cash 💵", payments: filtered }];
 
-            const grandTotal = filtered.reduce((s, i) => s + (i.amount_paid || 0), 0);
+            const grandTotal = filtered.reduce((s, p) => s + p.amount, 0);
 
             return (
               <div className="space-y-4 mt-2">
@@ -1419,23 +1446,23 @@ export default function Analytics() {
                           <th className="text-left text-xs text-gray-500 px-3 py-1.5">Invoice #</th>
                           <th className="text-left text-xs text-gray-500 px-3 py-1.5">Customer</th>
                           <th className="text-left text-xs text-gray-500 px-3 py-1.5">Vehicle</th>
-                          <th className="text-right text-xs text-gray-500 px-3 py-1.5">Amount Paid</th>
+                          <th className="text-right text-xs text-gray-500 px-3 py-1.5">Amount</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {group.invoices.map(inv => (
-                          <tr key={inv.id} className="border-b border-gray-800/40 hover:bg-gray-800/30 cursor-pointer"
-                            onClick={() => { setPaymentMethodModal(null); window.location.href = `/InvoiceDetail/${inv.id}`; }}>
-                            <td className="px-3 py-2 text-sky-400 font-mono font-semibold">{inv.invoice_number || inv.id.slice(0, 8)}</td>
-                            <td className="px-3 py-2 text-gray-200">{inv.customer_name}</td>
-                            <td className="px-3 py-2 text-gray-400 text-xs">{inv.vehicle_info || "—"}</td>
-                            <td className="px-3 py-2 text-right text-emerald-400 font-semibold">${(inv.amount_paid || 0).toFixed(2)}</td>
+                        {group.payments.map((p, i) => (
+                          <tr key={i} className="border-b border-gray-800/40 hover:bg-gray-800/30 cursor-pointer"
+                            onClick={() => { setPaymentMethodModal(null); window.location.href = `/InvoiceDetail/${p.invoice.id}`; }}>
+                            <td className="px-3 py-2 text-sky-400 font-mono font-semibold">{p.invoice.invoice_number || p.invoice.id.slice(0, 8)}</td>
+                            <td className="px-3 py-2 text-gray-200">{p.invoice.customer_name}</td>
+                            <td className="px-3 py-2 text-gray-400 text-xs">{p.invoice.vehicle_info || "—"}</td>
+                            <td className="px-3 py-2 text-right text-emerald-400 font-semibold">${p.amount.toFixed(2)}</td>
                           </tr>
                         ))}
                         <tr className="bg-gray-800/40">
                           <td colSpan={3} className="px-3 py-1.5 text-gray-400 text-xs font-semibold">Subtotal</td>
                           <td className="px-3 py-1.5 text-right text-emerald-300 font-semibold text-xs">
-                            ${group.invoices.reduce((s, i) => s + (i.amount_paid || 0), 0).toFixed(2)}
+                            ${group.payments.reduce((s, p) => s + p.amount, 0).toFixed(2)}
                           </td>
                         </tr>
                       </tbody>

@@ -11,6 +11,7 @@ import { base44 } from "@/api/base44Client";
 import { useNhtsaVinDecode } from "@/hooks/useNhtsaVinDecode";
 import CustomerSearchInput from "@/components/shared/CustomerSearchInput";
 import VinScanner from "./VinScanner";
+import { capitalizeFields } from "@/utils/capitalize";
 
 const emptyForm = {
   customer_id: "", customer_name: "", vin: "", license_plate: "",
@@ -74,7 +75,7 @@ export default function VehicleFormDialog({ open, onClose, vehicle, onSaved, cus
 
   const handleSave = async () => {
     setSaving(true);
-    const data = { ...form, year: Number(form.year), mileage: Number(form.mileage) || 0 };
+    const data = capitalizeFields({ ...form, year: Number(form.year), mileage: Number(form.mileage) || 0 }, ["make", "model", "color", "engine_type", "customer_name", "trim"]);
     if (vehicle?.id) {
       await base44.entities.Vehicle.update(vehicle.id, data);
 
