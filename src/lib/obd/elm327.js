@@ -68,6 +68,10 @@ export class ELM327Client {
 
     this.server = await this.device.gatt.connect();
 
+    // Small settle delay — some BLE OBD adapters (e.g. Vgate iCar Pro 2S)
+    // need a moment after GATT connection before their service table is ready
+    await new Promise(r => setTimeout(r, 500));
+
     let matched = null;
     for (const profile of KNOWN_UART_PROFILES) {
       try {
@@ -81,10 +85,24 @@ export class ELM327Client {
       }
     }
 
+    // If first pass found nothing, wait 1s and retry once — some adapters are slow to enumerate
+    if (!matched) {
+      await new Promise(r => setTimeout(r, 1000));
+      for (const profile of KNOWN_UART_PROFILES) {
+        try {
+          const service = await this.server.getPrimaryService(profile.service);
+          const writeChar = await service.getCharacteristic(profile.write);
+          const notifyChar = await service.getCharacteristic(profile.notify);
+          matched = { writeChar, notifyChar };
+          break;
+        } catch (e) { /* try next */ }
+      }
+    }
+
     if (!matched) {
       await this.disconnect();
       throw new Error(
-        "Connected to the device but couldn't find a compatible OBD2 service. This adapter's Bluetooth profile isn't supported yet — let us know the exact model and we'll add it."
+        "Connected to the device but couldn't find a compatible OBD2 service. Make sure: 1) The adapter is fully plugged into the OBD2 port, 2) Ignition is ON (key in ACC or engine running), 3) This is a BLE 4.0+ adapter (not classic Bluetooth). If it still fails, let us know the exact model."
       );
     }
 
@@ -98,7 +116,7 @@ export class ELM327Client {
 
     // Standard ELM327 init sequence
     this._adapterInfo = { name: this.device.name || "OBD2 Adapter", protocol: "", voltage: "" };
-    await this._sendCommand("ATZ", 2000);   // reset
+    await this._sendCommand("ATZ", 3500);   // reset — allow extra time for slow adapters
     await this._sendCommand("ATE0");        // echo off
     await this._sendCommand("ATL0");        // linefeeds off
     await this._sendCommand("ATS0");        // spaces off

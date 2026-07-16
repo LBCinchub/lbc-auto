@@ -70,6 +70,11 @@ export default function Diagnostics() {
     } catch (err) {
       setConnState("error");
       setConnError(err?.message || "Couldn't connect to the adapter.");
+      // Auto-reset to disconnected after 6s so user can retry without refreshing
+      setTimeout(() => {
+        setConnState("disconnected");
+        setConnError("");
+      }, 6000);
     }
   };
 
@@ -183,6 +188,7 @@ export default function Diagnostics() {
         adapterName={adapterName}
         protocol={protocol}
         voltage={voltage}
+        connError={connError}
         onConnect={handleConnect}
         onDisconnect={handleDisconnect}
         onVehicleChange={() => setShowVehiclePanel(!showVehiclePanel)}

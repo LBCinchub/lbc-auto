@@ -11,6 +11,7 @@ export default function VehicleConnectionBanner({
   onConnect,
   onDisconnect,
   onVehicleChange,
+  connError,
 }) {
   const vehicleDesc = selectedVehicle
     ? `${selectedVehicle.year || ""} ${selectedVehicle.make || ""} ${selectedVehicle.model || ""} ${selectedVehicle.engine_type || ""}`.trim()
@@ -46,10 +47,14 @@ export default function VehicleConnectionBanner({
           <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border ${
             connected
               ? "bg-emerald-500/10 border-emerald-500/20"
+              : connState === "error"
+              ? "bg-red-500/10 border-red-500/20"
               : "bg-gray-800 border-gray-700"
           }`}>
             {connected ? (
               <Bluetooth className="w-5 h-5 text-emerald-400" />
+            ) : connState === "error" ? (
+              <Bluetooth className="w-5 h-5 text-red-400" />
             ) : (
               <WifiOff className="w-5 h-5 text-gray-500" />
             )}
@@ -67,9 +72,12 @@ export default function VehicleConnectionBanner({
                 </p>
               </>
             ) : (
-              <p className="text-sm text-gray-400">
-                {connState === "connecting" ? "Connecting..." : "Disconnected"}
+              <p className={`text-sm font-semibold ${connState === "error" ? "text-red-400" : "text-gray-400"}`}>
+                {connState === "connecting" ? "Connecting..." : connState === "error" ? "Connection Failed" : "Disconnected"}
               </p>
+              {connState === "error" && connError && (
+                <p className="text-xs text-red-400/80 mt-0.5 leading-tight">{connError}</p>
+              )}
             )}
           </div>
           {connected ? (
