@@ -72,12 +72,14 @@ export default function VehicleConnectionBanner({
                 </p>
               </>
             ) : (
-              <p className={`text-sm font-semibold ${connState === "error" ? "text-red-400" : "text-gray-400"}`}>
-                {connState === "connecting" ? "Connecting..." : connState === "error" ? "Connection Failed" : "Disconnected"}
-              </p>
-              {connState === "error" && connError && (
-                <p className="text-xs text-red-400/80 mt-0.5 leading-tight">{connError}</p>
-              )}
+              <>
+                <p className={`text-sm font-semibold ${connState === "error" ? "text-red-400" : "text-gray-400"}`}>
+                  {connState === "connecting" ? "Connecting..." : connState === "error" ? "Connection Failed" : "Disconnected"}
+                </p>
+                {connState === "error" && connError && (
+                  <p className="text-xs text-red-400/80 mt-0.5 leading-tight">{connError}</p>
+                )}
+              </>
             )}
           </div>
           {connected ? (
