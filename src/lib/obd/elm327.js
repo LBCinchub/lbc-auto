@@ -40,7 +40,7 @@ const ALL_KNOWN_UUIDS = Array.from(
 );
 
 export class ELM327Client {
-  constructor() {
+  constructor(onDisconnect) {
     this.device = null;
     this.server = null;
     this.writeChar = null;
@@ -48,6 +48,7 @@ export class ELM327Client {
     this.buffer = "";
     this.pending = null; // { resolve, reject, timeout }
     this._queue = Promise.resolve(); // serializes commands so concurrent callers can't interleave
+    this._onDisconnect = onDisconnect || null; // called when adapter drops unexpectedly
   }
 
   static isSupported() {
@@ -113,6 +114,20 @@ export class ELM327Client {
     this.notifyChar.addEventListener("characteristicvaluechanged", (e) =>
       this._onData(e.target.value)
     );
+
+    // Handle unexpected adapter disconnection (out of range, power-off, etc.)
+    // Reject any pending command so the caller gets an error immediately.
+    this.device.addEventListener("gattserverdisconnected", () => {
+      if (this.pending) {
+        clearTimeout(this.pending.timeout);
+        this.pending.reject(new Error("Adapter disconnected unexpectedly."));
+        this.pending = null;
+      }
+      // Null out refs so isConnected returns false and UI can react
+      this.writeChar = null;
+      this.notifyChar = null;
+      if (this._onDisconnect) this._onDisconnect();
+    });
 
     // Standard ELM327 init sequence
     this._adapterInfo = { name: this.device.name || "OBD2 Adapter", protocol: "", voltage: "" };
@@ -195,7 +210,14 @@ export class ELM327Client {
 
       try {
         const bytes = new TextEncoder().encode(command + "\r");
-        await this.writeChar.writeValue(bytes);
+        // writeValueWithoutResponse is correct for ELM327 clones — they use ATT Write Without Response.
+        // writeValue() (deprecated) can silently hang in newer Chrome versions waiting for
+        // an ATT confirmation the adapter never sends.
+        if (this.writeChar.properties.writeWithoutResponse) {
+          await this.writeChar.writeValueWithoutResponse(bytes);
+        } else {
+          await this.writeChar.writeValue(bytes); // fallback for older adapters
+        }
       } catch (err) {
         clearTimeout(timeout);
         this.pending = null;

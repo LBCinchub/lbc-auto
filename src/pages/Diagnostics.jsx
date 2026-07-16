@@ -59,7 +59,16 @@ export default function Diagnostics() {
     setConnError("");
     setConnState("connecting");
     try {
-      const client = new ELM327Client();
+      const client = new ELM327Client(() => {
+        // Adapter dropped unexpectedly — reset UI so user can reconnect without refreshing
+        setConnState("disconnected");
+        setConnError("Adapter disconnected. Tap CONNECT to reconnect.");
+        setAdapterName("");
+        setProtocol("");
+        setVoltage("");
+        clientRef.current = null;
+        setTimeout(() => setConnError(""), 5000);
+      });
       const info = await client.connect();
       clientRef.current = client;
       setAdapterName(info.name);
