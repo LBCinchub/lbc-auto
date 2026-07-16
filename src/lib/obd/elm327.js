@@ -183,6 +183,10 @@ export class ELM327Client {
         clearTimeout(this.pending.timeout);
         this.pending.resolve(response);
         this.pending = null;
+      } else {
+        // Response arrived before pending was set (rare BLE race) — stash it
+        // so the next _sendCommandInternal can pick it up immediately
+        this._lastUnsolicitedResponse = response;
       }
     }
   }
@@ -199,6 +203,13 @@ export class ELM327Client {
 
   async _sendCommandInternal(command, timeoutMs) {
     if (!this.writeChar) throw new Error("Not connected to an OBD2 adapter.");
+
+    // Pick up a stashed response from a BLE race (notification beat the pending assignment)
+    if (this._lastUnsolicitedResponse !== undefined) {
+      const stashed = this._lastUnsolicitedResponse;
+      this._lastUnsolicitedResponse = undefined;
+      return stashed;
+    }
 
     return new Promise(async (resolve, reject) => {
       const timeout = setTimeout(() => {
@@ -384,7 +395,7 @@ export class ELM327Client {
   /** Full system scan — sends the complete init + DTC + VIN sequence with progress. */
   async fullSystemScan(onProgress) {
     const steps = [
-      { cmd: "ATZ", label: "Resetting adapter...", delay: 2000 },
+      { cmd: "ATZ", label: "Resetting adapter...", delay: 3500 },
       { cmd: "ATE0", label: "Configuring adapter..." },
       { cmd: "ATL0", label: "Configuring adapter..." },
       { cmd: "ATS0", label: "Configuring adapter..." },
