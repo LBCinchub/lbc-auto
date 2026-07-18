@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { jsPDF } from "jspdf";
 import StatCard from "../components/dashboard/StatCard";
+import AutoAIBubble from "@/components/shared/AutoAIBubble";
 
 const COLORS = ["#0ea5e9", "#8b5cf6", "#10b981", "#f59e0b", "#ef4444", "#ec4899"];
 
@@ -1558,6 +1559,7 @@ export default function Analytics() {
           </div>
         </DialogContent>
       </Dialog>
+      <AutoAIBubble />
     </div>
   );
 }

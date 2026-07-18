@@ -20,6 +20,7 @@ import VehicleFormDialog from "../components/vehicles/VehicleFormDialog";
 import VehiclePhotosTab from "@/components/photos/VehiclePhotosTab";
 import VehicleHistoryReport from "@/components/reports/VehicleHistoryReport";
 import { useQueryClient } from "@tanstack/react-query";
+import AutoAIBubble from "@/components/shared/AutoAIBubble";
 
 const AVATAR_COLORS = ["bg-sky-500","bg-violet-500","bg-emerald-500","bg-amber-500","bg-rose-500","bg-indigo-500"];
 function getAvatarColor(name = "") {
@@ -678,6 +679,7 @@ export default function CustomerDetails() {
           customers={[customer]}
         />
       )}
+      <AutoAIBubble />
     </div>
   );
 }

@@ -16,6 +16,7 @@ import StatusBadge from "../components/shared/StatusBadge";
 import AppointmentFormDialog from "../components/appointments/AppointmentFormDialog";
 import RepairOrderFormDialog from "../components/orders/RepairOrderFormDialog";
 import DateFilter, { applyDateFilter } from "../components/shared/DateFilter";
+import AutoAIBubble from "@/components/shared/AutoAIBubble";
 
 export default function Appointments() {
   const _location = useLocation();
@@ -325,6 +326,7 @@ export default function Appointments() {
           parts={[]}
         />
       )}
+      <AutoAIBubble />
     </div>
   );
 }

@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import PrintTemplate from "@/components/shared/PrintTemplate";
 import PaymentReceiptDialog from "@/components/invoices/PaymentReceiptDialog";
 import { normalizeDiscountType } from "@/utils/discount";
+import AutoAIBubble from "@/components/shared/AutoAIBubble";
 
 
 // Auto-capitalise: first letter of every word
@@ -806,6 +807,7 @@ export default function EstimateDetail() {
           </button>
         </div>
       </div>
+      <AutoAIBubble />
     </div>
   );
 }

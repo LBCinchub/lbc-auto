@@ -14,6 +14,7 @@ import RockAutoImportDialog from "../components/parts/RockAutoImportDialog";
 import CsvImportDialog from "../components/parts/CsvImportDialog";
 import BarcodeScanner from "../components/parts/BarcodeScanner";
 import QuickStockUpdate from "../components/parts/QuickStockUpdate";
+import AutoAIBubble from "@/components/shared/AutoAIBubble";
 
 export default function Parts() {
   const [search, setSearch] = useState("");
@@ -282,6 +283,7 @@ export default function Parts() {
         }}
         onUpdate={handleStockUpdate}
       />
+      <AutoAIBubble />
     </div>
   );
 }

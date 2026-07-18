@@ -15,6 +15,7 @@ import EstimateFormDialog from "../components/estimates/EstimateFormDialog";
 import InvoiceFormDialog from "../components/invoices/InvoiceFormDialog";
 import PaymentReceiptDialog from "../components/invoices/PaymentReceiptDialog";
 import DateFilter, { applyDateFilter } from "../components/shared/DateFilter";
+import AutoAIBubble from "@/components/shared/AutoAIBubble";
 
 const STATUS_STYLES = {
   draft:     "bg-gray-700/50 text-gray-300",
@@ -459,7 +460,7 @@ export default function Estimates() {
           }}
         />
       )}
-
+      <AutoAIBubble />
     </div>
   );
 }

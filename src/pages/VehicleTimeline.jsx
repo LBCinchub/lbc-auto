@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import AutoAIBubble from "@/components/shared/AutoAIBubble";
 
 const statusColors = {
   paid: "bg-emerald-500/20 text-emerald-400",
@@ -310,6 +311,7 @@ export default function VehicleTimeline() {
           )}
         </TabsContent>
       </Tabs>
+      <AutoAIBubble />
     </div>
   );
 }

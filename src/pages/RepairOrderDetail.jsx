@@ -14,6 +14,7 @@ import EstimateFormDialog from "@/components/estimates/EstimateFormDialog";
 import InvoiceFormDialog from "@/components/invoices/InvoiceFormDialog";
 import SignaturePad from "@/components/orders/SignaturePad";
 import PaymentHistoryManager from "@/components/invoices/PaymentHistoryManager";
+import AutoAIBubble from "@/components/shared/AutoAIBubble";
 
 export default function RepairOrderDetail() {
   const { orderId } = useParams();
@@ -843,6 +844,7 @@ export default function RepairOrderDetail() {
           </div>
         </DialogContent>
       </Dialog>
+      <AutoAIBubble />
     </div>
   );
 

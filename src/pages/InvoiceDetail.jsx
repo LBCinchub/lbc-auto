@@ -17,6 +17,7 @@ import PaymentReceiptDialog from "@/components/invoices/PaymentReceiptDialog";
 import { useEmailSend } from "@/hooks/useEmailSend";
 import RepairOrderFormDialog from "@/components/orders/RepairOrderFormDialog";
 import PaymentHistoryManager from "@/components/invoices/PaymentHistoryManager";
+import AutoAIBubble from "@/components/shared/AutoAIBubble";
 
 
 
@@ -839,6 +840,7 @@ export default function InvoiceDetail() {
           </button>
         </div>
       </div>
+      <AutoAIBubble />
     </div>
   );
 }

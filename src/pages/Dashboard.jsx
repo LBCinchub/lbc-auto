@@ -14,6 +14,7 @@ import KpiCards from "../components/dashboard/KpiCards";
 import FinancialSummary from "../components/dashboard/FinancialSummary";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import StatusBadge from "../components/shared/StatusBadge";
+import AutoAIBubble from "@/components/shared/AutoAIBubble";
 
 export default function Dashboard() {
   const [modal, setModal] = useState(null);
@@ -228,6 +229,7 @@ export default function Dashboard() {
           </div>
         </DialogContent>
       </Dialog>
+      <AutoAIBubble />
     </div>
   );
 }

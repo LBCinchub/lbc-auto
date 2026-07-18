@@ -11,6 +11,7 @@ import PageHeader from "../components/shared/PageHeader";
 import SearchBar from "../components/shared/SearchBar";
 import EmptyState from "../components/shared/EmptyState";
 import VehicleFormDialog from "../components/vehicles/VehicleFormDialog";
+import AutoAIBubble from "@/components/shared/AutoAIBubble";
 
 export default function Vehicles() {
   const _location = useLocation();
@@ -227,6 +228,7 @@ export default function Vehicles() {
         customers={customers}
         onSaved={() => queryClient.invalidateQueries({ queryKey: ["vehicles"] })}
       />
+      <AutoAIBubble />
     </div>
   );
 }
