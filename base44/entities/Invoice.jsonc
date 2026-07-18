@@ -26,6 +26,10 @@
       "type": "string",
       "description": "Vehicle info for display"
     },
+    "vehicle_id": {
+      "type": "string",
+      "description": "Linked vehicle ID"
+    },
     "parts_total": {
       "type": "number",
       "description": "Parts subtotal"
@@ -226,11 +230,7 @@
     "total"
   ],
   "rls": {
-    "create": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
+    "create": true,
     "read": {
       "$or": [
         {
@@ -256,9 +256,16 @@
       ]
     },
     "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
     }
   }
 }
