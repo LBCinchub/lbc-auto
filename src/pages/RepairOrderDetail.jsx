@@ -242,7 +242,7 @@ export default function RepairOrderDetail() {
 
   return (
     <div className="space-y-6">
-      <div className="sticky bottom-0 z-30 bg-gray-950 border-t border-gray-800 px-4 py-3 flex items-center justify-between">
+      <div className="sticky bottom-0 z-30 bg-gray-950 border-t border-gray-800 py-3 px-4 flex items-center justify-between">
         <Button variant="ghost" onClick={() => navigate(-1)} className="text-gray-400 hover:text-white gap-2">
           <ArrowLeft className="w-4 h-4" /> Back
         </Button>

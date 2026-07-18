@@ -620,8 +620,8 @@ export default function TechJobView() {
           {saving ? "Saving..." : savedOk ? <><CheckCircle2 style={{width:18,height:18}}/> Saved!</> : "Save Job"}
         </button>
         {intakeComplete < 5 && (
-          <p style={{ color: "#fbbf24", fontSize: 11, marginTop: 6, textAlign: "center" }}>
-            ⚠️ {5 - intakeComplete} photo{5 - intakeComplete > 1 ? "s" : ""} required before saving
+          <p style={{ color: "#fbbf24", fontSize: 11, marginTop: 4, textAlign: "center" }}>
+            ⚠️ {5 - intakeComplete} photo{5 - intakeComplete !== 1 ? "s" : ""} still needed
           </p>
         )}
       </div>
