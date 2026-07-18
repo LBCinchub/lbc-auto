@@ -64,11 +64,41 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
   const openPrint = (hidePrice) => {
     const id = hidePrice ? "print-worker-body" : "print-full-body";
     const content = document.getElementById(id);
-    const win = window.open("", "_blank");
+    if (!content) {
+      alert("Print template not ready. Please wait a moment and try again.");
+      return;
+    }
     const title = hidePrice ? `${type} ${docNumber} - Worker Copy` : `${type} ${docNumber}`;
-    win.document.write(buildPrintHTML(content.innerHTML, title, hidePrice));
-    win.document.close();
-    setTimeout(() => win.print(), 300);
+    const html = buildPrintHTML(content.innerHTML, title, hidePrice);
+
+    // Use a hidden iframe so browser popup blocker cannot block it
+    let iframe = document.getElementById("lbc-print-iframe");
+    if (!iframe) {
+      iframe = document.createElement("iframe");
+      iframe.id = "lbc-print-iframe";
+      iframe.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:none;";
+      document.body.appendChild(iframe);
+    }
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+    iframeDoc.open();
+    iframeDoc.write(html);
+    iframeDoc.close();
+    setTimeout(() => {
+      try {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      } catch(e) {
+        // Fallback: open in new tab
+        const win = window.open("", "_blank");
+        if (win) {
+          win.document.write(html);
+          win.document.close();
+          setTimeout(() => win.print(), 400);
+        } else {
+          alert("Could not open print dialog. Please allow popups for this site.");
+        }
+      }
+    }, 400);
   };
 
   const headerBlock = (
