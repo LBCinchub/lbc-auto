@@ -344,23 +344,27 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
   const handleSave = async () => {
     if (submittingRef.current) return; // synchronous guard — prevents double-submit before React re-renders
     submittingRef.current = true;
+    setSaving(true);  // ← MOVE THIS UP — show spinner immediately
 
     // ── CENTER CONTROL: Validate before any DB write ──────────────────────
     if (form.customer_id) {
-      const validation = await validateRecord({
-        customerId: form.customer_id,
-        vehicleId: form.vehicle_id,
-        entityType: "Invoice",
-      });
-      if (!validation.ok) {
-        submittingRef.current = false;
-        setSaving(false);
-        alert("⚠️ Cannot save:\n\n" + validation.errors.join("\n"));
-        return;
+      try {
+        const validation = await validateRecord({
+          customerId: form.customer_id,
+          vehicleId: form.vehicle_id,
+          entityType: "Invoice",
+        });
+        if (!validation.ok) {
+          submittingRef.current = false;
+          setSaving(false);
+          alert("⚠️ Cannot save:\n\n" + validation.errors.join("\n"));
+          return;
+        }
+      } catch (validationErr) {
+        // validateRecord network error — skip validation, allow save to proceed
+        console.warn("[validateRecord] skipped due to error:", validationErr?.message);
       }
     }
-
-    setSaving(true);
     let resolvedCustomerId = form.customer_id;
     let resolvedVehicleId = form.vehicle_id;
     if ((!form.repair_order_id || customerOverride) && !form.customer_id && form.customer_name) {

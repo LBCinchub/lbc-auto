@@ -341,16 +341,21 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
     setSaveError("");
 
     // ── CENTER CONTROL: Validate DB integrity before any write ───────────
-    const dbValidation = await validateRecord({
-      customerId: form.customer_id,
-      vehicleId: form.vehicle_id,
-      entityType: "Estimate",
-    });
-    if (!dbValidation.ok) {
-      setValidationErrors({ customer: dbValidation.errors.join(" ") });
-      submittingRef.current = false;
-      setSaving(false);
-      return;
+    try {
+      const dbValidation = await validateRecord({
+        customerId: form.customer_id,
+        vehicleId: form.vehicle_id,
+        entityType: "Estimate",
+      });
+      if (!dbValidation.ok) {
+        setValidationErrors({ customer: dbValidation.errors.join(" ") });
+        submittingRef.current = false;
+        setSaving(false);
+        return;
+      }
+    } catch (validationErr) {
+      // validateRecord network error — skip validation, allow save to proceed
+      console.warn("[validateRecord] skipped due to error:", validationErr?.message);
     }
 
     try {

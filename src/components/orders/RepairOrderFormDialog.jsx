@@ -269,24 +269,31 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
   const handleSave = async () => {
     if (submittingRef.current) return; // synchronous guard — prevents double-submit before React re-renders
     submittingRef.current = true;
+    setSaving(true);  // ← MOVE THIS UP — show spinner immediately
     if (!form.customer_id || !form.vehicle_id || !form.description) {
       alert('Please fill in Customer, Vehicle, and Description fields');
       submittingRef.current = false;
+      setSaving(false);
       return;
     }
 
     // ── CENTER CONTROL: Validate before any DB write ──────────────────────
-    const validation = await validateRecord({
-      customerId: form.customer_id,
-      vehicleId: form.vehicle_id,
-      entityType: "RepairOrder",
-    });
-    if (!validation.ok) {
-      alert("⚠️ Cannot save:\n\n" + validation.errors.join("\n"));
-      return;
+    try {
+      const validation = await validateRecord({
+        customerId: form.customer_id,
+        vehicleId: form.vehicle_id,
+        entityType: "RepairOrder",
+      });
+      if (!validation.ok) {
+        alert("⚠️ Cannot save:\n\n" + validation.errors.join("\n"));
+        submittingRef.current = false;
+        setSaving(false);
+        return;
+      }
+    } catch (validationErr) {
+      // validateRecord network error — skip validation, allow save to proceed
+      console.warn("[validateRecord] skipped due to error:", validationErr?.message);
     }
-
-    setSaving(true);
     try {
       const laborHours = Number(form.labor_hours) || 0;
       const laborCost = (form.labor_items || []).reduce((s, r) => s + (parseFloat(r.hours) || 0) * (parseFloat(r.rate) || 120), 0);

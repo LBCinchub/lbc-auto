@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -42,6 +42,7 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
     time_slot: "", notes: "", status: "scheduled"
   });
   const [saving, setSaving] = useState(false);
+  const submittingRef = useRef(false);
   const [shopEmail, setShopEmail] = useState("");
   const [confirmAppt, setConfirmAppt] = useState(null);
   const queryClient = useQueryClient();
@@ -208,19 +209,28 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
   };
 
   const handleSave = async () => {
+    submittingRef.current = true;
+    setSaving(true);  // ← show spinner immediately
+
     // ── CENTER CONTROL: Validate ───────────────────────────────────────────
     if (form.customer_id) {
-      const validation = await validateRecord({
-        customerId: form.customer_id,
-        vehicleId: form.vehicle_id,
-        entityType: "Appointment",
-      });
-      if (!validation.ok) {
-        alert("⚠️ Cannot save:\n\n" + validation.errors.join("\n"));
-        return;
+      try {
+        const validation = await validateRecord({
+          customerId: form.customer_id,
+          vehicleId: form.vehicle_id,
+          entityType: "Appointment",
+        });
+        if (!validation.ok) {
+          submittingRef.current = false;
+          setSaving(false);
+          alert("⚠️ Cannot save:\n\n" + validation.errors.join("\n"));
+          return;
+        }
+      } catch (validationErr) {
+        // validateRecord network error — skip validation, allow save to proceed
+        console.warn("[validateRecord] skipped due to error:", validationErr?.message);
       }
     }
-    setSaving(true);
     const payload = capitalizeFields({ ...form, shop_email: shopEmail }, ["customer_name", "vehicle_info", "service_type", "notes", "mechanic_name"]);
     const isNew = !(appointment && appointment.id && !appointment._prefillCustomerId);
     if (!isNew) {
