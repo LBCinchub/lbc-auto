@@ -770,7 +770,7 @@ export default function EstimateDetail() {
       )}
 
       {/* ── BOTTOM ACTION BAR — compact dashboard style ── */}
-      <div className="no-print mt-4 mb-2 flex items-center justify-between gap-3 px-1">
+      <div className="no-print sticky bottom-0 z-30 bg-gray-950 border-t border-gray-800 px-4 py-3 flex items-center justify-between gap-3">
         {/* Left: status + financials */}
         <div className="flex items-center gap-3 flex-wrap">
           <span className={`text-xs font-bold px-2.5 py-1 rounded-full border capitalize ${

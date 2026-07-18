@@ -457,7 +457,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-3xl flex flex-col p-0" style={{ maxHeight: "90vh", height: "90vh" }}>
+      <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-3xl flex flex-col p-0" style={{ maxHeight: "90vh", height: "90vh" }} onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
         {/* Fixed header */}
         <div className="flex-shrink-0 px-6 pt-6 pb-4 border-b border-gray-800">
           <DialogHeader>

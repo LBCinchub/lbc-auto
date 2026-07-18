@@ -610,7 +610,7 @@ export default function TechJobView() {
             {intakeComplete}/5
           </span>
         </div>
-        <button onClick={handleSave} disabled={saving} style={{
+        <button onClick={handleSave} disabled={saving || intakeComplete < 5} style={{
           background: savedOk ? "linear-gradient(135deg,#166534,#15803d)" : "linear-gradient(135deg,#1d4ed8,#2563eb)",
           border:"none",borderRadius:14,padding:"14px 28px",
           color:"#fff",fontSize:15,fontWeight:800,cursor:"pointer",
@@ -619,6 +619,11 @@ export default function TechJobView() {
         }}>
           {saving ? "Saving..." : savedOk ? <><CheckCircle2 style={{width:18,height:18}}/> Saved!</> : "Save Job"}
         </button>
+        {intakeComplete < 5 && (
+          <p style={{ color: "#fbbf24", fontSize: 11, marginTop: 6, textAlign: "center" }}>
+            ⚠️ {5 - intakeComplete} photo{5 - intakeComplete > 1 ? "s" : ""} required before saving
+          </p>
+        )}
       </div>
 
     </div>
