@@ -351,6 +351,8 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         entityType: "Invoice",
       });
       if (!validation.ok) {
+        submittingRef.current = false;
+        setSaving(false);
         alert("⚠️ Cannot save:\n\n" + validation.errors.join("\n"));
         return;
       }
@@ -396,11 +398,6 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         paymentHistory = [...paymentHistory, { date: new Date().toISOString().substring(0, 10), amount: form.amount_paid, method: form.payment_method, note: "Partial payment received" }];
       }
     }
-    // ── BUG 22/23: Enforce consistency between status and balance_due ──
-    if (finalStatus === "paid") {
-      // BUG 22: paid invoices must always have balance_due = 0
-      data.balance_due = 0;
-    }
     if (finalStatus !== "paid" && form.due_date) {
       if (form.due_date < new Date().toISOString().split("T")[0]) finalStatus = "overdue";
     }
@@ -411,33 +408,33 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
     data.line_items = capitalizeArrayItems(data.line_items, ["description"]);
     data.parts_used = capitalizeArrayItems(data.parts_used, ["name"]);
 
-    if (invoice && invoice.id) {
-      await base44.entities.Invoice.update(invoice.id, data);
-      if (data.repair_order_id) {
-        try {
-          const ro = await base44.entities.RepairOrder.get(data.repair_order_id);
-          if (ro) await base44.entities.RepairOrder.update(data.repair_order_id, { customer_id: data.customer_id, customer_name: data.customer_name, vehicle_info: data.vehicle_info, labor_cost: laborTotal, parts_cost: partsTotal, total_cost: finalTotal, parts_used: data.parts_used?.length ? data.parts_used : ro.parts_used, description: ro.description, notes: ro.notes });
-        } catch (e) {}
+    try {
+      if (invoice && invoice.id) {
+        await base44.entities.Invoice.update(invoice.id, data);
+        if (data.repair_order_id) {
+          try {
+            const ro = await base44.entities.RepairOrder.get(data.repair_order_id);
+            if (ro) await base44.entities.RepairOrder.update(data.repair_order_id, { customer_id: data.customer_id, customer_name: data.customer_name, vehicle_info: data.vehicle_info, labor_cost: laborTotal, parts_cost: partsTotal, total_cost: finalTotal, parts_used: data.parts_used?.length ? data.parts_used : ro.parts_used, description: ro.description, notes: ro.notes });
+          } catch (e) {}
+        }
+        if (data.estimate_id) {
+          try {
+            const est = await base44.entities.Estimate.get(data.estimate_id);
+            if (est) {
+              const estTax = est.apply_tax ? (laborTotal + partsTotal) * ((est.tax_rate || 0) / 100) : 0;
+              await base44.entities.Estimate.update(data.estimate_id, { customer_id: data.customer_id, customer_name: data.customer_name, vehicle_info: data.vehicle_info, labor_total: laborTotal, parts_total: partsTotal, tax_amount: estTax, grand_total: laborTotal + partsTotal + estTax, notes: est.notes });
+            }
+          } catch (e) {}
+        }
+      } else {
+        const created = await base44.entities.Invoice.create(data);
+        submittingRef.current = false;
+        setSaving(false);
+        onSaved();
+        onClose();
+        navigate(`/InvoiceDetail/${created.id}`);
+        return;
       }
-      if (data.estimate_id) {
-        try {
-          const est = await base44.entities.Estimate.get(data.estimate_id);
-          if (est) {
-            const estTax = est.apply_tax ? (laborTotal + partsTotal) * ((est.tax_rate || 0) / 100) : 0;
-            await base44.entities.Estimate.update(data.estimate_id, { customer_id: data.customer_id, customer_name: data.customer_name, vehicle_info: data.vehicle_info, labor_total: laborTotal, parts_total: partsTotal, tax_amount: estTax, grand_total: laborTotal + partsTotal + estTax, notes: est.notes });
-          }
-        } catch (e) {}
-      }
-    } else {
-      const created = await base44.entities.Invoice.create(data);
-      submittingRef.current = false;
-      setSaving(false);
-      onSaved();
-      onClose();
-      navigate(`/InvoiceDetail/${created.id}`);
-      return;
-    }
-    setSaving(false);
       // ── Unified sync: Customer.last_visit + Vehicle.customer_id ──
       await syncCustomerActivity({
         customerId: resolvedCustomerId || form.customer_id,
@@ -446,8 +443,15 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         customerName: form.customer_name,
         customerPhone: form.customer_phone || "",
       });
-    onSaved();
-    onClose();
+      onSaved();
+      onClose();
+    } catch (err) {
+      console.error("[Invoice save error]", err);
+      alert("Failed to save invoice — " + (err?.message || "please try again"));
+    } finally {
+      submittingRef.current = false;
+      setSaving(false);
+    }
   };
 
   const statusColor = { unpaid: "bg-gray-500/20 text-gray-300", paid: "bg-green-500/20 text-green-400", partial: "bg-yellow-500/20 text-yellow-400", overdue: "bg-red-500/20 text-red-400" };
