@@ -424,8 +424,11 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         }
       } catch (e) { console.warn("Inventory deduction failed:", e); }
 
-      // ── Unified sync: Customer.last_visit + Vehicle.customer_id ──
-      await syncCustomerActivity({
+      // Close UI immediately — don't block on background sync
+      onSaved(data.status);
+      onClose();
+      // ── Background sync: Customer.last_visit + propagate ──
+      syncCustomerActivity({
         customerId: form.customer_id,
         vehicleId: form.vehicle_id,
         vehicleInfo: form.vehicle_info,
@@ -434,9 +437,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         entityId: savedOrderId,
         propagate: true,
         customerPhone: form.customer_phone,
-      });
-      onSaved(data.status);
-      onClose();
+      }).catch(e => console.warn("[CENTER CONTROL] background sync error:", e));
     } catch (error) {
       console.error('Error saving repair order:', error);
       alert('Failed to save repair order: ' + error.message);

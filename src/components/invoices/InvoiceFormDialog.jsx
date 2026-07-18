@@ -437,16 +437,20 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         navigate(`/InvoiceDetail/${created.id}`);
         return;
       }
-      // ── Unified sync: Customer.last_visit + Vehicle.customer_id ──
-      await syncCustomerActivity({
+      // Close UI immediately — don't block on background sync
+      submittingRef.current = false;
+      setSaving(false);
+      onSaved();
+      onClose();
+      // ── Background sync: Customer.last_visit + propagate ──
+      syncCustomerActivity({
         customerId: resolvedCustomerId || form.customer_id,
         vehicleId: resolvedVehicleId || form.vehicle_id,
         vehicleInfo: form.vehicle_info,
         customerName: form.customer_name,
         customerPhone: form.customer_phone || "",
-      });
-      onSaved();
-      onClose();
+        entityType: "Invoice",
+      }).catch(e => console.warn("[CENTER CONTROL] background sync error:", e));
     } catch (err) {
       console.error("[Invoice save error]", err);
       alert("Failed to save invoice — " + (err?.message || "please try again"));

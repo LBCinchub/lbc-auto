@@ -229,19 +229,19 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
       await base44.entities.Appointment.create(payload);
     }
     setSaving(false);
-      // ── Unified sync: link vehicle → customer, but don't mark as visited yet ──
-      await syncCustomerActivity({
-        customerId: form.customer_id,
-        vehicleId: form.vehicle_id,
-        vehicleInfo: form.vehicle_info,
-        customerName: form.customer_name,
-        entityType: "Appointment",
-        propagate: true,
-        customerPhone: form.customer_phone || "",
-        isNewVisit: false,
-      });
     onSaved();
     onClose();
+    // ── Background sync: link vehicle → customer (don't block UI) ──
+    syncCustomerActivity({
+      customerId: form.customer_id,
+      vehicleId: form.vehicle_id,
+      vehicleInfo: form.vehicle_info,
+      customerName: form.customer_name,
+      entityType: "Appointment",
+      propagate: true,
+      customerPhone: form.customer_phone || "",
+      isNewVisit: false,
+    }).catch(e => console.warn("[CENTER CONTROL] background sync error:", e));
     // ── Show confirmation modal for new appointments ──
     if (isNew) {
       setConfirmAppt({ ...form });

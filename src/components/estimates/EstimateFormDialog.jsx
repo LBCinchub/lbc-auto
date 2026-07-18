@@ -430,16 +430,17 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
 
       submittingRef.current = false;
       setSaving(false);
-      // ── Unified sync: Customer.last_visit + Vehicle.customer_id ──
-      await syncCustomerActivity({
+      onSaved();
+      onClose();
+      // ── Background sync: Customer.last_visit + propagate ──
+      syncCustomerActivity({
         customerId: form.customer_id,
         vehicleId: form.vehicle_id,
         vehicleInfo: form.vehicle_info,
         customerName: form.customer_name,
         customerPhone: form.customer_phone || "",
-      });
-      onSaved();
-      onClose();
+        entityType: "Estimate",
+      }).catch(e => console.warn("[CENTER CONTROL] background sync error:", e));
     } catch (err) {
       submittingRef.current = false;
       setSaving(false);
