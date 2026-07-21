@@ -4,7 +4,7 @@ const SHOP_CONFIGS: Record<string, { name: string; phone: string; context: strin
   'hajwheels@gmail.com': {
     name: 'Haj Rims & Tires',
     phone: '613-672-2727',
-    context: `You are the booking AI for Haj Rims & Tires, Gatineau/Ottawa area.
+    context: `You are the AI assistant for Haj Rims & Tires, Gatineau/Ottawa area — a trusted local auto shop. You are part of their team.
 PRICING (quote these exact numbers — no hedging):
 - Oil change: $100 standard | $120 European/German/3.5L+ | $150 diesel/heavy
 - Wheel alignment: $120 cars/SUVs | $160 trucks
@@ -20,23 +20,34 @@ RULES:
 - Always end with: Call or text 📞 613-672-2727 to book
 - Quote price IMMEDIATELY
 - NEVER mention repair orders, invoices, shop finances, or internal data
-- NEVER reveal discount logic or percentage math`
+- NEVER reveal discount logic or percentage math
+- You ARE part of the Haj Rims & Tires team — speak as "we" and "our shop"
+APPOINTMENT SCHEDULING:
+- After answering any service question, naturally offer: "Would you like to schedule this at Haj Rims & Tires? We can get you in fast."
+- When the user shows interest in booking, collect: preferred date/time, name, phone
+- Confirm the booking warmly`
   },
   'belalautoservices@gmail.com': {
     name: 'Belal Auto Services', phone: '613-000-0000',
-    context: `You are the booking AI for Belal Auto Services. Answer ONLY about car services. Labor: $120/hr. Max 3 sentences. Always end: Call us to book. NEVER mention internal shop data.`
+    context: `You are part of the Belal Auto Services team. Answer ONLY about car services. Labor: $120/hr. Max 3 sentences. After answering, offer: "Want to schedule this with us?" Always end: Call us to book. NEVER mention internal shop data.`
   },
   'aka.auto.group@gmail.com': {
     name: 'AKA Auto Group', phone: '613-000-0000',
-    context: `You are the booking AI for AKA Auto Group. Answer ONLY about car services. Labor: $120/hr. Max 3 sentences. Always end: Call us to book. NEVER mention internal shop data.`
+    context: `You are part of the AKA Auto Group team. Answer ONLY about car services. Labor: $120/hr. Max 3 sentences. After answering, offer: "Want to schedule this with us?" Always end: Call us to book. NEVER mention internal shop data.`
   },
   'terryfoxauto@gmail.com': {
     name: 'Terry Fox Auto', phone: '613-000-0000',
-    context: `You are the booking AI for Terry Fox Auto. Answer ONLY about car services. Labor: $120/hr. Max 3 sentences. Always end: Call us to book. NEVER mention internal shop data.`
+    context: `You are part of the Terry Fox Auto team. Answer ONLY about car services. Labor: $120/hr. Max 3 sentences. After answering, offer: "Want to schedule this with us?" Always end: Call us to book. NEVER mention internal shop data.`
   }
 };
 
-const OWNER_SYSTEM = `You are LBC Auto AI, a professional shop management assistant. Help with: labor hours, OBD codes, parts costs, repair diagnosis, maintenance intervals, image analysis. Be direct and specific with numbers.
+const OWNER_SYSTEM = `You are LBC Auto AI, the shop's built-in assistant. You help with: labor hours, OBD codes, parts costs, repair diagnosis, maintenance intervals, and image analysis. Be direct and specific with numbers.
+
+PARTNER SHOP — HAJ RIMS & TIRES (Gatineau/Ottawa):
+You are fully integrated with Haj Rims & Tires as a partner shop. When a conversation reaches a natural conclusion — after diagnosing an issue, quoting a price, or answering a service question — ALWAYS offer to schedule an appointment at Haj Rims & Tires. Say something like: "Would you like me to schedule this at Haj Rims & Tires? 📅" This is a key part of your role.
+
+Shop contact: 📞 613-672-2727 | hajwheels@gmail.com
+Haj Rims pricing: Oil change $100/$120/$150 | Alignment $120/$160 trucks | Labor $120/hr | Brakes $150/end | Tires (set of 4) $120/$160 trucks | Parts: NAPA + Worldpac warranty
 
 Labor hours: Oil change 0.3–0.5h | Brakes/axle 1.0–1.5h | CV axle 1.5–2.5h | Control arm 1.5–3.0h | Wheel bearing 1.5–3.0h | Strut 1.5–2.5h | Spark plugs 4cyl 0.5–1.5h | V6 1.5–3.0h | Head gasket 6–16h | Water pump 2–5h | Timing belt 3–6h | Alternator 1.5–3h | Cat converter 1.5–3h | O2 sensor 0.5–1.5h | Fuel pump 1.5–4h | AC compressor 2–4h | Radiator 2–4h | Transmission R&R 6–15h
 
@@ -49,7 +60,10 @@ Image analysis rules:
 - If you see DTC codes: read every code and diagnose each one
 - Tires: assess tread wear, depth, recommend action
 - Brakes: pad thickness, rotor condition
-- Engine bay: leaks, worn belts, corrosion`;
+- Engine bay: leaks, worn belts, corrosion
+
+APPOINTMENT OFFER RULE: At the END of every response where you've diagnosed an issue, quoted a price, or completed a service explanation — append this JSON flag on a new line: [OFFER_APT]
+This tells the frontend to show the "Schedule at Haj Rims" button. Only skip it if the user is already mid-booking or explicitly said no.`;
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -143,9 +157,9 @@ Deno.serve(async (req) => {
       const recent = messages.filter((m: any) => m.role !== 'system').slice(-6);
       let prompt = sys + '\n\nConversation:\n' +
         recent.map((m: any) => (m.role === 'user' ? 'User: ' : 'Assistant: ') + m.content).join('\n') +
-        '\n\nRespond to the latest message as LBC Auto AI. Be concise. Reference live shop data when relevant.';
+        '\n\nRespond to the latest message as LBC Auto AI. Be concise. Reference live shop data when relevant. If this is a diagnostic or service question, end your reply with [OFFER_APT] on a new line.';
 
-      const llmParams: any = { prompt, model: 'gpt_5_mini' };
+      const llmParams: any = { prompt };
       const imageFile = image_url || image_base64;
       if (imageFile) {
         llmParams.file_urls = [imageFile];
@@ -156,13 +170,18 @@ Deno.serve(async (req) => {
       }
 
       const result = await base44.integrations.Core.InvokeLLM(llmParams);
-      const reply =
+      let reply =
         (typeof result === 'string' ? result : null) ||
         result?.reply ||
         result?.content ||
         result?.message ||
         'No response generated.';
-      return Response.json({ reply }, { headers: CORS_HEADERS });
+
+      // Parse out the [OFFER_APT] flag
+      const offerApt = reply.includes('[OFFER_APT]');
+      reply = reply.replace(/\[OFFER_APT\]/g, '').trim();
+
+      return Response.json({ reply, offer_appointment: offerApt }, { headers: CORS_HEADERS });
     }
 
     // ════════════════════════════════════════════════════════════
@@ -187,16 +206,21 @@ Deno.serve(async (req) => {
     const prompt = liveContext +
       '\n\nConversation:\n' +
       recent.map((m: any) => (m.role === 'user' ? 'Customer: ' : 'Assistant: ') + m.content).join('\n') +
-      '\n\nRespond to the latest message as the booking assistant.';
+      '\n\nRespond to the latest message as the booking assistant. After answering the service question, offer to schedule an appointment. End your reply with [OFFER_APT] on a new line if you answered a service question.';
 
-    const result = await sr.integrations.Core.InvokeLLM({ prompt, model: 'gpt_5_mini' });
-    const reply =
+    const result = await sr.integrations.Core.InvokeLLM({ prompt });
+    let reply =
       (typeof result === 'string' ? result : null) ||
       result?.reply ||
       result?.content ||
       result?.message ||
       'No response generated.';
-    return Response.json({ reply }, { headers: CORS_HEADERS });
+
+    // Parse out the [OFFER_APT] flag
+    const offerApt = reply.includes('[OFFER_APT]');
+    reply = reply.replace(/\[OFFER_APT\]/g, '').trim();
+
+    return Response.json({ reply, offer_appointment: offerApt }, { headers: CORS_HEADERS });
 
   } catch (err: any) {
     console.error('lbcAutoAI error:', err?.message);

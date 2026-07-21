@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Bot, Send, Loader2, Wrench, Camera, Paperclip, X, Pin } from "lucide-react";
+import { Bot, Send, Loader2, Wrench, Camera, Paperclip, X, Pin, CalendarPlus } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import SavePhotoToProfile from "@/components/photos/SavePhotoToProfile";
 
@@ -186,8 +186,9 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
       const result = await base44.functions.invoke("lbcAutoAI", payload);
       setPendingImage(null);
 
-      const reply = result?.data?.reply || result?.reply || "No response generated.";
-      const assistantMsg = { role: "assistant", content: reply };
+      const replyRaw = result?.data?.reply || result?.reply || "No response generated.";
+      const offerApt  = result?.data?.offer_appointment || result?.offer_appointment || false;
+      const assistantMsg = { role: "assistant", content: replyRaw, offerApt };
       if (imageUrl) {
         assistantMsg.imageUrl = imageUrl;
         assistantMsg.saveable = true;
@@ -291,6 +292,37 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
                     >
                       <Pin style={{ width: 10, height: 10 }} /> Save to Customer Profile
                     </button>
+                  )}
+                  {m.offerApt && (
+                    <div style={{ marginTop: 10, padding: "10px 12px", borderRadius: 10, background: "#001f3a", border: "1px solid #00aaff44" }}>
+                      <div style={{ color: "#80d8ff", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>
+                        📅 Want to schedule this at Haj Rims &amp; Tires?
+                      </div>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        <button
+                          onClick={() => sendMessage("Yes, I'd like to schedule an appointment at Haj Rims & Tires")}
+                          style={{
+                            fontSize: 11, padding: "5px 12px", borderRadius: 20, cursor: "pointer",
+                            background: "linear-gradient(135deg, #004080, #0066cc)",
+                            border: "1px solid #00aaff", color: "#fff", fontWeight: 600,
+                            display: "inline-flex", alignItems: "center", gap: 5,
+                            boxShadow: "0 0 8px #00aaff44",
+                          }}
+                        >
+                          <CalendarPlus style={{ width: 11, height: 11 }} /> Yes, book me in
+                        </button>
+                        <button
+                          onClick={() => sendMessage("Call Haj Rims & Tires to book")}
+                          style={{
+                            fontSize: 11, padding: "5px 12px", borderRadius: 20, cursor: "pointer",
+                            background: "#001829", border: "1px solid #00aaff44",
+                            color: "#60b8d4",
+                          }}
+                        >
+                          📞 Call 613-672-2727
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
