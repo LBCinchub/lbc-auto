@@ -41,6 +41,20 @@ export default function ScanReportCard({
     return { label: "Info", cls: "bg-sky-500/15 text-sky-400 border-sky-500/30" };
   })();
 
+  const nextSteps = (() => {
+    if (!allCodes.length) return ["No faults detected — no immediate action required. Continue routine maintenance."];
+    const causes = [];
+    const seen = new Set();
+    allCodes.forEach((c) => {
+      (lookupDtc(c.code)?.causes || []).forEach((cause) => {
+        if (!seen.has(cause)) { seen.add(cause); causes.push(cause); }
+      });
+    });
+    const steps = causes.length ? causes.slice(0, 6) : ["Inspect the affected system per the DTC and repair the underlying fault."];
+    steps.push("Clear codes after repair and perform a road test to confirm the fix.");
+    return steps;
+  })();
+
   const renderCodeRow = (code, type) => {
     const info = lookupDtc(code.code) || {};
     const sev = severityFor(code);
@@ -64,13 +78,13 @@ export default function ScanReportCard({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-start md:items-center justify-center p-3 md:p-6 overflow-y-auto">
+    <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-start md:items-center justify-center p-3 md:p-6 overflow-y-auto">
       <div className="bg-gray-900 border border-gray-800 rounded-2xl max-w-2xl w-full shadow-2xl my-4">
         {/* Header */}
-        <div className="bg-gradient-to-r from-fuchsia-600/20 via-purple-600/15 to-transparent border-b border-gray-800 px-5 py-4 flex items-center justify-between rounded-t-2xl">
+        <div className="bg-gradient-to-r from-sky-600/15 via-blue-600/10 to-transparent border-b border-gray-800 px-5 py-4 flex items-center justify-between rounded-t-2xl">
           <div>
             <h2 className="text-white font-bold text-lg flex items-center gap-2">
-              <FileText className="w-5 h-5 text-fuchsia-400" />
+              <FileText className="w-5 h-5 text-sky-400" />
               Diagnostic Report
             </h2>
             <p className="text-xs text-gray-500">{new Date().toLocaleString()}</p>
@@ -124,7 +138,7 @@ export default function ScanReportCard({
 
           {/* DTC Summary */}
           <section>
-            <SectionTitle icon={AlertTriangle} label="Diagnostic Summary" />
+            <SectionTitle icon={AlertTriangle} label="Diagnostic Severity Summary" />
             <div className="grid grid-cols-3 gap-2 mb-2">
               <CountCard value={stored.length} label="Active" color="red" />
               <CountCard value={pending.length} label="Pending" color="amber" />
@@ -179,15 +193,25 @@ export default function ScanReportCard({
             </section>
           )}
 
-          {/* AI Health Summary */}
+          {/* Lumina AI Health Summary */}
           {aiSummary && (
             <section>
-              <SectionTitle icon={Sparkles} label="AI Health Summary" iconColor="text-fuchsia-400" />
-              <div className="bg-fuchsia-500/5 border border-fuchsia-500/20 rounded-lg p-3">
+              <SectionTitle icon={Sparkles} label="Lumina AI Health Summary" iconColor="text-sky-400" />
+              <div className="bg-sky-500/5 border border-sky-500/20 rounded-lg p-3">
                 <p className="text-sm text-gray-200 leading-relaxed">{aiSummary}</p>
               </div>
             </section>
           )}
+
+          {/* Recommended Next Steps */}
+          <section>
+            <SectionTitle icon={ArrowRight} label="Recommended Next Steps" iconColor="text-sky-400" />
+            <ol className="bg-gray-800/50 rounded-lg p-3 space-y-1.5 list-decimal list-inside">
+              {nextSteps.map((step, i) => (
+                <li key={i} className="text-sm text-gray-200 leading-relaxed">{step}</li>
+              ))}
+            </ol>
+          </section>
         </div>
 
         {/* Footer actions */}
@@ -204,7 +228,7 @@ export default function ScanReportCard({
             <Button variant="ghost" onClick={onDismiss} className="px-6 text-gray-400">
               Close
             </Button>
-            <Button onClick={onSaveToRepairOrder} disabled={saving} className="flex-1 bg-fuchsia-600 hover:bg-fuchsia-700 text-white">
+            <Button onClick={onSaveToRepairOrder} disabled={saving} className="flex-1 bg-sky-600 hover:bg-sky-700 text-white">
               {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <ArrowRight className="w-4 h-4 mr-1" />}
               Save to Repair Order
             </Button>

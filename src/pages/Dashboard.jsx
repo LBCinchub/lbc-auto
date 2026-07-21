@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
-import { Wrench, CheckCircle2, Clock, Calendar, Car, ChevronRight, AlertTriangle, Package } from "lucide-react";
+import { Wrench, CheckCircle2, Clock, Calendar, Car, ChevronRight, AlertTriangle, Package, ScanLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import StatCard from "../components/dashboard/StatCard";
@@ -85,6 +85,20 @@ export default function Dashboard() {
           onClick={() => setModal({ title: "Completed", items: completed, type: "order" })} />
         <StatCard title="Today's Appts" value={todayAppts.length} icon={Calendar} color="purple"
           onClick={() => setModal({ title: "Today's Appointments", items: todayAppts, type: "appt" })} />
+      </div>
+
+      {/* AI Scanner CTA */}
+      <div className="relative overflow-hidden rounded-xl border border-sky-500/30 bg-gradient-to-r from-sky-950/80 via-gray-900 to-gray-950 p-5 flex items-center gap-4">
+        <div className="w-12 h-12 rounded-xl bg-sky-500/15 flex items-center justify-center shrink-0">
+          <ScanLine className="w-6 h-6 text-sky-400" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-white font-bold text-base">AI Vehicle Diagnostic Scan</h3>
+          <p className="text-gray-400 text-sm">Connect your OBD adapter and run a full professional system scan with an AI health report.</p>
+        </div>
+        <Button onClick={() => navigate("/Diagnostics")} className="bg-sky-600 hover:bg-sky-700 text-white shrink-0">
+          <ScanLine className="w-4 h-4 mr-1" /> Run Diagnostic Scan
+        </Button>
       </div>
 
       {/* Low Stock Alert */}

@@ -289,14 +289,14 @@ ${monitors.length ? `<table>${monRows}</table>` : "<p class='muted'>Not availabl
   if (user && !isPro) {
     return (
       <div className="max-w-lg mx-auto mt-16 text-center space-y-4 bg-gray-900 border border-gray-800 rounded-xl p-8 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-fuchsia-500/5 to-transparent pointer-events-none" />
-        <Microscope className="w-10 h-10 text-fuchsia-400 mx-auto relative" />
+        <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-transparent pointer-events-none" />
+        <Microscope className="w-10 h-10 text-sky-400 mx-auto relative" />
         <h2 className="text-xl font-bold text-white relative">LBC AUTO AI SCANNER</h2>
-        <p className="text-fuchsia-400 text-sm font-semibold relative">Pro Feature</p>
+        <p className="text-sky-400 text-sm font-semibold relative">Pro Feature</p>
         <p className="text-gray-400 text-sm relative">
           Live Bluetooth OBD2 scanning, AI-powered diagnosis, live data streaming, and bidirectional ECU commands are included on the Pro plan ($299/mo). You're currently on Basic.
         </p>
-        <button onClick={() => (window.location.href = "/Billing")} className="bg-fuchsia-600 hover:bg-fuchsia-700 text-white px-6 py-2 rounded-lg font-semibold relative">
+        <button onClick={() => (window.location.href = "/Billing")} className="bg-sky-600 hover:bg-sky-700 text-white px-6 py-2 rounded-lg font-semibold relative">
           Upgrade to Pro
         </button>
       </div>
@@ -367,7 +367,7 @@ ${monitors.length ? `<table>${monRows}</table>` : "<p class='muted'>Not availabl
               onClick={() => setActiveTab(tab.key)}
               className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all ${
                 active
-                  ? "bg-fuchsia-500 text-white shadow-lg shadow-fuchsia-500/20"
+                  ? "bg-sky-600 text-white"
                   : "text-gray-400 hover:text-white hover:bg-gray-800"
               }`}
             >

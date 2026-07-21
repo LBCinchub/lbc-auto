@@ -6,8 +6,8 @@ export default function ScannerHeader({ isPro, onHelp }) {
     <div className="bg-gradient-to-r from-gray-950 via-gray-900 to-black border border-gray-800 rounded-xl px-5 py-4 flex items-center justify-between">
       <div className="flex items-center gap-3">
         <div className="relative">
-          <Hexagon className="w-8 h-8 text-fuchsia-500" fill="currentColor" fillOpacity={0.15} strokeWidth={1.5} />
-          <Hexagon className="w-8 h-8 text-fuchsia-400 absolute inset-0" strokeWidth={1.5} />
+          <Hexagon className="w-8 h-8 text-sky-500" fill="currentColor" fillOpacity={0.15} strokeWidth={1.5} />
+          <Hexagon className="w-8 h-8 text-sky-400 absolute inset-0" strokeWidth={1.5} />
         </div>
         <div>
           <h1 className="text-lg font-bold text-white tracking-tight leading-none">
@@ -18,7 +18,7 @@ export default function ScannerHeader({ isPro, onHelp }) {
       </div>
       <div className="flex items-center gap-2">
         {isPro && (
-          <span className="flex items-center gap-1 bg-fuchsia-500/15 text-fuchsia-400 border border-fuchsia-500/30 rounded-full px-3 py-1 text-xs font-bold">
+          <span className="flex items-center gap-1 bg-amber-500/15 text-amber-400 border border-amber-500/30 rounded-full px-3 py-1 text-xs font-bold">
             <Crown className="w-3 h-3" /> PRO
           </span>
         )}

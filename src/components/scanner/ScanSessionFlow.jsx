@@ -57,7 +57,7 @@ export default function ScanSessionFlow({
             ? "Adapter detected but vehicle ECU did not respond. Turn ignition ON and retry."
             : connError || "Couldn't connect to the adapter. Make sure it's plugged in and ignition is ON."}
         </p>
-        <Button onClick={onConnect} className="bg-fuchsia-600 hover:bg-fuchsia-700 text-white">
+        <Button onClick={onConnect} className="bg-sky-600 hover:bg-sky-700 text-white">
           <RefreshCw className="w-4 h-4 mr-2" /> Retry Connection
         </Button>
       </StagePanel>
@@ -67,7 +67,7 @@ export default function ScanSessionFlow({
   // ── Connecting ──
   if (connState === "connecting") {
     return (
-      <StagePanel icon={Bluetooth} iconColor="text-fuchsia-400" iconBg="bg-fuchsia-500/15" loading>
+      <StagePanel icon={Bluetooth} iconColor="text-sky-400" iconBg="bg-sky-500/15" loading>
         <h2 className="text-white font-bold text-lg mb-1">Connecting to OBD Adapter…</h2>
         <p className="text-gray-400 text-sm mb-4">Pairing with your BLE adapter and initializing protocol.</p>
         <div className="space-y-1.5 text-left max-w-xs mx-auto">
@@ -101,14 +101,14 @@ export default function ScanSessionFlow({
     return (
       <div className="space-y-4">
         <VehicleIdentifiedBanner vehicle={autoVehicle} />
-        <StagePanel icon={ScanLine} iconColor="text-fuchsia-400" iconBg="bg-fuchsia-500/15" loading>
+        <StagePanel icon={ScanLine} iconColor="text-sky-400" iconBg="bg-sky-500/15" loading>
           <div className="flex items-center justify-between mb-1">
             <h2 className="text-white font-bold text-lg">Diagnostic Scan in Progress</h2>
-            <span className="text-fuchsia-400 font-mono text-sm font-bold">{scanProgress}%</span>
+            <span className="text-sky-400 font-mono text-sm font-bold">{scanProgress}%</span>
           </div>
           <div className="flex items-center gap-3 mb-4">
             <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-fuchsia-500 to-purple-500 rounded-full transition-all duration-500" style={{ width: `${scanProgress}%` }} />
+              <div className="h-full bg-sky-500 rounded-full transition-all duration-500" style={{ width: `${scanProgress}%` }} />
             </div>
             <span className="text-xs text-gray-500 font-mono shrink-0">
               {Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, "0")}
@@ -141,7 +141,7 @@ export default function ScanSessionFlow({
             <Button onClick={onStartNewScan} variant="outline" className="border-gray-700 text-gray-300">
               <RefreshCw className="w-4 h-4 mr-1" /> New Scan
             </Button>
-            <Button onClick={onReopenReport} className="bg-fuchsia-600 hover:bg-fuchsia-700 text-white">
+            <Button onClick={onReopenReport} className="bg-sky-600 hover:bg-sky-700 text-white">
               <FileText className="w-4 h-4 mr-1" /> View Report
             </Button>
           </div>
@@ -162,7 +162,7 @@ export default function ScanSessionFlow({
           <Button onClick={onOpenVehiclePanel} variant="outline" className="border-gray-700 text-gray-300">
             Select Vehicle Manually
           </Button>
-          <Button onClick={onStartNewScan} className="bg-fuchsia-600 hover:bg-fuchsia-700 text-white">
+          <Button onClick={onStartNewScan} className="bg-sky-600 hover:bg-sky-700 text-white">
             Retry VIN Read
           </Button>
         </div>
@@ -174,16 +174,16 @@ export default function ScanSessionFlow({
   return (
     <div className="space-y-4">
       <div className="relative overflow-hidden bg-gradient-to-br from-gray-950 via-gray-900 to-black border border-gray-800 rounded-2xl p-8 text-center">
-        <div className="absolute inset-0 bg-gradient-to-br from-fuchsia-500/5 to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-transparent pointer-events-none" />
         <div className="relative">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-fuchsia-500/15 flex items-center justify-center">
-            <Hexagon className="w-9 h-9 text-fuchsia-400" fill="currentColor" fillOpacity={0.2} strokeWidth={1.5} />
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-sky-500/15 flex items-center justify-center">
+            <Hexagon className="w-9 h-9 text-sky-400" fill="currentColor" fillOpacity={0.2} strokeWidth={1.5} />
           </div>
           <h1 className="text-2xl font-bold text-white tracking-tight mb-1">AI Vehicle Diagnostic Scan</h1>
           <p className="text-gray-400 text-sm mb-6 max-w-md mx-auto">
             Connect your OBD2 adapter to run a full system scan with AI-powered health analysis.
           </p>
-          <Button onClick={onConnect} size="lg" className="bg-fuchsia-600 hover:bg-fuchsia-700 text-white px-8 h-12 text-base font-bold">
+          <Button onClick={onConnect} size="lg" className="bg-sky-600 hover:bg-sky-700 text-white px-8 h-12 text-base font-bold">
             <Zap className="w-5 h-5 mr-2" /> Start Diagnostic Scan
           </Button>
         </div>
@@ -210,7 +210,7 @@ function StagePanel({ icon: Icon, iconColor, iconBg, loading, children }) {
       <div className={`w-14 h-14 mx-auto mb-4 rounded-2xl ${iconBg} flex items-center justify-center relative`}>
         <Icon className={`w-7 h-7 ${iconColor}`} />
         {loading && (
-          <span className="absolute inset-0 rounded-2xl border-2 border-transparent border-t-fuchsia-400 animate-spin" />
+          <span className="absolute inset-0 rounded-2xl border-2 border-transparent border-t-sky-400 animate-spin" />
         )}
       </div>
       {children}
@@ -224,7 +224,7 @@ function StatusLine({ done, active, children }) {
       {done ? (
         <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
       ) : active ? (
-        <Loader2 className="w-4 h-4 text-fuchsia-400 animate-spin shrink-0" />
+        <Loader2 className="w-4 h-4 text-sky-400 animate-spin shrink-0" />
       ) : (
         <div className="w-4 h-4 rounded-full border border-gray-700 shrink-0" />
       )}
@@ -237,7 +237,7 @@ function StepCard({ step, icon: Icon, title, desc }) {
   return (
     <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
       <div className="flex items-center gap-2 mb-2">
-        <div className="w-7 h-7 rounded-full bg-fuchsia-500/15 text-fuchsia-400 flex items-center justify-center text-xs font-bold">
+        <div className="w-7 h-7 rounded-full bg-sky-500/15 text-sky-400 flex items-center justify-center text-xs font-bold">
           {step}
         </div>
         <Icon className="w-4 h-4 text-gray-400" />
