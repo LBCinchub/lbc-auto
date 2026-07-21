@@ -361,34 +361,12 @@ export class ELM327Client {
     return parseOBDDataBytes(response, pidSent);
   }
 
-  /** Request VIN via Mode 09 PID 02. Returns a 17-char VIN string or null. */
+  /** Request VIN via Mode 09 PID 02. Returns a validated 17-char VIN or null. */
   async readVIN() {
     try {
-      const response = await this._sendCommand("0902", 5000);
+      const response = await this._sendCommand("0902", 8000);
       if (/NO DATA|UNABLE TO CONNECT|ERROR/i.test(response)) return null;
-
-      // Keep only hex characters (strip spaces, CR/LF, "SEARCHING..." noise)
-      let hex = response.replace(/SEARCHING\.*/gi, "").replace(/[^0-9A-Fa-f]/g, "").toUpperCase();
-
-      // Multi-frame VIN responses contain repeated "49 02 XX" frame headers
-      // (49 = mode 09 + 0x40, 02 = PID, XX = frame index 01/02/03...).
-      // Remove ALL of them globally — the previous code only stripped the
-      // first, leaving frame indices interspersed in the hex and producing a
-      // different garbled VIN on every scan.
-      hex = hex.replace(/4902[0-9A-F]{2}/g, "");
-
-      // Decode remaining hex pairs as ASCII characters
-      let vin = "";
-      for (let i = 0; i + 2 <= hex.length; i += 2) {
-        const code = parseInt(hex.slice(i, i + 2), 16);
-        // VIN only contains A-Z and 0-9 — stop at the first non-printable
-        if (code < 0x30 || (code > 0x39 && code < 0x41) || code > 0x5A) continue;
-        vin += String.fromCharCode(code);
-      }
-      vin = vin.replace(/[^A-Z0-9]/gi, "").slice(0, 17);
-      // A valid VIN is exactly 17 chars and must not be all zeros
-      if (vin.length === 17 && !/^0+$/.test(vin)) return vin;
-      return null;
+      return parseVINResponse(response);
     } catch (e) {
       return null;
     }
@@ -540,21 +518,47 @@ function parseReadinessMonitors(bytes, milOn, dtcCount) {
   return { milOn, dtcCount, monitors };
 }
 
-/** Parses a raw ELM327 hex response for a given PID request into its data bytes. */
+/** Parses spaced or compact ELM327 PID responses into data bytes. */
 function parseOBDDataBytes(response, pidSent) {
-  // Response looks like "41 0C 1A F8" (mode+0x40, pid, data bytes...)
-  const clean = response.replace(/\s+/g, " ").trim();
-  const lines = clean.split(/[\r\n]+/).map(l => l.trim()).filter(Boolean);
-  for (const line of lines) {
-    const hexPairs = line.split(" ").filter(Boolean);
-    if (hexPairs.length < 3) continue;
-    const mode = hexPairs[0];
-    const expectedMode = (parseInt(pidSent.slice(0, 2), 16) + 0x40).toString(16).toUpperCase();
-    if (mode.toUpperCase() !== expectedMode.padStart(2, "0")) continue;
-    const dataBytes = hexPairs.slice(2).map(h => parseInt(h, 16)).filter(n => !isNaN(n));
-    if (dataBytes.length) return dataBytes;
+  const clean = String(response || "").replace(/SEARCHING\.*|NO DATA/gi, "").replace(/[^0-9A-F]/gi, "").toUpperCase();
+  const responseMode = (parseInt(pidSent.slice(0, 2), 16) + 0x40).toString(16).toUpperCase().padStart(2, "0");
+  const marker = responseMode + pidSent.slice(2).toUpperCase();
+  const start = clean.indexOf(marker);
+  if (start < 0) return null;
+  const payload = clean.slice(start + marker.length);
+  const bytes = payload.match(/[0-9A-F]{2}/g)?.map(h => parseInt(h, 16)) || [];
+  return bytes.length ? bytes : null;
+}
+
+/** Parse ISO-TP, CAN-header, numbered-frame, spaced, or compact VIN responses. */
+export function parseVINResponse(response) {
+  const payload = [];
+  for (const rawLine of String(response || "").toUpperCase().split(/[\r\n]+/)) {
+    let line = rawLine.replace(/SEARCHING\.*|BUS INIT.*|STOPPED/g, "").replace(/^\s*[0-9A-F]+:\s*/, "").trim();
+    if (!line) continue;
+    let tokens;
+    if (!/\s/.test(line)) {
+      let compact = line.replace(/[^0-9A-F]/g, "");
+      if (compact.length % 2 === 1 && /^[0-9A-F]{3}/.test(compact)) compact = compact.slice(3);
+      tokens = compact.match(/[0-9A-F]{2}/g) || [];
+    } else {
+      tokens = line.match(/[0-9A-F]{2,3}/g) || [];
+      if (tokens[0]?.length === 3) tokens.shift();
+      tokens = tokens.filter(t => t.length === 2);
+    }
+    if (/^1[0-9A-F]$/.test(tokens[0] || "")) tokens.splice(0, 2);
+    else if (/^2[0-9A-F]$/.test(tokens[0] || "")) tokens.shift();
+    payload.push(...tokens);
   }
-  return null;
+  if (!payload.length) {
+    const compact = String(response || "").replace(/[^0-9A-F]/gi, "").toUpperCase();
+    payload.push(...(compact.match(/[0-9A-F]{2}/g) || []));
+  }
+  const marker = payload.findIndex((b, i) => b === "49" && payload[i + 1] === "02");
+  if (marker < 0) return null;
+  const chars = payload.slice(marker + 2).map(h => parseInt(h, 16)).filter(n => (n >= 48 && n <= 57) || (n >= 65 && n <= 90)).map(n => String.fromCharCode(n)).join("");
+  const vin = chars.slice(0, 17);
+  return /^[A-HJ-NPR-Z0-9]{17}$/.test(vin) && !/^0+$/.test(vin) ? vin : null;
 }
 
 /** Decodes a raw Mode 03 response into human-readable DTC codes (e.g. "P0301"). */

@@ -69,6 +69,7 @@ export function useAutoConnectScan({ clientRef, connState }) {
       const make = get("Make");
       const model = get("Model");
       const year = get("Model Year");
+      const trim = get("Trim");
       const cyl = get("Engine Number of Cylinders");
       const disp = get("Displacement (L)");
       const fuel = get("Fuel Type - Primary");
@@ -78,7 +79,8 @@ export function useAutoConnectScan({ clientRef, connState }) {
       if (disp) parts.push(`${parseFloat(disp).toFixed(1)}L`);
       if (config) parts.push(config);
       if (fuel) parts.push(fuel);
-      return { make, model, year, engine_type: parts.join(" ") || "" };
+      const engine = parts.join(" ") || "";
+      return { make, model, year, trim, engine, engine_type: engine };
     } catch (e) {
       return null;
     }
@@ -94,18 +96,21 @@ export function useAutoConnectScan({ clientRef, connState }) {
     setScanLabel("Reading VIN...");
     setScanProgress(8);
     const vin = await client.readVIN().catch(() => null);
-    const mileage = vin ? await client.readMileage().catch(() => null) : null;
+    const mileage = await client.readMileage().catch(() => null);
     let decoded = null;
     if (vin) decoded = await decodeVinNhtsa(vin);
     if (cancelledRef.current) return;
 
-    if (vin) {
+    if (vin && decoded?.year && decoded?.make && decoded?.model) {
       setAutoVehicle({
         vin,
         year: decoded?.year || "",
         make: decoded?.make || "",
         model: decoded?.model || "",
-        engine_type: decoded?.engine_type || "",
+        trim: decoded?.trim || "",
+        engine: decoded?.engine || "",
+        engine_type: decoded?.engine || "",
+        mileage_km: mileage,
         mileage,
       });
     }
@@ -167,13 +172,16 @@ export function useAutoConnectScan({ clientRef, connState }) {
   const finishScan = async (results, vin, decoded, mileage) => {
     if (cancelledRef.current) return;
     // Ensure autoVehicle is set even on early-exit paths
-    if (vin && !autoVehicle) {
+    if (vin && decoded?.year && decoded?.make && decoded?.model && !autoVehicle) {
       setAutoVehicle({
         vin,
         year: decoded?.year || "",
         make: decoded?.make || "",
         model: decoded?.model || "",
-        engine_type: decoded?.engine_type || "",
+        trim: decoded?.trim || "",
+        engine: decoded?.engine || "",
+        engine_type: decoded?.engine || "",
+        mileage_km: mileage,
         mileage,
       });
     }
@@ -182,46 +190,17 @@ export function useAutoConnectScan({ clientRef, connState }) {
     setScanLabel("Scan complete");
     setScanning(false);
     setReportReady(true);
+    setReportOpen(!!(vin && decoded?.year && decoded?.make && decoded?.model));
+  };
+
+  const setManualVehicle = useCallback((vehicle) => {
+    setAutoVehicle({ ...vehicle, engine_type: vehicle.engine || "", mileage: vehicle.mileage_km ?? null });
     setReportOpen(true);
-    generateAiSummary(results, vin, decoded, mileage);
-  };
-
-  const generateAiSummary = async (results, vin, decoded, mileage) => {
-    try {
-      const codeList = [
-        ...(results.storedCodes || []).map((c) => `${c.code} (stored)`),
-        ...(results.pendingCodes || []).map((c) => `${c.code} (pending)`),
-        ...(results.permanentCodes || []).map((c) => `${c.code} (permanent)`),
-      ];
-      const snap = results.liveSnapshot || {};
-      const notReady = results.emissions?.monitors?.filter((m) => m.status === "fail").map((m) => m.name) || [];
-      const vehStr = `${decoded?.year || ""} ${decoded?.make || ""} ${decoded?.model || ""} ${decoded?.engine_type || ""}`.trim();
-      const prompt = `You are an expert automotive diagnostician. Provide a concise 2-3 sentence overall health assessment of this vehicle based on the OBD2 scan results.
-
-Vehicle: ${vehStr || "Unknown"}
-Mileage: ${mileage != null ? Number(mileage).toLocaleString() + " km" : "unknown"}
-VIN: ${vin || "unknown"}
-
-Diagnostic Trouble Codes: ${codeList.length ? codeList.join(", ") : "None found"}
-Emissions monitors not ready: ${notReady.length ? notReady.join(", ") : "None — all monitors ready"}
-Live sensor snapshot: RPM ${snap.rpm ?? "N/A"}, Coolant temp ${snap.coolant ?? "N/A"}°C, Battery voltage ${snap.battery ?? "N/A"}V, Throttle position ${snap.throttle ?? "N/A"}%
-Check Engine Light: ${results.emissions?.milOn ? "ON" : "OFF"}
-Confirmed DTC count: ${results.emissions?.dtcCount ?? "unknown"}
-
-Give a professional, plain-language 2-3 sentence summary of the vehicle's overall health. Highlight any urgent issues. Plain text only, no bullet points.`;
-      const resp = await base44.integrations.Core.InvokeLLM({
-        prompt,
-        response_json_schema: { type: "object", properties: { summary: { type: "string" } } },
-      });
-      setAiSummary(resp?.summary || "Unable to generate summary for this scan.");
-    } catch (e) {
-      setAiSummary("Unable to generate AI summary for this scan.");
-    }
-  };
+  }, []);
 
   return {
     autoVehicle, scanning, scanProgress, scanLabel, scanResults,
-    reportReady, reportOpen, dismissReport, reopenReport, aiSummary, restartScan,
+    reportReady, reportOpen, dismissReport, reopenReport, aiSummary, setAiSummary, restartScan, setManualVehicle,
   };
 }
 

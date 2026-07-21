@@ -1,10 +1,11 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { lookupDtc } from "@/lib/dtcDatabase";
+import DtcAiAnalysis from "@/components/scanner/DtcAiAnalysis";
 import {
   X, Car, AlertTriangle, CheckCircle2, XCircle, ShieldCheck, ShieldAlert,
   Activity, FileText, Loader2, ArrowRight, Gauge, Battery, Thermometer, Zap, Sparkles,
-  RefreshCw, Printer,
+  RefreshCw, Printer, Save, Wrench,
 } from "lucide-react";
 
 /**
@@ -12,8 +13,9 @@ import {
  * Non-dismissable by outside click or ESC (only the action buttons close it).
  */
 export default function ScanReportCard({
-  autoVehicle, scanResults, aiSummary, saving,
-  onDismiss, onSaveToRepairOrder, onPrint, onStartNewScan,
+  autoVehicle, scanResults, aiSummary, saving, savingScan, savingEstimate, laborRate,
+  analysisByCode, analyzingCodes, onAnalyzeCode, onAnalyzeAll, onAddCodeToRepairOrder,
+  onDismiss, onSaveToRepairOrder, onCreateEstimate, onSaveReport, onEnterVehicleManually, onPrint, onStartNewScan,
 }) {
   const stored = scanResults?.storedCodes || [];
   const pending = scanResults?.pendingCodes || [];
@@ -24,10 +26,10 @@ export default function ScanReportCard({
   const totalCodes = stored.length + pending.length + permanent.length;
 
   const severityFor = (code) => {
-    const sev = lookupDtc(code.code)?.severity;
-    if (sev === "HIGH") return { label: "Critical", cls: "bg-red-500/15 text-red-400 border-red-500/30" };
-    if (sev === "MEDIUM") return { label: "Warning", cls: "bg-amber-500/15 text-amber-400 border-amber-500/30" };
-    if (sev === "LOW") return { label: "Info", cls: "bg-sky-500/15 text-sky-400 border-sky-500/30" };
+    const sev = analysisByCode?.[code.code]?.urgency?.toUpperCase() || lookupDtc(code.code)?.severity;
+    if (sev === "HIGH" || sev === "CRITICAL") return { label: "Critical", cls: "bg-red-500/15 text-red-400 border-red-500/30" };
+    if (sev === "MEDIUM" || sev === "WARNING") return { label: "Warning", cls: "bg-amber-500/15 text-amber-400 border-amber-500/30" };
+    if (sev === "LOW" || sev === "INFO") return { label: "Info", cls: "bg-sky-500/15 text-sky-400 border-sky-500/30" };
     return { label: "Info", cls: "bg-sky-500/15 text-sky-400 border-sky-500/30" };
   };
 
@@ -65,13 +67,14 @@ export default function ScanReportCard({
         </span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-sm text-gray-200 font-medium">{info.name || "Unknown code"}</p>
+            <p className="text-sm text-gray-200 font-medium">{analysisByCode?.[code.code]?.plain_english || info.name || "Definition pending AI analysis"}</p>
             <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${sev.cls}`}>{sev.label}</span>
             <span className="text-[9px] text-gray-500 uppercase">{type}</span>
           </div>
           {info.causes?.length > 0 && (
             <p className="text-[11px] text-gray-500 mt-0.5">Repair direction: {info.causes.join(" · ")}</p>
           )}
+          <DtcAiAnalysis analysis={analysisByCode?.[code.code]} loading={analyzingCodes?.[code.code]} laborRate={laborRate} onAnalyze={() => onAnalyzeCode(code)} onAdd={() => onAddCodeToRepairOrder(code)} />
         </div>
       </div>
     );
@@ -113,11 +116,11 @@ export default function ScanReportCard({
           {/* Vehicle Confirmed */}
           <section>
             <SectionTitle icon={Car} label="Vehicle Confirmed" />
-            <div className="bg-gray-800/50 rounded-lg p-3">
+            {autoVehicle ? <div className="bg-gray-800/50 rounded-lg p-3">
               <p className="text-white font-bold text-base">
-                {autoVehicle?.year || ""} {autoVehicle?.make || ""} {autoVehicle?.model || "Unknown"}
+                {autoVehicle.year} {autoVehicle.make} {autoVehicle.model}
               </p>
-              {autoVehicle?.engine_type && <p className="text-gray-400 text-sm">{autoVehicle.engine_type}</p>}
+              {(autoVehicle.trim || autoVehicle.engine || autoVehicle.engine_type) && <p className="text-gray-400 text-sm">{[autoVehicle.trim, autoVehicle.engine || autoVehicle.engine_type].filter(Boolean).join(" · ")}</p>}
               <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs">
                 {autoVehicle?.vin && (
                   <span className="text-gray-500">
@@ -126,14 +129,14 @@ export default function ScanReportCard({
                 )}
                 <span className="text-gray-500">
                   Mileage:{" "}
-                  {autoVehicle?.mileage != null ? (
-                    <span className="text-emerald-400 font-bold">{Number(autoVehicle.mileage).toLocaleString()} km</span>
+                  {(autoVehicle?.mileage_km ?? autoVehicle?.mileage) != null ? (
+                    <span className="text-emerald-400 font-bold">{Number(autoVehicle.mileage_km ?? autoVehicle.mileage).toLocaleString()} km</span>
                   ) : (
                     <span className="text-gray-500 italic">Not reported by ECU</span>
                   )}
                 </span>
               </div>
-            </div>
+            </div> : <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3"><p className="text-white font-semibold">Vehicle not identified automatically</p><Button size="sm" onClick={onEnterVehicleManually} className="mt-2 bg-amber-600 hover:bg-amber-700">Enter Vehicle Manually</Button></div>}
           </section>
 
           {/* DTC Summary */}
@@ -144,12 +147,13 @@ export default function ScanReportCard({
               <CountCard value={pending.length} label="Pending" color="amber" />
               <CountCard value={permanent.length} label="Permanent" color="purple" />
             </div>
+            {totalCodes > 0 && <Button onClick={onAnalyzeAll} disabled={analyzingCodes?.all} className="w-full mb-2 bg-sky-600 hover:bg-sky-700"><Sparkles className="w-4 h-4 mr-1" />{analyzingCodes?.all ? "Analyzing All Codes…" : "Analyze All Codes With AI"}</Button>}
             {totalCodes === 0 ? (
               <div className="flex items-center gap-2 text-emerald-400 text-sm py-2">
                 <CheckCircle2 className="w-4 h-4" /> No trouble codes found — all systems passed.
               </div>
             ) : (
-              <div className="bg-gray-800/50 rounded-lg p-3 max-h-44 overflow-y-auto">
+              <div className="bg-gray-800/50 rounded-lg p-3 max-h-96 overflow-y-auto">
                 {stored.map((c) => renderCodeRow(c, "stored"))}
                 {pending.map((c) => renderCodeRow(c, "pending"))}
                 {permanent.map((c) => renderCodeRow(c, "permanent"))}
@@ -214,25 +218,13 @@ export default function ScanReportCard({
           </section>
         </div>
 
-        {/* Footer actions */}
-        <div className="border-t border-gray-800 p-4 space-y-2 rounded-b-2xl">
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={onStartNewScan} className="flex-1 border-gray-700 text-gray-300">
-              <RefreshCw className="w-4 h-4 mr-1" /> Start New Scan
-            </Button>
-            <Button variant="outline" onClick={onPrint} className="flex-1 border-gray-700 text-gray-300">
-              <Printer className="w-4 h-4 mr-1" /> Print Report
-            </Button>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="ghost" onClick={onDismiss} className="px-6 text-gray-400">
-              Close
-            </Button>
-            <Button onClick={onSaveToRepairOrder} disabled={saving} className="flex-1 bg-sky-600 hover:bg-sky-700 text-white">
-              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <ArrowRight className="w-4 h-4 mr-1" />}
-              Save to Repair Order
-            </Button>
-          </div>
+        {/* Sticky scanner-to-repair actions */}
+        <div className="sticky bottom-0 border-t border-gray-800 bg-gray-900 p-4 grid grid-cols-2 md:grid-cols-5 gap-2 rounded-b-2xl">
+          <Button variant="outline" onClick={onSaveReport} disabled={savingScan} className="border-gray-700 text-gray-300">{savingScan ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save Scan Report</Button>
+          <Button onClick={onSaveToRepairOrder} disabled={saving || !autoVehicle} className="bg-sky-600 hover:bg-sky-700 text-white">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wrench className="w-4 h-4" />} Create Repair Order</Button>
+          <Button onClick={onCreateEstimate} disabled={savingEstimate || !autoVehicle} className="bg-emerald-600 hover:bg-emerald-700 text-white">{savingEstimate ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />} Create Estimate</Button>
+          <Button variant="outline" onClick={onPrint} className="border-gray-700 text-gray-300"><Printer className="w-4 h-4" /> Print Report</Button>
+          <Button variant="outline" onClick={onStartNewScan} className="border-gray-700 text-gray-300"><RefreshCw className="w-4 h-4" /> New Scan</Button>
         </div>
       </div>
     </div>

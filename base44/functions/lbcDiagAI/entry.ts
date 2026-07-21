@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json().catch(() => ({}));
-    const { mode = "analyze", codes = [], live_data = null, vehicle = "", messages = [] } = body;
+    const { mode = "analyze", codes = [], live_data = null, freeze_frame = null, vehicle = "", vehicle_details = {}, labor_rate = null, messages = [] } = body;
 
     // ── Shop context ────────────────────────────────────────────────────────
     const shopInfo = [];
@@ -49,12 +49,25 @@ Deno.serve(async (req) => {
     if (lowStock.length) {
       context += "\nLow stock alert: " + lowStock.slice(0, 10).map(p => `${p.name} (${p.quantity} left)`).join(", ");
     }
-    if (vehicle) context += "\nVehicle: " + vehicle;
+    const effectiveRate = Number(labor_rate || user.labor_rate || 120);
+    const vehicleText = vehicle || [vehicle_details.year, vehicle_details.make, vehicle_details.model, vehicle_details.trim, vehicle_details.engine].filter(Boolean).join(" ");
+    if (vehicleText) context += "\nVehicle: " + vehicleText;
+    if (vehicle_details.vin) context += "\nVIN: " + vehicle_details.vin;
+    if (vehicle_details.mileage_km != null) context += "\nMileage: " + vehicle_details.mileage_km + " km";
+    context += "\nLabor rate for calculations: $" + effectiveRate + "/hr";
     if (codes.length) {
       context += "\nDiagnostic Trouble Codes found:\n" + codes.map(c => `- ${c.code} (${c.type || "stored"})`).join("\n");
     }
-    if (live_data) {
-      context += "\nLive data snapshot: " + JSON.stringify(live_data);
+    if (live_data) context += "\nLive data snapshot: " + JSON.stringify(live_data);
+    if (freeze_frame) context += "\nFreeze-frame data: " + JSON.stringify(freeze_frame);
+    let historyVehicleId = vehicle_details.vehicle_id || "";
+    if (!historyVehicleId && vehicle_details.vin) {
+      const matchedVehicles = await base44.entities.Vehicle.filter({ vin: vehicle_details.vin }, "-updated_date", 1).catch(() => []);
+      historyVehicleId = matchedVehicles[0]?.id || "";
+    }
+    if (historyVehicleId) {
+      const history = await base44.entities.RepairOrder.filter({ vehicle_id: historyVehicleId }, "-created_date", 20).catch(() => []);
+      if (history.length) context += "\nActual repair history for this vehicle: " + JSON.stringify(history.map(r => ({ description:r.description, labor_items:r.labor_items, parts_used:r.parts_used, notes:r.notes })).slice(0, 10));
     }
 
     // ── ANALYZE MODE: structured JSON ───────────────────────────────────────
@@ -67,13 +80,15 @@ Deno.serve(async (req) => {
         context +
         `\n\nAnalyze these OBD2 codes for this vehicle. For EACH code provide:
 - plain_english: what it means in simple terms
-- likely_causes: ordered most → least probable
+- likely_cause: most probable root cause
+- diagnostic_steps: ordered confirmation steps before replacing parts
 - urgency: Low, Medium, High, or Critical
-- recommended_fix_order: cheapest/most-likely-first steps
-- estimated_labor_hours: realistic hours for the fix (account for rust/access)
-- estimated_labor_cost: hours × our labor rate
-- parts_needed: list of parts (name + approximate cost if known)
-- in_stock: true if we likely have the part in our inventory
+- estimated_labor_hours_low and estimated_labor_hours_high: realistic range
+- recommended_parts: objects with name and status (Required, Optional, or Inspect First)
+- parts_optional_vs_required: matching status labels
+- customer_friendly_explanation: clear customer-facing explanation
+- mechanic_notes: concise technical notes
+Calculate labor using exactly $${effectiveRate}/hr.
 CRITICAL — Think holistically about ALL codes together before giving per-code breakdowns. Codes are often related: one underlying fault triggers multiple codes. Analyze the full picture and determine:
 - Which code is the ROOT CAUSE and which codes are SYMPTOMS (secondary/triggered by the root cause).
 - How the codes connect to each other (e.g., a misfire P030X can cause a catalytic P0420, a lean P0171 can cause a misfire, etc.).
@@ -142,24 +157,17 @@ CRITICAL — Provide an "inspection_decision" section that gives the mechanic a 
                 properties: {
                   code: { type: "string" },
                   plain_english: { type: "string" },
-                  likely_causes: { type: "array", items: { type: "string" } },
+                  likely_cause: { type: "string" },
+                  diagnostic_steps: { type: "array", items: { type: "string" } },
                   urgency: { type: "string", enum: ["Low", "Medium", "High", "Critical"] },
                   is_root_cause: { type: "boolean" },
                   is_symptom: { type: "boolean" },
-                  recommended_fix_order: { type: "array", items: { type: "string" } },
-                  estimated_labor_hours: { type: "number" },
-                  estimated_labor_cost: { type: "number" },
-                  parts_needed: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        name: { type: "string" },
-                        estimated_cost: { type: "number" },
-                        in_stock: { type: "boolean" },
-                      },
-                    },
-                  },
+                  estimated_labor_hours_low: { type: "number" },
+                  estimated_labor_hours_high: { type: "number" },
+                  recommended_parts: { type: "array", items: { type: "object", properties: { name: { type: "string" }, status: { type: "string", enum: ["Required", "Optional", "Inspect First"] } } } },
+                  parts_optional_vs_required: { type: "array", items: { type: "string" } },
+                  customer_friendly_explanation: { type: "string" },
+                  mechanic_notes: { type: "string" },
                 },
               },
             },

@@ -13,9 +13,12 @@ import VehiclePanel from "@/components/scanner/VehiclePanel";
 import ScanProgressBar from "@/components/scanner/ScanProgressBar";
 import ScanReportCard from "@/components/scanner/ScanReportCard";
 import ScanSessionFlow from "@/components/scanner/ScanSessionFlow";
+import VehicleIdentifiedBanner from "@/components/scanner/VehicleIdentifiedBanner";
+import ManualVehicleIdentification from "@/components/scanner/ManualVehicleIdentification";
 import { useAutoConnectScan } from "@/hooks/useAutoConnectScan";
 import { lookupDtc } from "@/lib/dtcDatabase";
 import { useToast } from "@/components/ui/use-toast";
+import { validateRecord } from "@/utils/syncCustomerActivity";
 
 const TABS = [
   { key: "scan", label: "SCAN", icon: Search },
@@ -43,6 +46,11 @@ export default function Diagnostics() {
   const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [showAddVehicle, setShowAddVehicle] = useState(false);
   const [savingToRO, setSavingToRO] = useState(false);
+  const [savingScan, setSavingScan] = useState(false);
+  const [savingEstimate, setSavingEstimate] = useState(false);
+  const [manualVehicleOpen, setManualVehicleOpen] = useState(false);
+  const [analysisByCode, setAnalysisByCode] = useState({});
+  const [analyzingCodes, setAnalyzingCodes] = useState({});
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
@@ -63,12 +71,36 @@ export default function Diagnostics() {
   const { toast } = useToast();
   const {
     autoVehicle, scanning, scanProgress, scanLabel, scanResults,
-    reportReady, reportOpen, dismissReport, reopenReport, aiSummary, restartScan,
+    reportReady, reportOpen, dismissReport, reopenReport, aiSummary, setAiSummary, restartScan, setManualVehicle,
   } = useAutoConnectScan({ clientRef, connState });
+
+  const allScanCodes = () => [...(scanResults?.storedCodes || []), ...(scanResults?.pendingCodes || []), ...(scanResults?.permanentCodes || [])];
 
   const handleStartNewScan = () => {
     dismissReport();
+    setAnalysisByCode({});
+    setAnalyzingCodes({});
     restartScan();
+  };
+
+  const analyzeCodes = async (codes) => {
+    if (!codes.length) return;
+    const keys = codes.map(c => c.code);
+    setAnalyzingCodes(prev => ({ ...prev, ...Object.fromEntries(keys.map(k => [k, true])), all: codes.length > 1 }));
+    try {
+      const response = await base44.functions.invoke("lbcDiagAI", {
+        mode: "analyze", codes, shop_email: user?.email, labor_rate: laborRate,
+        vehicle_details: { ...autoVehicle, vehicle_id: vehicleId || undefined },
+        freeze_frame: scanResults?.freezeFrame || null, live_data: scanResults?.liveSnapshot || null,
+      });
+      const analysis = response.data?.analysis || {};
+      setAnalysisByCode(prev => ({ ...prev, ...Object.fromEntries((analysis.findings || []).map(f => [f.code, f])) }));
+      setAiSummary(analysis.summary || analysis.root_cause_analysis || "");
+    } catch (error) {
+      toast({ title: "AI analysis failed", description: error?.message || "Try again.", variant: "destructive" });
+    } finally {
+      setAnalyzingCodes(prev => ({ ...prev, ...Object.fromEntries(keys.map(k => [k, false])), all: false }));
+    }
   };
 
   // Opens a clean printable report in a new window (avoids dark-theme CSS conflicts).
@@ -79,8 +111,10 @@ export default function Diagnostics() {
     const snap = r.liveSnapshot || {};
     const monitors = r.emissions?.monitors || [];
     const codeRows = codes.map((c) => {
-      const info = lookupDtc(c.code) || {};
-      return `<tr><td style="font-weight:700">${c.code}</td><td>${info.name || "Unknown code"}</td><td>${info.severity || "—"}</td><td>${(info.causes || []).join(", ") || "—"}</td></tr>`;
+      const info = lookupDtc(c.code) || {}, ai = analysisByCode[c.code];
+      const labor = ai ? `${ai.estimated_labor_hours_low || 0}–${ai.estimated_labor_hours_high || 0} hrs × $${laborRate}/hr` : "Run AI analysis";
+      const parts = ai?.recommended_parts?.map(p => `${p.name} (${p.status})`).join(", ") || "—";
+      return `<tr><td style="font-weight:700">${c.code}</td><td>${ai?.plain_english || info.name || "Definition pending"}</td><td>${ai?.urgency || info.severity || "Info"}</td><td>${labor}<br><span class="muted">Parts: ${parts}</span></td></tr>`;
     }).join("");
     const monRows = monitors.map((m) => `<tr><td>${m.name}</td><td>${m.status === "pass" ? "PASS" : "NOT READY"}</td></tr>`).join("");
     const html = `<!DOCTYPE html><html><head><title>Diagnostic Report</title><style>body{font-family:Arial,Helvetica,sans-serif;padding:28px;color:#111}h1{font-size:20px;margin:0 0 2px}h2{font-size:14px;border-bottom:1px solid #ccc;padding-bottom:4px;margin:18px 0 8px}table{width:100%;font-size:12px;border-collapse:collapse}td{padding:3px 6px;border-bottom:1px solid #eee;vertical-align:top}.muted{color:#666;font-size:11px}</style></head><body>
@@ -89,11 +123,12 @@ export default function Diagnostics() {
 <h2>Vehicle Confirmed</h2>
 <table>
 <tr><td style="font-weight:700;width:110px">Vehicle</td><td>${v.year || ""} ${v.make || ""} ${v.model || ""}</td></tr>
-<tr><td style="font-weight:700">VIN</td><td>${v.vin || "—"}</td></tr>
-<tr><td style="font-weight:700">Mileage</td><td>${v.mileage != null ? Number(v.mileage).toLocaleString() + " km" : "Not reported by ECU"}</td></tr>
+  <tr><td style="font-weight:700">Trim / Engine</td><td>${[v.trim, v.engine || v.engine_type].filter(Boolean).join(" · ") || "—"}</td></tr>
+  <tr><td style="font-weight:700">VIN</td><td>${v.vin || "Manually identified"}</td></tr>
+  <tr><td style="font-weight:700">Mileage</td><td>${(v.mileage_km ?? v.mileage) != null ? Number(v.mileage_km ?? v.mileage).toLocaleString() + " km" : "Not reported by ECU"}</td></tr>
 </table>
 <h2>Diagnostic Trouble Codes (${codes.length})</h2>
-${codes.length ? `<table><tr><td style="font-weight:700">Code</td><td style="font-weight:700">Description</td><td style="font-weight:700">Severity</td><td style="font-weight:700">Likely Causes</td></tr>${codeRows}</table>` : "<p class='muted'>No trouble codes found — all clear.</p>"}
+${codes.length ? `<table><tr><td style="font-weight:700">Code</td><td style="font-weight:700">Description</td><td style="font-weight:700">Severity</td><td style="font-weight:700">Labor / Parts</td></tr>${codeRows}</table>` : "<p class='muted'>No trouble codes found — all clear.</p>"}
 <h2>Emissions Readiness</h2>
 ${monitors.length ? `<table>${monRows}</table>` : "<p class='muted'>Not available.</p>"}
 <h2>Live Data Snapshot</h2>
@@ -104,7 +139,7 @@ ${monitors.length ? `<table>${monRows}</table>` : "<p class='muted'>Not availabl
 <tr><td style="font-weight:700">Throttle Position</td><td>${snap.throttle ?? "—"} %</td></tr>
 </table>
 <h2>AI Health Summary</h2>
-<p>${aiSummary || "Not available."}</p>
+<p>${aiSummary || "Run AI analysis from the scanner report to add vehicle-specific labor and parts guidance."}</p>
 <p class="muted" style="margin-top:28px;text-align:center;border-top:1px solid #ccc;padding-top:10px">LBC Auto · AI Vehicle Diagnostic Scan</p>
 </body></html>`;
     const w = window.open("", "_blank");
@@ -115,77 +150,73 @@ ${monitors.length ? `<table>${monRows}</table>` : "<p class='muted'>Not availabl
     setTimeout(() => w.print(), 300);
   };
 
-  // "Save to Repair Order" — pre-fills a new RO with vehicle info + codes + AI summary.
-  // Creates a walk-in customer + vehicle from the decoded VIN if none is selected.
-  const handleSaveToRepairOrder = async () => {
-    if (!user) return;
+  const ensureScannerVehicle = async () => {
+    if (vehicleId && selectedVehicle) return { custId: customerId, custName: customerName || selectedVehicle.customer_name, vehId: vehicleId, vehInfo: vehicleInfoStr };
+    if (!autoVehicle) throw new Error("Enter the vehicle details first.");
+    const newCust = await base44.entities.Customer.create({ full_name: `Walk-in (${autoVehicle.vin ? `VIN ${autoVehicle.vin.slice(-6)}` : `${autoVehicle.year} ${autoVehicle.make}`})`, phone: "000-000-0000", shop_owner_email: user.email });
+    const newVeh = await base44.entities.Vehicle.create({ customer_id:newCust.id, customer_name:newCust.full_name, shop_owner_email:user.email, vin:autoVehicle.vin || "", year:Number(autoVehicle.year), make:autoVehicle.make, model:autoVehicle.model, trim:autoVehicle.trim || "", engine_type:autoVehicle.engine || autoVehicle.engine_type || "", mileage:autoVehicle.mileage_km ?? autoVehicle.mileage ?? undefined });
+    const vehInfo = `${autoVehicle.year} ${autoVehicle.make} ${autoVehicle.model}`.trim();
+    setCustomers(prev => [newCust, ...prev]); setCustomerId(newCust.id); setCustomerName(newCust.full_name); setVehicles(prev => [newVeh, ...prev]); setVehicleId(newVeh.id);
+    return { custId:newCust.id, custName:newCust.full_name, vehId:newVeh.id, vehInfo };
+  };
+
+  const repairRows = (codes) => {
+    const findings = codes.map(c => analysisByCode[c.code]).filter(Boolean);
+    const labor_items = findings.map(f => { const hours=Number(f.estimated_labor_hours_high || f.estimated_labor_hours_low || 0); return { description:`${f.code} diagnosis and repair`, hours, rate:laborRate, total:hours*laborRate }; });
+    const parts = findings.flatMap(f => (f.recommended_parts || []).map(p => ({ name:p.name || p, quantity:p.status === "Required" ? 1 : 0, unit_price:0, total:0 })));
+    return { findings, labor_items, parts };
+  };
+
+  const handleSaveToRepairOrder = async (selectedCodes = null) => {
+    if (!user || !autoVehicle) { setManualVehicleOpen(true); return; }
     setSavingToRO(true);
     try {
-      const codes = [
-        ...(scanResults?.storedCodes || []),
-        ...(scanResults?.pendingCodes || []),
-        ...(scanResults?.permanentCodes || []),
-      ];
-      const codeText = codes.length ? codes.map((c) => c.code).join(", ") : "No codes";
-      const desc = `Auto-scan diagnostics${autoVehicle ? ` — ${autoVehicle.year || ""} ${autoVehicle.make || ""} ${autoVehicle.model || ""}`.trim() : ""}\nCodes: ${codeText}\nAI Summary: ${aiSummary || "N/A"}`;
-
-      let custId = customerId;
-      let custName = customerName;
-      let vehId = vehicleId;
-      let vehInfo = vehicleInfoStr;
-
-      if (!vehId && autoVehicle) {
-        const newCust = await base44.entities.Customer.create({
-          full_name: `Walk-in (VIN ${autoVehicle.vin?.slice(-6) || "scan"})`,
-          phone: "000-000-0000",
-          shop_owner_email: user.email,
-        });
-        custId = newCust.id;
-        custName = newCust.full_name;
-        const fuel = (autoVehicle.engine_type || "").toLowerCase();
-        const newVeh = await base44.entities.Vehicle.create({
-          customer_id: custId,
-          customer_name: custName,
-          shop_owner_email: user.email,
-          vin: autoVehicle.vin || undefined,
-          make: autoVehicle.make || undefined,
-          model: autoVehicle.model || undefined,
-          year: autoVehicle.year ? parseInt(autoVehicle.year) : undefined,
-          engine_type: autoVehicle.engine_type || undefined,
-          mileage: autoVehicle.mileage || undefined,
-          fuel_type: fuel.includes("electric") ? "Electric" : fuel.includes("hybrid") ? "Hybrid" : undefined,
-        });
-        vehId = newVeh.id;
-        vehInfo = `${autoVehicle.year || ""} ${autoVehicle.make || ""} ${autoVehicle.model || ""}`.trim();
-        setCustomers((prev) => [newCust, ...prev]);
-        setCustomerId(custId);
-        setCustomerName(custName);
-        setVehicles((prev) => [newVeh, ...prev]);
-        setVehicleId(vehId);
+      const codes = selectedCodes || allScanCodes();
+      const context = await ensureScannerVehicle();
+      const validation = await validateRecord({ customerId:context.custId, vehicleId:context.vehId, entityType:"RepairOrder" });
+      if (!validation.ok) throw new Error(validation.errors.join(" "));
+      const { findings, labor_items, parts } = repairRows(codes);
+      const description = `Scanner diagnosis — ${codes.map(c=>c.code).join(", ")}\n${findings.map(f=>f.customer_friendly_explanation).filter(Boolean).join(" ") || aiSummary || "AI analysis pending"}`;
+      const laborCost = labor_items.reduce((s,i)=>s+i.total,0);
+      let ro;
+      if (selectedCodes?.length === 1) {
+        const existing = (await base44.entities.RepairOrder.filter({ vehicle_id:context.vehId }, "-created_date", 20)).find(r => ["waiting","in_progress","waiting_for_parts"].includes(r.status));
+        if (existing) {
+          const mergedLabor = [...(existing.labor_items || []), ...labor_items], mergedParts = [...(existing.parts_used || []), ...parts];
+          ro = await base44.entities.RepairOrder.update(existing.id, { description:`${existing.description || ""}\n\n${description}`.trim(), notes:`${existing.notes || ""}\n${findings.map(f=>`${f.code}: ${f.mechanic_notes || f.likely_cause}`).join("\n")}`.trim(), labor_items:mergedLabor, parts_used:mergedParts, labor_hours:mergedLabor.reduce((s,i)=>s+(Number(i.hours)||0),0), labor_cost:mergedLabor.reduce((s,i)=>s+(Number(i.total)||0),0), total_cost:mergedLabor.reduce((s,i)=>s+(Number(i.total)||0),0)+(existing.parts_cost||0) });
+        }
       }
+      if (!ro) ro = await base44.entities.RepairOrder.create({ customer_id:context.custId, customer_name:context.custName, vehicle_id:context.vehId, vehicle_info:context.vehInfo, description, notes:findings.map(f=>`${f.code}: ${f.mechanic_notes || f.likely_cause}`).join("\n"), status:"waiting", labor_items, parts_used:parts, labor_hours:labor_items.reduce((s,i)=>s+i.hours,0), labor_cost:laborCost, parts_cost:0, total_cost:laborCost });
+      toast({ title: selectedCodes ? "Added to repair order" : "Repair order created", description:"Vehicle, codes, labor, parts, and customer explanation were included." });
+      dismissReport(); window.location.href=`/RepairOrderDetail/${ro.id}`;
+    } catch (error) { toast({ title:"Repair order failed", description:error?.message || "Try again.", variant:"destructive" }); }
+    finally { setSavingToRO(false); }
+  };
 
-      if (!vehId) {
-        toast({ title: "Select a vehicle first", description: "Choose a customer & vehicle before saving.", variant: "destructive" });
-        setSavingToRO(false);
-        return;
-      }
+  const handleCreateEstimate = async () => {
+    if (!autoVehicle) { setManualVehicleOpen(true); return; }
+    setSavingEstimate(true);
+    try {
+      const context = await ensureScannerVehicle();
+      const validation = await validateRecord({ customerId:context.custId, vehicleId:context.vehId, entityType:"Estimate" });
+      if (!validation.ok) throw new Error(validation.errors.join(" "));
+      const { labor_items, parts } = repairRows(allScanCodes());
+      const labor_total=labor_items.reduce((s,i)=>s+i.total,0);
+      const estimate=await base44.entities.Estimate.create({ estimate_number:`EST-${Date.now().toString().slice(-6)}`, customer_id:context.custId, customer_name:context.custName, vehicle_id:context.vehId, vehicle_info:context.vehInfo, status:"draft", service_reason:`Diagnostic codes: ${allScanCodes().map(c=>c.code).join(", ")}`, notes:aiSummary || "AI analysis pending", labor_items, parts_items:parts, labor_total, parts_total:0, tax_rate:0, tax_amount:0, grand_total:labor_total });
+      toast({ title:"Estimate created", description:"Scanner findings were pre-filled." }); dismissReport(); window.location.href=`/EstimateDetail/${estimate.id}`;
+    } catch (error) { toast({ title:"Estimate failed", description:error?.message || "Try again.", variant:"destructive" }); }
+    finally { setSavingEstimate(false); }
+  };
 
-      const ro = await base44.entities.RepairOrder.create({
-        customer_id: custId,
-        customer_name: custName,
-        vehicle_id: vehId,
-        vehicle_info: vehInfo,
-        description: desc,
-        status: "waiting",
-      });
-      toast({ title: "Repair order created", description: "Pre-filled with scan results." });
-      dismissReport();
-      window.location.href = `/RepairOrderDetail/${ro.id}`;
-    } catch (e) {
-      toast({ title: "Failed to create RO", description: e?.message || "Try again.", variant: "destructive" });
-    } finally {
-      setSavingToRO(false);
-    }
+  const handleSaveReport = async () => {
+    if (!autoVehicle) { setManualVehicleOpen(true); return; }
+    setSavingScan(true);
+    try {
+      const context=await ensureScannerVehicle();
+      await base44.entities.DiagnosticScan.create({ customer_id:context.custId, customer_name:context.custName, vehicle_id:context.vehId, vehicle_info:context.vehInfo, shop_owner_email:user.email, adapter_name:adapterName, mileage:autoVehicle.mileage_km ?? autoVehicle.mileage ?? undefined, dtc_codes:allScanCodes(), live_data_snapshot:scanResults?.liveSnapshot || {}, ai_analysis:{ summary:aiSummary, findings:Object.values(analysisByCode) }, status:"Completed" });
+      toast({ title:"Scan report saved" });
+    } catch (error) { toast({ title:"Save failed", description:error?.message || "Try again.", variant:"destructive" }); }
+    finally { setSavingScan(false); }
   };
 
   // ── BLE handlers ──────────────────────────────────────────────────────
@@ -283,7 +314,7 @@ ${monitors.length ? `<table>${monRows}</table>` : "<p class='muted'>Not availabl
 
   const vehicleInfoStr = selectedVehicle
     ? `${selectedVehicle.year || ""} ${selectedVehicle.make || ""} ${selectedVehicle.model || ""}`.trim()
-    : "—";
+    : autoVehicle ? `${autoVehicle.year || ""} ${autoVehicle.make || ""} ${autoVehicle.model || ""}`.trim() : "—";
 
   // ── Pro gate ───────────────────────────────────────────────────────────
   if (user && !isPro) {
@@ -336,6 +367,10 @@ ${monitors.length ? `<table>${monRows}</table>` : "<p class='muted'>Not availabl
         onDisconnect={handleDisconnect}
         onVehicleChange={() => setShowVehiclePanel(!showVehiclePanel)}
       />
+
+      {/* Persistent vehicle identity */}
+      {autoVehicle && <VehicleIdentifiedBanner vehicle={autoVehicle} />}
+      {connState === "connected" && reportReady && !autoVehicle && <ManualVehicleIdentification open={manualVehicleOpen} onOpenChange={setManualVehicleOpen} onSave={(vehicle) => { setManualVehicle(vehicle); setManualVehicleOpen(false); }} />}
 
       {/* Background scan progress — visible across all tabs */}
       <ScanProgressBar scanning={scanning} progress={scanProgress} label={scanLabel} />
@@ -393,6 +428,7 @@ ${monitors.length ? `<table>${monRows}</table>` : "<p class='muted'>Not availabl
           reportReady={reportReady}
           onConnect={handleConnect}
           onOpenVehiclePanel={() => setShowVehiclePanel(!showVehiclePanel)}
+          onEnterVehicleManually={() => setManualVehicleOpen(true)}
           onReopenReport={reopenReport}
           onStartNewScan={handleStartNewScan}
         />
@@ -422,8 +458,19 @@ ${monitors.length ? `<table>${monRows}</table>` : "<p class='muted'>Not availabl
           scanResults={scanResults}
           aiSummary={aiSummary}
           saving={savingToRO}
+          savingScan={savingScan}
+          savingEstimate={savingEstimate}
+          laborRate={laborRate}
+          analysisByCode={analysisByCode}
+          analyzingCodes={analyzingCodes}
           onDismiss={dismissReport}
-          onSaveToRepairOrder={handleSaveToRepairOrder}
+          onAnalyzeCode={(code) => analyzeCodes([code])}
+          onAnalyzeAll={() => analyzeCodes(allScanCodes())}
+          onAddCodeToRepairOrder={(code) => handleSaveToRepairOrder([code])}
+          onSaveToRepairOrder={() => handleSaveToRepairOrder()}
+          onCreateEstimate={handleCreateEstimate}
+          onSaveReport={handleSaveReport}
+          onEnterVehicleManually={() => setManualVehicleOpen(true)}
           onPrint={handlePrintReport}
           onStartNewScan={handleStartNewScan}
         />

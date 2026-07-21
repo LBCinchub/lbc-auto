@@ -4,7 +4,6 @@ import {
   Hexagon, Bluetooth, Car, ScanLine, CheckCircle2, Loader2,
   AlertTriangle, RefreshCw, Zap, Activity, FileText,
 } from "lucide-react";
-import VehicleIdentifiedBanner from "@/components/scanner/VehicleIdentifiedBanner";
 
 const SCAN_STEPS = [
   { key: "stored", label: "Reading stored codes", threshold: 20 },
@@ -24,7 +23,7 @@ const SCAN_STEPS = [
  */
 export default function ScanSessionFlow({
   connState, connError, autoVehicle, scanning, scanProgress, scanLabel, reportReady,
-  onConnect, onOpenVehiclePanel, onReopenReport, onStartNewScan,
+  onConnect, onOpenVehiclePanel, onEnterVehicleManually, onReopenReport, onStartNewScan,
 }) {
   const [elapsed, setElapsed] = useState(0);
   const timerRef = useRef(null);
@@ -100,7 +99,6 @@ export default function ScanSessionFlow({
   if (connState === "connected" && scanning && autoVehicle) {
     return (
       <div className="space-y-4">
-        <VehicleIdentifiedBanner vehicle={autoVehicle} />
         <StagePanel icon={ScanLine} iconColor="text-sky-400" iconBg="bg-sky-500/15" loading>
           <div className="flex items-center justify-between mb-1">
             <h2 className="text-white font-bold text-lg">Diagnostic Scan in Progress</h2>
@@ -133,7 +131,6 @@ export default function ScanSessionFlow({
   if (connState === "connected" && reportReady && autoVehicle) {
     return (
       <div className="space-y-4">
-        <VehicleIdentifiedBanner vehicle={autoVehicle} />
         <StagePanel icon={CheckCircle2} iconColor="text-emerald-400" iconBg="bg-emerald-500/15">
           <h2 className="text-white font-bold text-lg mb-1">Scan Complete</h2>
           <p className="text-gray-400 text-sm mb-4">Your diagnostic report is ready to review.</p>
@@ -150,25 +147,8 @@ export default function ScanSessionFlow({
     );
   }
 
-  // ── VIN not available — connected but no vehicle identified ──
-  if (connState === "connected" && !autoVehicle && !scanning) {
-    return (
-      <StagePanel icon={Car} iconColor="text-amber-400" iconBg="bg-amber-500/15">
-        <h2 className="text-white font-bold text-lg mb-1">VIN Not Available from ECU</h2>
-        <p className="text-gray-400 text-sm mb-4 max-w-sm mx-auto">
-          The adapter connected but couldn't read the VIN. You can still scan — select a vehicle manually to continue.
-        </p>
-        <div className="flex gap-2 justify-center">
-          <Button onClick={onOpenVehiclePanel} variant="outline" className="border-gray-700 text-gray-300">
-            Select Vehicle Manually
-          </Button>
-          <Button onClick={onStartNewScan} className="bg-sky-600 hover:bg-sky-700 text-white">
-            Retry VIN Read
-          </Button>
-        </div>
-      </StagePanel>
-    );
-  }
+  // The persistent manual-identification card is rendered above this flow.
+  if (connState === "connected" && !autoVehicle && !scanning) return null;
 
   // ── Landing (default) ──
   return (

@@ -7,7 +7,9 @@ import { Car, Gauge, Hash } from "lucide-react";
  */
 export default function VehicleIdentifiedBanner({ vehicle }) {
   if (!vehicle) return null;
-  const { year, make, model, mileage, vin, engine_type } = vehicle;
+  const { year, make, model, trim, vin } = vehicle;
+  const engine = vehicle.engine || vehicle.engine_type;
+  const mileage = vehicle.mileage_km ?? vehicle.mileage;
 
   return (
     <div className="bg-gradient-to-r from-emerald-500/15 to-teal-500/10 border border-emerald-500/30 rounded-xl p-4 animate-in fade-in slide-in-from-top-2 duration-500">
@@ -22,8 +24,8 @@ export default function VehicleIdentifiedBanner({ vehicle }) {
           <h3 className="text-white font-bold text-lg leading-tight truncate">
             {year || ""} {make || ""} {model || "Unknown Vehicle"}
           </h3>
-          {engine_type && (
-            <p className="text-gray-400 text-xs truncate">{engine_type}</p>
+          {(trim || engine) && (
+            <p className="text-gray-400 text-xs truncate">{[trim, engine].filter(Boolean).join(" · ")}</p>
           )}
         </div>
         {mileage != null && (
