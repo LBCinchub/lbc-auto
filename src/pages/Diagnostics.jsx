@@ -1,20 +1,20 @@
 import React, { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
-import { Microscope, Search, BarChart3, Settings, AlertTriangle, FileText } from "lucide-react";
+import { Microscope, Search, BarChart3, Settings, AlertTriangle } from "lucide-react";
 import { ELM327Client } from "@/lib/obd/elm327";
 import ScannerHeader from "@/components/scanner/ScannerHeader";
 import VehicleConnectionBanner from "@/components/scanner/VehicleConnectionBanner";
-import ScanMode from "@/components/scanner/ScanMode";
 import LiveDataMode from "@/components/scanner/LiveDataMode";
 import TechMode from "@/components/scanner/TechMode";
 import StatusBar from "@/components/scanner/StatusBar";
 import QuickAddCustomerDialog from "@/components/diagnostics/QuickAddCustomerDialog";
 import QuickAddVehicleDialog from "@/components/diagnostics/QuickAddVehicleDialog";
 import VehiclePanel from "@/components/scanner/VehiclePanel";
-import VehicleIdentifiedBanner from "@/components/scanner/VehicleIdentifiedBanner";
 import ScanProgressBar from "@/components/scanner/ScanProgressBar";
 import ScanReportCard from "@/components/scanner/ScanReportCard";
+import ScanSessionFlow from "@/components/scanner/ScanSessionFlow";
 import { useAutoConnectScan } from "@/hooks/useAutoConnectScan";
+import { lookupDtc } from "@/lib/dtcDatabase";
 import { useToast } from "@/components/ui/use-toast";
 
 const TABS = [
@@ -63,8 +63,57 @@ export default function Diagnostics() {
   const { toast } = useToast();
   const {
     autoVehicle, scanning, scanProgress, scanLabel, scanResults,
-    reportReady, reportOpen, dismissReport, reopenReport, aiSummary,
+    reportReady, reportOpen, dismissReport, reopenReport, aiSummary, restartScan,
   } = useAutoConnectScan({ clientRef, connState });
+
+  const handleStartNewScan = () => {
+    dismissReport();
+    restartScan();
+  };
+
+  // Opens a clean printable report in a new window (avoids dark-theme CSS conflicts).
+  const handlePrintReport = () => {
+    const v = autoVehicle || {};
+    const r = scanResults || {};
+    const codes = [...(r.storedCodes || []), ...(r.pendingCodes || []), ...(r.permanentCodes || [])];
+    const snap = r.liveSnapshot || {};
+    const monitors = r.emissions?.monitors || [];
+    const codeRows = codes.map((c) => {
+      const info = lookupDtc(c.code) || {};
+      return `<tr><td style="font-weight:700">${c.code}</td><td>${info.name || "Unknown code"}</td><td>${info.severity || "—"}</td><td>${(info.causes || []).join(", ") || "—"}</td></tr>`;
+    }).join("");
+    const monRows = monitors.map((m) => `<tr><td>${m.name}</td><td>${m.status === "pass" ? "PASS" : "NOT READY"}</td></tr>`).join("");
+    const html = `<!DOCTYPE html><html><head><title>Diagnostic Report</title><style>body{font-family:Arial,Helvetica,sans-serif;padding:28px;color:#111}h1{font-size:20px;margin:0 0 2px}h2{font-size:14px;border-bottom:1px solid #ccc;padding-bottom:4px;margin:18px 0 8px}table{width:100%;font-size:12px;border-collapse:collapse}td{padding:3px 6px;border-bottom:1px solid #eee;vertical-align:top}.muted{color:#666;font-size:11px}</style></head><body>
+<h1>LBC AUTO AI SCANNER — Diagnostic Report</h1>
+<p class="muted">Generated ${new Date().toLocaleString()}</p>
+<h2>Vehicle Confirmed</h2>
+<table>
+<tr><td style="font-weight:700;width:110px">Vehicle</td><td>${v.year || ""} ${v.make || ""} ${v.model || ""}</td></tr>
+<tr><td style="font-weight:700">VIN</td><td>${v.vin || "—"}</td></tr>
+<tr><td style="font-weight:700">Mileage</td><td>${v.mileage != null ? Number(v.mileage).toLocaleString() + " km" : "Not reported by ECU"}</td></tr>
+</table>
+<h2>Diagnostic Trouble Codes (${codes.length})</h2>
+${codes.length ? `<table><tr><td style="font-weight:700">Code</td><td style="font-weight:700">Description</td><td style="font-weight:700">Severity</td><td style="font-weight:700">Likely Causes</td></tr>${codeRows}</table>` : "<p class='muted'>No trouble codes found — all clear.</p>"}
+<h2>Emissions Readiness</h2>
+${monitors.length ? `<table>${monRows}</table>` : "<p class='muted'>Not available.</p>"}
+<h2>Live Data Snapshot</h2>
+<table>
+<tr><td style="font-weight:700;width:110px">Engine RPM</td><td>${snap.rpm ?? "—"}</td></tr>
+<tr><td style="font-weight:700">Coolant Temp</td><td>${snap.coolant ?? "—"} °C</td></tr>
+<tr><td style="font-weight:700">Battery Voltage</td><td>${snap.battery ?? "—"} V</td></tr>
+<tr><td style="font-weight:700">Throttle Position</td><td>${snap.throttle ?? "—"} %</td></tr>
+</table>
+<h2>AI Health Summary</h2>
+<p>${aiSummary || "Not available."}</p>
+<p class="muted" style="margin-top:28px;text-align:center;border-top:1px solid #ccc;padding-top:10px">LBC Auto · AI Vehicle Diagnostic Scan</p>
+</body></html>`;
+    const w = window.open("", "_blank");
+    if (!w) { toast({ title: "Allow popups to print", variant: "destructive" }); return; }
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 300);
+  };
 
   // "Save to Repair Order" — pre-fills a new RO with vehicle info + codes + AI summary.
   // Creates a walk-in customer + vehicle from the decoded VIN if none is selected.
@@ -288,17 +337,8 @@ export default function Diagnostics() {
         onVehicleChange={() => setShowVehiclePanel(!showVehiclePanel)}
       />
 
-      {/* Auto-detected vehicle banner + background scan progress (persist across tabs) */}
-      <VehicleIdentifiedBanner vehicle={autoVehicle} />
+      {/* Background scan progress — visible across all tabs */}
       <ScanProgressBar scanning={scanning} progress={scanProgress} label={scanLabel} />
-      {reportReady && !reportOpen && (
-        <button
-          onClick={reopenReport}
-          className="w-full bg-fuchsia-600/20 border border-fuchsia-500/40 text-fuchsia-300 rounded-xl py-2.5 text-sm font-bold flex items-center justify-center gap-2 hover:bg-fuchsia-600/30 transition-colors"
-        >
-          <FileText className="w-4 h-4" /> View Diagnostic Report
-        </button>
-      )}
 
       {/* Collapsible vehicle selector */}
       {showVehiclePanel && (
@@ -343,17 +383,18 @@ export default function Diagnostics() {
 
       {/* Active mode */}
       {activeTab === "scan" && (
-        <ScanMode
-          clientRef={clientRef}
+        <ScanSessionFlow
           connState={connState}
-          selectedVehicle={selectedVehicle}
-          customerId={customerId}
-          customerName={customerName}
-          vehicleId={vehicleId}
-          user={user}
-          laborRate={laborRate}
-          onSave={handleSaveScan}
-          onPhotoUpload={handlePhotoUpload}
+          connError={connError}
+          autoVehicle={autoVehicle}
+          scanning={scanning}
+          scanProgress={scanProgress}
+          scanLabel={scanLabel}
+          reportReady={reportReady}
+          onConnect={handleConnect}
+          onOpenVehiclePanel={() => setShowVehiclePanel(!showVehiclePanel)}
+          onReopenReport={reopenReport}
+          onStartNewScan={handleStartNewScan}
         />
       )}
 
@@ -383,6 +424,8 @@ export default function Diagnostics() {
           saving={savingToRO}
           onDismiss={dismissReport}
           onSaveToRepairOrder={handleSaveToRepairOrder}
+          onPrint={handlePrintReport}
+          onStartNewScan={handleStartNewScan}
         />
       )}
 

@@ -23,6 +23,7 @@ export function useAutoConnectScan({ clientRef, connState }) {
   const [reportOpen, setReportOpen] = useState(false);
   const [aiSummary, setAiSummary] = useState("");
   const cancelledRef = useRef(false);
+  const runRef = useRef(null);
 
   const dismissReport = useCallback(() => setReportOpen(false), []);
   const reopenReport = useCallback(() => setReportOpen(true), []);
@@ -147,6 +148,22 @@ export function useAutoConnectScan({ clientRef, connState }) {
     finishScan({ storedCodes: stored, pendingCodes: pending, permanentCodes: permanent, liveSnapshot: snapshot, emissions, freezeFrame }, vin, decoded, mileage);
   };
 
+  runRef.current = runAutoDetectAndScan;
+
+  // Re-run the full detect + scan flow without reconnecting (adapter stays paired).
+  const restartScan = useCallback(() => {
+    if (!clientRef.current) return;
+    cancelledRef.current = false;
+    setScanResults(null);
+    setReportReady(false);
+    setReportOpen(false);
+    setAiSummary("");
+    setAutoVehicle(null);
+    setScanning(true);
+    setScanProgress(5);
+    runRef.current?.();
+  }, [clientRef]);
+
   const finishScan = async (results, vin, decoded, mileage) => {
     if (cancelledRef.current) return;
     // Ensure autoVehicle is set even on early-exit paths
@@ -204,7 +221,7 @@ Give a professional, plain-language 2-3 sentence summary of the vehicle's overal
 
   return {
     autoVehicle, scanning, scanProgress, scanLabel, scanResults,
-    reportReady, reportOpen, dismissReport, reopenReport, aiSummary,
+    reportReady, reportOpen, dismissReport, reopenReport, aiSummary, restartScan,
   };
 }
 
