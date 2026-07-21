@@ -41,13 +41,9 @@ APPOINTMENT SCHEDULING:
   }
 };
 
-const OWNER_SYSTEM = `You are LBC Auto AI, the shop's built-in assistant. You help with: labor hours, OBD codes, parts costs, repair diagnosis, maintenance intervals, and image analysis. Be direct and specific with numbers.
+const OWNER_SYSTEM = `You are LBC Auto AI, the shop's built-in assistant. You help shop owners and technicians with: labor hours, OBD codes, parts costs, repair diagnosis, maintenance intervals, and image analysis. Be direct and specific with numbers.
 
-PARTNER SHOP — HAJ RIMS & TIRES (Gatineau/Ottawa):
-You are fully integrated with Haj Rims & Tires as a partner shop. When a conversation reaches a natural conclusion — after diagnosing an issue, quoting a price, or answering a service question — ALWAYS offer to schedule an appointment at Haj Rims & Tires. Say something like: "Would you like me to schedule this at Haj Rims & Tires? 📅" This is a key part of your role.
-
-Shop contact: 📞 613-672-2727 | hajwheels@gmail.com
-Haj Rims pricing: Oil change $100/$120/$150 | Alignment $120/$160 trucks | Labor $120/hr | Brakes $150/end | Tires (set of 4) $120/$160 trucks | Parts: NAPA + Worldpac warranty
+You are a professional shop management tool. NEVER offer appointment booking — shop owners are the ones running the shop, not booking into it.
 
 Labor hours: Oil change 0.3–0.5h | Brakes/axle 1.0–1.5h | CV axle 1.5–2.5h | Control arm 1.5–3.0h | Wheel bearing 1.5–3.0h | Strut 1.5–2.5h | Spark plugs 4cyl 0.5–1.5h | V6 1.5–3.0h | Head gasket 6–16h | Water pump 2–5h | Timing belt 3–6h | Alternator 1.5–3h | Cat converter 1.5–3h | O2 sensor 0.5–1.5h | Fuel pump 1.5–4h | AC compressor 2–4h | Radiator 2–4h | Transmission R&R 6–15h
 
@@ -60,10 +56,7 @@ Image analysis rules:
 - If you see DTC codes: read every code and diagnose each one
 - Tires: assess tread wear, depth, recommend action
 - Brakes: pad thickness, rotor condition
-- Engine bay: leaks, worn belts, corrosion
-
-APPOINTMENT OFFER RULE: At the END of every response where you've diagnosed an issue, quoted a price, or completed a service explanation — append this JSON flag on a new line: [OFFER_APT]
-This tells the frontend to show the "Schedule at Haj Rims" button. Only skip it if the user is already mid-booking or explicitly said no.`;
+- Engine bay: leaks, worn belts, corrosion`;
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -157,7 +150,7 @@ Deno.serve(async (req) => {
       const recent = messages.filter((m: any) => m.role !== 'system').slice(-6);
       let prompt = sys + '\n\nConversation:\n' +
         recent.map((m: any) => (m.role === 'user' ? 'User: ' : 'Assistant: ') + m.content).join('\n') +
-        '\n\nRespond to the latest message as LBC Auto AI. Be concise. Reference live shop data when relevant. If this is a diagnostic or service question, end your reply with [OFFER_APT] on a new line.';
+        '\n\nRespond to the latest message as LBC Auto AI. Be concise. Reference live shop data when relevant.';
 
       const llmParams: any = { prompt };
       const imageFile = image_url || image_base64;
@@ -177,11 +170,8 @@ Deno.serve(async (req) => {
         result?.message ||
         'No response generated.';
 
-      // Parse out the [OFFER_APT] flag
-      const offerApt = reply.includes('[OFFER_APT]');
       reply = reply.replace(/\[OFFER_APT\]/g, '').trim();
-
-      return Response.json({ reply, offer_appointment: offerApt }, { headers: CORS_HEADERS });
+      return Response.json({ reply, offer_appointment: false }, { headers: CORS_HEADERS });
     }
 
     // ════════════════════════════════════════════════════════════
