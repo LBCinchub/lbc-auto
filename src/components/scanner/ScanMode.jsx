@@ -1,12 +1,14 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Loader2, AlertTriangle, CheckCircle2, Sparkles, Trash2,
-  RefreshCw, Type, Camera, Save, Printer, FileText, ArrowRight, Zap,
+  RefreshCw, Type, Camera, Save, Printer, FileText, ArrowRight, Zap, Activity,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { lookupDtc } from "@/lib/dtcDatabase";
+import { LIVE_PIDS, getGaugeStatus, isLikelyHybrid, EV_PIDS } from "@/lib/obd/pids";
+import LiveGauge from "@/components/scanner/LiveGauge";
 import ManualCodeEntry from "@/components/scanner/ManualCodeEntry";
 import DtcCard from "@/components/scanner/DtcCard";
 import InspectionDecision from "@/components/scanner/InspectionDecision";
@@ -53,6 +55,47 @@ export default function ScanMode({
   const [chatLoading, setChatLoading] = useState(false);
   const [connError, setConnError] = useState("");
 
+  // ── Real-time live sensor streaming ──────────────────────────────────
+  const [liveStream, setLiveStream] = useState({});
+  const [streaming, setStreaming] = useState(false);
+  const streamRef = useRef(null);
+  const activePids = isLikelyHybrid(selectedVehicle) ? [...LIVE_PIDS, ...EV_PIDS] : LIVE_PIDS;
+
+  const stopLiveStream = useCallback(() => {
+    setStreaming(false);
+    if (streamRef.current) { clearInterval(streamRef.current); streamRef.current = null; }
+  }, []);
+
+  const startLiveStream = useCallback(() => {
+    stopLiveStream();
+    setStreaming(true);
+    const poll = async () => {
+      if (!clientRef.current) return;
+      const updates = {};
+      for (const pid of activePids) {
+        try {
+          const response = await clientRef.current.readPID(pid.pid);
+          if (/NO DATA|UNABLE TO CONNECT|ERROR/i.test(response)) continue;
+          const bytes = clientRef.current.parsePIDResponse(response, pid.pid);
+          if (bytes && bytes.length >= pid.formula.length) {
+            updates[pid.key] = { value: pid.formula(...bytes), pid };
+          }
+        } catch (e) { /* skip unsupported PID */ }
+      }
+      setLiveStream(updates);
+    };
+    poll(); // immediate first read
+    streamRef.current = setInterval(poll, 1000);
+  }, [clientRef, activePids, stopLiveStream]);
+
+  // Stop streaming when the component unmounts or the adapter disconnects
+  useEffect(() => {
+    return () => { if (streamRef.current) clearInterval(streamRef.current); };
+  }, []);
+  useEffect(() => {
+    if (connState !== "connected") stopLiveStream();
+  }, [connState, stopLiveStream]);
+
   const vehicleDesc = selectedVehicle
     ? `${selectedVehicle.year || ""} ${selectedVehicle.make || ""} ${selectedVehicle.model || ""} ${selectedVehicle.engine_type || ""}`.trim()
     : "Unknown vehicle";
@@ -93,6 +136,7 @@ export default function ScanMode({
 
   const handleFullScan = async () => {
     if (!clientRef.current) return;
+    stopLiveStream();
     setReading(true);
     setConnError("");
     setClearedMsg("");
@@ -109,6 +153,8 @@ export default function ScanMode({
       setReadProgress("Pulling live sensor data...");
       const live = await clientRef.current.readLiveData();
       setLiveData(live);
+      // Start real-time streaming so values update live on screen
+      startLiveStream();
     } catch (err) {
       setConnError(err?.message || "Failed to scan vehicle.");
     } finally {
@@ -342,6 +388,36 @@ export default function ScanMode({
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-3 flex items-center gap-2">
           <span className="text-xs text-gray-500 font-semibold uppercase tracking-wide">VIN</span>
           <span className="text-sm text-teal-400 font-mono font-bold tracking-wider">{vin}</span>
+        </div>
+      )}
+
+      {/* Real-time live sensor data — updates every second after a scan */}
+      {streaming && (
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-white font-bold text-sm flex items-center gap-2">
+              <Activity className="w-4 h-4 text-emerald-400" />
+              LIVE SENSOR DATA
+            </h2>
+            <span className="text-xs text-emerald-400 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> STREAMING
+            </span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            {activePids.map(pid => {
+              const data = liveStream[pid.key];
+              const value = data?.value;
+              return (
+                <LiveGauge
+                  key={pid.key}
+                  pid={pid}
+                  value={value}
+                  unit={pid.unit}
+                  status={getGaugeStatus(pid, value)}
+                />
+              );
+            })}
+          </div>
         </div>
       )}
 
