@@ -366,26 +366,28 @@ export class ELM327Client {
     try {
       const response = await this._sendCommand("0902", 5000);
       if (/NO DATA|UNABLE TO CONNECT|ERROR/i.test(response)) return null;
-      // VIN is multi-frame — response contains "49 02 01" followed by hex-encoded ASCII
-      const clean = response.replace(/\s+/g, "").replace(/SEARCHING\.*/gi, "").trim();
-      const hex = clean.replace(/^4902[0-9A-Fa-f]*/i, "");
-      // Each frame starts with a frame index byte, then hex-encoded ASCII chars
-      let vinHex = "";
-      // Try to extract just the VIN bytes (skip frame index bytes)
-      const frames = response.split(/[\r\n]+/).filter(l => /49\s*02/i.test(l));
-      for (const frame of frames) {
-        const f = frame.replace(/\s+/g, "");
-        // Skip "4902" + frame index (1 byte), rest is VIN hex
-        const vinPart = f.replace(/^4902[0-9A-Fa-f]{2}/i, "");
-        vinHex += vinPart;
+
+      // Keep only hex characters (strip spaces, CR/LF, "SEARCHING..." noise)
+      let hex = response.replace(/SEARCHING\.*/gi, "").replace(/[^0-9A-Fa-f]/g, "").toUpperCase();
+
+      // Multi-frame VIN responses contain repeated "49 02 XX" frame headers
+      // (49 = mode 09 + 0x40, 02 = PID, XX = frame index 01/02/03...).
+      // Remove ALL of them globally — the previous code only stripped the
+      // first, leaving frame indices interspersed in the hex and producing a
+      // different garbled VIN on every scan.
+      hex = hex.replace(/4902[0-9A-F]{2}/g, "");
+
+      // Decode remaining hex pairs as ASCII characters
+      let vin = "";
+      for (let i = 0; i + 2 <= hex.length; i += 2) {
+        const code = parseInt(hex.slice(i, i + 2), 16);
+        // VIN only contains A-Z and 0-9 — stop at the first non-printable
+        if (code < 0x30 || (code > 0x39 && code < 0x41) || code > 0x5A) continue;
+        vin += String.fromCharCode(code);
       }
-      if (vinHex) {
-        let vin = "";
-        for (let i = 0; i + 2 <= vinHex.length; i += 2) {
-          vin += String.fromCharCode(parseInt(vinHex.slice(i, i + 2), 16));
-        }
-        return vin.replace(/[^A-Z0-9]/gi, "").slice(0, 17) || null;
-      }
+      vin = vin.replace(/[^A-Z0-9]/gi, "").slice(0, 17);
+      // A valid VIN is exactly 17 chars and must not be all zeros
+      if (vin.length === 17 && !/^0+$/.test(vin)) return vin;
       return null;
     } catch (e) {
       return null;
