@@ -125,10 +125,15 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
   const [loading, setLoading] = useState(false);
   const [pendingImage, setPendingImage] = useState(null); // { file, preview }
   const [savePhoto, setSavePhoto] = useState(null); // { photoUrl, aiAnalysis }
+  const [user, setUser] = useState(null);
   const endRef   = useRef(null);
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
+
+  useEffect(() => {
+    base44.auth.me().then(setUser).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (open && endRef.current) endRef.current.scrollIntoView({ behavior: "smooth" });

@@ -49,6 +49,9 @@ export default function TechMode({ clientRef, connState, selectedVehicle, isPro 
 
     addEntry({ type: "info", text: `> ${cmdInput} — ${parsed.desc}` });
 
+    // Collect real readings to feed the AI so it uses ACTUAL values, not guesses
+    const readings = [];
+
     // Execute each PID/command in the parsed result
     for (const cmd of parsed.pids) {
       try {
@@ -56,6 +59,7 @@ export default function TechMode({ clientRef, connState, selectedVehicle, isPro 
 
         if (/NO DATA|UNABLE TO CONNECT|ERROR|CAN ERROR/i.test(response || "")) {
           addEntry({ type: "raw", command: cmd, text: `${response || "No data"} — this PID may not be supported by this vehicle.` });
+          readings.push({ command: cmd, raw: response || "No data", note: "Not supported / no data" });
           continue;
         }
 
@@ -66,28 +70,54 @@ export default function TechMode({ clientRef, connState, selectedVehicle, isPro 
           const decoded = decodePID(cmd, response);
           if (decoded) {
             addEntry({ type: "decoded", command: cmd, ...decoded });
+            readings.push({
+              command: cmd,
+              name: decoded.name,
+              value: decoded.value,
+              unit: decoded.unit,
+              range: decoded.range,
+              status: decoded.status,
+              raw: response,
+            });
+          } else {
+            readings.push({ command: cmd, raw: response });
           }
+        } else {
+          readings.push({ command: cmd, raw: response });
         }
       } catch (err) {
         addEntry({ type: "error", text: `Command "${cmd}" failed: ${err?.message || "timeout"}` });
+        readings.push({ command: cmd, error: err?.message || "timeout" });
       }
     }
 
     setBusy(false);
 
-    // AI interpretation
-    if (parsed.pids.length > 0 && parsed.type !== "info") {
+    // AI interpretation — pass the REAL decoded values so the AI uses actual numbers
+    if (readings.length > 0 && parsed.type !== "info") {
       try {
-        const lastResponse = terminal[terminal.length - 1];
         const vehicleDesc = selectedVehicle
           ? `${selectedVehicle.year || ""} ${selectedVehicle.make || ""} ${selectedVehicle.model || ""}`.trim()
           : "Unknown vehicle";
+
+        // Build a clear snapshot of the actual readings for the AI
+        const readingsSummary = readings.map(r => {
+          if (r.name != null) {
+            return `${r.name} (cmd ${r.command}): ${r.value}${r.unit} — status: ${r.status}, normal range: ${r.range}. Raw: ${r.raw}`;
+          }
+          if (r.error) return `Command ${r.command}: FAILED (${r.error})`;
+          return `Command ${r.command}: raw response = ${r.raw}`;
+        }).join("\n");
+
         const res = await base44.functions.invoke("lbcDiagAI", {
           mode: "chat",
           vehicle: vehicleDesc,
+          live_data: Object.fromEntries(
+            readings.filter(r => r.name != null).map(r => [r.name, r.value])
+          ),
           messages: [{
             role: "user",
-            content: `OBD2 command "${cmdInput}" (${parsed.desc}) was sent to a ${vehicleDesc}. Interpret the response and tell the mechanic what it means in one short paragraph. Mention if values are normal or abnormal, and what to check next.`,
+            content: `OBD2 command "${cmdInput}" (${parsed.desc}) was sent to a ${vehicleDesc}. Here are the ACTUAL real-time readings pulled from the vehicle:\n\n${readingsSummary}\n\nInterpret these REAL values for the mechanic. Use the EXACT numbers above — do not make up or approximate values. State whether each reading is normal or abnormal based on its range, and what to check next. One short paragraph.`,
           }],
         });
         if (res.data?.reply) {
