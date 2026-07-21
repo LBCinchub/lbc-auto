@@ -296,11 +296,11 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
                   {m.offerApt && (
                     <div style={{ marginTop: 10, padding: "10px 12px", borderRadius: 10, background: "#001f3a", border: "1px solid #00aaff44" }}>
                       <div style={{ color: "#80d8ff", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>
-                        📅 Want to schedule this at Haj Rims &amp; Tires?
+                        📅 Want to schedule this at {user?.business_name || "your shop"}?
                       </div>
                       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                         <button
-                          onClick={() => sendMessage("Yes, I'd like to schedule an appointment at Haj Rims & Tires")}
+                          onClick={() => sendMessage("Yes, I'd like to schedule an appointment")}
                           style={{
                             fontSize: 11, padding: "5px 12px", borderRadius: 20, cursor: "pointer",
                             background: "linear-gradient(135deg, #004080, #0066cc)",
@@ -311,16 +311,18 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
                         >
                           <CalendarPlus style={{ width: 11, height: 11 }} /> Yes, book me in
                         </button>
-                        <button
-                          onClick={() => sendMessage("Call Haj Rims & Tires to book")}
-                          style={{
-                            fontSize: 11, padding: "5px 12px", borderRadius: 20, cursor: "pointer",
-                            background: "#001829", border: "1px solid #00aaff44",
-                            color: "#60b8d4",
-                          }}
-                        >
-                          📞 Call 613-672-2727
-                        </button>
+                        {user?.phone && (
+                          <button
+                            onClick={() => sendMessage("I will call the shop to book")}
+                            style={{
+                              fontSize: 11, padding: "5px 12px", borderRadius: 20, cursor: "pointer",
+                              background: "#001829", border: "1px solid #00aaff44",
+                              color: "#60b8d4",
+                            }}
+                          >
+                            📞 Call {user.phone}
+                          </button>
+                        )}
                       </div>
                     </div>
                   )}
