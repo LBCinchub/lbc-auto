@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
-import { Microscope, Search, BarChart3, Settings, AlertTriangle } from "lucide-react";
+import { Microscope, Search, BarChart3, Settings, AlertTriangle, FileText } from "lucide-react";
 import { ELM327Client } from "@/lib/obd/elm327";
 import ScannerHeader from "@/components/scanner/ScannerHeader";
 import VehicleConnectionBanner from "@/components/scanner/VehicleConnectionBanner";
@@ -11,6 +11,11 @@ import StatusBar from "@/components/scanner/StatusBar";
 import QuickAddCustomerDialog from "@/components/diagnostics/QuickAddCustomerDialog";
 import QuickAddVehicleDialog from "@/components/diagnostics/QuickAddVehicleDialog";
 import VehiclePanel from "@/components/scanner/VehiclePanel";
+import VehicleIdentifiedBanner from "@/components/scanner/VehicleIdentifiedBanner";
+import ScanProgressBar from "@/components/scanner/ScanProgressBar";
+import ScanReportCard from "@/components/scanner/ScanReportCard";
+import { useAutoConnectScan } from "@/hooks/useAutoConnectScan";
+import { useToast } from "@/components/ui/use-toast";
 
 const TABS = [
   { key: "scan", label: "SCAN", icon: Search },
@@ -37,6 +42,7 @@ export default function Diagnostics() {
   const [sessionStart, setSessionStart] = useState(null);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [showAddVehicle, setShowAddVehicle] = useState(false);
+  const [savingToRO, setSavingToRO] = useState(false);
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
@@ -53,6 +59,85 @@ export default function Diagnostics() {
   const bleSupported = ELM327Client.isSupported();
   const laborRate = parseFloat(user?.labor_rate) || 120;
   const isPro = user?.plan_tier === "pro" || user?.plan_tier === "legacy";
+
+  const { toast } = useToast();
+  const {
+    autoVehicle, scanning, scanProgress, scanLabel, scanResults,
+    reportReady, reportOpen, dismissReport, reopenReport, aiSummary,
+  } = useAutoConnectScan({ clientRef, connState });
+
+  // "Save to Repair Order" — pre-fills a new RO with vehicle info + codes + AI summary.
+  // Creates a walk-in customer + vehicle from the decoded VIN if none is selected.
+  const handleSaveToRepairOrder = async () => {
+    if (!user) return;
+    setSavingToRO(true);
+    try {
+      const codes = [
+        ...(scanResults?.storedCodes || []),
+        ...(scanResults?.pendingCodes || []),
+        ...(scanResults?.permanentCodes || []),
+      ];
+      const codeText = codes.length ? codes.map((c) => c.code).join(", ") : "No codes";
+      const desc = `Auto-scan diagnostics${autoVehicle ? ` — ${autoVehicle.year || ""} ${autoVehicle.make || ""} ${autoVehicle.model || ""}`.trim() : ""}\nCodes: ${codeText}\nAI Summary: ${aiSummary || "N/A"}`;
+
+      let custId = customerId;
+      let custName = customerName;
+      let vehId = vehicleId;
+      let vehInfo = vehicleInfoStr;
+
+      if (!vehId && autoVehicle) {
+        const newCust = await base44.entities.Customer.create({
+          full_name: `Walk-in (VIN ${autoVehicle.vin?.slice(-6) || "scan"})`,
+          phone: "000-000-0000",
+          shop_owner_email: user.email,
+        });
+        custId = newCust.id;
+        custName = newCust.full_name;
+        const fuel = (autoVehicle.engine_type || "").toLowerCase();
+        const newVeh = await base44.entities.Vehicle.create({
+          customer_id: custId,
+          customer_name: custName,
+          shop_owner_email: user.email,
+          vin: autoVehicle.vin || undefined,
+          make: autoVehicle.make || undefined,
+          model: autoVehicle.model || undefined,
+          year: autoVehicle.year ? parseInt(autoVehicle.year) : undefined,
+          engine_type: autoVehicle.engine_type || undefined,
+          mileage: autoVehicle.mileage || undefined,
+          fuel_type: fuel.includes("electric") ? "Electric" : fuel.includes("hybrid") ? "Hybrid" : undefined,
+        });
+        vehId = newVeh.id;
+        vehInfo = `${autoVehicle.year || ""} ${autoVehicle.make || ""} ${autoVehicle.model || ""}`.trim();
+        setCustomers((prev) => [newCust, ...prev]);
+        setCustomerId(custId);
+        setCustomerName(custName);
+        setVehicles((prev) => [newVeh, ...prev]);
+        setVehicleId(vehId);
+      }
+
+      if (!vehId) {
+        toast({ title: "Select a vehicle first", description: "Choose a customer & vehicle before saving.", variant: "destructive" });
+        setSavingToRO(false);
+        return;
+      }
+
+      const ro = await base44.entities.RepairOrder.create({
+        customer_id: custId,
+        customer_name: custName,
+        vehicle_id: vehId,
+        vehicle_info: vehInfo,
+        description: desc,
+        status: "waiting",
+      });
+      toast({ title: "Repair order created", description: "Pre-filled with scan results." });
+      dismissReport();
+      window.location.href = `/RepairOrderDetail/${ro.id}`;
+    } catch (e) {
+      toast({ title: "Failed to create RO", description: e?.message || "Try again.", variant: "destructive" });
+    } finally {
+      setSavingToRO(false);
+    }
+  };
 
   // ── BLE handlers ──────────────────────────────────────────────────────
   const handleConnect = async () => {
@@ -203,6 +288,18 @@ export default function Diagnostics() {
         onVehicleChange={() => setShowVehiclePanel(!showVehiclePanel)}
       />
 
+      {/* Auto-detected vehicle banner + background scan progress (persist across tabs) */}
+      <VehicleIdentifiedBanner vehicle={autoVehicle} />
+      <ScanProgressBar scanning={scanning} progress={scanProgress} label={scanLabel} />
+      {reportReady && !reportOpen && (
+        <button
+          onClick={reopenReport}
+          className="w-full bg-fuchsia-600/20 border border-fuchsia-500/40 text-fuchsia-300 rounded-xl py-2.5 text-sm font-bold flex items-center justify-center gap-2 hover:bg-fuchsia-600/30 transition-colors"
+        >
+          <FileText className="w-4 h-4" /> View Diagnostic Report
+        </button>
+      )}
+
       {/* Collapsible vehicle selector */}
       {showVehiclePanel && (
         <VehiclePanel
@@ -274,6 +371,18 @@ export default function Diagnostics() {
           connState={connState}
           selectedVehicle={selectedVehicle}
           isPro={isPro}
+        />
+      )}
+
+      {/* Scan complete report card (full-screen overlay) */}
+      {reportOpen && (
+        <ScanReportCard
+          autoVehicle={autoVehicle}
+          scanResults={scanResults}
+          aiSummary={aiSummary}
+          saving={savingToRO}
+          onDismiss={dismissReport}
+          onSaveToRepairOrder={handleSaveToRepairOrder}
         />
       )}
 

@@ -449,6 +449,95 @@ export class ELM327Client {
 
     return { codes: merged, vin: this._adapterInfo?.vin || null };
   }
+
+  /** Read odometer/mileage via PID 01A6 (where supported). Returns km or null. */
+  async readMileage() {
+    try {
+      const response = await this._sendCommand("01A6", 5000);
+      if (/NO DATA|UNABLE TO CONNECT|ERROR/i.test(response)) return null;
+      const bytes = parseOBDDataBytes(response, "01A6");
+      if (!bytes || bytes.length < 4) return null;
+      return bytes[0] * 16777216 + bytes[1] * 65536 + bytes[2] * 256 + bytes[3];
+    } catch (e) { return null; }
+  }
+
+  /** Query supported Mode 01 PIDs via the 0100 bitmap chain. Returns Set of "01XX" strings. */
+  async getSupportedPids() {
+    const supported = new Set();
+    let groupPid = "0100";
+    while (groupPid) {
+      try {
+        const response = await this._sendCommand(groupPid, 5000);
+        if (/NO DATA|UNABLE TO CONNECT|ERROR/i.test(response)) break;
+        const bytes = parseOBDDataBytes(response, groupPid);
+        if (!bytes || bytes.length < 4) break;
+        const base = parseInt(groupPid.slice(2), 16);
+        for (let i = 0; i < 32; i++) {
+          const byteIdx = Math.floor(i / 8);
+          const bitIdx = 7 - (i % 8);
+          if (bytes[byteIdx] & (1 << bitIdx)) {
+            const pidNum = base + i + 1;
+            if (pidNum > 0xFE) continue;
+            supported.add("01" + pidNum.toString(16).toUpperCase().padStart(2, "0"));
+          }
+        }
+        if (!(bytes[0] & 0x01)) break; // bit 0 = next group supported
+        const nextBase = base + 0x20;
+        if (nextBase > 0xE0) break;
+        groupPid = "01" + nextBase.toString(16).toUpperCase().padStart(2, "0");
+      } catch (e) { break; }
+    }
+    return supported;
+  }
+
+  /** Read emissions readiness (Mode 01 PID 01). Returns structured monitor status or null. */
+  async readEmissionsReadiness() {
+    try {
+      const response = await this._sendCommand("0101", 4000);
+      if (/NO DATA|UNABLE TO CONNECT|ERROR/i.test(response)) return null;
+      const bytes = parseOBDDataBytes(response, "0101");
+      if (!bytes || bytes.length < 5) return null;
+      const milOn = !!(bytes[0] & 0x80);
+      const dtcCount = bytes[0] & 0x7F;
+      return parseReadinessMonitors(bytes, milOn, dtcCount);
+    } catch (e) { return null; }
+  }
+
+  /** Read freeze frame (Mode 02 PID 02). Returns { code, raw } or null. */
+  async readFreezeFrame() {
+    try {
+      const response = await this._sendCommand("0202", 6000);
+      if (/NO DATA|UNABLE TO CONNECT|ERROR/i.test(response)) return null;
+      const clean = response.replace(/\s+/g, "").replace(/SEARCHING\.*/gi, "").trim();
+      const hex = clean.replace(/^42/i, "");
+      if (hex.length < 4) return null;
+      return { code: decodeDTC(hex.slice(0, 4)), raw: response };
+    } catch (e) { return null; }
+  }
+}
+
+/** Parse emissions readiness monitor bits from a PID 01 response (5 data bytes). */
+function parseReadinessMonitors(bytes, milOn, dtcCount) {
+  const defs = [
+    { name: "Misfire", supp: 1, ready: 1, bSupp: 1, bReady: 2 },
+    { name: "Fuel System", supp: 2, ready: 2, bSupp: 1, bReady: 2 },
+    { name: "Components (CCM)", supp: 3, ready: 3, bSupp: 1, bReady: 2 },
+    { name: "Catalyst", supp: 0, ready: 0, bSupp: 3, bReady: 4 },
+    { name: "Heated Catalyst", supp: 1, ready: 1, bSupp: 3, bReady: 4 },
+    { name: "Evaporative System", supp: 2, ready: 2, bSupp: 3, bReady: 4 },
+    { name: "Secondary Air", supp: 3, ready: 3, bSupp: 3, bReady: 4 },
+    { name: "O2 Sensor", supp: 4, ready: 4, bSupp: 3, bReady: 4 },
+    { name: "O2 Sensor Heater", supp: 5, ready: 5, bSupp: 3, bReady: 4 },
+    { name: "EGR / VVT", supp: 6, ready: 6, bSupp: 3, bReady: 4 },
+  ];
+  const monitors = [];
+  for (const d of defs) {
+    const supported = !!(bytes[d.bSupp] & (1 << d.supp));
+    if (!supported) continue;
+    const ready = !!(bytes[d.bReady] & (1 << d.ready));
+    monitors.push({ name: d.name, status: ready ? "pass" : "fail" });
+  }
+  return { milOn, dtcCount, monitors };
 }
 
 /** Parses a raw ELM327 hex response for a given PID request into its data bytes. */
