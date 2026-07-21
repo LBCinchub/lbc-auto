@@ -36,6 +36,7 @@ export default function ScanMode({
   const [readPct, setReadPct] = useState(0);
   const [dtcCodes, setDtcCodes] = useState([]);
   const [liveData, setLiveData] = useState(null);
+  const [vin, setVin] = useState("");
   const [clearing, setClearing] = useState(false);
   const [clearedMsg, setClearedMsg] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
@@ -99,11 +100,12 @@ export default function ScanMode({
     setDtcCodes([]);
     setReadPct(0);
     try {
-      const { codes } = await clientRef.current.fullSystemScan((label, pct) => {
+      const { codes, vin: scannedVin } = await clientRef.current.fullSystemScan((label, pct) => {
         setReadProgress(label);
         setReadPct(pct);
       });
       setDtcCodes(codes);
+      setVin(scannedVin || "");
       setReadProgress("Pulling live sensor data...");
       const live = await clientRef.current.readLiveData();
       setLiveData(live);
@@ -334,6 +336,14 @@ export default function ScanMode({
 
       {/* Manual entry */}
       {showManualEntry && <ManualCodeEntry onSubmit={handleManualEntry} />}
+
+      {/* VIN read from the vehicle */}
+      {vin && (
+        <div className="bg-gray-900 border border-gray-800 rounded-lg p-3 flex items-center gap-2">
+          <span className="text-xs text-gray-500 font-semibold uppercase tracking-wide">VIN</span>
+          <span className="text-sm text-teal-400 font-mono font-bold tracking-wider">{vin}</span>
+        </div>
+      )}
 
       {/* Fault code badges summary */}
       {dtcCodes.length > 0 && (
