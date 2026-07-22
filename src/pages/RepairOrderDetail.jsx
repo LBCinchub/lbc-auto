@@ -15,6 +15,7 @@ import InvoiceFormDialog from "@/components/invoices/InvoiceFormDialog";
 import SignaturePad from "@/components/orders/SignaturePad";
 import PaymentHistoryManager from "@/components/invoices/PaymentHistoryManager";
 import AutoAIBubble from "@/components/shared/AutoAIBubble";
+import { invoiceFieldsFromRepairOrder, resolveVehicleId } from "@/utils/recordLinking";
 
 export default function RepairOrderDetail() {
   const { orderId } = useParams();
@@ -32,6 +33,7 @@ export default function RepairOrderDetail() {
   const [showHistoryManager, setShowHistoryManager] = useState(false);
   const [newOrderedPart, setNewOrderedPart] = useState({ name: "", part_number: "", supplier: "", quantity: "", unit_price: "", notes: "" });
   const [generatingInvoice, setGeneratingInvoice] = useState(false);
+  const [statusError, setStatusError] = useState("");
 
   const { data: order, isLoading } = useQuery({
     queryKey: ["repairOrder", orderId],
@@ -156,58 +158,38 @@ export default function RepairOrderDetail() {
 
   const previousOrders = allOrders.filter(o => o.id !== orderId);
 
+  const persistRepairOrder = async (status = order.status) => {
+    const currentUser = await base44.auth.me();
+    const vehicleId = await resolveVehicleId({ customerId: order.customer_id, vehicleId: order.vehicle_id, vehicleInfo: order.vehicle_info });
+    if (!vehicleId) throw new Error("No matching customer vehicle could be found.");
+    const history = [...(order.history || []), { timestamp: new Date().toISOString(), user: currentUser?.email || "system", action: "status_updated", changes: { status: { from: order.status, to: status } } }];
+    return await base44.entities.RepairOrder.update(order.id, {
+      customer_id: order.customer_id, customer_name: order.customer_name || "", vehicle_id: vehicleId,
+      vehicle_info: order.vehicle_info || "", estimate_id: order.estimate_id || "", order_number: order.order_number,
+      description: order.description, status, labor_items: order.labor_items || [], parts_used: order.parts_used || [],
+      labor_cost: Number(order.labor_cost) || 0, parts_cost: Number(order.parts_cost) || 0,
+      total_cost: Number(order.total_cost) || 0, notes: order.notes || "", photos: order.photos || [], history,
+    });
+  };
+
+  const handleStatusChange = async (newStatus) => {
+    setUpdatingStatus(true); setStatusError("");
+    try {
+      await persistRepairOrder(newStatus);
+      await queryClient.invalidateQueries({ queryKey: ["repairOrder", orderId] });
+    } catch (e) { setStatusError(e?.message || "Could not save repair order status."); }
+    finally { setUpdatingStatus(false); }
+  };
+
   const handleQuickGenerateInvoice = async () => {
     setGeneratingInvoice(true);
     try {
-      const currentUser = await base44.auth.me();
-      const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
-      const laborItems = order.labor_items || [];
-      const partsUsed = order.parts_used || [];
-      const laborTotal = r2(laborItems.reduce((s, l) => s + (parseFloat(l.hours) || 0) * (parseFloat(l.rate) || 0), 0));
-      const partsTotal = r2(partsUsed.reduce((s, p) => s + (parseFloat(p.quantity) || 0) * (parseFloat(p.unit_price) || 0), 0));
-      const subtotal = r2(laborTotal + partsTotal);
-      const taxRate = currentUser?.tax_rate || 0;
-      const taxAmount = r2(subtotal * (taxRate / 100));
-      const total = r2(subtotal + taxAmount);
+      const savedRO = await persistRepairOrder(order.status);
+      const invoiceNumber = `INV-${Date.now().toString(36).toUpperCase().slice(-8)}`;
+      const invoiceData = invoiceFieldsFromRepairOrder(savedRO, savedRO.vehicle_id, invoiceNumber);
+      const inv = await base44.entities.Invoice.create({ ...invoiceData, tax_rate: order.tax_rate || 0, tax_applies_to: order.tax_applies_to || "both", tax_amount: order.tax_amount || 0, status: "unpaid" });
 
-      const lineItems = [
-        ...laborItems.map(l => ({
-          description: l.description || "Labor",
-          type: "labor",
-          quantity: parseFloat(l.hours) || 1,
-          unit_price: parseFloat(l.rate) || 0,
-          total: r2((parseFloat(l.hours) || 0) * (parseFloat(l.rate) || 0)),
-        })),
-        ...partsUsed.map(p => ({
-          description: p.name || "Part",
-          type: "part",
-          quantity: parseFloat(p.quantity) || 1,
-          unit_price: parseFloat(p.unit_price) || 0,
-          total: r2((parseFloat(p.quantity) || 0) * (parseFloat(p.unit_price) || 0)),
-        })),
-      ];
-
-      const inv = await base44.entities.Invoice.create({
-        invoice_number: `INV-${Date.now().toString(36).toUpperCase().slice(-8)}`,
-        repair_order_id: order.id,
-        customer_id: order.customer_id || "",
-        customer_name: order.customer_name || "",
-        vehicle_info: order.vehicle_info || "",
-        line_items: lineItems,
-        parts_total: partsTotal,
-        labor_total: laborTotal,
-        tax_rate: taxRate,
-        tax_applies_to: "both",
-        tax_amount: taxAmount,
-        total,
-        balance_due: total,
-        amount_paid: 0,
-        status: "unpaid",
-        service_reason: order.description || "",
-      });
-
-      // Bug 3: Link the invoice back to the RO
-      await base44.entities.RepairOrder.update(order.id, {
+      await base44.entities.RepairOrder.update(savedRO.id, {
         linked_invoice_id: inv.id,
         linked_invoice_number: inv.invoice_number,
       });
@@ -215,7 +197,7 @@ export default function RepairOrderDetail() {
       queryClient.invalidateQueries({ queryKey: ["invoices", "byRO", orderId] });
       navigate(`/InvoiceDetail/${inv.id}`);
     } catch (err) {
-      alert("Could not generate invoice: " + (err?.message || err));
+      setStatusError(err?.message || "Could not generate the linked invoice.");
     } finally {
       setGeneratingInvoice(false);
     }
@@ -309,12 +291,8 @@ export default function RepairOrderDetail() {
              <button onClick={() => order.customer_id && navigate(`/CustomerDetails?id=${order.customer_id}`)} className="text-sky-400 hover:text-sky-300 hover:underline mt-1 text-left transition-colors font-medium">{order.customer_name}</button>
              {customer?.phone && <p className="text-sky-400 text-sm mt-1">{formatPhone(customer.phone)}</p>}
            </div>
-           <Select value={order.status} onValueChange={(newStatus) => {
-             setUpdatingStatus(true);
-             base44.entities.RepairOrder.update(orderId, { status: newStatus });
-             queryClient.invalidateQueries({ queryKey: ["repairOrder", orderId] });
-             setUpdatingStatus(false);
-           }} disabled={updatingStatus}>
+           <div>
+           <Select value={order.status} onValueChange={handleStatusChange} disabled={updatingStatus}>
              <SelectTrigger className="w-48 bg-gray-800 border-gray-700 text-white">
                <SelectValue />
              </SelectTrigger>
@@ -326,6 +304,8 @@ export default function RepairOrderDetail() {
                <SelectItem value="delivered">Delivered</SelectItem>
              </SelectContent>
            </Select>
+           {statusError && <p className="mt-2 max-w-48 text-xs text-rose-400">Save failed: {statusError}</p>}
+           </div>
          </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mb-8">
@@ -687,6 +667,7 @@ export default function RepairOrderDetail() {
         invoice={null}
         orders={order ? [order] : []}
         customers={customers}
+        vehicles={vehicles}
         initialOrderId={orderId}
         onSaved={() => {
           setShowInvoiceDialog(false);

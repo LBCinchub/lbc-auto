@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
 import { CreditCard, Receipt } from "lucide-react";
+import { invoiceFieldsFromRepairOrder, resolveVehicleId } from "@/utils/recordLinking";
 
 export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, entityName = "Invoice" }) {
   const [payments, setPayments] = useState([]); // Array of individual payment entries
@@ -17,6 +18,7 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
   const [receiptNumber, setReceiptNumber] = useState("");
   const [cashierCode, setCashierCode] = useState("");
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   // Reset form whenever a new invoice is opened
   React.useEffect(() => {
@@ -25,6 +27,7 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
       setCurrentPayment({ amount: "", payment_method: "card", card_last4: "" });
       setReceiptNumber("");
       setCashierCode("");
+      setSaveError("");
     }
   }, [open, invoice?.id]);
 
@@ -103,46 +106,33 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
     };
 
     if (entityName === "RepairOrder") {
-      // Step 1: Save payment fields to RepairOrder
-      await base44.entities.RepairOrder.update(invoice.id, paymentFields);
-
-      // Step 2: Auto-create or update a linked Invoice so Analytics always has one source of truth
-      const invoiceNum = invoice.linked_invoice_number || `INV-RO-${invoice.id.slice(-6).toUpperCase()}` || `INV-${Date.now().toString(36).toUpperCase().slice(-8)}`;
       try {
-        if (invoice.linked_invoice_id) {
-          // Update the already-linked invoice — BUG 7: always set repair_order_id
-          await base44.entities.Invoice.update(invoice.linked_invoice_id, {
-            ...paymentFields,
-            invoice_number: invoiceNum,
-            total: invoice.total || 0,
-            labor_total: invoice.labor_cost || 0,
-            parts_total: invoice.parts_cost || 0,
-            repair_order_id: invoice.id,
-          });
-        } else {
-          // Create a new linked invoice — BUG 7: always set repair_order_id
-          const created = await base44.entities.Invoice.create({
-            invoice_number: invoiceNum,
-            customer_id: invoice.customer_id || "",
-            customer_name: invoice.customer_name || "",
-            vehicle_info: invoice.vehicle_info || "",
-            repair_order_id: invoice.id,
-            total: invoice.total || 0,
-            labor_total: invoice.labor_cost || 0,
-            parts_total: invoice.parts_cost || 0,
-            tax_amount: invoice.tax_amount || 0,
-            ...paymentFields,
-          });
-          // Save linked invoice ID back to RepairOrder for future syncs + mark as invoiced
-          await base44.entities.RepairOrder.update(invoice.id, {
-            linked_invoice_id: created.id,
-            linked_invoice_number: invoiceNum,
-            status: "invoiced",
-            notes: (invoice.notes || "") + ` | Invoice: ${invoiceNum}`,
-          });
-        }
+        const currentRO = await base44.entities.RepairOrder.get(invoice.id);
+        if (!currentRO?.id) throw new Error("Repair Order no longer exists.");
+        const { status: paymentStatus, ...roPaymentFields } = paymentFields;
+        const savedRO = await base44.entities.RepairOrder.update(currentRO.id, { ...roPaymentFields, status: paymentStatus === "paid" ? "delivered" : currentRO.status });
+        const vehicleId = await resolveVehicleId({ customerId: savedRO.customer_id, vehicleId: savedRO.vehicle_id, vehicleInfo: savedRO.vehicle_info });
+        if (!vehicleId) throw new Error("No matching customer vehicle could be found.");
+        const invoiceNum = savedRO.linked_invoice_number || `INV-RO-${savedRO.id.slice(-6).toUpperCase()}`;
+        const invoiceData = { ...invoiceFieldsFromRepairOrder(savedRO, vehicleId, invoiceNum), ...paymentFields, tax_amount: savedRO.tax_amount || 0 };
+        const linkedInvoice = savedRO.linked_invoice_id ? await base44.entities.Invoice.get(savedRO.linked_invoice_id).catch(() => null) : null;
+        const savedInvoice = linkedInvoice
+          ? await base44.entities.Invoice.update(linkedInvoice.id, invoiceData)
+          : await base44.entities.Invoice.create(invoiceData);
+        await base44.entities.RepairOrder.update(savedRO.id, {
+          customer_id: savedRO.customer_id, customer_name: savedRO.customer_name || "", vehicle_id: vehicleId,
+          vehicle_info: savedRO.vehicle_info || "", estimate_id: savedRO.estimate_id || "", order_number: savedRO.order_number,
+          description: savedRO.description, status: newStatus === "paid" ? "delivered" : savedRO.status,
+          labor_items: savedRO.labor_items || [], parts_used: savedRO.parts_used || [], labor_cost: Number(savedRO.labor_cost) || 0,
+          parts_cost: Number(savedRO.parts_cost) || 0, total_cost: Number(savedRO.total_cost) || 0,
+          notes: savedRO.notes || "", photos: savedRO.photos || [], linked_invoice_id: savedInvoice.id,
+          linked_invoice_number: invoiceNum,
+          history: [...(savedRO.history || []), { timestamp: new Date().toISOString(), user: cashierCode || "system", action: "payment_recorded", changes: { invoice_id: savedInvoice.id } }],
+        });
       } catch (e) {
-        console.error("Failed to sync Invoice from RepairOrder payment:", e);
+        setSaveError(e?.message || "Could not finish and link this Repair Order.");
+        setSaving(false);
+        return;
       }
     } else if (entityName === "Estimate") {
       // Auto-create or update a linked Invoice with full line items, mark estimate as invoiced
@@ -253,7 +243,7 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-md">
+      <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-md" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Receipt className="w-5 h-5 text-sky-400" />
@@ -358,6 +348,7 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
             </div>
           </div>
 
+          {saveError && <p className="text-sm text-rose-400">Save failed: {saveError}</p>}
           <div className="flex gap-3 pt-2">
             <Button variant="outline" onClick={onClose} className="flex-1 border-gray-700 text-gray-300">Cancel</Button>
             <Button onClick={handleSave} disabled={saving || payments.length === 0}

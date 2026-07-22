@@ -15,6 +15,7 @@ import { fuzzyMatch } from "@/utils/fuzzySearch";
 import TechnicianNotes from "@/components/invoices/TechnicianNotes";
 import PaymentReceiptDialog from "@/components/invoices/PaymentReceiptDialog";
 import { capitalizeFields, capitalizeArrayItems } from "@/utils/capitalize";
+import { resolveVehicleId } from "@/utils/recordLinking";
 
 const emptyForm = {
   repair_order_id: "", estimate_id: "", customer_id: "", customer_name: "", customer_phone: "", vehicle_info: "",
@@ -32,6 +33,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
   const navigate = useNavigate();
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [showCashout, setShowCashout] = useState(false);
   const submittingRef = useRef(false);
   const [fetchedVehicles, setFetchedVehicles] = useState([]);
@@ -217,6 +219,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
       customer_id: order.customer_id,
       customer_name: order.customer_name,
       customer_phone: customerPhone,
+      vehicle_id: order.vehicle_id || "",
       vehicle_info: order.vehicle_info,
       parts_total: order.parts_cost || 0,
       labor_total: order.labor_cost || 0,
@@ -241,6 +244,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
       customer_id: est.customer_id,
       customer_name: est.customer_name,
       customer_phone: customerPhone,
+      vehicle_id: est.vehicle_id || "",
       vehicle_info: est.vehicle_info || "",
       parts_total: est.parts_total || 0,
       labor_total: est.labor_total || 0,
@@ -263,8 +267,9 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
       customer_id: linked.customer_id,
       customer_name: linked.customer_name,
       customer_phone: customerPhone,
+      vehicle_id: linked.vehicle_id || "",
       vehicle_info: linked.vehicle_info || "",
-    }));
+      }));
     setInvoiceSearch("");
     setLinkMode("invoice-linked");
   };
@@ -344,36 +349,36 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
   const handleSave = async () => {
     if (submittingRef.current) return; // synchronous guard — prevents double-submit before React re-renders
     submittingRef.current = true;
-    setSaving(true);  // ← MOVE THIS UP — show spinner immediately
-
-    // ── CENTER CONTROL: Validate before any DB write ──────────────────────
-    if (form.customer_id) {
-      try {
-        const validation = await validateRecord({
-          customerId: form.customer_id,
-          vehicleId: form.vehicle_id,
-          entityType: "Invoice",
-        });
-        if (!validation.ok) {
-          submittingRef.current = false;
-          setSaving(false);
-          alert("⚠️ Cannot save:\n\n" + validation.errors.join("\n"));
-          return;
-        }
-      } catch (validationErr) {
-        // validateRecord network error — skip validation, allow save to proceed
-        console.warn("[validateRecord] skipped due to error:", validationErr?.message);
-      }
-    }
+    setSaving(true);
+    setSaveError("");
     let resolvedCustomerId = form.customer_id;
-    let resolvedVehicleId = form.vehicle_id;
+    let resolvedVehicleId = "";
+    try {
+      resolvedVehicleId = await resolveVehicleId({ customerId: form.customer_id, vehicleId: form.vehicle_id, vehicleInfo: form.vehicle_info });
+      if (form.customer_id) {
+        const validation = await validateRecord({ customerId: form.customer_id, vehicleId: resolvedVehicleId, entityType: "Invoice" });
+        if (!validation.ok) throw new Error(validation.errors.join(" "));
+      }
+    } catch (validationErr) {
+      setSaveError(validationErr?.message || "Could not validate the customer and vehicle links.");
+      submittingRef.current = false;
+      setSaving(false);
+      return;
+    }
     if ((!form.repair_order_id || customerOverride) && !form.customer_id && form.customer_name) {
-      const newCustomer = await base44.entities.Customer.create({ full_name: form.customer_name, phone: form.customer_phone || "" });
-      resolvedCustomerId = newCustomer.id;
-      if (form.vehicle_info) {
-        const parts = form.vehicle_info.trim().split(" ");
-        const newVehicle = await base44.entities.Vehicle.create({ customer_id: newCustomer.id, customer_name: form.customer_name, vin: vinInput || "", year: parseInt(parts[0]) || new Date().getFullYear(), make: parts[1] || "Unknown", model: parts.slice(2).join(" ") || "Unknown" });
-        resolvedVehicleId = newVehicle.id;
+      try {
+        const newCustomer = await base44.entities.Customer.create({ full_name: form.customer_name, phone: form.customer_phone || "" });
+        resolvedCustomerId = newCustomer.id;
+        if (form.vehicle_info) {
+          const parts = form.vehicle_info.trim().split(" ");
+          const newVehicle = await base44.entities.Vehicle.create({ customer_id: newCustomer.id, customer_name: form.customer_name, vin: vinInput || "", year: parseInt(parts[0]) || new Date().getFullYear(), make: parts[1] || "Unknown", model: parts.slice(2).join(" ") || "Unknown" });
+          resolvedVehicleId = newVehicle.id;
+        }
+      } catch (e) {
+        setSaveError(e?.message || "Could not create the customer or vehicle.");
+        submittingRef.current = false;
+        setSaving(false);
+        return;
       }
     }
 
@@ -420,8 +425,8 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
         if (data.repair_order_id) {
           try {
             const ro = await base44.entities.RepairOrder.get(data.repair_order_id);
-            if (ro) await base44.entities.RepairOrder.update(data.repair_order_id, { customer_id: data.customer_id, customer_name: data.customer_name, vehicle_info: data.vehicle_info, labor_cost: laborTotal, parts_cost: partsTotal, total_cost: finalTotal, parts_used: data.parts_used?.length ? data.parts_used : ro.parts_used, description: ro.description, notes: ro.notes });
-          } catch (e) {}
+            if (ro) await base44.entities.RepairOrder.update(data.repair_order_id, { customer_id: data.customer_id, customer_name: data.customer_name, vehicle_id: resolvedVehicleId, vehicle_info: data.vehicle_info, labor_cost: laborTotal, parts_cost: partsTotal, total_cost: finalTotal, labor_items: data.labor_items, parts_used: data.parts_used?.length ? data.parts_used : ro.parts_used, description: ro.description, notes: ro.notes, history: ro.history || [] });
+            } catch (e) { throw new Error(`Invoice saved, but Repair Order sync failed: ${e?.message || e}`); }
         }
         if (data.estimate_id) {
           try {
@@ -430,34 +435,39 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
               const estTax = est.apply_tax ? (laborTotal + partsTotal) * ((est.tax_rate || 0) / 100) : 0;
               await base44.entities.Estimate.update(data.estimate_id, { customer_id: data.customer_id, customer_name: data.customer_name, vehicle_info: data.vehicle_info, labor_total: laborTotal, parts_total: partsTotal, tax_amount: estTax, grand_total: laborTotal + partsTotal + estTax, notes: est.notes });
             }
-          } catch (e) {}
-        }
-      } else {
-        const created = await base44.entities.Invoice.create(data);
-        submittingRef.current = false;
-        setSaving(false);
+          } catch (e) { throw new Error(`Invoice saved, but estimate sync failed: ${e?.message || e}`); }
+          }
+          } else {
+            let savedRO = null;
+            if (data.repair_order_id) {
+              const ro = await base44.entities.RepairOrder.get(data.repair_order_id);
+              if (!ro?.id) throw new Error("Linked Repair Order no longer exists.");
+              savedRO = await base44.entities.RepairOrder.update(ro.id, {
+                customer_id: data.customer_id, customer_name: data.customer_name, vehicle_id: resolvedVehicleId,
+                vehicle_info: data.vehicle_info, estimate_id: ro.estimate_id || data.estimate_id || "", order_number: ro.order_number,
+                description: ro.description || data.service_reason || "Service", status: ro.status || "completed",
+                labor_items: data.labor_items || [], parts_used: data.parts_used || [], labor_cost: data.labor_total,
+                parts_cost: data.parts_total, total_cost: data.total, notes: ro.notes || data.customer_note || "",
+                photos: ro.photos || [], history: ro.history || [],
+              });
+              data.repair_order_id = savedRO.id;
+            }
+            const created = await base44.entities.Invoice.create(data);
+            if (savedRO) await base44.entities.RepairOrder.update(savedRO.id, { linked_invoice_id: created.id, linked_invoice_number: created.invoice_number });
+            const syncResult = await syncCustomerActivity({ customerId: resolvedCustomerId, vehicleId: resolvedVehicleId, vehicleInfo: form.vehicle_info, customerName: form.customer_name, customerPhone: form.customer_phone || "", entityType: "Invoice", entityId: created.id });
+        if (!syncResult.ok) throw new Error(syncResult.errors.join(" "));
         onSaved();
         onClose();
         navigate(`/InvoiceDetail/${created.id}`);
         return;
       }
-      // Close UI immediately — don't block on background sync
-      submittingRef.current = false;
-      setSaving(false);
+      const syncResult = await syncCustomerActivity({ customerId: resolvedCustomerId, vehicleId: resolvedVehicleId, vehicleInfo: form.vehicle_info, customerName: form.customer_name, customerPhone: form.customer_phone || "", entityType: "Invoice", entityId: invoice.id });
+      if (!syncResult.ok) throw new Error(syncResult.errors.join(" "));
       onSaved();
       onClose();
-      // ── Background sync: Customer.last_visit + propagate ──
-      syncCustomerActivity({
-        customerId: resolvedCustomerId || form.customer_id,
-        vehicleId: resolvedVehicleId || form.vehicle_id,
-        vehicleInfo: form.vehicle_info,
-        customerName: form.customer_name,
-        customerPhone: form.customer_phone || "",
-        entityType: "Invoice",
-      }).catch(e => console.warn("[CENTER CONTROL] background sync error:", e));
     } catch (err) {
       console.error("[Invoice save error]", err);
-      alert("Failed to save invoice — " + (err?.message || "please try again"));
+      setSaveError(err?.message || "Failed to save invoice.");
     } finally {
       submittingRef.current = false;
       setSaving(false);
@@ -980,6 +990,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, orders, cust
             </div>
           </div>
 
+          {saveError && <div className="px-5 pt-2 text-sm text-rose-400">Save failed: {saveError}</div>}
           {/* Row 2 — Action buttons always full-width, never wrap */}
           <div className="flex gap-2 px-5 py-3">
             <Button variant="outline" onClick={onClose}

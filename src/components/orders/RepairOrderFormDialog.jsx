@@ -15,6 +15,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, X, Loader2, CreditCard } from "lucide-react";
 import { useNhtsaVinDecode } from "@/hooks/useNhtsaVinDecode";
 import { useToast } from "@/components/ui/use-toast";
+import { resolveVehicleId } from "@/utils/recordLinking";
 
 import CustomerSearchInput from "@/components/shared/CustomerSearchInput";
 import { capWords, toTitleCase, capitalizeFields, capitalizeArrayItems } from "@/utils/capitalize";
@@ -33,12 +34,14 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
     customer_id: "", customer_name: "", vehicle_id: "", vehicle_info: "",
     mechanic_id: "", mechanic_name: "", description: "", status: "waiting",
     labor_hours: "", labor_items: [{ description: "", hours: "", rate: "120", total: 0 }], // rate overridden at load
-    notes: "", parts_used: [], estimated_completion: "",
+    notes: "", parts_used: [], estimated_completion: "", estimate_id: "", photos: [], history: [],
     discount_type: "none", discount_value: 0, total_cost: 0, custom_total: false,
     apply_tax: true, tax_applies_to: "both"
   });
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [showCashout, setShowCashout] = useState(false);
+  const [cashoutOrder, setCashoutOrder] = useState(null);
   const [newCustomerForm, setNewCustomerForm] = useState(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -122,6 +125,9 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         notes: order.notes || "",
         parts_used: order.parts_used || [],
         estimated_completion: order.estimated_completion || "",
+        estimate_id: order.estimate_id || "",
+        photos: order.photos || [],
+        history: order.history || [],
         discount_type: order.discount_type || "none",
         discount_value: order.discount_value || 0,
         total_cost: order.total_cost || 0,
@@ -138,7 +144,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         vehicle_info: order?._prefillVehicleInfo || order?.vehicle_info || "",
         mechanic_id: "", mechanic_name: "", description: "", status: "waiting",
         labor_hours: "", labor_items: [{ description: "", hours: "", rate: "120", total: 0 }], // rate overridden at load
-        notes: "", parts_used: [], estimated_completion: "",
+        notes: "", parts_used: [], estimated_completion: "", estimate_id: order?.estimate_id || "", photos: order?.photos || [], history: [],
         discount_type: order?.discount_type || "none", discount_value: order?.discount_value || 0, total_cost: 0, custom_total: false,
         apply_tax: true, tax_applies_to: "both"
       });
@@ -266,33 +272,42 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
     setForm({ ...form, parts_used: form.parts_used.filter((_, i) => i !== idx) });
   };
 
-  const handleSave = async () => {
-    if (submittingRef.current) return; // synchronous guard — prevents double-submit before React re-renders
+  const handleSave = async ({ closeAfterSave = true } = {}) => {
+    if (submittingRef.current) return null;
     submittingRef.current = true;
-    setSaving(true);  // ← MOVE THIS UP — show spinner immediately
-    if (!form.customer_id || !form.vehicle_id || !form.description) {
-      alert('Please fill in Customer, Vehicle, and Description fields');
+    setSaving(true);
+    setSaveError("");
+    let resolvedVehicleId = form.vehicle_id;
+    try {
+      resolvedVehicleId = await resolveVehicleId({ customerId: form.customer_id, vehicleId: form.vehicle_id, vehicleInfo: form.vehicle_info });
+    } catch (e) {
+      setSaveError(e?.message || "Could not verify the selected vehicle.");
+    }
+    if (!form.customer_id || !resolvedVehicleId || !form.description) {
+      setSaveError("Customer, matching vehicle, and description are required.");
       submittingRef.current = false;
       setSaving(false);
-      return;
+      return null;
     }
 
     // ── CENTER CONTROL: Validate before any DB write ──────────────────────
     try {
       const validation = await validateRecord({
         customerId: form.customer_id,
-        vehicleId: form.vehicle_id,
+        vehicleId: resolvedVehicleId,
         entityType: "RepairOrder",
       });
       if (!validation.ok) {
-        alert("⚠️ Cannot save:\n\n" + validation.errors.join("\n"));
+        setSaveError(validation.errors.join(" "));
         submittingRef.current = false;
         setSaving(false);
         return;
       }
     } catch (validationErr) {
-      // validateRecord network error — skip validation, allow save to proceed
-      console.warn("[validateRecord] skipped due to error:", validationErr?.message);
+      setSaveError(validationErr?.message || "Could not validate the customer and vehicle links.");
+      submittingRef.current = false;
+      setSaving(false);
+      return null;
     }
     try {
       const laborHours = Number(form.labor_hours) || 0;
@@ -323,6 +338,9 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
 
       const data = {
         ...form,
+        vehicle_id: resolvedVehicleId,
+        estimate_id: form.estimate_id || order?.estimate_id || "",
+        photos: form.photos || order?.photos || [],
         labor_hours: laborHours,
         labor_cost: Math.round(laborCost * 100) / 100,
         parts_cost: Math.round(partsCost * 100) / 100,
@@ -335,6 +353,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
       data.labor_items = capitalizeArrayItems(data.labor_items, ["description"]);
       data.parts_used = capitalizeArrayItems(data.parts_used, ["name"]);
 
+      let savedOrder = null;
       let savedOrderId = order?.id;
       if (order && order.id) {
         const changes = {};
@@ -351,18 +370,21 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         };
 
         data.history = [...(order.history || []), historyEntry];
-        await base44.entities.RepairOrder.update(order.id, data);
+        savedOrder = await base44.entities.RepairOrder.update(order.id, data);
+        savedOrderId = savedOrder?.id || order.id;
 
         // FIX 2: Sync to linked Invoice(s) — update all financials
         try {
-          const linkedInvoices = await base44.entities.Invoice.filter({ repair_order_id: order.id });
+          const linkedInvoices = await base44.entities.Invoice.filter({ repair_order_id: savedOrderId });
           for (const inv of linkedInvoices) {
             const newTotal = finalTotal;
             const newBalanceDue = newTotal - (inv.amount_paid || 0);
             await base44.entities.Invoice.update(inv.id, {
               customer_id: data.customer_id,
               customer_name: data.customer_name,
+              vehicle_id: resolvedVehicleId,
               vehicle_info: data.vehicle_info,
+              repair_order_id: savedOrderId,
               parts_total: data.parts_cost,
               labor_total: data.labor_cost,
               tax_rate: form.apply_tax ? userTaxRate : 0,
@@ -377,14 +399,14 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
             });
           }
           if (linkedInvoices.length > 0) toast({ title: "Invoice also updated" });
-        } catch (e) { console.warn("Sync to invoice failed:", e); }
+        } catch (e) { throw new Error(`Repair Order saved, but linked invoice update failed: ${e?.message || e}`); }
 
         // Sync to linked Estimate(s) — update all financials
         try {
-          const linkedInvoices2 = await base44.entities.Invoice.filter({ repair_order_id: order.id });
+          const linkedInvoices2 = await base44.entities.Invoice.filter({ repair_order_id: savedOrderId });
           const estimateIds = [...new Set(linkedInvoices2.map(i => i.estimate_id).filter(Boolean))];
           // Also find estimates directly linked via repair_order_id
-          const linkedEstimates = await base44.entities.Estimate.filter({ repair_order_id: order.id });
+          const linkedEstimates = await base44.entities.Estimate.filter({ repair_order_id: savedOrderId });
           const allEstimateIds = [...new Set([...estimateIds, ...linkedEstimates.map(e => e.id)])];
           for (const estId of allEstimateIds) {
             const est = await base44.entities.Estimate.get(estId);
@@ -395,6 +417,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
               await base44.entities.Estimate.update(estId, {
                 customer_id: data.customer_id,
                 customer_name: data.customer_name,
+                vehicle_id: resolvedVehicleId,
                 vehicle_info: data.vehicle_info,
                 labor_total: estLaborTotal,
                 parts_total: estPartsTotal,
@@ -407,7 +430,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
               });
             }
           }
-        } catch (e) { console.warn("Sync to estimate failed:", e); }
+        } catch (e) { throw new Error(`Repair Order saved, but linked estimate update failed: ${e?.message || e}`); }
       } else {
         data.history = [{
           timestamp,
@@ -415,8 +438,8 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
           action: 'created',
           changes: {}
         }];
-        const created = await base44.entities.RepairOrder.create(data);
-        savedOrderId = created.id;
+        savedOrder = await base44.entities.RepairOrder.create(data);
+        savedOrderId = savedOrder.id;
       }
       
       // ── Deduct parts from inventory ──
@@ -431,24 +454,29 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         }
       } catch (e) { console.warn("Inventory deduction failed:", e); }
 
-      // Close UI immediately — don't block on background sync
-      onSaved(data.status);
-      onClose();
-      // ── Background sync: Customer.last_visit + propagate ──
-      syncCustomerActivity({
-        customerId: form.customer_id,
-        vehicleId: form.vehicle_id,
-        vehicleInfo: form.vehicle_info,
-        customerName: form.customer_name,
+      const syncResult = await syncCustomerActivity({
+        customerId: data.customer_id,
+        vehicleId: resolvedVehicleId,
+        vehicleInfo: data.vehicle_info,
+        customerName: data.customer_name,
         entityType: "RepairOrder",
         entityId: savedOrderId,
         propagate: true,
         customerPhone: form.customer_phone,
-      }).catch(e => console.warn("[CENTER CONTROL] background sync error:", e));
+      });
+      if (!syncResult.ok) throw new Error(syncResult.errors.join(" "));
+      const persistedOrder = savedOrder || { ...data, id: savedOrderId };
+      if (closeAfterSave) {
+        onSaved(data.status, persistedOrder);
+        onClose();
+      }
+      return persistedOrder;
     } catch (error) {
       console.error('Error saving repair order:', error);
-      alert('Failed to save repair order: ' + error.message);
+      setSaveError(error?.message || "Failed to save repair order.");
+      return null;
     } finally {
+      submittingRef.current = false;
       setSaving(false);
     }
   };
@@ -887,6 +915,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
             </div>
           </div>
 
+          {saveError && <div className="px-5 pt-2 text-sm text-rose-400">Save failed: {saveError}</div>}
           {/* Row 2 — Buttons */}
           <div className="flex gap-2 px-5 py-3">
             <Button variant="outline" onClick={onClose}
@@ -894,13 +923,13 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
               Cancel
             </Button>
             <Button onClick={handleSave}
-              disabled={saving || !form.customer_id || !form.vehicle_id || !form.description}
+              disabled={saving || !form.customer_id || (!form.vehicle_id && !form.vehicle_info) || !form.description}
               className="flex-1 bg-sky-500 hover:bg-sky-600 text-white gap-2 h-9 text-sm font-semibold">
               {saving ? "Saving..." : "Save Order"}
             </Button>
             {order?.id && (
               <Button
-                onClick={async () => { await handleSave(); setShowCashout(true); }}
+                onClick={async () => { const saved = await handleSave({ closeAfterSave: false }); if (saved) { setCashoutOrder(saved); setShowCashout(true); } }}
                 disabled={saving}
                 className="flex-1 gap-2 h-9 text-sm font-bold shrink-0"
                 style={{ background: "linear-gradient(135deg,#16a34a,#15803d)", color: "#fff", border: "none", boxShadow: "0 2px 12px rgba(22,163,74,0.45)" }}>
@@ -911,28 +940,23 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         </div>
 
         {/* Unified Cashout Dialog */}
-        {showCashout && order?.id && (
+        {showCashout && cashoutOrder?.id && (
           <PaymentReceiptDialog
             open={showCashout}
             onClose={() => setShowCashout(false)}
             invoice={{
-              id: order.id,
-              invoice_number: order.order_number,
-              customer_id: order.customer_id || "",
-              customer_name: order.customer_name || form.customer_name,
-              vehicle_info: order.vehicle_info || form.vehicle_info,
-              total: totalCost,
-              labor_cost: laborCost,
-              parts_cost: partsCost,
-              amount_paid: order.amount_paid || 0,
-              balance_due: totalCost - (order.amount_paid || 0),
-              payment_history: order.payment_history || [],
-              linked_invoice_id: order.linked_invoice_id,
+              ...cashoutOrder,
+              invoice_number: cashoutOrder.order_number,
+              total: cashoutOrder.total_cost || 0,
+              labor_cost: cashoutOrder.labor_cost || 0,
+              parts_cost: cashoutOrder.parts_cost || 0,
+              balance_due: (cashoutOrder.total_cost || 0) - (cashoutOrder.amount_paid || 0),
             }}
             entityName="RepairOrder"
             onSaved={() => {
               setShowCashout(false);
-              onSaved?.();
+              onSaved?.("delivered", cashoutOrder);
+              onClose();
             }}
           />
         )}

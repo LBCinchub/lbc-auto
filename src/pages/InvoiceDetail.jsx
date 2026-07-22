@@ -18,6 +18,7 @@ import { useEmailSend } from "@/hooks/useEmailSend";
 import RepairOrderFormDialog from "@/components/orders/RepairOrderFormDialog";
 import PaymentHistoryManager from "@/components/invoices/PaymentHistoryManager";
 import AutoAIBubble from "@/components/shared/AutoAIBubble";
+import { resolveVehicleId } from "@/utils/recordLinking";
 
 
 
@@ -78,6 +79,7 @@ export default function InvoiceDetail() {
     queryKey: ["repairOrder", invoice?.repair_order_id],
     queryFn: () => base44.entities.RepairOrder.get(invoice.repair_order_id),
     enabled: !!invoice?.repair_order_id,
+    retry: false,
   });
 
   const vehicleId = repairOrder?.vehicle_id || invoice?.vehicle_id;
@@ -216,26 +218,21 @@ export default function InvoiceDetail() {
   const handleCreateRO = async () => {
     setCreatingRO(true);
     try {
-      // Build a RO pre-filled from invoice data
+      const resolvedVehicleId = await resolveVehicleId({ customerId: invoice.customer_id, vehicleId: invoice.vehicle_id, vehicleInfo: invoice.vehicle_info });
+      if (!resolvedVehicleId) throw new Error("No matching customer vehicle could be found.");
+      const currentUser = await base44.auth.me();
       const roData = {
-        customer_id:    invoice.customer_id,
-        customer_name:  invoice.customer_name,
-        customer_phone: invoice.customer_phone || "",
-        vehicle_id:     invoice.vehicle_id || "",
-        vehicle_info:   invoice.vehicle_info || "",
-        description:    invoice.service_reason || "Service from Invoice #" + invoice.invoice_number,
-        labor_items:    invoice.labor_items || [],
-        parts_used:     invoice.parts_used  || [],
-        labor_cost:     invoice.labor_total || 0,
-        parts_cost:     invoice.parts_total || 0,
-        total_cost:     invoice.grand_total || invoice.total || 0,
-        status:         "pending",
-        linked_invoice_id: invoice.id,
-        order_number:   "RO-" + Date.now().toString(36).toUpperCase(),
+        customer_id: invoice.customer_id, customer_name: invoice.customer_name || "", vehicle_id: resolvedVehicleId,
+        vehicle_info: invoice.vehicle_info || "", estimate_id: invoice.estimate_id || "",
+        description: invoice.service_reason || `Service from Invoice #${invoice.invoice_number}`,
+        labor_items: laborItems.map(r => ({ description: r.description, hours: Number(r.hours) || 0, rate: Number(r.rate) || 0, total: Number(r.total) || 0 })),
+        parts_used: partsItems.map(r => ({ name: r.name, quantity: Number(r.quantity) || 0, unit_price: Number(r.unit_price) || 0, total: Number(r.total) || 0 })),
+        labor_cost: laborTotal, parts_cost: partsTotal, total_cost: grandTotal, status: "waiting",
+        notes: [customerNote, techNotes].filter(Boolean).join("\n\n"), photos: [], linked_invoice_id: invoice.id, order_number: `RO-${Date.now().toString(36).toUpperCase()}`,
+        history: [{ timestamp: new Date().toISOString(), user: currentUser?.email || "system", action: "created_from_invoice", changes: { invoice_id: invoice.id } }],
       };
       const newRO = await base44.entities.RepairOrder.create(roData);
-      // Link back from invoice → RO
-      await base44.entities.Invoice.update(invoice.id, { repair_order_id: newRO.id });
+      await base44.entities.Invoice.update(invoice.id, { repair_order_id: newRO.id, vehicle_id: resolvedVehicleId });
       queryClient.invalidateQueries({ queryKey: ["invoice", invoiceId] });
       navigate(`/RepairOrderDetail/${newRO.id}`);
     } catch(e) {
@@ -372,8 +369,8 @@ export default function InvoiceDetail() {
         </Button>
         <div className="flex flex-wrap gap-2">
           {/* Repair Order — view if exists, create if not */}
-          {invoice?.repair_order_id ? (
-            <Button variant="outline" size="sm" onClick={() => navigate(`/RepairOrderDetail/${invoice.repair_order_id}`)}
+          {repairOrder?.id ? (
+            <Button variant="outline" size="sm" onClick={() => navigate(`/RepairOrderDetail/${repairOrder.id}`)}
               className="border-orange-700/50 text-orange-400 h-9 gap-1.5 text-xs hover:border-orange-500 hover:text-orange-300">
               <Wrench className="w-3.5 h-3.5" /> View Repair Order
             </Button>
@@ -382,8 +379,8 @@ export default function InvoiceDetail() {
               className="border-orange-700/50 text-orange-400 h-9 gap-1.5 text-xs hover:border-orange-500 hover:bg-orange-500/10">
               {creatingRO
                 ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Creating...</>
-                : <><Wrench className="w-3.5 h-3.5" /> Send to Repair Order</>
-              }
+                : <><Wrench className="w-3.5 h-3.5" /> {invoice?.repair_order_id ? "Relink Repair Order" : "Send to Repair Order"}</>
+                }
             </Button>
           )}
           {/* Email */}

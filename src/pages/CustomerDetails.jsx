@@ -21,6 +21,7 @@ import VehiclePhotosTab from "@/components/photos/VehiclePhotosTab";
 import VehicleHistoryReport from "@/components/reports/VehicleHistoryReport";
 import { useQueryClient } from "@tanstack/react-query";
 import AutoAIBubble from "@/components/shared/AutoAIBubble";
+import InvoiceLinkGuard from "@/components/customers/InvoiceLinkGuard";
 
 const AVATAR_COLORS = ["bg-sky-500","bg-violet-500","bg-emerald-500","bg-amber-500","bg-rose-500","bg-indigo-500"];
 function getAvatarColor(name = "") {
@@ -448,7 +449,8 @@ export default function CustomerDetails() {
                           )}
                         </div>
                         <div className="text-xs text-gray-400 mt-0.5">{fmtDate(inv.created_date)} · {inv.vehicle_info || "—"}</div>
-                      </div>
+                        <InvoiceLinkGuard invoice={inv} vehicles={vehicles} repairOrders={repairOrders} onRelink={reload} />
+                        </div>
                       <div className="flex items-center gap-3">
                         <span className="font-bold text-white">{fmt(inv.total)}</span>
                         {(inv.status === "partial" || inv.status === "unpaid") && inv.balance_due > 0 && (
@@ -624,7 +626,7 @@ export default function CustomerDetails() {
         <RepairOrderFormDialog
           open={roOpen}
           onClose={() => setRoOpen(false)}
-          order={{ customer_id: customer.id, customer_name: customer.full_name }}
+          order={{ customer_id: customer.id, customer_name: customer.full_name, vehicle_id: vehicles.length === 1 ? vehicles[0].id : "", vehicle_info: vehicles.length === 1 ? `${vehicles[0].year} ${vehicles[0].make} ${vehicles[0].model}` : "" }}
           onSaved={() => { setRoOpen(false); reload(); }}
           customers={[customer]}
           vehicles={vehicles}

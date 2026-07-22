@@ -19,6 +19,7 @@ import InvoiceFormDialog from "../components/invoices/InvoiceFormDialog";
 import PaymentReceiptDialog from "../components/invoices/PaymentReceiptDialog";
 import DateFilter, { applyDateFilter } from "../components/shared/DateFilter";
 import AutoAIBubble from "@/components/shared/AutoAIBubble";
+import { invoiceFieldsFromRepairOrder, resolveVehicleId } from "@/utils/recordLinking";
 
 const statusFilters = [
   { value: "all", label: "All" },
@@ -146,51 +147,12 @@ export default function RepairOrders() {
   const handleGenerateInvoice = async (order) => {
     setGeneratingInvoice(order.id);
     try {
-      const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
-      const laborItems = order.labor_items || [];
-      const partsUsed = order.parts_used || [];
-      const laborTotal = r2(laborItems.reduce((s, l) => s + (parseFloat(l.hours) || 0) * (parseFloat(l.rate) || 0), 0));
-      const partsTotal = r2(partsUsed.reduce((s, p) => s + (parseFloat(p.quantity) || 0) * (parseFloat(p.unit_price) || 0), 0));
-      const subtotal = r2(laborTotal + partsTotal);
-      const taxRate = user?.tax_rate || 0;
-      const taxAmount = r2(subtotal * (taxRate / 100));
-      const total = r2(subtotal + taxAmount);
-
-      const lineItems = [
-        ...laborItems.map(l => ({
-          description: l.description || "Labor",
-          type: "labor",
-          quantity: parseFloat(l.hours) || 1,
-          unit_price: parseFloat(l.rate) || 0,
-          total: r2((parseFloat(l.hours) || 0) * (parseFloat(l.rate) || 0)),
-        })),
-        ...partsUsed.map(p => ({
-          description: p.name || "Part",
-          type: "part",
-          quantity: parseFloat(p.quantity) || 1,
-          unit_price: parseFloat(p.unit_price) || 0,
-          total: r2((parseFloat(p.quantity) || 0) * (parseFloat(p.unit_price) || 0)),
-        })),
-      ];
-
-      const inv = await base44.entities.Invoice.create({
-        invoice_number: `INV-${Date.now().toString(36).toUpperCase().slice(-8)}`,
-        repair_order_id: order.id,
-        customer_id: order.customer_id || "",
-        customer_name: order.customer_name || "",
-        vehicle_info: order.vehicle_info || "",
-        line_items: lineItems,
-        parts_total: partsTotal,
-        labor_total: laborTotal,
-        tax_rate: taxRate,
-        tax_applies_to: "both",
-        tax_amount: taxAmount,
-        total,
-        balance_due: total,
-        amount_paid: 0,
-        status: "unpaid",
-        service_reason: order.description || "",
-      });
+      const vehicleId = await resolveVehicleId({ customerId: order.customer_id, vehicleId: order.vehicle_id, vehicleInfo: order.vehicle_info });
+      if (!vehicleId) throw new Error("No matching customer vehicle could be found.");
+      const savedRO = await base44.entities.RepairOrder.update(order.id, { vehicle_id: vehicleId });
+      const invoiceNumber = `INV-${Date.now().toString(36).toUpperCase().slice(-8)}`;
+      const inv = await base44.entities.Invoice.create({ ...invoiceFieldsFromRepairOrder(savedRO, vehicleId, invoiceNumber), tax_rate: order.tax_rate || 0, tax_applies_to: order.tax_applies_to || "both", tax_amount: order.tax_amount || 0, status: "unpaid" });
+      await base44.entities.RepairOrder.update(savedRO.id, { linked_invoice_id: inv.id, linked_invoice_number: inv.invoice_number });
 
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       navigate(`/InvoiceDetail/${inv.id}`);
@@ -389,6 +351,7 @@ export default function RepairOrders() {
                         id: order.id,
                         customer_id: order.customer_id || "",
                         customer_name: order.customer_name,
+                        vehicle_id: order.vehicle_id || "",
                         vehicle_info: order.vehicle_info,
                         total: order.total_cost || 0,
                         labor_cost: order.labor_cost || 0,
@@ -459,6 +422,7 @@ export default function RepairOrders() {
         initialOrderId={invoiceOrder?.id}
         orders={orders}
         customers={customers}
+        vehicles={vehicles}
         onSaved={() => queryClient.invalidateQueries({ queryKey: ["invoices"] })}
       />
 

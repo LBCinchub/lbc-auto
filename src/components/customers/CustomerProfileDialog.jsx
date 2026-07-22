@@ -566,7 +566,7 @@ export default function CustomerProfileDialog({ customer, open, onClose, custome
                 <span className="text-xs">Estimate</span>
               </Button>
               <Button className="bg-sky-600 hover:bg-sky-700 text-white flex flex-col h-auto py-3 gap-1"
-                onClick={() => { onClose(); navigate(`/RepairOrders?customerId=${customer.id}&customerName=${encodeURIComponent(customer.full_name)}`); }}>
+                onClick={() => { const onlyVehicle = customerVehicles.length === 1 ? customerVehicles[0] : null; onClose(); navigate(`/RepairOrders?customerId=${customer.id}&customerName=${encodeURIComponent(customer.full_name)}${onlyVehicle ? `&vehicleId=${onlyVehicle.id}&vehicleInfo=${encodeURIComponent(`${onlyVehicle.year} ${onlyVehicle.make} ${onlyVehicle.model}`)}` : ""}`); }}>
                 <Wrench className="w-4 h-4" />
                 <span className="text-xs">Repair Order</span>
               </Button>
