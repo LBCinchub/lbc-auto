@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 
 const SYSTEM_PROMPT = `You are LBC Auto AI — an expert automotive technician and business partner to the shop owner.
 Speak as "we" and "our shop." Quote labor using OUR labor rate. Talk shop-to-shop, partner-to-partner.
@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json().catch(() => ({}));
-    const { mode = "analyze", codes = [], live_data = null, freeze_frame = null, vehicle = "", vehicle_details = {}, labor_rate = null, messages = [] } = body;
+    const { mode = "analyze", codes = [], live_data = null, freeze_frame = null, vehicle = "", vehicle_details = {}, labor_rate = null, messages = [], readiness_monitors = [], scan_timestamp = "", health_summary = "", focused_code = null, connection_issue = null, protocol_attempts = [] } = body;
 
     // ── Shop context ────────────────────────────────────────────────────────
     const shopInfo = [];
@@ -60,6 +60,12 @@ Deno.serve(async (req) => {
     }
     if (live_data) context += "\nLive data snapshot: " + JSON.stringify(live_data);
     if (freeze_frame) context += "\nFreeze-frame data: " + JSON.stringify(freeze_frame);
+    if (readiness_monitors.length) context += "\nReadiness monitors: " + JSON.stringify(readiness_monitors);
+    if (scan_timestamp) context += "\nScan timestamp: " + scan_timestamp;
+    if (health_summary) context += "\nGenerated health summary: " + health_summary;
+    if (focused_code) context += "\nFocused code: " + focused_code;
+    if (connection_issue) context += "\nConnection issue: " + JSON.stringify(connection_issue);
+    if (protocol_attempts.length) context += "\nProtocol attempts: " + protocol_attempts.join(", ");
     let historyVehicleId = vehicle_details.vehicle_id || "";
     if (!historyVehicleId && vehicle_details.vin) {
       const matchedVehicles = await base44.entities.Vehicle.filter({ vin: vehicle_details.vin }, "-updated_date", 1).catch(() => []);
@@ -180,11 +186,15 @@ CRITICAL — Provide an "inspection_decision" section that gives the mechanic a 
 
     // ── CHAT MODE: follow-up questions ─────────────────────────────────────
     const recent = messages.filter(m => m.role !== "system").slice(-8);
+    const firstResponseGuide = recent.filter(m => m.role === "assistant").length === 0
+      ? `\nFor this first scan follow-up, include: customer-friendly meaning; likely causes ranked by probability; ordered mechanic diagnostic steps; parts to inspect first; required versus optional parts; labor low/high at $${effectiveRate}/hr; safe-to-drive guidance; and what our shop should quote next. If this is a connection issue, explain adapter versus ECU causes and give a safe retry checklist without exposing raw commands.`
+      : "";
     const prompt = SYSTEM_PROMPT +
       context +
+      firstResponseGuide +
       "\n\nConversation:\n" +
       recent.map(m => (m.role === "user" ? "User: " : "Assistant: ") + m.content).join("\n") +
-      "\n\nRespond to the latest message as LBC Auto AI. Be concise. Reference the scan codes, shop data, and parts inventory when relevant.";
+      "\n\nRespond to the latest message as LBC Auto AI. Keep all original scan context active. Reference the vehicle, scan codes, shop labor rate, and parts inventory when relevant.";
 
     const result = await base44.integrations.Core.InvokeLLM({
       prompt,

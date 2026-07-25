@@ -23,7 +23,7 @@ export default function Layout({ children, currentPageName }) {
 
       {/* ── Global overlays — appear on every page, every layout ── */}
       <FloatingNote />
-      <AutoAIBubble />
+      {currentPageName !== "Diagnostics" && <AutoAIBubble />}
     </div>
   );
 }
