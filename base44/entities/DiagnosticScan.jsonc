@@ -16,104 +16,128 @@
     },
     "vehicle_info": {
       "type": "string",
-      "description": "Vehicle display string (year make model)"
+      "description": "Vehicle display string"
     },
     "shop_owner_email": {
       "type": "string",
-      "description": "Shop owner email — set for cross-tenant RLS scoping"
+      "description": "Authenticated shop owner tenant"
     },
     "adapter_name": {
-      "type": "string",
-      "description": "Bluetooth OBD2 adapter device name used for this scan"
+      "type": "string"
     },
     "mileage": {
-      "type": "number",
-      "description": "Odometer reading at time of scan"
+      "type": "number"
+    },
+    "scan_timestamp": {
+      "type": "string"
+    },
+    "freeze_frame": {
+      "type": "object"
+    },
+    "readiness_monitors": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "protocol_attempts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     },
     "dtc_codes": {
       "type": "array",
-      "description": "Trouble codes read from the vehicle",
       "items": {
         "type": "object",
         "properties": {
-          "code": { "type": "string" },
-          "raw": { "type": "string" },
-          "description": { "type": "string" }
-        }
-      }
-    },
-    "live_data_snapshot": {
-      "type": "object",
-      "description": "Snapshot of key live PIDs at time of scan",
-      "properties": {
-        "rpm": { "type": "number" },
-        "coolant_temp_c": { "type": "number" },
-        "speed_kph": { "type": "number" },
-        "fuel_level_pct": { "type": "number" },
-        "engine_load_pct": { "type": "number" },
-        "intake_temp_c": { "type": "number" }
-      }
-    },
-    "ai_analysis": {
-      "type": "object",
-      "description": "AI-generated diagnosis for the codes found",
-      "properties": {
-        "summary": { "type": "string" },
-        "findings": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "code": { "type": "string" },
-              "plain_english": { "type": "string" },
-              "likely_causes": { "type": "array", "items": { "type": "string" } },
-              "urgency": { "type": "string", "enum": ["Low", "Medium", "High", "Critical"] },
-              "recommended_fix_order": { "type": "array", "items": { "type": "string" } }
-            }
+          "code": {
+            "type": "string"
+          },
+          "raw": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
           }
         }
       }
     },
+    "live_data_snapshot": {
+      "type": "object"
+    },
+    "ai_analysis": {
+      "type": "object"
+    },
+    "ai_follow_up": {
+      "type": "object",
+      "properties": {
+        "summary": {
+          "type": "string"
+        },
+        "customer_notes": {
+          "type": "string"
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "role": {
+                "type": "string"
+              },
+              "content": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "saved_at": {
+          "type": "string"
+        }
+      }
+    },
     "codes_cleared": {
-      "type": "boolean",
-      "description": "Whether the codes were cleared from the vehicle during this session"
+      "type": "boolean"
     },
     "notes": {
-      "type": "string",
-      "description": "Technician notes about this scan"
+      "type": "string"
     },
     "status": {
       "type": "string",
-      "enum": ["Completed", "Codes Cleared", "Needs Follow-up"],
+      "enum": [
+        "Completed",
+        "Codes Cleared",
+        "Needs Follow-up"
+      ],
       "default": "Completed"
     },
     "estimate_id": {
-      "type": "string",
-      "description": "Linked Estimate ID if this scan was converted into a customer estimate"
+      "type": "string"
+    },
+    "repair_order_id": {
+      "type": "string"
     }
   },
   "required": [
-    "vehicle_id"
+    "vehicle_id",
+    "shop_owner_email"
   ],
   "rls": {
-    "create": true,
+    "create": {
+      "data.shop_owner_email": "{{user.email}}"
+    },
     "read": {
-      "$or": [
-        { "created_by": "{{user.email}}" },
-        { "data.shop_owner_email": "{{user.email}}" }
-      ]
+      "data.shop_owner_email": "{{user.email}}"
     },
     "update": {
-      "$or": [
-        { "created_by": "{{user.email}}" },
-        { "data.shop_owner_email": "{{user.email}}" }
-      ]
+      "data.shop_owner_email": "{{user.email}}"
     },
     "delete": {
-      "$or": [
-        { "created_by": "{{user.email}}" },
-        { "data.shop_owner_email": "{{user.email}}" }
-      ]
+      "data.shop_owner_email": "{{user.email}}"
     }
   }
 }
