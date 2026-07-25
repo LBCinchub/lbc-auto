@@ -12,7 +12,7 @@ export function useScannerAiChat(context) {
     const response = await base44.functions.invoke("lbcDiagAI", {
       mode: "chat", messages: nextMessages, codes: context.codes, vehicle_details: context.vehicle,
       live_data: context.liveSnapshot, freeze_frame: context.freezeFrame, readiness_monitors: context.readiness,
-      scan_timestamp: context.timestamp, health_summary: context.healthSummary, focused_code: nextFocus?.code || null,
+      scan_timestamp: context.timestamp, health_summary: context.healthSummary, focused_code: nextFocus?.code ? nextFocus : null,
       connection_issue: nextFocus?.connectionIssue || null, protocol_attempts: context.protocolAttempts,
       shop_email: context.shopEmail, labor_rate: context.laborRate,
     });
@@ -25,7 +25,9 @@ export function useScannerAiChat(context) {
       ? "Explain why this scan connection failed and give the safest next diagnostic steps."
       : nextFocus?.code
         ? `Analyze ${nextFocus.code} for this vehicle and provide the full mechanic and customer guidance.`
-        : "Review this complete health scan and tell us what to diagnose, repair, and quote next.";
+        : nextFocus?.allCodes
+          ? "Analyze every detected code together, identify root causes versus symptoms, and provide complete mechanic and customer guidance."
+          : "Review this complete health scan and tell us what to diagnose, repair, and quote next.";
     const first = [{ role: "user", content: prompt }];
     setFocus(nextFocus); setMessages(first); setOpen(true);
     ask(first, nextFocus).catch(error => { setMessages([...first, { role: "assistant", content: error?.message || "AI could not respond." }]); setLoading(false); });

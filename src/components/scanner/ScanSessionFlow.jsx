@@ -23,7 +23,7 @@ const SCAN_STEPS = [
  */
 export default function ScanSessionFlow({
   connState, connError, connectionStep, ecuIssue, autoVehicle, scanning, scanProgress, scanLabel, reportReady,
-  onConnect, onOpenVehiclePanel, onEnterVehicleManually, onReopenReport, onStartNewScan,
+  onConnect, onOpenVehiclePanel, onEnterVehicleManually, onReopenReport, onStartNewScan, onAskConnectionHelp,
 }) {
   const [elapsed, setElapsed] = useState(0);
   const timerRef = useRef(null);
@@ -56,9 +56,10 @@ export default function ScanSessionFlow({
             ? "Adapter detected but vehicle ECU did not respond. Turn ignition ON and retry."
             : connError || "Couldn't connect to the adapter. Make sure it's plugged in and ignition is ON."}
         </p>
-        <Button onClick={onConnect} className="bg-sky-600 hover:bg-sky-700 text-white">
-          <RefreshCw className="w-4 h-4 mr-2" /> Retry Connection
-        </Button>
+        <div className="flex flex-wrap gap-2 justify-center">
+          <Button onClick={onConnect} className="bg-sky-600 hover:bg-sky-700 text-white"><RefreshCw className="w-4 h-4 mr-2" /> Retry Connection</Button>
+          <Button onClick={() => onAskConnectionHelp(connError)} variant="outline" className="border-gray-700 text-gray-300">Ask AI Why Connection Failed</Button>
+        </div>
       </StagePanel>
     );
   }
@@ -95,6 +96,7 @@ export default function ScanSessionFlow({
         <div className="flex flex-wrap gap-2 justify-center">
           <Button onClick={onStartNewScan} className="bg-sky-600 hover:bg-sky-700 text-white"><RefreshCw className="w-4 h-4 mr-2" /> Retry ECU</Button>
           <Button onClick={onEnterVehicleManually} variant="outline" className="border-gray-700 text-gray-300"><Car className="w-4 h-4 mr-2" /> Enter Vehicle Manually</Button>
+          <Button onClick={() => onAskConnectionHelp(ecuIssue)} variant="outline" className="border-amber-500/40 text-amber-300">Ask AI Why Connection Failed</Button>
         </div>
       </StagePanel>
     );

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 
 export default function DtcAiAnalysis({ analysis, laborRate, loading, onAnalyze, onAdd }) {
   if (loading) return <div className="mt-3 flex items-center gap-2 text-sky-400 text-sm"><Loader2 className="w-4 h-4 animate-spin" /> Analyzing vehicle-specific labor and parts…</div>;
-  if (!analysis) return <Button size="sm" onClick={onAnalyze} className="mt-3 bg-sky-600 hover:bg-sky-700">Analyze With AI</Button>;
+  if (!analysis) return null;
   const low = Number(analysis.estimated_labor_hours_low || 0), high = Number(analysis.estimated_labor_hours_high || low);
   return <div className="mt-3 rounded-lg border border-sky-500/20 bg-sky-500/5 p-3 space-y-3">
     <p className="text-sm text-white font-medium">{analysis.plain_english}</p>

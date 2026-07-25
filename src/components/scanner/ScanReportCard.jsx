@@ -13,8 +13,8 @@ import {
  * Non-dismissable by outside click or ESC (only the action buttons close it).
  */
 export default function ScanReportCard({
-  autoVehicle, scanResults, aiSummary, saving, savingScan, savingEstimate, laborRate,
-  analysisByCode, analyzingCodes, onAnalyzeCode, onAnalyzeAll, onAddCodeToRepairOrder,
+  autoVehicle, scanResults, aiSummary, aiMessages = [], saving, savingScan, savingEstimate, laborRate,
+  analysisByCode, analyzingCodes, onAnalyzeCode, onAddCodeToRepairOrder, onAskAi, onAskAiCode, onAskAiAll, onAskConnectionHelp,
   onDismiss, onSaveToRepairOrder, onCreateEstimate, onSaveReport, onEnterVehicleManually, onPrint, onStartNewScan,
 }) {
   const stored = scanResults?.storedCodes || [];
@@ -25,6 +25,7 @@ export default function ScanReportCard({
   const milOn = scanResults?.emissions?.milOn;
   const totalCodes = stored.length + pending.length + permanent.length;
   const ecuUnavailable = scanResults?.ecuResponsive === false;
+  const followUpNote = [...aiMessages].reverse().find(message => message.role === "assistant")?.content || "";
 
   const severityFor = (code) => {
     const sev = analysisByCode?.[code.code]?.urgency?.toUpperCase() || lookupDtc(code.code)?.severity;
@@ -77,6 +78,7 @@ export default function ScanReportCard({
           {info.causes?.length > 0 && (
             <p className="text-[11px] text-gray-500 mt-0.5">Repair direction: {info.causes.join(" · ")}</p>
           )}
+          <Button size="sm" onClick={() => onAskAiCode(code)} className="mt-3 bg-sky-600 hover:bg-sky-700"><Sparkles className="w-4 h-4" /> Analyze With AI</Button>
           <DtcAiAnalysis analysis={analysisByCode?.[code.code]} loading={analyzingCodes?.[code.code]} laborRate={laborRate} onAnalyze={() => onAnalyzeCode(code)} onAdd={() => onAddCodeToRepairOrder(code)} />
         </div>
       </div>
@@ -150,7 +152,6 @@ export default function ScanReportCard({
               <CountCard value={pending.length} label="Pending" color="amber" />
               <CountCard value={permanent.length} label="Permanent" color="purple" />
             </div>
-            {totalCodes > 0 && <Button onClick={onAnalyzeAll} disabled={analyzingCodes?.all} className="w-full mb-2 bg-sky-600 hover:bg-sky-700"><Sparkles className="w-4 h-4 mr-1" />{analyzingCodes?.all ? "Analyzing All Codes…" : "Analyze All Codes With AI"}</Button>}
             {totalCodes === 0 ? (
               <div className={`flex items-center gap-2 text-sm py-2 ${ecuUnavailable ? "text-amber-400" : "text-emerald-400"}`}>
                 {ecuUnavailable ? <AlertTriangle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
@@ -163,6 +164,16 @@ export default function ScanReportCard({
                 {permanent.map((c) => renderCodeRow(c, "permanent"))}
               </div>
             )}
+          </section>
+
+          <section className="rounded-xl border border-sky-500/25 bg-sky-500/5 p-4">
+            <SectionTitle icon={Sparkles} label="Lumina Scan Follow-up" iconColor="text-sky-400" />
+            <p className="text-sm text-gray-300 mb-3">Ask follow-up questions with this vehicle, scan, readiness, live data, and health summary already loaded.</p>
+            <div className="grid sm:grid-cols-2 gap-2">
+              <Button onClick={onAskAi} className="bg-sky-600 hover:bg-sky-700"><Sparkles className="w-4 h-4" /> Ask Lumina About This Scan</Button>
+              {totalCodes > 0 && <Button onClick={onAskAiAll} variant="outline" className="border-sky-500/40 text-sky-300">Analyze All Codes With AI</Button>}
+              {ecuUnavailable && <Button onClick={onAskConnectionHelp} className="sm:col-span-2 bg-amber-600 hover:bg-amber-700"><AlertTriangle className="w-4 h-4" /> Ask AI Why Connection Failed</Button>}
+            </div>
           </section>
 
           {/* Emissions Readiness */}
@@ -208,6 +219,13 @@ export default function ScanReportCard({
               <div className="bg-sky-500/5 border border-sky-500/20 rounded-lg p-3">
                 <p className="text-sm text-gray-200 leading-relaxed">{aiSummary}</p>
               </div>
+            </section>
+          )}
+
+          {followUpNote && (
+            <section>
+              <SectionTitle icon={Sparkles} label="Saved AI Follow-up" iconColor="text-sky-400" />
+              <div className="bg-gray-800/50 rounded-lg p-3"><p className="text-sm text-gray-200 whitespace-pre-wrap leading-relaxed">{followUpNote}</p></div>
             </section>
           )}
 
