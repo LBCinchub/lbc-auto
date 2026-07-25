@@ -123,21 +123,41 @@
     }
   },
   "required": [
-    "vehicle_id",
-    "shop_owner_email"
+    "vehicle_id"
   ],
   "rls": {
     "create": {
       "data.shop_owner_email": "{{user.email}}"
     },
     "read": {
-      "data.shop_owner_email": "{{user.email}}"
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.shop_owner_email": "{{user.email}}"
+        }
+      ]
     },
     "update": {
-      "data.shop_owner_email": "{{user.email}}"
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.shop_owner_email": "{{user.email}}"
+        }
+      ]
     },
     "delete": {
-      "data.shop_owner_email": "{{user.email}}"
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.shop_owner_email": "{{user.email}}"
+        }
+      ]
     }
   }
 }
