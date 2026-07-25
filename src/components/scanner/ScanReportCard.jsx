@@ -78,7 +78,7 @@ export default function ScanReportCard({
           {info.causes?.length > 0 && (
             <p className="text-[11px] text-gray-500 mt-0.5">Repair direction: {info.causes.join(" · ")}</p>
           )}
-          <Button size="sm" onClick={() => onAskAiCode(code)} className="mt-3 bg-sky-600 hover:bg-sky-700"><Sparkles className="w-4 h-4" /> Analyze With AI</Button>
+          <Button size="sm" onClick={() => onAskAiCode({ ...code, type })} className="mt-3 bg-sky-600 hover:bg-sky-700"><Sparkles className="w-4 h-4" /> Ask AI About This Code</Button>
           <DtcAiAnalysis analysis={analysisByCode?.[code.code]} loading={analyzingCodes?.[code.code]} laborRate={laborRate} onAnalyze={() => onAnalyzeCode(code)} onAdd={() => onAddCodeToRepairOrder(code)} />
         </div>
       </div>

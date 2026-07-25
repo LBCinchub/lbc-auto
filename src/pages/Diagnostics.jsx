@@ -358,13 +358,30 @@ ${monitors.length ? `<table>${monRows}</table>` : "<p class='muted'>Not availabl
     codes: allScanCodes(), vehicle: { ...autoVehicle, vehicle_id: vehicleId || undefined, customer_id: customerId || undefined },
     liveSnapshot: scanResults?.liveSnapshot || null, freezeFrame: scanResults?.freezeFrame || null,
     readiness: scanResults?.emissions?.monitors || [], timestamp: new Date(sessionStart || Date.now()).toISOString(),
-    healthSummary: aiSummary, protocolAttempts: clientRef.current?.protocolAttempts || scanResults?.protocolAttempts || (protocol ? [protocol] : []),
-    shopEmail: user?.email, laborRate,
+    healthSummary: aiSummary, healthScore: scanResults?.healthScore ?? null,
+    healthResult: scanResults?.ecuResponsive === false ? "Limited scan — ECU unavailable" : allScanCodes().length ? "Faults detected" : "No faults detected",
+    protocolAttempts: clientRef.current?.protocolAttempts || scanResults?.protocolAttempts || (protocol ? [protocol] : []),
+    scanReportId, customerId, vehicleId, shopEmail: user?.email, laborRate,
   });
+
+  const openScannerChat = (focus = null) => {
+    scannerAi.openChat(focus, async () => {
+      let linkedReportId = scanReportId;
+      if (!linkedReportId && customerId && vehicleId && selectedVehicle) {
+        try {
+          const { report } = await ensureScanReportPersisted();
+          linkedReportId = report.id;
+        } catch (error) {
+          // Chat remains available even when a report cannot yet be linked.
+        }
+      }
+      return { scanReportId: linkedReportId };
+    });
+  };
 
   const openCodeAi = (code) => {
     const info = lookupDtc(code.code) || {};
-    scannerAi.openChat({ code:code.code, description:analysisByCode[code.code]?.plain_english || info.name, severity:analysisByCode[code.code]?.urgency || info.severity, system:info.system, module:info.system || "Powertrain", type:code.type });
+    openScannerChat({ code:code.code, description:analysisByCode[code.code]?.plain_english || info.name, severity:analysisByCode[code.code]?.urgency || info.severity, system:info.system, module:info.system || "Powertrain", type:code.type });
     analyzeCodes([code]);
   };
 
@@ -503,7 +520,7 @@ ${monitors.length ? `<table>${monRows}</table>` : "<p class='muted'>Not availabl
           onEnterVehicleManually={() => setManualVehicleOpen(true)}
           onReopenReport={reopenReport}
           onStartNewScan={handleStartNewScan}
-          onAskConnectionHelp={(message) => scannerAi.openChat({ connectionIssue:{ message:message || scanResults?.diagnosis || "0100 timeout — ECU did not respond", adapter:adapterName, adapterConnected:connState === "connected", protocolAttempts:clientRef.current?.protocolAttempts || scanResults?.protocolAttempts || (protocol ? [protocol] : []) } })}
+          onAskConnectionHelp={(message) => openScannerChat({ connectionIssue:{ message:message || scanResults?.diagnosis || "0100 timeout — ECU did not respond", adapter:adapterName, adapterConnected:connState === "connected", protocolAttempts:clientRef.current?.protocolAttempts || scanResults?.protocolAttempts || (protocol ? [protocol] : []) } })}
         />
       )}
 
@@ -539,10 +556,10 @@ ${monitors.length ? `<table>${monRows}</table>` : "<p class='muted'>Not availabl
           analyzingCodes={analyzingCodes}
           onDismiss={dismissReport}
           onAnalyzeCode={(code) => analyzeCodes([code])}
-          onAskAi={() => scannerAi.openChat()}
-          onAskAiAll={() => { scannerAi.openChat({ allCodes:true }); analyzeCodes(allScanCodes()); }}
+          onAskAi={() => openScannerChat()}
+          onAskAiAll={() => { openScannerChat({ allCodes:true }); analyzeCodes(allScanCodes()); }}
           onAskAiCode={openCodeAi}
-          onAskConnectionHelp={() => scannerAi.openChat({ connectionIssue:{ message:scanResults?.diagnosis || "0100 timeout — ECU did not respond", adapter:adapterName, adapterConnected:connState === "connected", protocolAttempts:clientRef.current?.protocolAttempts || scanResults?.protocolAttempts || (protocol ? [protocol] : []) } })}
+          onAskConnectionHelp={() => openScannerChat({ connectionIssue:{ message:scanResults?.diagnosis || "0100 timeout — ECU did not respond", adapter:adapterName, adapterConnected:connState === "connected", protocolAttempts:clientRef.current?.protocolAttempts || scanResults?.protocolAttempts || (protocol ? [protocol] : []) } })}
           onAddCodeToRepairOrder={(code) => handleSaveToRepairOrder([code])}
           onSaveToRepairOrder={() => handleSaveToRepairOrder()}
           onCreateEstimate={() => handleCreateEstimate()}

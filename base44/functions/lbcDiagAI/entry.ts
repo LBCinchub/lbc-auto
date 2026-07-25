@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json().catch(() => ({}));
-    const { mode = "analyze", codes = [], live_data = null, freeze_frame = null, vehicle = "", vehicle_details = {}, labor_rate = null, messages = [], readiness_monitors = [], scan_timestamp = "", health_summary = "", focused_code = null, connection_issue = null, protocol_attempts = [] } = body;
+    const { mode = "analyze", codes = [], live_data = null, freeze_frame = null, vehicle = "", vehicle_details = {}, labor_rate = null, messages = [], readiness_monitors = [], scan_timestamp = "", health_summary = "", health_score = null, health_result = "", focused_code = null, connection_issue = null, protocol_attempts = [], scan_report_id = "", customer_id = "", vehicle_id = "" } = body;
 
     // ── Shop context ────────────────────────────────────────────────────────
     const shopInfo = [];
@@ -63,6 +63,11 @@ Deno.serve(async (req) => {
     if (readiness_monitors.length) context += "\nReadiness monitors: " + JSON.stringify(readiness_monitors);
     if (scan_timestamp) context += "\nScan timestamp: " + scan_timestamp;
     if (health_summary) context += "\nGenerated health summary: " + health_summary;
+    if (health_score != null) context += "\nHealth score: " + health_score;
+    if (health_result) context += "\nHealth result: " + health_result;
+    if (scan_report_id) context += "\nLinked scan report ID: " + scan_report_id;
+    if (customer_id) context += "\nSelected customer ID: " + customer_id;
+    if (vehicle_id) context += "\nSelected vehicle ID: " + vehicle_id;
     if (focused_code) context += "\nFocused code: " + JSON.stringify(focused_code);
     if (connection_issue) context += "\nConnection issue: " + JSON.stringify(connection_issue);
     if (protocol_attempts.length) context += "\nProtocol attempts: " + protocol_attempts.join(", ");

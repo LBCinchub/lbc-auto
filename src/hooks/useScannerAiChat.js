@@ -14,13 +14,15 @@ export function useScannerAiChat(context) {
       live_data: context.liveSnapshot, freeze_frame: context.freezeFrame, readiness_monitors: context.readiness,
       scan_timestamp: context.timestamp, health_summary: context.healthSummary, focused_code: nextFocus?.code ? nextFocus : null,
       connection_issue: nextFocus?.connectionIssue || null, protocol_attempts: context.protocolAttempts,
+      scan_report_id: nextFocus?.scanReportId || context.scanReportId || "", customer_id: context.customerId || "", vehicle_id: context.vehicleId || "",
+      health_score: context.healthScore ?? null, health_result: context.healthResult || "",
       shop_email: context.shopEmail, labor_rate: context.laborRate,
     });
     setMessages(prev => [...prev, { role: "assistant", content: response.data.reply }]);
     setLoading(false);
   };
 
-  const openChat = (nextFocus = null) => {
+  const openChat = async (nextFocus = null, prepareContext = null) => {
     const prompt = nextFocus?.connectionIssue
       ? "Explain why this scan connection failed and give the safest next diagnostic steps."
       : nextFocus?.code
@@ -29,8 +31,16 @@ export function useScannerAiChat(context) {
           ? "Analyze every detected code together, identify root causes versus symptoms, and provide complete mechanic and customer guidance."
           : "Review this complete health scan and tell us what to diagnose, repair, and quote next.";
     const first = [{ role: "user", content: prompt }];
-    setFocus(nextFocus); setMessages(first); setOpen(true);
-    ask(first, nextFocus).catch(error => { setMessages([...first, { role: "assistant", content: error?.message || "AI could not respond." }]); setLoading(false); });
+    setFocus(nextFocus); setMessages(first); setOpen(true); setLoading(true);
+    try {
+      const prepared = prepareContext ? await prepareContext() : null;
+      const activeFocus = { ...(nextFocus || {}), ...(prepared || {}) };
+      setFocus(activeFocus);
+      await ask(first, activeFocus);
+    } catch (error) {
+      setMessages([...first, { role: "assistant", content: error?.message || "AI could not respond." }]);
+      setLoading(false);
+    }
   };
 
   const send = (text) => {
