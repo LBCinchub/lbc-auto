@@ -156,7 +156,10 @@ export default function ScanMode({
       // Start real-time streaming so values update live on screen
       startLiveStream();
     } catch (err) {
-      setConnError(err?.message || "Failed to scan vehicle.");
+      const rawMessage = err?.message || "";
+      setConnError(/No response from adapter for command/i.test(rawMessage)
+        ? "The adapter did not complete vehicle communication. Verify ignition and adapter seating, then retry."
+        : rawMessage || "Failed to scan vehicle.");
     } finally {
       setReading(false);
       setReadProgress("");

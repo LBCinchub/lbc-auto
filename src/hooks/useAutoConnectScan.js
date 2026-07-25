@@ -23,6 +23,7 @@ export function useAutoConnectScan({ clientRef, connState }) {
   const [reportOpen, setReportOpen] = useState(false);
   const [aiSummary, setAiSummary] = useState("");
   const cancelledRef = useRef(false);
+  const forceEcuRetryRef = useRef(false);
   const runRef = useRef(null);
 
   const dismissReport = useCallback(() => setReportOpen(false), []);
@@ -92,9 +93,23 @@ export function useAutoConnectScan({ clientRef, connState }) {
     const deadline = Date.now() + SCAN_TIMEOUT_MS;
     const timedOut = () => Date.now() > deadline;
 
-    // ── 1. VIN + mileage ──
-    setScanLabel("Reading VIN...");
-    setScanProgress(8);
+    if (!client.ecuResponsive) {
+      if (forceEcuRetryRef.current) {
+        forceEcuRetryRef.current = false;
+        setScanLabel("Detecting vehicle protocol");
+        setScanProgress(8);
+        await client.ensureEcuResponsive((status) => {
+          setScanLabel(status === "detecting_protocol" ? "Detecting vehicle protocol" : status === "reading_pids" ? "Reading supported PIDs" : "Contacting ECU");
+        });
+      }
+      if (!client.ecuResponsive) {
+        return finishScan({ storedCodes: [], pendingCodes: [], permanentCodes: [], ecuResponsive: false, diagnosis: "Adapter connected, but vehicle ECU is not responding. Turn ignition ON / engine running, verify adapter is fully seated, then retry." }, null, null, null);
+      }
+    }
+
+    // ── 1. VIN + mileage — only after the ECU confirms Mode 01 communication ──
+    setScanLabel("Vehicle identified — reading VIN and mileage");
+    setScanProgress(12);
     const vin = await client.readVIN().catch(() => null);
     const mileage = await client.readMileage().catch(() => null);
     let decoded = null;
@@ -118,22 +133,22 @@ export function useAutoConnectScan({ clientRef, connState }) {
     if (cancelledRef.current || timedOut()) return finishScan({ storedCodes: [], pendingCodes: [], permanentCodes: [] }, vin, decoded, mileage);
 
     // ── 2. Background scan ──
-    setScanLabel("Reading stored codes (Mode 03)...");
+    setScanLabel("Reading stored fault codes...");
     setScanProgress(20);
     const stored = await client.readDTCs().catch(() => []);
     if (cancelledRef.current || timedOut()) return finishScan({ storedCodes: stored }, vin, decoded, mileage);
 
-    setScanLabel("Reading pending codes (Mode 07)...");
+    setScanLabel("Reading pending fault codes...");
     setScanProgress(38);
     const pending = await client.readPendingDTCs().catch(() => []);
     if (cancelledRef.current || timedOut()) return finishScan({ storedCodes: stored, pendingCodes: pending }, vin, decoded, mileage);
 
-    setScanLabel("Reading permanent codes (Mode 0A)...");
+    setScanLabel("Reading permanent fault codes...");
     setScanProgress(52);
     const permanent = await client.readPermanentDTCs().catch(() => []);
     if (cancelledRef.current || timedOut()) return finishScan({ storedCodes: stored, pendingCodes: pending, permanentCodes: permanent }, vin, decoded, mileage);
 
-    setScanLabel("Polling supported PIDs...");
+    setScanLabel("Reading supported vehicle data...");
     setScanProgress(68);
     const supportedPids = await client.getSupportedPids().catch(() => new Set());
     const snapshot = await readLiveSnapshot(client, supportedPids);
@@ -166,6 +181,7 @@ export function useAutoConnectScan({ clientRef, connState }) {
     setAutoVehicle(null);
     setScanning(true);
     setScanProgress(5);
+    forceEcuRetryRef.current = true;
     runRef.current?.();
   }, [clientRef]);
 
@@ -187,7 +203,7 @@ export function useAutoConnectScan({ clientRef, connState }) {
     }
     setScanResults(results);
     setScanProgress(100);
-    setScanLabel("Scan complete");
+    setScanLabel(results?.ecuResponsive === false ? "Manual vehicle entry required" : "Scan complete");
     setScanning(false);
     setReportReady(true);
     setReportOpen(!!(vin && decoded?.year && decoded?.make && decoded?.model));
@@ -200,6 +216,7 @@ export function useAutoConnectScan({ clientRef, connState }) {
 
   return {
     autoVehicle, scanning, scanProgress, scanLabel, scanResults,
+    ecuIssue: scanResults?.ecuResponsive === false,
     reportReady, reportOpen, dismissReport, reopenReport, aiSummary, setAiSummary, restartScan, setManualVehicle,
   };
 }

@@ -24,6 +24,7 @@ export default function ScanReportCard({
   const snapshot = scanResults?.liveSnapshot || {};
   const milOn = scanResults?.emissions?.milOn;
   const totalCodes = stored.length + pending.length + permanent.length;
+  const ecuUnavailable = scanResults?.ecuResponsive === false;
 
   const severityFor = (code) => {
     const sev = analysisByCode?.[code.code]?.urgency?.toUpperCase() || lookupDtc(code.code)?.severity;
@@ -35,6 +36,7 @@ export default function ScanReportCard({
 
   const allCodes = [...stored, ...pending, ...permanent];
   const overall = (() => {
+    if (ecuUnavailable) return { label: "Limited Scan", cls: "bg-amber-500/15 text-amber-400 border-amber-500/30" };
     if (!allCodes.length) return { label: "Passed", cls: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" };
     const hasHigh = allCodes.some((c) => lookupDtc(c.code)?.severity === "HIGH");
     const hasMed = allCodes.some((c) => lookupDtc(c.code)?.severity === "MEDIUM");
@@ -44,6 +46,7 @@ export default function ScanReportCard({
   })();
 
   const nextSteps = (() => {
+    if (ecuUnavailable) return ["Turn ignition ON or start the engine.", "Verify the adapter is fully seated, then retry ECU communication.", "Use manual vehicle entry to save a limited diagnostic report if communication remains unavailable."];
     if (!allCodes.length) return ["No faults detected — no immediate action required. Continue routine maintenance."];
     const causes = [];
     const seen = new Set();
@@ -149,8 +152,9 @@ export default function ScanReportCard({
             </div>
             {totalCodes > 0 && <Button onClick={onAnalyzeAll} disabled={analyzingCodes?.all} className="w-full mb-2 bg-sky-600 hover:bg-sky-700"><Sparkles className="w-4 h-4 mr-1" />{analyzingCodes?.all ? "Analyzing All Codes…" : "Analyze All Codes With AI"}</Button>}
             {totalCodes === 0 ? (
-              <div className="flex items-center gap-2 text-emerald-400 text-sm py-2">
-                <CheckCircle2 className="w-4 h-4" /> No trouble codes found — all systems passed.
+              <div className={`flex items-center gap-2 text-sm py-2 ${ecuUnavailable ? "text-amber-400" : "text-emerald-400"}`}>
+                {ecuUnavailable ? <AlertTriangle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+                {ecuUnavailable ? "ECU did not respond — fault codes could not be read." : "No trouble codes found — all systems passed."}
               </div>
             ) : (
               <div className="bg-gray-800/50 rounded-lg p-3 max-h-96 overflow-y-auto">

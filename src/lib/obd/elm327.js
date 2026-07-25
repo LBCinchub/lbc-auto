@@ -1,3 +1,5 @@
+import { ELM_INIT_COMMANDS, ECU_RETRY_TIMEOUTS, FALLBACK_PROTOCOLS, ECU_NOT_RESPONDING_MESSAGE, wait, isConfirmedAdapterResponse, isSupportedPidResponse } from "@/lib/obd/obdInitialization";
+
 /**
  * elm327.js — Web Bluetooth ELM327 OBD2 client.
  *
@@ -55,7 +57,7 @@ export class ELM327Client {
     return typeof navigator !== "undefined" && !!navigator.bluetooth;
   }
 
-  async connect() {
+  async connect(onStatus) {
     if (!ELM327Client.isSupported()) {
       throw new Error(
         "This browser doesn't support Web Bluetooth. Use Chrome or Edge on Android/desktop (not supported on iOS Safari)."
@@ -129,26 +131,66 @@ export class ELM327Client {
       if (this._onDisconnect) this._onDisconnect();
     });
 
-    // Standard ELM327 init sequence
-    this._adapterInfo = { name: this.device.name || "OBD2 Adapter", protocol: "", voltage: "" };
-    await this._sendCommand("ATZ", 3500);   // reset — allow extra time for slow adapters
-    await this._sendCommand("ATE0");        // echo off
-    await this._sendCommand("ATL0");        // linefeeds off
-    await this._sendCommand("ATS0");        // spaces off
-    await this._sendCommand("ATH0");        // headers off
-    await this._sendCommand("ATSP0", 5000);  // auto-detect protocol
-    await this._sendCommand("ATAT1");        // adaptive timing
-    await this._sendCommand("0100", 5000);  // test connection
+    this._adapterInfo = { name: this.device.name || "OBD2 Adapter", protocol: "", voltage: "", ecuResponsive: false };
+    await this._initializeAdapter(onStatus);
+    this._adapterInfo.ecuResponsive = await this.ensureEcuResponsive(onStatus);
+    this._adapterInfo.ecuError = this._adapterInfo.ecuResponsive ? "" : ECU_NOT_RESPONDING_MESSAGE;
 
-    // Try to grab protocol + voltage for the connection banner
-    try {
-      this._adapterInfo.protocol = await this._sendCommand("ATDP", 3000);
-    } catch (e) { /* not critical */ }
-    try {
-      this._adapterInfo.voltage = await this._sendCommand("ATRV", 3000);
-    } catch (e) { /* not critical */ }
-
+    try { this._adapterInfo.voltage = await this._sendCommand("ATRV", 3000); } catch (e) { /* optional */ }
     return this._adapterInfo;
+  }
+
+  async _initializeAdapter(onStatus) {
+    onStatus?.("initializing");
+    for (const step of ELM_INIT_COMMANDS) {
+      try {
+        const response = await this._sendCommand(step.command, step.timeout);
+        if (step.required && !isConfirmedAdapterResponse(response)) throw new Error("Adapter did not confirm initialization.");
+      } catch (error) {
+        if (step.required) throw error;
+      }
+      if (step.settle) await wait(step.settle);
+    }
+  }
+
+  async ensureEcuResponsive(onStatus) {
+    let lastProtocol = "";
+    onStatus?.("detecting_protocol");
+    await wait(300);
+    for (let i = 0; i < ECU_RETRY_TIMEOUTS.length; i++) {
+      onStatus?.(i === 0 ? "contacting_ecu" : "reading_pids");
+      try {
+        const response = await this._sendCommand("0100", ECU_RETRY_TIMEOUTS[i]);
+        if (isSupportedPidResponse(response)) {
+          this.ecuResponsive = true;
+          try { lastProtocol = await this._sendCommand("ATDP", 3000); } catch (e) { /* optional */ }
+          this._adapterInfo = { ...this._adapterInfo, protocol: lastProtocol, ecuResponsive: true, ecuError: "" };
+          return true;
+        }
+      } catch (e) { /* retry after protocol check */ }
+      try { lastProtocol = await this._sendCommand("ATDP", 3500); } catch (e) { /* protocol may still be searching */ }
+      await wait(700 + (i * 500));
+    }
+
+    onStatus?.("detecting_protocol");
+    for (const protocolCommand of FALLBACK_PROTOCOLS) {
+      try {
+        const selected = await this._sendCommand(protocolCommand, 5000);
+        if (!isConfirmedAdapterResponse(selected)) continue;
+        await wait(900);
+        const response = await this._sendCommand("0100", 14000);
+        if (isSupportedPidResponse(response)) {
+          try { lastProtocol = await this._sendCommand("ATDP", 3000); } catch (e) { /* optional */ }
+          this.ecuResponsive = true;
+          this._adapterInfo = { ...this._adapterInfo, protocol: lastProtocol, ecuResponsive: true, ecuError: "" };
+          return true;
+        }
+      } catch (e) { /* safely probe next common protocol */ }
+    }
+
+    this.ecuResponsive = false;
+    this._adapterInfo = { ...this._adapterInfo, protocol: lastProtocol, ecuResponsive: false, ecuError: ECU_NOT_RESPONDING_MESSAGE };
+    return false;
   }
 
   /** Returns adapter info (name, protocol, voltage) gathered during init */
@@ -174,6 +216,7 @@ export class ELM327Client {
   }
 
   _onData(dataView) {
+    if (Date.now() < (this._ignoreNotificationsUntil || 0)) return;
     const text = new TextDecoder().decode(dataView);
     this.buffer += text;
     if (this.buffer.includes(">")) {
@@ -183,11 +226,9 @@ export class ELM327Client {
         clearTimeout(this.pending.timeout);
         this.pending.resolve(response);
         this.pending = null;
-      } else {
-        // Response arrived before pending was set (rare BLE race) — stash it
-        // so the next _sendCommandInternal can pick it up immediately
-        this._lastUnsolicitedResponse = response;
       }
+      // Late notifications after a timed-out command are deliberately discarded.
+      // Reusing them would associate an old response with the next queued command.
     }
   }
 
@@ -203,24 +244,23 @@ export class ELM327Client {
 
   async _sendCommandInternal(command, timeoutMs) {
     if (!this.writeChar) throw new Error("Not connected to an OBD2 adapter.");
+    const quarantineDelay = Math.max(0, (this._ignoreNotificationsUntil || 0) - Date.now());
+    if (quarantineDelay) await wait(quarantineDelay);
 
-    // Pick up a stashed response from a BLE race (notification beat the pending assignment)
-    if (this._lastUnsolicitedResponse !== undefined) {
-      const stashed = this._lastUnsolicitedResponse;
-      this._lastUnsolicitedResponse = undefined;
-      return stashed;
-    }
-
+    const normalizedCommand = String(command || "").replace(/[\r\n]+/g, "").trim();
+    this.buffer = "";
     return new Promise(async (resolve, reject) => {
       const timeout = setTimeout(() => {
         this.pending = null;
-        reject(new Error(`No response from adapter for command "${command}" (timed out).`));
+        this.buffer = "";
+        this._ignoreNotificationsUntil = Date.now() + 1000;
+        reject(new Error(`No response from adapter for command "${normalizedCommand}" (timed out).`));
       }, timeoutMs);
 
       this.pending = { resolve, reject, timeout };
 
       try {
-        const bytes = new TextEncoder().encode(command + "\r");
+        const bytes = new TextEncoder().encode(`${normalizedCommand}\r`);
         // writeValueWithoutResponse is correct for ELM327 clones — they use ATT Write Without Response.
         // writeValue() (deprecated) can silently hang in newer Chrome versions waiting for
         // an ATT confirmation the adapter never sends.
@@ -372,60 +412,33 @@ export class ELM327Client {
     }
   }
 
-  /** Full system scan — sends the complete init + DTC + VIN sequence with progress. */
+  /** Full system scan — confirms adapter + ECU before requesting vehicle data. */
   async fullSystemScan(onProgress) {
-    const steps = [
-      { cmd: "ATZ", label: "Resetting adapter...", delay: 3500 },
-      { cmd: "ATE0", label: "Configuring adapter..." },
-      { cmd: "ATL0", label: "Configuring adapter..." },
-      { cmd: "ATS0", label: "Configuring adapter..." },
-      { cmd: "ATSP0", label: "Auto-detecting protocol...", delay: 5000 },
-      { cmd: "ATAT1", label: "Setting adaptive timing..." },
-      { cmd: "0100", label: "Checking supported PIDs...", delay: 5000 },
-      { cmd: "0902", label: "Requesting VIN...", delay: 5000 },
-      { cmd: "03", label: "Reading confirmed fault codes...", delay: 15000 },
-      { cmd: "07", label: "Reading pending fault codes...", delay: 15000 },
-      { cmd: "0A", label: "Reading permanent fault codes...", delay: 15000 },
-    ];
+    onProgress?.("Initializing adapter", 5);
+    await this._initializeAdapter();
+    onProgress?.("Detecting vehicle protocol", 12);
+    const ecuResponsive = await this.ensureEcuResponsive();
+    if (!ecuResponsive) return { codes: [], vin: null, ecuResponsive: false, diagnosis: ECU_NOT_RESPONDING_MESSAGE };
 
-    const vin = null;
-    let stored = [], pending = [], permanent = [];
+    onProgress?.("Vehicle identified", 20);
+    const vin = await this.readVIN();
+    if (vin) this._adapterInfo = { ...this._adapterInfo, vin };
+    onProgress?.("Reading stored fault codes", 38);
+    const stored = await this.readDTCs().catch(() => []);
+    onProgress?.("Reading pending fault codes", 58);
+    const pending = await this.readPendingDTCs();
+    onProgress?.("Reading permanent fault codes", 78);
+    const permanent = await this.readPermanentDTCs();
 
-    for (let i = 0; i < steps.length; i++) {
-      const step = steps[i];
-      if (onProgress) onProgress(step.label, Math.round((i / steps.length) * 100));
-
-      if (step.cmd === "0902") {
-        const v = await this.readVIN().catch(() => null);
-        if (v) this._adapterInfo = { ...this._adapterInfo, vin: v };
-      } else if (step.cmd === "03") {
-        stored = await this.readDTCs().catch(() => []);
-      } else if (step.cmd === "07") {
-        pending = await this.readPendingDTCs().catch(() => []);
-      } else if (step.cmd === "0A") {
-        permanent = await this.readPermanentDTCs().catch(() => []);
-      } else {
-        await this._sendCommand(step.cmd, step.delay || 4000).catch(() => {});
-      }
-    }
-
-    if (onProgress) onProgress("Scan complete", 100);
-
-    // Merge with type tags
     const seen = new Set();
-    const merged = [];
-    const addCodes = (arr, type) => {
-      for (const c of arr) {
-        if (seen.has(c.code)) continue;
-        seen.add(c.code);
-        merged.push({ ...c, type });
-      }
-    };
-    addCodes(stored, "stored");
-    addCodes(pending, "pending");
-    addCodes(permanent, "permanent");
-
-    return { codes: merged, vin: this._adapterInfo?.vin || null };
+    const codes = [];
+    [[stored, "stored"], [pending, "pending"], [permanent, "permanent"]].forEach(([items, type]) => {
+      items.forEach(code => {
+        if (!seen.has(code.code)) { seen.add(code.code); codes.push({ ...code, type }); }
+      });
+    });
+    onProgress?.("Scan complete", 100);
+    return { codes, vin: this._adapterInfo?.vin || null, ecuResponsive: true };
   }
 
   /** Read odometer/mileage via PID 01A6 (where supported). Returns km or null. */

@@ -22,7 +22,7 @@ const SCAN_STEPS = [
  * persists across tab switches.
  */
 export default function ScanSessionFlow({
-  connState, connError, autoVehicle, scanning, scanProgress, scanLabel, reportReady,
+  connState, connError, connectionStep, ecuIssue, autoVehicle, scanning, scanProgress, scanLabel, reportReady,
   onConnect, onOpenVehiclePanel, onEnterVehicleManually, onReopenReport, onStartNewScan,
 }) {
   const [elapsed, setElapsed] = useState(0);
@@ -67,14 +67,35 @@ export default function ScanSessionFlow({
   if (connState === "connecting") {
     return (
       <StagePanel icon={Bluetooth} iconColor="text-sky-400" iconBg="bg-sky-500/15" loading>
-        <h2 className="text-white font-bold text-lg mb-1">Connecting to OBD Adapter…</h2>
-        <p className="text-gray-400 text-sm mb-4">Pairing with your BLE adapter and initializing protocol.</p>
+        <h2 className="text-white font-bold text-lg mb-1">Preparing Vehicle Communication…</h2>
+        <p className="text-gray-400 text-sm mb-4">Establishing a stable adapter and ECU session.</p>
         <div className="space-y-1.5 text-left max-w-xs mx-auto">
-          <StatusLine done>Searching for Bluetooth adapter</StatusLine>
-          <StatusLine active>Establishing secure connection</StatusLine>
-          <StatusLine>Initializing ELM327 protocol</StatusLine>
+          {[
+            ["connecting", "Connecting to adapter"],
+            ["initializing", "Initializing adapter"],
+            ["detecting_protocol", "Detecting vehicle protocol"],
+            ["contacting_ecu", "Contacting ECU"],
+            ["reading_pids", "Reading supported PIDs"],
+          ].map(([key, label], index, steps) => {
+            const activeIndex = Math.max(0, steps.findIndex(([step]) => step === connectionStep));
+            return <StatusLine key={key} done={index < activeIndex} active={index === activeIndex}>{label}</StatusLine>;
+          })}
         </div>
         <p className="text-xs text-gray-500 mt-4">Make sure ignition is ON (key in ACC or engine running).</p>
+      </StagePanel>
+    );
+  }
+
+  // ── Adapter connected, ECU unavailable ──
+  if (connState === "connected" && ecuIssue && !autoVehicle) {
+    return (
+      <StagePanel icon={AlertTriangle} iconColor="text-amber-400" iconBg="bg-amber-500/15">
+        <h2 className="text-white font-bold text-lg mb-1">Vehicle ECU Not Responding</h2>
+        <p className="text-gray-300 text-sm mb-4 max-w-md mx-auto">Adapter connected, but vehicle ECU is not responding. Turn ignition ON / engine running, verify adapter is fully seated, then retry.</p>
+        <div className="flex flex-wrap gap-2 justify-center">
+          <Button onClick={onStartNewScan} className="bg-sky-600 hover:bg-sky-700 text-white"><RefreshCw className="w-4 h-4 mr-2" /> Retry ECU</Button>
+          <Button onClick={onEnterVehicleManually} variant="outline" className="border-gray-700 text-gray-300"><Car className="w-4 h-4 mr-2" /> Enter Vehicle Manually</Button>
+        </div>
       </StagePanel>
     );
   }
@@ -86,10 +107,12 @@ export default function ScanSessionFlow({
         <h2 className="text-white font-bold text-lg mb-1">Identifying Vehicle…</h2>
         <p className="text-gray-400 text-sm mb-4">{scanLabel || "Reading VIN and mileage from ECU…"}</p>
         <div className="space-y-1.5 text-left max-w-xs mx-auto">
-          <StatusLine done>Adapter connected</StatusLine>
-          <StatusLine active>Requesting VIN (Mode 09)</StatusLine>
-          <StatusLine>Decoding vehicle specifications</StatusLine>
-          <StatusLine>Reading odometer (where supported)</StatusLine>
+          <StatusLine done>Connecting to adapter</StatusLine>
+          <StatusLine done>Initializing adapter</StatusLine>
+          <StatusLine done>Detecting vehicle protocol</StatusLine>
+          <StatusLine done>Contacting ECU</StatusLine>
+          <StatusLine done>Reading supported PIDs</StatusLine>
+          <StatusLine active>Vehicle identified / reading details</StatusLine>
         </div>
       </StagePanel>
     );
@@ -147,7 +170,19 @@ export default function ScanSessionFlow({
     );
   }
 
-  // The persistent manual-identification card is rendered above this flow.
+  if (connState === "connected" && reportReady && !autoVehicle) {
+    return (
+      <StagePanel icon={Car} iconColor="text-amber-400" iconBg="bg-amber-500/15">
+        <h2 className="text-white font-bold text-lg mb-1">Manual Vehicle Entry Required</h2>
+        <p className="text-gray-400 text-sm mb-4">The scan can continue, but the VIN or vehicle details were not available automatically.</p>
+        <div className="flex flex-wrap gap-2 justify-center">
+          <Button onClick={onEnterVehicleManually} className="bg-sky-600 hover:bg-sky-700 text-white"><Car className="w-4 h-4 mr-2" /> Enter Vehicle Manually</Button>
+          <Button onClick={onOpenVehiclePanel} variant="outline" className="border-gray-700 text-gray-300">Select Existing Vehicle</Button>
+        </div>
+      </StagePanel>
+    );
+  }
+
   if (connState === "connected" && !autoVehicle && !scanning) return null;
 
   // ── Landing (default) ──

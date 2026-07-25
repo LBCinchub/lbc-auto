@@ -41,6 +41,7 @@ export default function Diagnostics() {
   const [protocol, setProtocol] = useState("");
   const [voltage, setVoltage] = useState("");
   const [connError, setConnError] = useState("");
+  const [connectionStep, setConnectionStep] = useState("connecting");
   const clientRef = useRef(null);
   const [sessionStart, setSessionStart] = useState(null);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
@@ -70,11 +71,18 @@ export default function Diagnostics() {
 
   const { toast } = useToast();
   const {
-    autoVehicle, scanning, scanProgress, scanLabel, scanResults,
+    autoVehicle, scanning, scanProgress, scanLabel, scanResults, ecuIssue,
     reportReady, reportOpen, dismissReport, reopenReport, aiSummary, setAiSummary, restartScan, setManualVehicle,
   } = useAutoConnectScan({ clientRef, connState });
 
   const allScanCodes = () => [...(scanResults?.storedCodes || []), ...(scanResults?.pendingCodes || []), ...(scanResults?.permanentCodes || [])];
+
+  useEffect(() => {
+    if (reportReady && !autoVehicle && selectedVehicle) {
+      setManualVehicle({ ...selectedVehicle, engine: selectedVehicle.engine_type || "", mileage_km: selectedVehicle.mileage ?? null });
+      setShowVehiclePanel(false);
+    }
+  }, [reportReady, autoVehicle, selectedVehicle, setManualVehicle]);
 
   const handleStartNewScan = () => {
     dismissReport();
@@ -128,7 +136,7 @@ export default function Diagnostics() {
   <tr><td style="font-weight:700">Mileage</td><td>${(v.mileage_km ?? v.mileage) != null ? Number(v.mileage_km ?? v.mileage).toLocaleString() + " km" : "Not reported by ECU"}</td></tr>
 </table>
 <h2>Diagnostic Trouble Codes (${codes.length})</h2>
-${codes.length ? `<table><tr><td style="font-weight:700">Code</td><td style="font-weight:700">Description</td><td style="font-weight:700">Severity</td><td style="font-weight:700">Labor / Parts</td></tr>${codeRows}</table>` : "<p class='muted'>No trouble codes found — all clear.</p>"}
+${codes.length ? `<table><tr><td style="font-weight:700">Code</td><td style="font-weight:700">Description</td><td style="font-weight:700">Severity</td><td style="font-weight:700">Labor / Parts</td></tr>${codeRows}</table>` : r.ecuResponsive === false ? "<p><strong>Limited scan:</strong> Adapter connected, but the vehicle ECU did not respond. Fault codes could not be read.</p>" : "<p class='muted'>No trouble codes found — all clear.</p>"}
 <h2>Emissions Readiness</h2>
 ${monitors.length ? `<table>${monRows}</table>` : "<p class='muted'>Not available.</p>"}
 <h2>Live Data Snapshot</h2>
@@ -213,7 +221,7 @@ ${monitors.length ? `<table>${monRows}</table>` : "<p class='muted'>Not availabl
     setSavingScan(true);
     try {
       const context=await ensureScannerVehicle();
-      await base44.entities.DiagnosticScan.create({ customer_id:context.custId, customer_name:context.custName, vehicle_id:context.vehId, vehicle_info:context.vehInfo, shop_owner_email:user.email, adapter_name:adapterName, mileage:autoVehicle.mileage_km ?? autoVehicle.mileage ?? undefined, dtc_codes:allScanCodes(), live_data_snapshot:scanResults?.liveSnapshot || {}, ai_analysis:{ summary:aiSummary, findings:Object.values(analysisByCode) }, status:"Completed" });
+      await base44.entities.DiagnosticScan.create({ customer_id:context.custId, customer_name:context.custName, vehicle_id:context.vehId, vehicle_info:context.vehInfo, shop_owner_email:user.email, adapter_name:adapterName, mileage:autoVehicle.mileage_km ?? autoVehicle.mileage ?? undefined, dtc_codes:allScanCodes(), live_data_snapshot:scanResults?.liveSnapshot || {}, ai_analysis:{ summary:aiSummary, findings:Object.values(analysisByCode) }, notes:scanResults?.ecuResponsive === false ? scanResults.diagnosis : undefined, status:scanResults?.ecuResponsive === false ? "Needs Follow-up" : "Completed" });
       toast({ title:"Scan report saved" });
     } catch (error) { toast({ title:"Save failed", description:error?.message || "Try again.", variant:"destructive" }); }
     finally { setSavingScan(false); }
@@ -222,6 +230,7 @@ ${monitors.length ? `<table>${monRows}</table>` : "<p class='muted'>Not availabl
   // ── BLE handlers ──────────────────────────────────────────────────────
   const handleConnect = async () => {
     setConnError("");
+    setConnectionStep("connecting");
     setConnState("connecting");
     try {
       const client = new ELM327Client(() => {
@@ -234,7 +243,7 @@ ${monitors.length ? `<table>${monRows}</table>` : "<p class='muted'>Not availabl
         clientRef.current = null;
         setTimeout(() => setConnError(""), 5000);
       });
-      const info = await client.connect();
+      const info = await client.connect(setConnectionStep);
       clientRef.current = client;
       setAdapterName(info.name);
       setProtocol(info.protocol || "");
@@ -243,7 +252,10 @@ ${monitors.length ? `<table>${monRows}</table>` : "<p class='muted'>Not availabl
       setSessionStart(Date.now());
     } catch (err) {
       setConnState("error");
-      setConnError(err?.message || "Couldn't connect to the adapter.");
+      const rawMessage = err?.message || "";
+      setConnError(/No response from adapter for command|initialization/i.test(rawMessage)
+        ? "BLE adapter connected, but initialization did not complete. Verify the adapter is fully seated and retry."
+        : rawMessage || "Couldn't connect to the adapter.");
       // Auto-reset to disconnected after 6s so user can retry without refreshing
       setTimeout(() => {
         setConnState("disconnected");
@@ -421,6 +433,8 @@ ${monitors.length ? `<table>${monRows}</table>` : "<p class='muted'>Not availabl
         <ScanSessionFlow
           connState={connState}
           connError={connError}
+          connectionStep={connectionStep}
+          ecuIssue={ecuIssue}
           autoVehicle={autoVehicle}
           scanning={scanning}
           scanProgress={scanProgress}
