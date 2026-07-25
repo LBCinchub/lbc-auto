@@ -78,7 +78,11 @@ export default function Diagnostics() {
     reportReady, reportOpen, dismissReport, reopenReport, aiSummary, setAiSummary, restartScan, setManualVehicle,
   } = useAutoConnectScan({ clientRef, connState });
 
-  const allScanCodes = () => [...(scanResults?.storedCodes || []), ...(scanResults?.pendingCodes || []), ...(scanResults?.permanentCodes || [])];
+  const allScanCodes = () => [
+    ...(scanResults?.storedCodes || []).map(code => ({ ...code, type:"stored" })),
+    ...(scanResults?.pendingCodes || []).map(code => ({ ...code, type:"pending" })),
+    ...(scanResults?.permanentCodes || []).map(code => ({ ...code, type:"permanent" })),
+  ];
 
   useEffect(() => {
     if (reportReady && !autoVehicle && selectedVehicle) {
@@ -102,7 +106,7 @@ export default function Diagnostics() {
     try {
       const response = await base44.functions.invoke("lbcDiagAI", {
         mode: "analyze", codes, shop_email: user?.email, labor_rate: laborRate,
-        vehicle_details: { ...autoVehicle, vehicle_id: vehicleId || undefined },
+        vehicle_details: { ...autoVehicle, vehicle_id: vehicleId || undefined, customer_id: customerId || undefined },
         freeze_frame: scanResults?.freezeFrame || null, live_data: scanResults?.liveSnapshot || null,
       });
       const analysis = response.data?.analysis || {};
@@ -119,6 +123,7 @@ export default function Diagnostics() {
   const handlePrintReport = () => {
     const v = autoVehicle || {};
     const r = scanResults || {};
+    const followUp = [...scannerAi.messages].reverse().find(message => message.role === "assistant")?.content || "";
     const codes = [...(r.storedCodes || []), ...(r.pendingCodes || []), ...(r.permanentCodes || [])];
     const snap = r.liveSnapshot || {};
     const monitors = r.emissions?.monitors || [];
@@ -151,7 +156,8 @@ ${monitors.length ? `<table>${monRows}</table>` : "<p class='muted'>Not availabl
 <tr><td style="font-weight:700">Throttle Position</td><td>${snap.throttle ?? "—"} %</td></tr>
 </table>
 <h2>AI Health Summary</h2>
-<p>${aiSummary || "Run AI analysis from the scanner report to add vehicle-specific labor and parts guidance."}</p>
+  <p>${aiSummary || "Run AI analysis from the scanner report to add vehicle-specific labor and parts guidance."}</p>
+  ${followUp ? `<h2>AI Follow-up Notes</h2><p>${followUp}</p>` : ""}
 <p class="muted" style="margin-top:28px;text-align:center;border-top:1px solid #ccc;padding-top:10px">LBC Auto · AI Vehicle Diagnostic Scan</p>
 </body></html>`;
     const w = window.open("", "_blank");
@@ -175,7 +181,7 @@ ${monitors.length ? `<table>${monRows}</table>` : "<p class='muted'>Not availabl
     adapter_name: adapterName, mileage: autoVehicle?.mileage_km ?? autoVehicle?.mileage ?? selectedVehicle?.mileage,
     scan_timestamp: new Date(sessionStart || Date.now()).toISOString(), dtc_codes: allScanCodes(),
     freeze_frame: scanResults?.freezeFrame || {}, readiness_monitors: scanResults?.emissions?.monitors || [],
-    protocol_attempts: scanResults?.protocolAttempts || (protocol ? [protocol] : []), live_data_snapshot: scanResults?.liveSnapshot || {},
+    protocol_attempts: clientRef.current?.protocolAttempts || scanResults?.protocolAttempts || (protocol ? [protocol] : []), live_data_snapshot: scanResults?.liveSnapshot || {},
     ai_analysis: { summary: aiSummary, findings: Object.values(analysisByCode) },
     notes: scanResults?.ecuResponsive === false ? scanResults.diagnosis : undefined,
     status: scanResults?.ecuResponsive === false ? "Needs Follow-up" : "Completed",
@@ -202,7 +208,8 @@ ${monitors.length ? `<table>${monRows}</table>` : "<p class='muted'>Not availabl
       const codes = selectedCodes || allScanCodes();
       const { context, report } = await ensureScanReportPersisted();
       const { findings, labor_items, parts } = repairRows(codes);
-      const description = `Scanner diagnosis — ${codes.map(c=>c.code).join(", ")}\n${findings.map(f=>f.customer_friendly_explanation).filter(Boolean).join(" ") || aiSummary || "AI analysis pending"}`;
+      const chatNote = [...scannerAi.messages].reverse().find(message => message.role === "assistant")?.content || "";
+      const description = `Scanner diagnosis — ${codes.map(c=>c.code).join(", ")}\n${findings.map(f=>f.customer_friendly_explanation).filter(Boolean).join(" ") || chatNote || aiSummary || "AI analysis pending"}`;
       const laborCost = labor_items.reduce((s,i)=>s+i.total,0);
       let ro;
       if (selectedCodes?.length === 1) {
@@ -212,7 +219,7 @@ ${monitors.length ? `<table>${monRows}</table>` : "<p class='muted'>Not availabl
           ro = await createScannerRepairOrder({ reportId:report.id, customerId:context.custId, vehicleId:context.vehId, vehicleInfo:context.vehInfo, customerName:context.custName, existingId:existing.id, payload:{ description:`${existing.description || ""}\n\n${description}`.trim(), notes:`${existing.notes || ""}\n${findings.map(f=>`${f.code}: ${f.mechanic_notes || f.likely_cause}`).join("\n")}`.trim(), labor_items:mergedLabor, parts_used:mergedParts, labor_hours:mergedLabor.reduce((s,i)=>s+(Number(i.hours)||0),0), labor_cost:mergedLabor.reduce((s,i)=>s+(Number(i.total)||0),0), total_cost:mergedLabor.reduce((s,i)=>s+(Number(i.total)||0),0)+(existing.parts_cost||0) } });
         }
       }
-      if (!ro) ro = await createScannerRepairOrder({ reportId:report.id, customerId:context.custId, vehicleId:context.vehId, vehicleInfo:context.vehInfo, customerName:context.custName, payload:{ description, notes:findings.map(f=>`${f.code}: ${f.mechanic_notes || f.likely_cause}`).join("\n"), status:"waiting", labor_items, parts_used:parts, labor_hours:labor_items.reduce((s,i)=>s+i.hours,0), labor_cost:laborCost, parts_cost:0, total_cost:laborCost } });
+      if (!ro) ro = await createScannerRepairOrder({ reportId:report.id, customerId:context.custId, vehicleId:context.vehId, vehicleInfo:context.vehInfo, customerName:context.custName, payload:{ description, notes:findings.map(f=>`${f.code}: ${f.mechanic_notes || f.likely_cause}`).join("\n") || chatNote, status:"waiting", labor_items, parts_used:parts, labor_hours:labor_items.reduce((s,i)=>s+i.hours,0), labor_cost:laborCost, parts_cost:0, total_cost:laborCost } });
       toast({ title: selectedCodes ? "Added to repair order" : "Repair order created", description:"Vehicle, codes, labor, parts, and customer explanation were included." });
       dismissReport(); window.location.href=`/RepairOrderDetail/${ro.id}`;
     } catch (error) { toast({ title:"Repair order failed", description:error?.message || "Try again.", variant:"destructive" }); }
@@ -227,7 +234,8 @@ ${monitors.length ? `<table>${monRows}</table>` : "<p class='muted'>Not availabl
       const codes = selectedCodes || allScanCodes();
       const { labor_items, parts } = repairRows(codes);
       const labor_total=labor_items.reduce((s,i)=>s+i.total,0);
-      const estimate=await createScannerEstimate({ reportId:report.id, customerId:context.custId, vehicleId:context.vehId, vehicleInfo:context.vehInfo, customerName:context.custName, payload:{ estimate_number:`EST-${Date.now().toString().slice(-6)}`, status:"draft", service_reason:`Diagnostic codes: ${codes.map(c=>c.code).join(", ")}`, notes:aiSummary || "AI analysis pending", labor_items, parts_items:parts, labor_total, parts_total:0, tax_rate:0, tax_amount:0, grand_total:labor_total } });
+      const chatNote = [...scannerAi.messages].reverse().find(message => message.role === "assistant")?.content || "";
+      const estimate=await createScannerEstimate({ reportId:report.id, customerId:context.custId, vehicleId:context.vehId, vehicleInfo:context.vehInfo, customerName:context.custName, payload:{ estimate_number:`EST-${Date.now().toString().slice(-6)}`, status:"draft", service_reason:`Diagnostic codes: ${codes.map(c=>c.code).join(", ")}`, notes:chatNote || aiSummary || "AI analysis pending", labor_items, parts_items:parts, labor_total, parts_total:0, tax_rate:0, tax_amount:0, grand_total:labor_total } });
       toast({ title:"Estimate created", description:"Scanner findings were pre-filled." }); dismissReport(); window.location.href=`/EstimateDetail/${estimate.id}`;
     } catch (error) { toast({ title:"Estimate failed", description:error?.message || "Try again.", variant:"destructive" }); }
     finally { setSavingEstimate(false); }
@@ -347,23 +355,24 @@ ${monitors.length ? `<table>${monRows}</table>` : "<p class='muted'>Not availabl
     : autoVehicle ? `${autoVehicle.year || ""} ${autoVehicle.make || ""} ${autoVehicle.model || ""}`.trim() : "—";
 
   const scannerAi = useScannerAiChat({
-    codes: allScanCodes(), vehicle: { ...autoVehicle, vehicle_id: vehicleId || undefined },
+    codes: allScanCodes(), vehicle: { ...autoVehicle, vehicle_id: vehicleId || undefined, customer_id: customerId || undefined },
     liveSnapshot: scanResults?.liveSnapshot || null, freezeFrame: scanResults?.freezeFrame || null,
     readiness: scanResults?.emissions?.monitors || [], timestamp: new Date(sessionStart || Date.now()).toISOString(),
-    healthSummary: aiSummary, protocolAttempts: scanResults?.protocolAttempts || (protocol ? [protocol] : []),
+    healthSummary: aiSummary, protocolAttempts: clientRef.current?.protocolAttempts || scanResults?.protocolAttempts || (protocol ? [protocol] : []),
     shopEmail: user?.email, laborRate,
   });
 
   const openCodeAi = (code) => {
     const info = lookupDtc(code.code) || {};
-    scannerAi.openChat({ code:code.code, description:analysisByCode[code.code]?.plain_english || info.name, severity:analysisByCode[code.code]?.urgency || info.severity, system:info.system, type:code.type });
+    scannerAi.openChat({ code:code.code, description:analysisByCode[code.code]?.plain_english || info.name, severity:analysisByCode[code.code]?.urgency || info.severity, system:info.system, module:info.system || "Powertrain", type:code.type });
+    analyzeCodes([code]);
   };
 
   const handleSaveAiNotes = async () => {
     try {
-      const { context, report } = await ensureScanReportPersisted();
+      const context = await ensureScannerVehicle();
       const latest = [...scannerAi.messages].reverse().find(message => message.role === "assistant")?.content || "";
-      await saveScannerAiNotes({ reportId:report.id, reportData:scanReportData(context), messages:scannerAi.messages, summary:aiSummary, customerNotes:latest });
+      const report = await saveScannerAiNotes({ reportId:scanReportId, reportData:scanReportData(context), messages:scannerAi.messages, summary:aiSummary, customerNotes:latest });
       setScanReportId(report.id); toast({ title:"AI notes saved to scan report" });
     } catch (error) { toast({ title:"Select customer and vehicle", description:error?.message, variant:"destructive" }); }
   };
@@ -494,6 +503,7 @@ ${monitors.length ? `<table>${monRows}</table>` : "<p class='muted'>Not availabl
           onEnterVehicleManually={() => setManualVehicleOpen(true)}
           onReopenReport={reopenReport}
           onStartNewScan={handleStartNewScan}
+          onAskConnectionHelp={(message) => scannerAi.openChat({ connectionIssue:{ message:message || scanResults?.diagnosis || "0100 timeout — ECU did not respond", adapter:adapterName, adapterConnected:connState === "connected", protocolAttempts:clientRef.current?.protocolAttempts || scanResults?.protocolAttempts || (protocol ? [protocol] : []) } })}
         />
       )}
 
@@ -530,12 +540,12 @@ ${monitors.length ? `<table>${monRows}</table>` : "<p class='muted'>Not availabl
           onDismiss={dismissReport}
           onAnalyzeCode={(code) => analyzeCodes([code])}
           onAskAi={() => scannerAi.openChat()}
-          onAskAiAll={() => scannerAi.openChat({ allCodes:true })}
+          onAskAiAll={() => { scannerAi.openChat({ allCodes:true }); analyzeCodes(allScanCodes()); }}
           onAskAiCode={openCodeAi}
-          onAskConnectionHelp={() => scannerAi.openChat({ connectionIssue:{ message:scanResults?.diagnosis || "0100 timeout — ECU did not respond", adapter:adapterName, adapterConnected:connState === "connected", protocolAttempts:scanResults?.protocolAttempts || (protocol ? [protocol] : []) } })}
+          onAskConnectionHelp={() => scannerAi.openChat({ connectionIssue:{ message:scanResults?.diagnosis || "0100 timeout — ECU did not respond", adapter:adapterName, adapterConnected:connState === "connected", protocolAttempts:clientRef.current?.protocolAttempts || scanResults?.protocolAttempts || (protocol ? [protocol] : []) } })}
           onAddCodeToRepairOrder={(code) => handleSaveToRepairOrder([code])}
           onSaveToRepairOrder={() => handleSaveToRepairOrder()}
-          onCreateEstimate={handleCreateEstimate}
+          onCreateEstimate={() => handleCreateEstimate()}
           onSaveReport={handleSaveReport}
           onEnterVehicleManually={() => setManualVehicleOpen(true)}
           onPrint={handlePrintReport}

@@ -50,6 +50,7 @@ export class ELM327Client {
     this.buffer = "";
     this.pending = null; // { resolve, reject, timeout }
     this._queue = Promise.resolve(); // serializes commands so concurrent callers can't interleave
+    this.protocolAttempts = ["Automatic protocol detection"];
     this._onDisconnect = onDisconnect || null; // called when adapter drops unexpectedly
   }
 
@@ -173,7 +174,9 @@ export class ELM327Client {
     }
 
     onStatus?.("detecting_protocol");
+    const protocolLabels = { ATSP0:"Automatic protocol detection", ATSP6:"CAN 11-bit / 500 kbaud", ATSP7:"CAN 29-bit / 500 kbaud", ATSP8:"CAN 11-bit / 250 kbaud", ATSP9:"CAN 29-bit / 250 kbaud" };
     for (const protocolCommand of FALLBACK_PROTOCOLS) {
+      if (!this.protocolAttempts.includes(protocolLabels[protocolCommand])) this.protocolAttempts.push(protocolLabels[protocolCommand]);
       try {
         const selected = await this._sendCommand(protocolCommand, 5000);
         if (!isConfirmedAdapterResponse(selected)) continue;

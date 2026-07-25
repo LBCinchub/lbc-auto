@@ -17,7 +17,7 @@ export default function ScannerAiDrawer({ open, messages, loading, focus, onClos
         <button onClick={onClose} className="p-2 rounded-lg text-gray-400 hover:bg-gray-800"><X className="w-5 h-5" /></button>
       </header>
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {messages.map((message, index) => <ScannerAiMessage key={index} message={message} isLatest={index === latestAssistant} onRepairOrder={onRepairOrder} onEstimate={onEstimate} onPrint={onPrint} onSave={onSave} />)}
+        {messages.map((message, index) => <ScannerAiMessage key={index} message={message} isLatest={index === latestAssistant} showRepairActions={!focus?.connectionIssue} onRepairOrder={onRepairOrder} onEstimate={onEstimate} onPrint={onPrint} onSave={onSave} />)}
         {loading && <div className="flex items-center gap-2 text-sm text-sky-400"><Loader2 className="w-4 h-4 animate-spin" /> Lumina is reviewing the scan…</div>}
       </div>
       <div className="shrink-0 border-t border-gray-800 bg-gray-900 p-3 space-y-2">

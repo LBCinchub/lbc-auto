@@ -29,9 +29,10 @@ export async function saveScannerAiNotes({ reportId, reportData, messages, summa
 export async function createScannerRepairOrder({ reportId, customerId, vehicleId, vehicleInfo, customerName, payload, existingId }) {
   await verifiedOwner();
   await validateLinks(customerId, vehicleId, "RepairOrder");
+  const linkedPayload = { ...payload, scan_report_id: reportId || "" };
   const record = existingId
-    ? await base44.entities.RepairOrder.update(existingId, payload)
-    : await base44.entities.RepairOrder.create({ ...payload, customer_id: customerId, customer_name: customerName, vehicle_id: vehicleId, vehicle_info: vehicleInfo });
+    ? await base44.entities.RepairOrder.update(existingId, linkedPayload)
+    : await base44.entities.RepairOrder.create({ ...linkedPayload, customer_id: customerId, customer_name: customerName, vehicle_id: vehicleId, vehicle_info: vehicleInfo });
   await syncCustomerActivity({ customerId, vehicleId, vehicleInfo, customerName, entityType: "RepairOrder", entityId: record.id });
   if (reportId) await base44.entities.DiagnosticScan.update(reportId, { repair_order_id: record.id });
   return record;
@@ -40,7 +41,7 @@ export async function createScannerRepairOrder({ reportId, customerId, vehicleId
 export async function createScannerEstimate({ reportId, customerId, vehicleId, vehicleInfo, customerName, payload }) {
   await verifiedOwner();
   await validateLinks(customerId, vehicleId, "Estimate");
-  const record = await base44.entities.Estimate.create({ ...payload, customer_id: customerId, customer_name: customerName, vehicle_id: vehicleId, vehicle_info: vehicleInfo });
+  const record = await base44.entities.Estimate.create({ ...payload, scan_report_id: reportId || "", customer_id: customerId, customer_name: customerName, vehicle_id: vehicleId, vehicle_info: vehicleInfo });
   await syncCustomerActivity({ customerId, vehicleId, vehicleInfo, customerName, entityType: "Estimate", entityId: record.id });
   if (reportId) await base44.entities.DiagnosticScan.update(reportId, { estimate_id: record.id });
   return record;
