@@ -1,0 +1,10 @@
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Save } from "lucide-react";
+
+const KEY="lbc_alignment_module_settings";
+export default function AlignmentSettings() {
+  const [settings,setSettings]=useState(()=>{const saved=localStorage.getItem(KEY);return saved?JSON.parse(saved):{unit:"degrees",default_session:"before_after",show_roadmap:true};}),[saved,setSaved]=useState(false);
+  const save=()=>{localStorage.setItem(KEY,JSON.stringify(settings));setSaved(true);};
+  return <section className="max-w-2xl rounded-xl border border-slate-800 bg-slate-900 p-5 space-y-5"><div><h2 className="font-bold text-white">Alignment Module Settings</h2><p className="text-sm text-slate-400">Local workspace preferences for this device.</p></div><label className="block text-sm text-slate-300">Default measurement unit<select value={settings.unit} onChange={e=>setSettings({...settings,unit:e.target.value})} className="mt-1 h-9 w-full rounded border border-slate-700 bg-slate-950 px-3 text-white"><option value="degrees">Degrees</option><option value="decimal_degrees">Decimal degrees</option></select></label><label className="block text-sm text-slate-300">Default session type<select value={settings.default_session} onChange={e=>setSettings({...settings,default_session:e.target.value})} className="mt-1 h-9 w-full rounded border border-slate-700 bg-slate-950 px-3 text-white"><option value="before_after">Before & After</option><option value="diagnostic">Diagnostic</option></select></label><label className="flex items-center gap-2 text-sm text-slate-300"><input type="checkbox" checked={settings.show_roadmap} onChange={e=>setSettings({...settings,show_roadmap:e.target.checked})}/>Show roadmap items in the internal sidebar</label><div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-200">Phase 1 safety gates and source-verification disclaimers cannot be disabled.</div><Button onClick={save}><Save/>Save Settings</Button>{saved&&<span className="ml-3 text-sm text-emerald-400">Saved</span>}</section>;
+}

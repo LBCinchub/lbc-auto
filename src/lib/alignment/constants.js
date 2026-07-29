@@ -1,4 +1,4 @@
-export const PHASE_NOTICE = "Phase 1: LBC Alignment Companion — reporting, import, manual entry, and recovery support only. Direct machine control is not enabled until verified/calibrated hardware integration exists.";
+export const PHASE_NOTICE = "Phase 1: LBC Alignment Companion — reporting, import, manual entry, and recovery support only. Direct machine control is not enabled.";
 
 export const ALIGNMENT_ROWS = [
   ["front_left_camber", "Front Left Camber", "front", "camber", "left"], ["front_right_camber", "Front Right Camber", "front", "camber", "right"],
