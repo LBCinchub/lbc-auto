@@ -1,0 +1,102 @@
+{
+  "name": "AlignmentReport",
+  "type": "object",
+  "properties": {
+    "shop_owner_email": {
+      "type": "string"
+    },
+    "alignment_session_id": {
+      "type": "string"
+    },
+    "customer_id": {
+      "type": "string"
+    },
+    "vehicle_id": {
+      "type": "string"
+    },
+    "repair_order_id": {
+      "type": "string"
+    },
+    "report_title": {
+      "type": "string"
+    },
+    "pdf_url": {
+      "type": "string"
+    },
+    "photo_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "technician_notes": {
+      "type": "string"
+    },
+    "customer_visible": {
+      "type": "boolean",
+      "default": false
+    },
+    "customer_email_sent": {
+      "type": "boolean",
+      "default": false
+    },
+    "disclaimer_acknowledged": {
+      "type": "boolean",
+      "default": false
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "generated",
+        "sent",
+        "archived"
+      ],
+      "default": "draft"
+    }
+  },
+  "required": [
+    "shop_owner_email",
+    "alignment_session_id",
+    "customer_id",
+    "vehicle_id"
+  ],
+  "rls": {
+    "create": {
+      "data.shop_owner_email": "{{user.email}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.shop_owner_email": "{{user.email}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.shop_owner_email": "{{user.email}}"
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.shop_owner_email": "{{user.email}}"
+        }
+      ]
+    }
+  }
+}

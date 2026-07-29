@@ -1,0 +1,82 @@
+{
+  "name": "CalibrationRecord",
+  "type": "object",
+  "properties": {
+    "shop_owner_email": {
+      "type": "string"
+    },
+    "machine_id": {
+      "type": "string"
+    },
+    "calibration_type": {
+      "type": "string"
+    },
+    "calibrated_by": {
+      "type": "string"
+    },
+    "calibration_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "next_due_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "certificate_url": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "current",
+        "due_soon",
+        "expired",
+        "unknown"
+      ],
+      "default": "unknown"
+    }
+  },
+  "required": [
+    "shop_owner_email",
+    "machine_id",
+    "calibration_type"
+  ],
+  "rls": {
+    "create": {
+      "data.shop_owner_email": "{{user.email}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.shop_owner_email": "{{user.email}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.shop_owner_email": "{{user.email}}"
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.shop_owner_email": "{{user.email}}"
+        }
+      ]
+    }
+  }
+}

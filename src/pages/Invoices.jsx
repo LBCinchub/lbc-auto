@@ -59,8 +59,10 @@ export default function Invoices() {
     const customerName = urlParams.get("customerName");
     const vehicleId = urlParams.get("vehicleId");
     const vehicleInfo = urlParams.get("vehicleInfo");
+    const serviceReason = urlParams.get("serviceReason") || "";
+    const notes = urlParams.get("notes") || "";
     if (customerId) {
-      setEditingInvoice({ customer_id: customerId, customer_name: customerName, vehicle_id: vehicleId || "", vehicle_info: vehicleInfo || "" });
+      setEditingInvoice({ customer_id: customerId, customer_name: customerName, vehicle_id: vehicleId || "", vehicle_info: vehicleInfo || "", service_reason: serviceReason, technician_notes: notes, line_items: serviceReason ? [{ description: serviceReason, type: "labor", quantity: 1, unit_price: 0, total: 0 }] : [] });
       setDialogOpen(true);
     }
   }, []);

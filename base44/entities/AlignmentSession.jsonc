@@ -1,0 +1,112 @@
+{
+  "name": "AlignmentSession",
+  "type": "object",
+  "properties": {
+    "shop_owner_email": {
+      "type": "string"
+    },
+    "customer_id": {
+      "type": "string"
+    },
+    "vehicle_id": {
+      "type": "string"
+    },
+    "repair_order_id": {
+      "type": "string"
+    },
+    "machine_id": {
+      "type": "string"
+    },
+    "technician_name": {
+      "type": "string"
+    },
+    "session_type": {
+      "type": "string",
+      "enum": [
+        "before",
+        "after",
+        "before_after",
+        "diagnostic"
+      ],
+      "default": "before_after"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "measurements_entered",
+        "report_generated",
+        "linked_to_ro",
+        "completed",
+        "archived"
+      ],
+      "default": "draft"
+    },
+    "before_notes": {
+      "type": "string"
+    },
+    "after_notes": {
+      "type": "string"
+    },
+    "created_from": {
+      "type": "string",
+      "enum": [
+        "manual",
+        "pdf_upload",
+        "screenshot_upload",
+        "csv_upload",
+        "recovery_case"
+      ],
+      "default": "manual"
+    },
+    "source_confidence": {
+      "type": "number"
+    },
+    "source_file_url": {
+      "type": "string"
+    },
+    "completed_at": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "shop_owner_email",
+    "customer_id",
+    "vehicle_id"
+  ],
+  "rls": {
+    "create": {
+      "data.shop_owner_email": "{{user.email}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.shop_owner_email": "{{user.email}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.shop_owner_email": "{{user.email}}"
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.shop_owner_email": "{{user.email}}"
+        }
+      ]
+    }
+  }
+}

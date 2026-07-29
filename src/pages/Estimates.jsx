@@ -62,7 +62,9 @@ export default function Estimates() {
     if (prefilledCustomerId) {
       const prefilledVehicleId = urlParams.get("vehicleId");
       const prefilledVehicleInfo = urlParams.get("vehicleInfo");
-      setEditing({ customer_id: prefilledCustomerId, customer_name: prefilledCustomerName, vehicle_id: prefilledVehicleId || "", vehicle_info: prefilledVehicleInfo || "" });
+      const serviceReason = urlParams.get("serviceReason") || "";
+      const notes = urlParams.get("notes") || "";
+      setEditing({ customer_id: prefilledCustomerId, customer_name: prefilledCustomerName, vehicle_id: prefilledVehicleId || "", vehicle_info: prefilledVehicleInfo || "", service_reason: serviceReason, notes, labor_items: serviceReason ? [{ description: serviceReason, hours: 0, rate: 0, total: 0 }] : [] });
       setDialogOpen(true);
     }
   }, []);

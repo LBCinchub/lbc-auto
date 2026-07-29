@@ -1,0 +1,8 @@
+import React from "react";
+import { Button } from "@/components/ui/button";
+import { CheckCircle2, Ruler, XCircle } from "lucide-react";
+
+export default function AlignmentOverview({ onStart }) {
+  return <div className="grid lg:grid-cols-2 gap-4"><section className="rounded-xl border border-gray-800 bg-gray-900 p-5"><Ruler className="w-8 h-8 text-sky-400" /><h2 className="text-xl font-bold text-white mt-3">LBC Alignment Companion</h2><p className="text-gray-400 mt-2">Capture legacy aligner measurements and produce professional LBC-branded reports without replacing working shop equipment.</p><Button onClick={onStart} className="mt-5 bg-sky-600 hover:bg-sky-700">Start Alignment Session</Button></section>
+    <section className="rounded-xl border border-gray-800 bg-gray-900 p-5 grid sm:grid-cols-2 gap-5"><div><h3 className="font-bold text-emerald-400 mb-3">Available now</h3>{["Manual before/after entry","PDF, screenshot, and CSV storage","Repair Order linking","Machine recovery cases"].map(x=><p key={x} className="flex gap-2 text-sm text-gray-300 mb-2"><CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />{x}</p>)}</div><div><h3 className="font-bold text-rose-400 mb-3">Not enabled</h3>{["Camera beam control","Proprietary sensor control","Live machine measurement","Automated calibration"].map(x=><p key={x} className="flex gap-2 text-sm text-gray-300 mb-2"><XCircle className="w-4 h-4 text-rose-400 shrink-0" />{x}</p>)}</div></section></div>;
+}

@@ -1,0 +1,122 @@
+{
+  "name": "RecoveryCase",
+  "type": "object",
+  "properties": {
+    "shop_owner_email": {
+      "type": "string"
+    },
+    "machine_id": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "issue_summary": {
+      "type": "string"
+    },
+    "exact_model": {
+      "type": "string"
+    },
+    "serial_number": {
+      "type": "string"
+    },
+    "old_pc_status": {
+      "type": "string"
+    },
+    "recovered_files_notes": {
+      "type": "string"
+    },
+    "missing_items": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "checklist": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "assigned_to": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "intake",
+        "files_collected",
+        "scanning",
+        "checklist_generated",
+        "tech_assigned",
+        "in_progress",
+        "recovered",
+        "unrecoverable",
+        "closed"
+      ],
+      "default": "intake"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "default": "medium"
+    },
+    "photos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "next_steps": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "shop_owner_email",
+    "title",
+    "issue_summary"
+  ],
+  "rls": {
+    "create": {
+      "data.shop_owner_email": "{{user.email}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.shop_owner_email": "{{user.email}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.shop_owner_email": "{{user.email}}"
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.shop_owner_email": "{{user.email}}"
+        }
+      ]
+    }
+  }
+}

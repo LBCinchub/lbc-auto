@@ -1,0 +1,104 @@
+{
+  "name": "AlignmentMachine",
+  "type": "object",
+  "properties": {
+    "shop_owner_email": {
+      "type": "string"
+    },
+    "make": {
+      "type": "string"
+    },
+    "model": {
+      "type": "string"
+    },
+    "serial_number": {
+      "type": "string"
+    },
+    "firmware_version": {
+      "type": "string"
+    },
+    "software_version": {
+      "type": "string"
+    },
+    "connection_type": {
+      "type": "string",
+      "enum": [
+        "none",
+        "file_export",
+        "pdf_print",
+        "screenshot_ocr",
+        "manual",
+        "serial",
+        "usb",
+        "ethernet"
+      ],
+      "default": "manual"
+    },
+    "software_status": {
+      "type": "string",
+      "enum": [
+        "operational",
+        "lost",
+        "corrupted",
+        "unsupported",
+        "unknown"
+      ],
+      "default": "unknown"
+    },
+    "last_calibration_at": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "inactive",
+        "needs_service"
+      ],
+      "default": "active"
+    }
+  },
+  "required": [
+    "shop_owner_email",
+    "make",
+    "model"
+  ],
+  "rls": {
+    "create": {
+      "data.shop_owner_email": "{{user.email}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.shop_owner_email": "{{user.email}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.shop_owner_email": "{{user.email}}"
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.shop_owner_email": "{{user.email}}"
+        }
+      ]
+    }
+  }
+}

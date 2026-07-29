@@ -35,6 +35,8 @@ import CustomerDetails from './pages/CustomerDetails';
 import MissingPhones from './pages/MissingPhones';
 import Diagnostics from './pages/Diagnostics';
 import ChatInbox from './pages/ChatInbox';
+import Alignment from './pages/Alignment';
+import AlignmentAnnouncement from './components/alignment/AlignmentAnnouncement';
 import OnboardingFlow from './components/onboarding/OnboardingFlow';
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -278,8 +280,9 @@ const AuthenticatedApp = () => {
   // Render the main app
   return (
     <>
-      {/* One-time update notification */}
+      {/* One-time update notifications */}
       {user && <UpdateBanner user={user} />}
+      {user && <AlignmentAnnouncement />}
 
       <Routes>
         <Route path="/" element={
@@ -313,6 +316,7 @@ const AuthenticatedApp = () => {
         <Route path="/CustomerDetails" element={<LayoutWrapper currentPageName="Customers"><CustomerDetails /></LayoutWrapper>} />
         <Route path="/MissingPhones" element={<LayoutWrapper currentPageName="MissingPhones"><MissingPhones /></LayoutWrapper>} />
         <Route path="/Diagnostics" element={<LayoutWrapper currentPageName="Diagnostics"><Diagnostics /></LayoutWrapper>} />
+        <Route path="/Alignment" element={<LayoutWrapper currentPageName="Alignment"><Alignment /></LayoutWrapper>} />
         <Route path="/ChatInbox" element={<LayoutWrapper currentPageName="ChatInbox"><ChatInbox /></LayoutWrapper>} />
         <Route path="/PaymentWall" element={<PaymentWall />} />
         <Route path="/landing" element={<Landing />} />

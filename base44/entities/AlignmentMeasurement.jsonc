@@ -1,0 +1,134 @@
+{
+  "name": "AlignmentMeasurement",
+  "type": "object",
+  "properties": {
+    "shop_owner_email": {
+      "type": "string"
+    },
+    "alignment_session_id": {
+      "type": "string"
+    },
+    "axle": {
+      "type": "string",
+      "enum": [
+        "front",
+        "rear"
+      ]
+    },
+    "parameter": {
+      "type": "string",
+      "enum": [
+        "camber",
+        "caster",
+        "toe",
+        "total_toe",
+        "thrust_angle",
+        "sai",
+        "setback"
+      ]
+    },
+    "side": {
+      "type": "string",
+      "enum": [
+        "left",
+        "right",
+        "center",
+        "total"
+      ]
+    },
+    "before_value": {
+      "type": "number"
+    },
+    "after_value": {
+      "type": "number"
+    },
+    "unit": {
+      "type": "string",
+      "default": "degrees"
+    },
+    "spec_min": {
+      "type": "number"
+    },
+    "spec_max": {
+      "type": "number"
+    },
+    "spec_preferred": {
+      "type": "number"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "adjust",
+        "out_of_range",
+        "no_spec",
+        "unverified"
+      ],
+      "default": "no_spec"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "manual",
+        "pdf_extract",
+        "ocr",
+        "csv_import",
+        "screenshot",
+        "unknown"
+      ],
+      "default": "manual"
+    },
+    "confidence": {
+      "type": "number"
+    },
+    "raw_text": {
+      "type": "string"
+    },
+    "requires_verification": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "shop_owner_email",
+    "alignment_session_id",
+    "axle",
+    "parameter",
+    "side"
+  ],
+  "rls": {
+    "create": {
+      "data.shop_owner_email": "{{user.email}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.shop_owner_email": "{{user.email}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.shop_owner_email": "{{user.email}}"
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.shop_owner_email": "{{user.email}}"
+        }
+      ]
+    }
+  }
+}

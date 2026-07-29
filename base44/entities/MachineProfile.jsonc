@@ -1,0 +1,58 @@
+{
+  "name": "MachineProfile",
+  "type": "object",
+  "properties": {
+    "make": {
+      "type": "string"
+    },
+    "model": {
+      "type": "string"
+    },
+    "known_aliases": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "known_export_formats": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "recovery_difficulty": {
+      "type": "string"
+    },
+    "protocol_notes": {
+      "type": "string"
+    },
+    "community_notes": {
+      "type": "string"
+    },
+    "support_status": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "make",
+    "model"
+  ],
+  "rls": {
+    "read": {},
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
