@@ -4,7 +4,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { base44 } from '@/api/base44Client'
 import { pagesConfig } from './pages.config'
-import { BrowserRouter as Router, Route, Routes, useNavigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Navigate, Route, Routes, useNavigate, useLocation } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { ThemeProvider } from '@/lib/ThemeContext';
@@ -36,7 +36,6 @@ import MissingPhones from './pages/MissingPhones';
 import Diagnostics from './pages/Diagnostics';
 import ChatInbox from './pages/ChatInbox';
 import Alignment from './pages/Alignment';
-import AlignmentAnnouncement from './components/alignment/AlignmentAnnouncement';
 import OnboardingFlow from './components/onboarding/OnboardingFlow';
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -280,9 +279,8 @@ const AuthenticatedApp = () => {
   // Render the main app
   return (
     <>
-      {/* One-time update notifications */}
+      {/* One-time update notification */}
       {user && <UpdateBanner user={user} />}
-      {user && <AlignmentAnnouncement />}
 
       <Routes>
         <Route path="/" element={
@@ -316,7 +314,7 @@ const AuthenticatedApp = () => {
         <Route path="/CustomerDetails" element={<LayoutWrapper currentPageName="Customers"><CustomerDetails /></LayoutWrapper>} />
         <Route path="/MissingPhones" element={<LayoutWrapper currentPageName="MissingPhones"><MissingPhones /></LayoutWrapper>} />
         <Route path="/Diagnostics" element={<LayoutWrapper currentPageName="Diagnostics"><Diagnostics /></LayoutWrapper>} />
-        <Route path="/Alignment" element={<LayoutWrapper currentPageName="Alignment"><Alignment /></LayoutWrapper>} />
+        <Route path="/Alignment" element={user?.role === "admin" && user?.alignment_lab_enabled === true ? <LayoutWrapper currentPageName="Alignment"><Alignment /></LayoutWrapper> : <Navigate to="/" replace />} />
         <Route path="/ChatInbox" element={<LayoutWrapper currentPageName="ChatInbox"><ChatInbox /></LayoutWrapper>} />
         <Route path="/PaymentWall" element={<PaymentWall />} />
         <Route path="/landing" element={<Landing />} />

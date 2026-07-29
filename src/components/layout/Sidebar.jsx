@@ -31,8 +31,7 @@ import {
   Tablet,
   Store,
   Gauge,
-  MessageSquare,
-  Ruler
+  MessageSquare
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/lib/ThemeContext";
@@ -46,7 +45,6 @@ const navItems = [
   { name: "Estimates",     icon: ClipboardList,   page: "Estimates",        color: "from-teal-500 to-emerald-600",  light: "bg-teal-50 text-teal-700 border-teal-200",        dark: "bg-teal-500/15 text-teal-400 border-teal-500/30",    label: "text-teal-400" },
   { name: "Repair Orders", icon: Wrench,          page: "RepairOrders",     color: "from-orange-500 to-red-500",    light: "bg-orange-50 text-orange-700 border-orange-200",  dark: "bg-orange-500/15 text-orange-400 border-orange-500/30", label: "text-orange-400" },
   { name: "AI Scanner",    icon: Gauge,           page: "Diagnostics",      color: "from-fuchsia-500 to-pink-600",   light: "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200", dark: "bg-fuchsia-500/15 text-fuchsia-400 border-fuchsia-500/30", label: "text-fuchsia-400", proOnly: true },
-  { name: "LBC Alignment", icon: Ruler,           page: "Alignment",        color: "from-cyan-500 to-blue-600",      light: "bg-cyan-50 text-cyan-700 border-cyan-200",         dark: "bg-cyan-500/15 text-cyan-400 border-cyan-500/30",     label: "text-cyan-400", path: "/Alignment" },
   { name: "Invoices",      icon: FileText,        page: "Invoices",         color: "from-emerald-500 to-green-600", light: "bg-emerald-50 text-emerald-700 border-emerald-200", dark: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30", label: "text-emerald-400" },
   { name: "Parts",         icon: Package,         page: "Parts",            color: "from-indigo-500 to-blue-600",   light: "bg-indigo-50 text-indigo-700 border-indigo-200",  dark: "bg-indigo-500/15 text-indigo-400 border-indigo-500/30", label: "text-indigo-400" },
   { name: "Parts Lookup",  icon: Search,          page: "PartsLookup",      color: "from-cyan-500 to-sky-600",      light: "bg-cyan-50 text-cyan-700 border-cyan-200",        dark: "bg-cyan-500/15 text-cyan-400 border-cyan-500/30",    label: "text-cyan-400" },
