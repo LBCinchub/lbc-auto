@@ -1,0 +1,83 @@
+{
+  "name": "PortalActivationCode",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "shop_owner_email": {
+      "type": "string",
+      "format": "email",
+      "description": "Normalized lowercase tenant email"
+    },
+    "code_hash": {
+      "type": "string",
+      "minLength": 64
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "used_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Optional; absence means unused"
+    },
+    "issued_by": {
+      "type": "string"
+    },
+    "delivery_method": {
+      "type": "string",
+      "enum": [
+        "email",
+        "sms",
+        "shop_issued"
+      ]
+    },
+    "attempts": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0
+    },
+    "revoked": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "customer_id",
+    "shop_owner_email",
+    "code_hash",
+    "created_at",
+    "expires_at",
+    "issued_by",
+    "delivery_method"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "portal_security_service"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "portal_security_service"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "portal_security_service"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "portal_security_service"
+      }
+    }
+  }
+}

@@ -1,38 +1,12 @@
-// customerData v3 — service role bypass for RLS. Adds estimates + appointments.
-// deployed: 2026-07-05
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { createClientFromRequest } from "npm:@base44/sdk@0.8.40";
+import { buildCustomerPortalData, requireCustomerSession } from "../../shared/customerPortalSecurity.ts";
 
-Deno.serve(async (req) => {
-  const base44 = createClientFromRequest(req);
+export default async function(req) {
   try {
-    const { customer_id, shop_email } = await req.json();
-    if (!customer_id || !shop_email) {
-      return new Response(JSON.stringify({ error: "Missing params" }), {
-        status: 400, headers: { "Content-Type": "application/json" }
-      });
-    }
-
-    const sr = base44.asServiceRole;
-    const [vehicles, orders, invoices, estimates, appointments, messages, notifications, offers, recommendations, reviews] = await Promise.all([
-      sr.entities.Vehicle.filter({ customer_id }, "-created_date", 20),
-      sr.entities.RepairOrder.filter({ customer_id }, "-created_date", 50),
-      sr.entities.Invoice.filter({ customer_id }, "-created_date", 50),
-      sr.entities.Estimate.filter({ customer_id }, "-created_date", 50),
-      sr.entities.Appointment.filter({ customer_id }, "-date", 50),
-      sr.entities.CustomerMessage.filter({ customer_id }, "sent_at", 200),
-      sr.entities.CustomerNotification.filter({ customer_id }, "-sent_at", 30),
-      sr.entities.ShopOffer.filter({ shop_owner_email: shop_email, is_active: true }, "-created_date", 20),
-      sr.entities.CarRecommendation.filter({ customer_id, is_resolved: false }, "-created_date", 20),
-      sr.entities.CustomerReview.filter({ customer_id }, "-created_date", 5),
-    ]);
-
-    return new Response(JSON.stringify({
-      vehicles, orders, invoices, estimates, appointments, messages, notifications, offers, recommendations, reviews
-    }), { headers: { "Content-Type": "application/json" } });
-
-  } catch (e) {
-    return new Response(JSON.stringify({ error: String(e) }), {
-      status: 500, headers: { "Content-Type": "application/json" }
-    });
+    const base44 = createClientFromRequest(req);
+    const auth = await requireCustomerSession(base44, req);
+    return Response.json(await buildCustomerPortalData(auth.sr, auth.customer, auth.session.shop_owner_email));
+  } catch {
+    return Response.json({ error: "Session expired or unavailable" }, { status: 401 });
   }
-});
+}

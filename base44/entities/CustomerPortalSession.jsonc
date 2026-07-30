@@ -1,0 +1,83 @@
+{
+  "name": "CustomerPortalSession",
+  "type": "object",
+  "properties": {
+    "session_id": {
+      "type": "string",
+      "minLength": 32
+    },
+    "token_hash": {
+      "type": "string",
+      "minLength": 64
+    },
+    "customer_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "shop_owner_email": {
+      "type": "string",
+      "format": "email",
+      "description": "Normalized lowercase tenant email"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "revoked": {
+      "type": "boolean",
+      "default": false
+    },
+    "revoked_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Optional; absence means not revoked"
+    },
+    "ip": {
+      "type": "string",
+      "description": "Optional request IP"
+    },
+    "user_agent": {
+      "type": "string",
+      "description": "Optional request user agent"
+    },
+    "last_validated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "session_id",
+    "token_hash",
+    "customer_id",
+    "shop_owner_email",
+    "created_at",
+    "expires_at",
+    "last_validated_at"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "portal_security_service"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "portal_security_service"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "portal_security_service"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "portal_security_service"
+      }
+    }
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "name": "CustomerPasscode",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "shop_owner_email": {
+      "type": "string",
+      "format": "email",
+      "description": "Normalized lowercase tenant email"
+    },
+    "passcode_hash": {
+      "type": "string",
+      "minLength": 64
+    },
+    "passcode_salt": {
+      "type": "string",
+      "minLength": 32
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "failed_attempts": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0
+    },
+    "locked_until": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Optional; absence means not locked"
+    },
+    "portal_access_enabled": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "customer_id",
+    "shop_owner_email",
+    "passcode_hash",
+    "passcode_salt",
+    "created_at",
+    "updated_at"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "portal_security_service"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "portal_security_service"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "portal_security_service"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "portal_security_service"
+      }
+    }
+  }
+}

@@ -5,9 +5,8 @@ import {
   Heart, Gauge, AlertTriangle, CheckCircle2, Clock,
   Image, ArrowLeft
 } from "lucide-react";
-import { base44 } from "@/api/base44Client";
 import CustomerAIChat from "@/components/shared/CustomerAIChat";
-import FloatingChatWidget from "@/components/chat/FloatingChatWidget";
+import { clearPortalToken, getPortalToken, portalRequest } from "@/lib/customerPortalApi";
 
 const REACTIONS = [
   { emoji:"👍", key:"thumbsup" },
@@ -69,14 +68,10 @@ export default function CustomerDashboard() {
   const [reviewDone, setReviewDone] = useState(false);
 
   useEffect(() => {
-    const saved = sessionStorage.getItem("customer_session");
-    if (!saved) { window.location.href = "/CustomerPortal"; return; }
-    const sess = JSON.parse(saved);
-    setSession(sess);
-    loadAll(sess);
-
-    // Poll messages + notifications every 5s
-    pollRef.current = setInterval(() => refreshMessages(sess), 5000);
+    const token = getPortalToken();
+    if (!token) { window.location.href = "/CustomerPortal"; return; }
+    loadAll(token);
+    pollRef.current = setInterval(() => refreshMessages(token), 5000);
     return () => clearInterval(pollRef.current);
   }, []);
 
@@ -86,46 +81,32 @@ export default function CustomerDashboard() {
     }
   }, [messages, activeTab]);
 
-  const loadAll = async (sess) => {
+  const loadAll = async () => {
     try {
-      const d = await (await fetch("/api/functions/customerData", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({
-        customer_id: sess.customer_id,
-        shop_email: sess.shop_email,
-      }) })).json();
+      const d = await portalRequest("getCustomerPortalData", {}, true);
+      setSession({ customer_name: d.customer?.full_name || "Customer", shop_name: d.shop?.business_name || "Auto Shop" });
       setVehicles(d.vehicles || []); setOrders(d.orders || []); setInvoices(d.invoices || []);
       setEstimates(d.estimates || []); setAppointments(d.appointments || []);
       setMessages(d.messages || []); setNotifications(d.notifications || []);
       setOffers(d.offers || []); setRecommendations(d.recommendations || []);
       setReviews(d.reviews || []);
       if (d.reviews?.length > 0) { setMyReview(d.reviews[0]); setReviewDone(true); }
-    } catch (e) { console.error(e); }
+    } catch (e) { if (e.status === 401) { clearPortalToken(); window.location.href = "/CustomerPortal"; } }
     setLoading(false);
   };
 
-  const refreshMessages = async (sess) => {
+  const refreshMessages = async () => {
     try {
-      const d = await (await fetch("/api/functions/customerData", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({
-        customer_id: sess.customer_id,
-        shop_email: sess.shop_email,
-      }) })).json();
+      const d = await portalRequest("getCustomerPortalData", {}, true);
       if (d.messages) setMessages(d.messages);
       if (d.notifications) setNotifications(d.notifications);
-    } catch {}
+    } catch (e) { if (e.status === 401) { clearPortalToken(); window.location.href = "/CustomerPortal"; } }
   };
 
   const sendMessage = async () => {
     if (!newMsg.trim() || !session) return;
     setSendingMsg(true);
-    const msgPayload = {
-      shop_owner_email: session.shop_email,
-      customer_id: session.customer_id,
-      customer_phone: session.customer_phone,
-      customer_name: session.customer_name,
-      sender: "customer",
-      message: newMsg.trim(),
-      sent_at: new Date().toISOString(),
-    };
-    const data = await base44.functions.invoke("customerSendMessage", msgPayload);
+    const data = await portalRequest("sendSecureCustomerMessage", { message: newMsg.trim() }, true);
     if (data.message) setMessages(prev => [...prev, data.message]);
     setNewMsg("");
     setSendingMsg(false);
@@ -133,38 +114,21 @@ export default function CustomerDashboard() {
   };
 
   const reactToOffer = async (offer, reactionKey) => {
-    const current = offer.reactions || {};
-    const updated = { ...current, [reactionKey]: (current[reactionKey] || 0) + 1 };
-    await base44.entities.ShopOffer.update(offer.id, { reactions: updated });
-    setOffers(prev => prev.map(o => o.id===offer.id ? {...o, reactions: updated} : o));
+    const data = await portalRequest("updateCustomerPortalEngagement", { action: "reaction", offer_id: offer.id, reaction: reactionKey }, true);
+    setOffers(prev => prev.map(o => o.id===offer.id ? {...o, reactions: data.reactions} : o));
   };
 
   const commentOnOffer = async (offer, text) => {
     if (!text.trim()) return;
-    const comment = {
-      customer_name: session.customer_name,
-      customer_phone: session.customer_phone,
-      text: text.trim(),
-      created_at: new Date().toISOString(),
-    };
-    const updatedComments = [...(offer.comments || []), comment];
-    await base44.entities.ShopOffer.update(offer.id, { comments: updatedComments });
-    setOffers(prev => prev.map(o => o.id===offer.id ? {...o, comments: updatedComments} : o));
+    const data = await portalRequest("updateCustomerPortalEngagement", { action: "comment", offer_id: offer.id, text: text.trim() }, true);
+    setOffers(prev => prev.map(o => o.id===offer.id ? {...o, comments: [...(o.comments || []), data.comment]} : o));
   };
 
   const submitReview = async () => {
     if (!reviewRating || !session) return;
     setSubmittingReview(true);
-    const rev = await base44.entities.CustomerReview.create({
-      shop_owner_email: session.shop_email,
-      customer_id: session.customer_id,
-      customer_name: session.customer_name,
-      customer_phone: session.customer_phone,
-      rating: reviewRating,
-      review_text: reviewText,
-      is_published: true,
-    });
-    setMyReview(rev);
+    const data = await portalRequest("updateCustomerPortalEngagement", { action: "review", rating: reviewRating, review_text: reviewText }, true);
+    setMyReview(data.review);
     setReviewDone(true);
     setSubmittingReview(false);
   };
@@ -228,7 +192,7 @@ export default function CustomerDashboard() {
               }}>🌐</span>
             )}
           </button>
-          <button onClick={() => { sessionStorage.removeItem("customer_session"); window.location.href="/CustomerPortal"; }}
+          <button onClick={async () => { try { await portalRequest("logoutCustomer", {}, true); } catch {} clearPortalToken(); window.location.href="/CustomerPortal"; }}
             style={{ background:"transparent", border:"1px solid #334155", borderRadius:8, padding:"6px 10px", color:"#64748b", cursor:"pointer", fontSize:12, display:"flex", alignItems:"center", gap:4 }}>
             <LogOut style={{ width:13, height:13 }}/> Out
           </button>
@@ -666,8 +630,8 @@ export default function CustomerDashboard() {
         )}
       </div>
 
-      {/* Customer AI chat — sends ONLY { messages, mode: "customer" }, no shop data */}
-      <CustomerAIChat shop_email={session?.shop_email} />
+      {/* Customer AI chat uses no browser-supplied tenant identity */}
+      <CustomerAIChat />
 
       {/* Bottom nav */}
       <div style={{
@@ -694,7 +658,6 @@ export default function CustomerDashboard() {
           </button>
         ))}
       </div>
-      {session?.shop_email && <FloatingChatWidget shop_email={session.shop_email} shop_name={session.shop_name} />}
     </div>
   );
 }

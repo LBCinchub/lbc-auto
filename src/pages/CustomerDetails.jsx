@@ -22,6 +22,7 @@ import VehicleHistoryReport from "@/components/reports/VehicleHistoryReport";
 import { useQueryClient } from "@tanstack/react-query";
 import AutoAIBubble from "@/components/shared/AutoAIBubble";
 import InvoiceLinkGuard from "@/components/customers/InvoiceLinkGuard";
+import PortalAccessPanel from "@/components/customers/PortalAccessPanel";
 
 const AVATAR_COLORS = ["bg-sky-500","bg-violet-500","bg-emerald-500","bg-amber-500","bg-rose-500","bg-indigo-500"];
 function getAvatarColor(name = "") {
@@ -369,6 +370,8 @@ export default function CustomerDetails() {
               <FileText className="w-4 h-4" /> New Invoice
             </Button>
           </div>
+
+          <PortalAccessPanel customerId={customer.id} />
 
           {/* ── TABS: Estimates / Repair Orders / Invoices ── */}
           <Tabs defaultValue="estimates">
