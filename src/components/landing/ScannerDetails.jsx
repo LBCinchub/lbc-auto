@@ -1,0 +1,12 @@
+import React from "react";
+import { Activity, Bluetooth, Bot, CarFront, FileText, Gauge, MessageSquareText, Printer, Save, ScanLine, ShieldAlert, Wrench } from "lucide-react";
+import "./ScannerDetails.css";
+
+const stages=[
+  [Bluetooth,"Connect compatible hardware","Current target includes Vgate iCar Pro 2S BLE where applicable; vehicle and adapter support can vary."],
+  [CarFront,"Identify VIN and mileage","Decode VIN through the vehicle-data flow, keep a persistent Vehicle Identified card, or enter details manually when VIN is unavailable."],
+  [Activity,"Run vehicle health workflow","Background polling supports an approximately two-minute guided scan with readiness, DTC counts and types, severity, and a supported live-data snapshot."],
+  [FileText,"Review the scanner report","Summary, findings, verification-focused next steps, and supported actions to Save to Repair Order, Create Estimate, or Print."],
+];
+const modes=[[ScanLine,"Scan","Guided vehicle health scan and report."],[Gauge,"Live Data","Supported sensor streaming when compatible hardware and vehicle capabilities permit."],[Wrench,"Tech Mode","Advanced technician controls and raw commands where supported; professional use only."]];
+export default function ScannerDetails(){return <details className="lp-scanner-details"><summary><span><ScanLine/>Explore the LBC AI Scanner workflow</span><small>DEMO EXPLANATION</small></summary><div className="lp-scanner-body"><div className="lp-scanner-modes">{modes.map(([Icon,title,copy])=><article key={title}><Icon/><strong>{title}</strong><p>{copy}</p></article>)}</div><ol>{stages.map(([Icon,title,copy])=><li key={title}><Icon/><span><strong>{title}</strong><p>{copy}</p></span></li>)}</ol><div className="lp-dtc-guide"><Bot/><div><strong>Every DTC explanation supports technician review</strong><p>Likely causes, verification steps, labor-range guidance, relevant parts guidance, customer-friendly and mechanic-level explanations, plus Add to RO/Estimate workflow where supported.</p><span><Save/>Save to Repair Order</span><span><FileText/>Create Estimate</span><span><Printer/>Print</span><span><MessageSquareText/>Post-scan LBC Auto AI chat</span></div></div><p className="lp-scanner-warning"><ShieldAlert/>AI assists; the technician verifies. Vehicle compatibility, diagnosis, repair outcomes, live-data availability, and ECU command support are not guaranteed.</p></div></details>;}

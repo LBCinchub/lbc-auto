@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { ArrowRight, Building2, Database, UserRoundCog, Users } from "lucide-react";
 const roles=[
-  [Building2,"Shop Owner","Center Control, operations, financials, performance, and customer communication in one shop workspace."],
-  [UserRoundCog,"Technician","Assigned jobs, scoped shop PIN access, time tracking, status updates, and required documentation."],
-  [Users,"Customer","A secure passcode portal for approvals, service status, invoices, appointments, and messaging."]
+  [Building2,"Shop Owner","Center Control follows Appointment → Customer & Vehicle → Estimate → Approval → Repair Order → Completion → Invoice in one shop workspace."],
+  [UserRoundCog,"Technician","The scoped Technician Portal shows approved assigned Repair Orders, real work statuses, time tracking, and required documentation."],
+  [Users,"Customer","The secure Customer Portal shows customer-safe Repair Orders, Estimates, Invoices, and Appointments, plus decisions, receipts, and messaging."]
 ];
 export default function RolesSection(){const [active,setActive]=useState(0);const [Icon,title,copy]=roles[active];return <section id="for-shops" className="lp-section lp-roles"><div className="lp-container"><div className="lp-section-head"><span className="lp-eyebrow">ONE SYSTEM, THREE EXPERIENCES</span><h2>The right view for the work at hand.</h2><p>Center Control, the shop-scoped job portal, and the secure private customer portal use the same source records while exposing only role-appropriate information.</p></div><div className="lp-role-tabs" role="tablist">{roles.map(([,name],i)=><button key={name} role="tab" aria-selected={active===i} onClick={()=>setActive(i)}>{name}</button>)}</div><div className="lp-role-panel" role="tabpanel"><Icon/><div><h3>{title}</h3><p>{copy}</p></div></div><div className="lp-role-source" aria-label="Three role experiences connected to one shop-scoped record source"><span><Building2/>Shop Owner / Center Control</span><ArrowRight/><span><Database/>Tenant-scoped source records</span><ArrowRight/><span><UserRoundCog/>Technician / Job Portal</span><ArrowRight/><span><Users/>Customer / Private Portal</span><strong>All three experiences use the same source records while revealing only role-appropriate information.</strong></div></div></section>;}
