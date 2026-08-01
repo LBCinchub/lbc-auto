@@ -203,10 +203,17 @@ const AuthenticatedApp = () => {
   const location = useLocation();
 
   useEffect(() => {
-    if (user && !user.trial_started_date) {
+    const isPublicLanding = location.pathname === '/' || location.pathname === '/landing';
+    if (user && !user.trial_started_date && !isPublicLanding) {
       base44.functions.invoke('initializeUserTrial', {});
     }
-  }, [user]);
+  }, [user, location.pathname]);
+
+  // The exact main-domain root is public. Do not add "/" to PUBLIC_PATHS,
+  // because prefix matching would unintentionally expose every route.
+  if (location.pathname === '/') {
+    return <Routes><Route path="/" element={<Landing />} /></Routes>;
+  }
 
   // PUBLIC ROUTES — bypass all auth, render immediately, no login required
   const PUBLIC_PATHS = ['/CustomerPortal', '/lbc-customer', '/CustomerDashboard', '/TechPortal', '/lbc-team', '/TechDashboard', '/TechJobView', '/OfficeAssistant', '/landing'];
