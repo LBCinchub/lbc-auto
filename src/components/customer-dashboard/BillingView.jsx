@@ -1,0 +1,9 @@
+import React from "react";
+import { FileCheck2, Receipt } from "lucide-react";
+import StatusChip from "@/components/customer-dashboard/StatusChip";
+import { formatDate, formatMoney } from "@/components/customer-dashboard/portalUtils";
+
+export default function BillingView({ data, tab, onTab, onOpen }) {
+  const rows = tab === "estimates" ? data.estimates : data.invoices; const type = tab === "estimates" ? "estimate" : "invoice"; const Icon = tab === "estimates" ? FileCheck2 : Receipt;
+  return <section className="portal-panel"><div className="portal-section-heading"><div><p className="portal-eyebrow">Secure documents</p><h2>Billing</h2></div><div className="portal-segmented"><button className={tab === "estimates" ? "active" : ""} onClick={() => onTab("estimates")}>Estimates</button><button className={tab === "invoices" ? "active" : ""} onClick={() => onTab("invoices")}>Invoices</button></div></div><div className="portal-document-grid">{rows.length ? [...rows].sort((a, b) => new Date(b.created_date) - new Date(a.created_date)).map((record) => <button key={record.id} onClick={() => onOpen(type, record)}><div className="portal-icon-box"><Icon /></div><div className="min-w-0 flex-1"><h3>{type === "estimate" ? record.estimate_number ? `Estimate #${record.estimate_number}` : "Estimate" : record.invoice_number ? `Invoice #${record.invoice_number}` : "Invoice"}</h3><p>{record.vehicle_info || "Vehicle document"}</p><small>{formatDate(record.created_date)}</small></div><div className="text-right"><strong>{formatMoney(type === "estimate" ? record.grand_total : record.total)}</strong><StatusChip status={record.status} /></div></button>) : <div className="portal-empty"><Icon /><h3>{type === "estimate" ? "No estimates yet" : "No invoices yet"}</h3><p>Your real shop documents appear here when available.</p></div>}</div></section>;
+}

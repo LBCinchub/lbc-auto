@@ -1,0 +1,10 @@
+import React, { useEffect, useRef, useState } from "react";
+import { CheckCircle2, MessageSquare, Send } from "lucide-react";
+import { timeAgo } from "@/components/customer-dashboard/portalUtils";
+
+export default function ChatView({ messages, shopName, onSend, onRead }) {
+  const [text, setText] = useState(""); const [busy, setBusy] = useState(false); const [error, setError] = useState(""); const [sent, setSent] = useState(false); const panel = useRef(null);
+  useEffect(() => { onRead(); }, []); useEffect(() => { if (panel.current) panel.current.scrollTop = panel.current.scrollHeight; }, [messages]);
+  const submit = async (event) => { event.preventDefault(); if (!text.trim()) return; setBusy(true); setError(""); setSent(false); try { await onSend(text.trim()); setText(""); setSent(true); } catch (reason) { setError(reason.message); } finally { setBusy(false); } };
+  return <section className="portal-chat"><div className="portal-section-heading"><div><p className="portal-eyebrow">Secure conversation</p><h2>Chat with {shopName}</h2></div><MessageSquare /></div><div ref={panel} className="portal-chat-thread">{messages.length ? messages.map((message) => <div key={message.id} className={message.sender === "customer" ? "customer" : "shop"}><div>{message.sender === "shop" && <strong>{shopName}</strong>}<p>{message.message}</p><small>{timeAgo(message.sent_at)}</small></div></div>) : <div className="portal-empty"><MessageSquare /><h3>Start a conversation</h3><p>Ask about service, an estimate, or your next appointment.</p></div>}</div><form className="portal-chat-compose" onSubmit={submit}><label className="sr-only" htmlFor="portal-message">Message</label><textarea id="portal-message" rows="2" value={text} onChange={(event) => setText(event.target.value)} placeholder="Write a message to the shop…" /><button className="portal-primary-button" disabled={busy || !text.trim()}><Send />{busy ? "Sending…" : "Send"}</button></form>{error && <p className="portal-inline-error">{error} Your message is still here—try again.</p>}{sent && <p className="portal-inline-success"><CheckCircle2 />Message sent securely.</p>}</section>;
+}

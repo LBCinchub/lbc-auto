@@ -50,6 +50,11 @@ module.exports = {
   				'4': 'hsl(var(--chart-4))',
   				'5': 'hsl(var(--chart-5))'
   			},
+  			portal: {
+  				DEFAULT: 'hsl(var(--portal-bg))', surface: 'hsl(var(--portal-surface))', raised: 'hsl(var(--portal-raised))',
+  				text: 'hsl(var(--portal-text))', muted: 'hsl(var(--portal-muted))', border: 'hsl(var(--portal-border))',
+  				accent: 'hsl(var(--portal-accent))', 'accent-soft': 'hsl(var(--portal-accent-soft))', success: 'hsl(var(--portal-success))', warning: 'hsl(var(--portal-warning))', danger: 'hsl(var(--portal-danger))'
+  			},
   			sidebar: {
   				DEFAULT: 'hsl(var(--sidebar-background))',
   				foreground: 'hsl(var(--sidebar-foreground))',

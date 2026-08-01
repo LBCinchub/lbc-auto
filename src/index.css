@@ -37,6 +37,17 @@
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+    --portal-bg: 222 72% 5%;
+    --portal-surface: 220 48% 10%;
+    --portal-raised: 218 38% 15%;
+    --portal-text: 210 40% 98%;
+    --portal-muted: 215 20% 65%;
+    --portal-border: 216 34% 22%;
+    --portal-accent: 188 86% 53%;
+    --portal-accent-soft: 192 65% 16%;
+    --portal-success: 156 72% 50%;
+    --portal-warning: 42 96% 56%;
+    --portal-danger: 0 84% 65%;
   }
 
   .dark {
@@ -72,6 +83,17 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+    --portal-bg: 222 72% 5%;
+    --portal-surface: 220 48% 10%;
+    --portal-raised: 218 38% 15%;
+    --portal-text: 210 40% 98%;
+    --portal-muted: 215 20% 65%;
+    --portal-border: 216 34% 22%;
+    --portal-accent: 188 86% 53%;
+    --portal-accent-soft: 192 65% 16%;
+    --portal-success: 156 72% 50%;
+    --portal-warning: 42 96% 56%;
+    --portal-danger: 0 84% 65%;
   }
 }
 

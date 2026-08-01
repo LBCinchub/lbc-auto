@@ -1,0 +1,11 @@
+import React, { useRef } from "react";
+import { Car, Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { nextService, vehicleName } from "@/components/customer-dashboard/portalUtils";
+
+export default function VehicleSelector({ vehicles, selected, onSelect, recommendations, appointments }) {
+  const rail = useRef(null); const move = (amount) => rail.current?.scrollBy({ left: amount, behavior: "smooth" });
+  const cards = [{ id: "all", all: true }, ...vehicles];
+  return <section aria-labelledby="vehicle-selector-title"><div className="portal-section-heading"><div><p className="portal-eyebrow">Your garage</p><h2 id="vehicle-selector-title">Choose a vehicle</h2></div>{vehicles.length > 3 && <div className="hidden gap-2 md:flex"><button className="portal-icon-button" onClick={() => move(-320)} aria-label="Previous vehicles"><ChevronLeft /></button><button className="portal-icon-button" onClick={() => move(320)} aria-label="Next vehicles"><ChevronRight /></button></div>}</div>
+    <div ref={rail} className="portal-horizontal-rail">{cards.map((vehicle) => { const active = selected === vehicle.id; const service = vehicle.all ? null : nextService(vehicle, recommendations.filter((r) => r.vehicle_id === vehicle.id), appointments.filter((a) => a.vehicle_id === vehicle.id)); return <button key={vehicle.id} className={`portal-vehicle-card ${active ? "active" : ""}`} onClick={() => onSelect(vehicle.id)} aria-pressed={active}><div className="flex items-start justify-between gap-3"><div className="portal-icon-box"><Car /></div>{active && <span className="portal-selected"><Check /> Selected</span>}</div><h3>{vehicle.all ? "All Vehicles" : vehicleName(vehicle)}</h3>{vehicle.all ? <p>{vehicles.length} vehicle{vehicles.length === 1 ? "" : "s"} in your secure garage</p> : <><p>{[vehicle.engine_type, vehicle.fuel_type].filter(Boolean).join(" · ") || "Vehicle details on file"}</p>{vehicle.mileage != null && <strong>{Number(vehicle.mileage).toLocaleString()} km</strong>}<small>{service ? `${service.label} · ${service.date}` : "No upcoming service recorded"}</small></>}</button>; })}</div>
+  </section>;
+}

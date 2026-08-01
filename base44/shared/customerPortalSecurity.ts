@@ -252,6 +252,23 @@ function pick(record, keys) {
   return projectSafeRecord(record, keys);
 }
 
+function notificationTarget(notification, collections) {
+  const action = String(notification.action_url || "");
+  const choices = [
+    ["order", "home", collections.orders], ["estimate", "billing", collections.estimates], ["invoice", "billing", collections.invoices],
+    ["appointment", "home", collections.appointments], ["recommendation", "cars", collections.recommendations], ["diagnostic", "cars", collections.diagnostics],
+  ];
+  for (const [type, view, records] of choices) {
+    const record = records.find((item) => action.includes(item.id));
+    if (record) return { type, view, id: record.id };
+  }
+  const viewByType = { message: "messages", offer: "offers", recommendation: "cars", car_ready: "home", reminder: "home", review_request: "review" };
+  return { view: viewByType[notification.type] || "home" };
+}
+
+const safePayments = (rows) => (rows || []).map((row) => pick(row, ["date", "amount", "method"]));
+const safeCodes = (rows) => (rows || []).map((row) => pick(row, ["code", "description", "type"]));
+
 export async function buildCustomerPortalData(sr, customer, tenantEmail) {
   const tenant = normalizeTenantEmail(tenantEmail);
   const customerId = customer.id;
@@ -266,9 +283,9 @@ export async function buildCustomerPortalData(sr, customer, tenantEmail) {
     listAllRecords(sr.entities.Estimate, relatedQuery()),
     listAllRecords(sr.entities.Appointment, relatedQuery(), "date"),
     listAllRecords(sr.entities.CustomerMessage, { customer_id: customerId }, "sent_at"),
-    listAllRecords(sr.entities.CustomerNotification, { customer_id: customerId }, "sent_at"),
+    listAllRecords(sr.entities.CustomerNotification, { customer_id: customerId }, "-sent_at"),
     listAllRecords(sr.entities.CarRecommendation, relatedQuery()),
-    listAllRecords(sr.entities.CustomerReview, { customer_id: customerId }),
+    listAllRecords(sr.entities.CustomerReview, { customer_id: customerId }, "-created_date"),
     listAllRecords(sr.entities.DiagnosticScan, relatedQuery(), "scan_timestamp"),
   ]);
   const estimateIds = estimatesRaw.map((item) => item.id);
@@ -297,19 +314,20 @@ export async function buildCustomerPortalData(sr, customer, tenantEmail) {
   const diagnostics = safe("DiagnosticScan", [...diagnosticsInitial, ...diagnosticsLinked]);
   const offers = await listAllRecords(sr.entities.ShopOffer, { shop_owner_email: tenant, is_active: true });
   const shop = tenantUsers[0] || {};
+  const collections = { orders, estimates, invoices, appointments, recommendations, diagnostics };
   return {
-    customer: pick(customer, ["id", "full_name"]),
+    customer: pick(customer, ["full_name"]),
     shop: pick(shop, ["business_name", "phone", "address", "city", "province", "logo_url", "google_review_link"]),
-    vehicles: vehicles.map((v) => pick(v, ["id", "customer_id", "year", "make", "model", "trim", "vin", "license_plate", "engine_type", "fuel_type", "drive_type", "color", "mileage", "mileage_history", "intake_photos", "last_service_date"])),
-    orders: orders.map((r) => pick(r, ["id", "customer_id", "vehicle_id", "estimate_id", "order_number", "vehicle_info", "description", "status", "estimated_completion", "created_date"])),
-    invoices: invoices.map((r) => pick(r, ["id", "customer_id", "vehicle_id", "repair_order_id", "estimate_id", "invoice_number", "vehicle_info", "total", "amount_paid", "balance_due", "status", "due_date", "paid_date", "customer_note", "payment_history", "line_items", "created_date"])),
-    estimates: estimates.map((r) => pick(r, ["id", "customer_id", "vehicle_id", "linked_invoice_id", "linked_invoice_number", "estimate_number", "vehicle_info", "status", "auth_status", "grand_total", "amount_paid", "payment_history", "valid_until", "service_reason", "labor_items", "parts_items", "created_date"])),
-    appointments: appointments.map((r) => pick(r, ["id", "customer_id", "vehicle_id", "vehicle_info", "service_type", "date", "time_slot", "status", "created_date"])),
-    messages: messages.map((r) => pick(r, ["id", "customer_id", "sender", "message", "read_by_customer", "read_by_shop", "sent_at"])),
-    notifications: notifications.map((r) => pick(r, ["id", "customer_id", "type", "title", "body", "is_read", "action_url", "sent_at"])),
-    offers: offers.map((r) => ({ ...pick(r, ["id", "shop_name", "title", "description", "image_url", "valid_until", "reactions", "created_date"]), comments: (r.comments || []).map((c) => pick(c, ["customer_name", "text", "created_at"])) })),
-    recommendations: recommendations.map((r) => pick(r, ["id", "customer_id", "vehicle_id", "vehicle_info", "title", "description", "urgency", "estimated_cost", "is_resolved", "created_date"])),
-    reviews: reviews.map((r) => pick(r, ["id", "customer_id", "rating", "review_text", "is_published", "shop_reply", "shop_replied_at", "created_date"])),
-    diagnostics: diagnostics.map((r) => pick(r, ["id", "customer_id", "vehicle_id", "repair_order_id", "estimate_id", "vehicle_info", "scan_timestamp", "dtc_codes", "status", "created_date"])),
+    vehicles: vehicles.map((v) => pick(v, ["id", "year", "make", "model", "trim", "vin", "license_plate", "engine_type", "fuel_type", "drive_type", "color", "mileage", "mileage_history", "intake_photos", "last_service_date", "last_service_mileage", "service_interval_km", "service_interval_months"])),
+    orders: orders.map((r) => pick(r, ["id", "vehicle_id", "estimate_id", "order_number", "vehicle_info", "description", "status", "estimated_completion", "created_date"])),
+    invoices: invoices.map((r) => ({ ...pick(r, ["id", "vehicle_id", "repair_order_id", "estimate_id", "invoice_number", "vehicle_info", "total", "amount_paid", "balance_due", "status", "due_date", "paid_date", "customer_note", "line_items", "created_date"]), payment_history: safePayments(r.payment_history) })),
+    estimates: estimates.map((r) => ({ ...pick(r, ["id", "vehicle_id", "linked_invoice_id", "linked_invoice_number", "estimate_number", "vehicle_info", "status", "auth_status", "grand_total", "amount_paid", "valid_until", "service_reason", "labor_items", "parts_items", "created_date"]), payment_history: safePayments(r.payment_history) })),
+    appointments: appointments.map((r) => pick(r, ["id", "vehicle_id", "vehicle_info", "service_type", "date", "time_slot", "status", "created_date"])),
+    messages: messages.map((r) => pick(r, ["id", "sender", "message", "read_by_customer", "read_by_shop", "sent_at"])),
+    notifications: notifications.map((r) => ({ ...pick(r, ["id", "type", "title", "body", "is_read", "sent_at"]), target: notificationTarget(r, collections) })),
+    offers: offers.map((r) => pick(r, ["id", "shop_name", "title", "description", "image_url", "valid_until", "reactions", "created_date"])),
+    recommendations: recommendations.map((r) => pick(r, ["id", "vehicle_id", "vehicle_info", "title", "description", "urgency", "estimated_cost", "is_resolved", "created_date"])),
+    reviews: reviews.map((r) => pick(r, ["id", "rating", "review_text", "is_published", "shop_reply", "shop_replied_at", "created_date"])),
+    diagnostics: diagnostics.map((r) => ({ ...pick(r, ["id", "vehicle_id", "repair_order_id", "estimate_id", "vehicle_info", "scan_timestamp", "status", "created_date"]), dtc_codes: safeCodes(r.dtc_codes) })),
   };
 }
