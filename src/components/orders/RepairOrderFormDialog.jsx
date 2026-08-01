@@ -19,6 +19,7 @@ import { resolveVehicleId } from "@/utils/recordLinking";
 
 import CustomerSearchInput from "@/components/shared/CustomerSearchInput";
 import { capWords, toTitleCase, capitalizeFields, capitalizeArrayItems } from "@/utils/capitalize";
+import UnifiedFinancialActionBar from "@/components/financial-workflow/UnifiedFinancialActionBar";
 
 const statuses = [
   { value: "waiting", label: "Waiting" },
@@ -373,33 +374,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         savedOrder = await base44.entities.RepairOrder.update(order.id, data);
         savedOrderId = savedOrder?.id || order.id;
 
-        // FIX 2: Sync to linked Invoice(s) — update all financials
-        try {
-          const linkedInvoices = await base44.entities.Invoice.filter({ repair_order_id: savedOrderId });
-          for (const inv of linkedInvoices) {
-            const newTotal = finalTotal;
-            const newBalanceDue = newTotal - (inv.amount_paid || 0);
-            await base44.entities.Invoice.update(inv.id, {
-              customer_id: data.customer_id,
-              customer_name: data.customer_name,
-              vehicle_id: resolvedVehicleId,
-              vehicle_info: data.vehicle_info,
-              repair_order_id: savedOrderId,
-              parts_total: data.parts_cost,
-              labor_total: data.labor_cost,
-              tax_rate: form.apply_tax ? userTaxRate : 0,
-              tax_amount: taxAmt,
-              total: newTotal,
-              balance_due: newBalanceDue > 0 ? newBalanceDue : 0,
-              line_items: [
-                ...data.parts_used.filter(p => p.name).map(p => ({ description: p.name, type: "part", quantity: p.quantity, unit_price: p.unit_price, total: p.total })),
-                ...data.labor_items.filter(l => l.description).map(l => ({ description: l.description, type: "labor", quantity: l.hours, unit_price: l.rate, total: l.total })),
-              ],
-              customer_note: inv.customer_note,
-            });
-          }
-          if (linkedInvoices.length > 0) toast({ title: "Invoice also updated" });
-        } catch (e) { throw new Error(`Repair Order saved, but linked invoice update failed: ${e?.message || e}`); }
+        // Linked invoice writes are centralized in financialDocumentAction.
 
         // Sync to linked Estimate(s) — update all financials
         try {
@@ -895,49 +870,16 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         </div>{/* end space-y-4 */}
         </div>{/* end scrollable body */}
 
-        {/* ── Bottom Bar ── */}
-        <div className="flex-shrink-0 border-t border-gray-800"
-          style={{ background: "linear-gradient(135deg,#0f172a 0%,#111827 100%)" }}>
-
-          {/* Row 1 — Status + Totals */}
-          <div className="flex items-center gap-4 px-5 pt-3 pb-2 border-b border-gray-800/60">
-            <div style={{
-              background: form.status === "completed" ? "rgba(74,222,128,0.12)" : form.status === "in_progress" ? "rgba(251,191,36,0.12)" : "rgba(148,163,184,0.08)",
-              border: `1px solid ${form.status === "completed" ? "rgba(74,222,128,0.3)" : form.status === "in_progress" ? "rgba(251,191,36,0.3)" : "rgba(148,163,184,0.15)"}`,
-              borderRadius: "20px", padding: "3px 12px",
-              color: form.status === "completed" ? "#4ade80" : form.status === "in_progress" ? "#fbbf24" : "#94a3b8",
-              fontSize: "11px", fontWeight: 700, textTransform: "capitalize", whiteSpace: "nowrap",
-            }}>{form.status || "pending"}</div>
-            <div className="flex items-center gap-4 text-xs">
-              <span className="text-gray-500">Total <strong className="text-emerald-400">${totalCost.toFixed(2)}</strong></span>
-              <span className="text-gray-500">Labor <strong className="text-purple-400">${laborCost.toFixed(2)}</strong></span>
-              <span className="text-gray-500">Parts <strong className="text-orange-400">${partsCost.toFixed(2)}</strong></span>
-            </div>
-          </div>
-
-          {saveError && <div className="px-5 pt-2 text-sm text-rose-400">Save failed: {saveError}</div>}
-          {/* Row 2 — Buttons */}
-          <div className="flex gap-2 px-5 py-3">
-            <Button variant="outline" onClick={onClose}
-              className="border-gray-700 text-gray-300 h-9 text-sm px-4 shrink-0">
-              Cancel
-            </Button>
-            <Button onClick={handleSave}
-              disabled={saving || !form.customer_id || (!form.vehicle_id && !form.vehicle_info) || !form.description}
-              className="flex-1 bg-sky-500 hover:bg-sky-600 text-white gap-2 h-9 text-sm font-semibold">
-              {saving ? "Saving..." : "Save Order"}
-            </Button>
-            {order?.id && (
-              <Button
-                onClick={async () => { const saved = await handleSave({ closeAfterSave: false }); if (saved) { setCashoutOrder(saved); setShowCashout(true); } }}
-                disabled={saving}
-                className="flex-1 gap-2 h-9 text-sm font-bold shrink-0"
-                style={{ background: "linear-gradient(135deg,#16a34a,#15803d)", color: "#fff", border: "none", boxShadow: "0 2px 12px rgba(22,163,74,0.45)" }}>
-                <CreditCard className="w-4 h-4" /> Cashout
-              </Button>
-            )}
-          </div>
-        </div>
+        <UnifiedFinancialActionBar
+          step={3}
+          dirty
+          totals={{ total: totalCost, balance: totalCost - (order?.amount_paid || 0) }}
+          saving={saving}
+          saved={order}
+          onBack={onClose}
+          onSave={handleSave}
+          onPayment={order?.id ? async () => { const saved = await handleSave({ closeAfterSave: false }); if (saved) { setCashoutOrder(saved); setShowCashout(true); } } : undefined}
+        />
 
         {/* Unified Cashout Dialog */}
         {showCashout && cashoutOrder?.id && (

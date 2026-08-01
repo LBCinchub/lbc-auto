@@ -1,0 +1,73 @@
+{
+  "name": "FinancialWorkflowEvent",
+  "type": "object",
+  "properties": {
+    "shop_owner_email": {
+      "type": "string",
+      "format": "email"
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "create",
+        "edit",
+        "finalize",
+        "send",
+        "record_payment",
+        "void",
+        "link"
+      ]
+    },
+    "invoice_id": {
+      "type": "string"
+    },
+    "source_type": {
+      "type": "string"
+    },
+    "source_id": {
+      "type": "string"
+    },
+    "idempotency_key": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "actor_email": {
+      "type": "string",
+      "format": "email"
+    },
+    "metadata": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "shop_owner_email",
+    "action",
+    "created_at",
+    "actor_email"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

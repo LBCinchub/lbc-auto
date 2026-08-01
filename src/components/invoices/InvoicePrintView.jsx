@@ -92,7 +92,7 @@ export default function InvoicePrintView({ invoice, onClose }) {
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="bg-white text-gray-900 max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="bg-white text-gray-900 max-w-3xl max-h-[90vh] overflow-y-auto" onInteractOutside={e => e.preventDefault()} onEscapeKeyDown={e => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Invoice Preview</DialogTitle>
         </DialogHeader>

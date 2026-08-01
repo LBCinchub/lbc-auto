@@ -23,6 +23,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import AutoAIBubble from "@/components/shared/AutoAIBubble";
 import InvoiceLinkGuard from "@/components/customers/InvoiceLinkGuard";
 import PortalAccessPanel from "@/components/customers/PortalAccessPanel";
+import InvoiceFormDialog from "@/components/invoices/InvoiceFormDialog";
+import FinancialDocumentDrawer from "@/components/financial-workflow/FinancialDocumentDrawer";
 
 const AVATAR_COLORS = ["bg-sky-500","bg-violet-500","bg-emerald-500","bg-amber-500","bg-rose-500","bg-indigo-500"];
 function getAvatarColor(name = "") {
@@ -146,6 +148,8 @@ export default function CustomerDetails() {
   const [apptOpen, setApptOpen] = useState(false);
   const [estimateOpen, setEstimateOpen] = useState(false);
   const [vehicleDialogOpen, setVehicleDialogOpen] = useState(false);
+  const [newInvoiceOpen, setNewInvoiceOpen] = useState(false);
+  const [invoiceSource, setInvoiceSource] = useState(null);
   const [editingVehicle, setEditingVehicle] = useState(null);
   const [newNote, setNewNote] = useState("");
   const [savingNote, setSavingNote] = useState(false);
@@ -365,7 +369,7 @@ export default function CustomerDetails() {
               variant="outline" className="border-purple-500/40 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 gap-2">
               <ClipboardList className="w-4 h-4" /> New Estimate
             </Button>
-            <Button onClick={() => navigate(`/Invoices?customerId=${customer.id}&customerName=${encodeURIComponent(customer.full_name)}`)}
+            <Button onClick={() => setNewInvoiceOpen(true)}
               variant="outline" className="border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 gap-2">
               <FileText className="w-4 h-4" /> New Invoice
             </Button>
@@ -442,7 +446,7 @@ export default function CustomerDetails() {
               ) : (
                 <div className="space-y-2">
                   {invoices.map(inv => (
-                    <div key={inv.id} onClick={() => navigate(`/InvoiceDetail/${inv.id}`)}
+                    <div key={inv.id} onClick={() => setInvoiceSource({ type: "invoice", id: inv.id })}
                       className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 flex items-center justify-between cursor-pointer hover:border-sky-500/30 hover:bg-gray-800/50 transition-all">
                       <div>
                         <div className="flex items-center gap-2">
@@ -682,6 +686,23 @@ export default function CustomerDetails() {
             setVehicles(freshVehicles);
           }}
           customers={[customer]}
+        />
+      )}
+      {customer && newInvoiceOpen && (
+        <InvoiceFormDialog
+          open
+          onClose={() => setNewInvoiceOpen(false)}
+          customers={[customer]}
+          vehicles={vehicles}
+          onSaved={() => { reload(); queryClient.invalidateQueries({ queryKey: ["invoices"] }); }}
+        />
+      )}
+      {invoiceSource && (
+        <FinancialDocumentDrawer
+          open
+          source={invoiceSource}
+          onClose={() => setInvoiceSource(null)}
+          onSaved={reload}
         />
       )}
       <AutoAIBubble />

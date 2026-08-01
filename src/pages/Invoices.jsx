@@ -52,21 +52,6 @@ export default function Invoices() {
     base44.auth.me().then(setUser);
   }, []);
 
-  // Auto-open new invoice dialog if coming from customer profile
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const customerId = urlParams.get("customerId");
-    const customerName = urlParams.get("customerName");
-    const vehicleId = urlParams.get("vehicleId");
-    const vehicleInfo = urlParams.get("vehicleInfo");
-    const serviceReason = urlParams.get("serviceReason") || "";
-    const notes = urlParams.get("notes") || "";
-    if (customerId) {
-      setEditingInvoice({ customer_id: customerId, customer_name: customerName, vehicle_id: vehicleId || "", vehicle_info: vehicleInfo || "", service_reason: serviceReason, technician_notes: notes, line_items: serviceReason ? [{ description: serviceReason, type: "labor", quantity: 1, unit_price: 0, total: 0 }] : [] });
-      setDialogOpen(true);
-    }
-  }, []);
-
   const sendAuthSMS = async (inv) => {
     const customer = customers.find(c => c.id === inv.customer_id);
     const phone = customer?.phone;
@@ -175,14 +160,6 @@ export default function Invoices() {
     e.stopPropagation();
     const cachedEmail = customers.find(c => c.id === inv.customer_id)?.email || null;
     sendEmail(inv.id, "invoice", cachedEmail, inv.customer_id, inv.customer_name, inv);
-  };
-
-  const markPaid = async (inv) => {
-    await base44.entities.Invoice.update(inv.id, {
-      status: "paid",
-      paid_date: new Date().toISOString().split("T")[0],
-    });
-    queryClient.invalidateQueries({ queryKey: ["invoices"] });
   };
 
   const exportCSV = () => {
@@ -333,38 +310,12 @@ export default function Invoices() {
   }, [_location.search]);
 
   // ── Send Invoice to Repair Order ──────────────────────────────────────────
-  const handleSendToRO = async (e, inv) => {
+  const handleSendToRO = (e, inv) => {
     e.stopPropagation();
-    if (inv.repair_order_id) {
-      navigate(`/RepairOrderDetail/${inv.repair_order_id}`);
-      return;
-    }
-    setCreatingRO(inv.id);
-    try {
-      const roData = {
-        customer_id:       inv.customer_id || "",
-        customer_name:     inv.customer_name || "",
-        customer_phone:    inv.customer_phone || "",
-        vehicle_id:        inv.vehicle_id || "",
-        vehicle_info:      inv.vehicle_info || "",
-        description:       inv.service_reason || "Service from Invoice #" + inv.invoice_number,
-        labor_items:       inv.labor_items  || [],
-        parts_used:        inv.parts_used   || [],
-        labor_cost:        inv.labor_total  || 0,
-        parts_cost:        inv.parts_total  || 0,
-        total_cost:        inv.grand_total  || inv.total || 0,
-        status:            "pending",
-        linked_invoice_id: inv.id,
-        order_number:      "RO-" + Date.now().toString(36).toUpperCase(),
-      };
-      const newRO = await base44.entities.RepairOrder.create(roData);
-      await base44.entities.Invoice.update(inv.id, { repair_order_id: newRO.id });
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      navigate(`/RepairOrderDetail/${newRO.id}`);
-    } catch(err) {
-      alert("Could not create Repair Order: " + (err?.message || err));
-    } finally {
-      setCreatingRO(null);
+    if (inv.repair_order_id) navigate(`/RepairOrderDetail/${inv.repair_order_id}`);
+    else {
+      setEditingInvoice(inv);
+      setDialogOpen(true);
     }
   };
 

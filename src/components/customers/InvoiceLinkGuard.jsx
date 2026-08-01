@@ -14,11 +14,18 @@ export default function InvoiceLinkGuard({ invoice, vehicles, repairOrders, onRe
   const save = async () => {
     setSaving(true); setError("");
     try {
-      const patch = {};
-      if (missingVehicle && vehicleId) patch.vehicle_id = vehicleId;
-      if (brokenRO && repairOrderId) patch.repair_order_id = repairOrderId;
-      if (!Object.keys(patch).length) throw new Error("Select a matching record first.");
-      await base44.entities.Invoice.update(invoice.id, patch);
+      const intent = {};
+      if (missingVehicle && vehicleId) intent.vehicle_id = vehicleId;
+      if (brokenRO && repairOrderId) intent.repair_order_id = repairOrderId;
+      if (!Object.keys(intent).length) throw new Error("Select a matching record first.");
+      await base44.functions.invoke("financialDocumentAction", {
+        action: "relink",
+        source_type: "invoice",
+        source_id: invoice.id,
+        invoice_id: invoice.id,
+        idempotency_key: crypto.randomUUID(),
+        intent,
+      });
       onRelink?.();
     } catch (e) { setError(e?.message || "Could not relink invoice."); }
     finally { setSaving(false); }

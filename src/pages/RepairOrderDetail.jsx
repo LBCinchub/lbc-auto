@@ -11,11 +11,12 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import EstimateFormDialog from "@/components/estimates/EstimateFormDialog";
-import InvoiceFormDialog from "@/components/invoices/InvoiceFormDialog";
+import FinancialDocumentDrawer from "@/components/financial-workflow/FinancialDocumentDrawer";
+import UnifiedFinancialActionBar from "@/components/financial-workflow/UnifiedFinancialActionBar";
 import SignaturePad from "@/components/orders/SignaturePad";
 import PaymentHistoryManager from "@/components/invoices/PaymentHistoryManager";
 import AutoAIBubble from "@/components/shared/AutoAIBubble";
-import { invoiceFieldsFromRepairOrder, resolveVehicleId } from "@/utils/recordLinking";
+import { resolveVehicleId } from "@/utils/recordLinking";
 
 export default function RepairOrderDetail() {
   const { orderId } = useParams();
@@ -181,27 +182,7 @@ export default function RepairOrderDetail() {
     finally { setUpdatingStatus(false); }
   };
 
-  const handleQuickGenerateInvoice = async () => {
-    setGeneratingInvoice(true);
-    try {
-      const savedRO = await persistRepairOrder(order.status);
-      const invoiceNumber = `INV-${Date.now().toString(36).toUpperCase().slice(-8)}`;
-      const invoiceData = invoiceFieldsFromRepairOrder(savedRO, savedRO.vehicle_id, invoiceNumber);
-      const inv = await base44.entities.Invoice.create({ ...invoiceData, tax_rate: order.tax_rate || 0, tax_applies_to: order.tax_applies_to || "both", tax_amount: order.tax_amount || 0, status: "unpaid" });
-
-      await base44.entities.RepairOrder.update(savedRO.id, {
-        linked_invoice_id: inv.id,
-        linked_invoice_number: inv.invoice_number,
-      });
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["invoices", "byRO", orderId] });
-      navigate(`/InvoiceDetail/${inv.id}`);
-    } catch (err) {
-      setStatusError(err?.message || "Could not generate the linked invoice.");
-    } finally {
-      setGeneratingInvoice(false);
-    }
-  };
+  const handleQuickGenerateInvoice = () => setShowInvoiceDialog(true);
 
   if (isLoading) {
     return (
@@ -251,7 +232,7 @@ export default function RepairOrderDetail() {
             </>
           ) : (
             <>
-              <Button onClick={() => navigate(`/InvoiceDetail/${linkedInvoicesList[0].id}`)} className="bg-purple-600 hover:bg-purple-700 gap-2">
+              <Button onClick={() => setShowInvoiceDialog(true)} className="bg-purple-600 hover:bg-purple-700 gap-2">
                 <FileText className="w-4 h-4" /> View Invoice
               </Button>
               <Button variant="outline" size="sm" onClick={() => setShowHistoryManager(true)} className="gap-2 border-gray-700 text-gray-300 hover:bg-gray-800">
@@ -372,7 +353,7 @@ export default function RepairOrderDetail() {
                     <div
                       key={inv.id}
                       className="flex items-center justify-between bg-purple-500/10 border border-purple-500/20 rounded-lg px-3 py-2 cursor-pointer hover:bg-purple-500/20 transition-colors"
-                      onClick={() => navigate(`/InvoiceDetail/${inv.id}`)}
+                      onClick={() => setShowInvoiceDialog(true)}
                     >
                       <div>
                         <p className="text-purple-400 font-medium text-sm">#{inv.invoice_number}</p>
@@ -647,6 +628,19 @@ export default function RepairOrderDetail() {
         </div>
       )}
 
+      <div className="no-print sticky bottom-0 z-30">
+        <UnifiedFinancialActionBar
+          step={3}
+          dirty={false}
+          totals={{ total: order.total_cost || 0, balance: Math.max(0, (order.total_cost || 0) - (linkedInvoicesList[0]?.amount_paid || 0)) }}
+          saving={generatingInvoice}
+          saved={order}
+          onBack={() => navigate(-1)}
+          onPrint={handlePrintWorkerCopy}
+          onFinalize={() => setShowInvoiceDialog(true)}
+        />
+      </div>
+
       <EstimateFormDialog
         open={showEstimateDialog}
         onClose={() => setShowEstimateDialog(false)}
@@ -661,16 +655,12 @@ export default function RepairOrderDetail() {
         }}
       />
 
-      <InvoiceFormDialog
+      <FinancialDocumentDrawer
         open={showInvoiceDialog}
+        source={{ type: "repair_order", id: orderId }}
         onClose={() => setShowInvoiceDialog(false)}
-        invoice={null}
-        orders={order ? [order] : []}
-        customers={customers}
-        vehicles={vehicles}
-        initialOrderId={orderId}
         onSaved={() => {
-          setShowInvoiceDialog(false);
+          queryClient.invalidateQueries({ queryKey: ["repairOrder", orderId] });
           queryClient.invalidateQueries({ queryKey: ["invoices", "byRO", orderId] });
         }}
       />
@@ -829,28 +819,8 @@ export default function RepairOrderDetail() {
     </div>
   );
 
-  async function syncLinkedInvoices(updatedParts, updatedLaborItems) {
-    try {
-      const linkedInvoices = await base44.entities.Invoice.filter({ repair_order_id: orderId });
-      const partsTotal = updatedParts.reduce((s, p) => s + (p.total || 0), 0);
-      const laborTotal = updatedLaborItems.reduce((s, l) => s + ((l.hours || 0) * (l.rate || 0)), 0);
-      const newTotal = partsTotal + laborTotal;
-      for (const inv of linkedInvoices) {
-        const balanceDue = newTotal - (inv.amount_paid || 0);
-        await base44.entities.Invoice.update(inv.id, {
-          parts_total: partsTotal,
-          labor_total: laborTotal,
-          total: newTotal,
-          balance_due: balanceDue > 0 ? balanceDue : 0,
-          parts_used: updatedParts,
-          line_items: [
-            ...updatedParts.filter(p => p.name).map(p => ({ description: p.name, type: "part", quantity: p.quantity, unit_price: p.unit_price, total: p.total })),
-            ...updatedLaborItems.filter(l => l.description).map(l => ({ description: l.description, type: "labor", quantity: l.hours, unit_price: l.rate, total: l.hours * l.rate })),
-          ],
-          customer_note: inv.customer_note,
-        });
-      }
-    } catch (e) { console.warn("Sync to invoice failed:", e); }
+  async function syncLinkedInvoices() {
+    // Invoice changes are made only inside the secured financial workflow.
   }
 
   function addPart() {

@@ -13,6 +13,8 @@ import PrintTemplate from "@/components/shared/PrintTemplate";
 import PaymentReceiptDialog from "@/components/invoices/PaymentReceiptDialog";
 import { normalizeDiscountType } from "@/utils/discount";
 import AutoAIBubble from "@/components/shared/AutoAIBubble";
+import FinancialDocumentDrawer from "@/components/financial-workflow/FinancialDocumentDrawer";
+import UnifiedFinancialActionBar from "@/components/financial-workflow/UnifiedFinancialActionBar";
 
 
 // Auto-capitalise: first letter of every word
@@ -33,6 +35,7 @@ export default function EstimateDetail() {
   const [savedOk, setSavedOk] = useState(false);
   const [showCashoutDialog, setShowCashoutDialog] = useState(false);
   const [showHistoryManager, setShowHistoryManager] = useState(false);
+  const [showInvoiceWorkflow, setShowInvoiceWorkflow] = useState(false);
   
   // Editable line items state
   const [laborItems, setLaborItems] = useState([]);
@@ -229,29 +232,7 @@ export default function EstimateDetail() {
       if (linkedROs.length > 0) toast({ title: "Repair Order also updated" });
     } catch (e) { console.warn("Estimate→RO sync failed:", e); }
 
-    // FIX 3: Sync to linked Invoices (by estimate_id)
-    try {
-      const linkedInvoices = await base44.entities.Invoice.filter({ estimate_id: estimateId });
-      const lineItems = [
-        ...updatedPartsItems.filter(p => p.name).map(p => ({ description: p.name, type: "part", quantity: p.quantity, unit_price: p.unit_price, total: p.total })),
-        ...updatedLaborItems.filter(l => l.description).map(l => ({ description: l.description, type: "labor", quantity: l.hours, unit_price: l.rate, total: l.total })),
-      ];
-      for (const inv of linkedInvoices) {
-        const newTotal = grandTotal;
-        const newBalanceDue = r2(newTotal - (inv.amount_paid || 0));
-        await base44.entities.Invoice.update(inv.id, {
-          customer_name: estimate.customer_name,
-          vehicle_info: estimate.vehicle_info,
-          line_items: lineItems,
-          labor_total: laborTotal,
-          parts_total: partsTotal,
-          tax_amount: taxAmount,
-          total: newTotal,
-          balance_due: newBalanceDue > 0 ? newBalanceDue : 0,
-        });
-      }
-      if (linkedInvoices.length > 0) toast({ title: "Invoice also updated" });
-    } catch (e) { console.warn("Estimate→Invoice sync failed:", e); }
+    // Invoice writes are centralized in financialDocumentAction.
 
     // ── CENTER CONTROL — sync to Customer record ──────────────────────────────
     try {
@@ -273,58 +254,7 @@ export default function EstimateDetail() {
     setTimeout(() => setSavedOk(false), 3000);
   };
 
-  const handleConvertToInvoice = async () => {
-    if (!window.confirm("Convert this estimate to an invoice?")) return;
-    try {
-      // ── Build line_items from estimate labor_items + parts_items (no data loss) ──
-      const lineItems = [
-        ...(estimate.labor_items || []).map(item => ({
-          description: item.description || 'Labour',
-          quantity: Number(item.hours) || 1,
-          unit_price: Number(item.rate) || 0,
-          total: Math.round((Number(item.total) || 0) * 100) / 100,
-          type: 'labor'
-        })),
-        ...(estimate.parts_items || []).map(item => ({
-          description: item.name || item.description || 'Part',
-          quantity: Number(item.quantity) || 1,
-          unit_price: Number(item.unit_price) || 0,
-          total: Math.round((Number(item.total) || 0) * 100) / 100,
-          type: 'part'
-        })),
-      ];
-      const r2 = (n) => Math.round((n || 0) * 100) / 100;
-      const inv = await base44.entities.Invoice.create({
-        invoice_number: `INV-${Date.now().toString(36).toUpperCase().slice(-8)}`,
-        estimate_id: estimate.id,
-        customer_id: estimate.customer_id,
-        customer_name: estimate.customer_name,
-        vehicle_info: estimate.vehicle_info,
-        line_items: lineItems,
-        parts_total: r2(estimate.parts_total),
-        labor_total: r2(estimate.labor_total),
-        tax_rate: estimate.tax_rate || 0,
-        tax_applies_to: estimate.tax_applies_to || "both",
-        tax_amount: r2(estimate.tax_amount),
-        discount: estimate.discount || 0,
-        discount_type: estimate.discount_type || "$",
-        total: r2(estimate.grand_total),
-        balance_due: r2(estimate.grand_total),
-        amount_paid: 0,
-        status: "unpaid",
-        service_reason: estimate.service_reason || "",
-        customer_note: estimate.notes || "",
-      });
-      await base44.entities.Estimate.update(estimate.id, {
-        status: "invoiced",
-        linked_invoice_id: inv.id,
-        linked_invoice_number: inv.invoice_number,
-      });
-      navigate(`/InvoiceDetail/${inv.id}`);
-    } catch (error) {
-      console.error("Error converting estimate to invoice:", error);
-    }
-  };
+  const handleConvertToInvoice = () => setShowInvoiceWorkflow(true);
 
   const handleConvertToRepairOrder = async () => {
     if (!window.confirm("Convert this estimate to a repair order?")) return;
@@ -413,7 +343,7 @@ export default function EstimateDetail() {
             {saving ? "Saving..." : "Save Changes"}
           </Button>
           {estimate.linked_invoice_id && (
-            <Button size="sm" onClick={() => navigate(`/InvoiceDetail/${estimate.linked_invoice_id}`)}
+            <Button size="sm" onClick={() => setShowInvoiceWorkflow(true)}
               className="bg-purple-600 hover:bg-purple-700 text-white gap-1.5 h-9 text-xs">
               <FileText className="w-3.5 h-3.5" /> View Invoice
             </Button>
@@ -769,44 +699,29 @@ export default function EstimateDetail() {
         />
       )}
 
-      {/* ── BOTTOM ACTION BAR — compact dashboard style ── */}
-      <div className="no-print sticky bottom-0 z-30 bg-gray-950 border-t border-gray-800 py-3 px-4 flex items-center justify-between gap-3">
-        {/* Left: status + financials */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <span className={`text-xs font-bold px-2.5 py-1 rounded-full border capitalize ${
-            estimate.status === "invoiced" ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
-            : estimate.status === "approved" ? "bg-green-500/10 border-green-500/30 text-green-400"
-            : estimate.status === "sent" ? "bg-sky-500/10 border-sky-500/30 text-sky-400"
-            : estimate.status === "declined" ? "bg-red-500/10 border-red-500/30 text-red-400"
-            : "bg-gray-700/40 border-gray-600/40 text-gray-400"
-          }`}>{estimate.status || "draft"}</span>
-          <span className="text-xs text-gray-500">Total <strong className="text-sky-400">${grandTotal.toFixed(2)}</strong></span>
-          <span className="text-xs text-gray-500">Labor <strong className="text-violet-400">${laborTotal.toFixed(2)}</strong></span>
-          <span className="text-xs text-gray-500">Parts <strong className="text-orange-400">${partsTotal.toFixed(2)}</strong></span>
-        </div>
-
-        {/* Right: action buttons */}
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {(estimate?.payment_history?.length > 0 || estimate?.amount_paid > 0) && (
-            <button onClick={() => setShowHistoryManager(true)}
-              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-900/30 border border-amber-700/30 text-amber-400 hover:bg-amber-900/50 transition-colors">
-              <History className="w-3.5 h-3.5" /> Payments
-            </button>
-          )}
-          <button onClick={() => setShowCashoutDialog(true)}
-            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-900/30 border border-emerald-700/30 text-emerald-400 hover:bg-emerald-900/50 transition-colors">
-            <CreditCard className="w-3.5 h-3.5" /> Cashout
-          </button>
-          <button onClick={handleSave} disabled={saving}
-            className={`flex items-center gap-1.5 text-xs font-semibold px-4 py-1.5 rounded-lg transition-all ${
-              savedOk ? "bg-emerald-600 text-white" : "bg-blue-600 hover:bg-blue-500 text-white"
-            } disabled:opacity-50`}>
-            {saving ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving...</>
-              : savedOk ? <><CheckCircle2 className="w-3.5 h-3.5" /> Saved ✓</>
-              : <><Save className="w-3.5 h-3.5" /> Save</>}
-          </button>
-        </div>
+      <div className="no-print sticky bottom-0 z-30">
+        <UnifiedFinancialActionBar
+          step={3}
+          dirty={false}
+          totals={{ total: grandTotal, balance: grandTotal - (estimate.amount_paid || 0) }}
+          saving={saving}
+          saved={estimate}
+          onBack={() => navigate(-1)}
+          onSave={handleSave}
+          onPrint={() => window.print()}
+          onPayment={() => setShowCashoutDialog(true)}
+          onFinalize={handleConvertToInvoice}
+        />
       </div>
+      <FinancialDocumentDrawer
+        open={showInvoiceWorkflow}
+        source={{ type: "estimate", id: estimateId }}
+        onClose={() => setShowInvoiceWorkflow(false)}
+        onSaved={() => {
+          queryClient.invalidateQueries({ queryKey: ["estimate", estimateId] });
+          queryClient.invalidateQueries({ queryKey: ["estimates"] });
+        }}
+      />
       <AutoAIBubble />
     </div>
   );

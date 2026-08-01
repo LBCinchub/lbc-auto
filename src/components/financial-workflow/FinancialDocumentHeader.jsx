@@ -1,0 +1,6 @@
+import React from "react";
+import { FileText, X } from "lucide-react";
+const steps = ["Work & Line Items", "Taxes & Totals", "Review & Delivery"];
+export default function FinancialDocumentHeader({ invoice, step, onStep, onClose }) {
+  return <header className="border-b border-gray-800 bg-gray-950 px-4 py-4 md:px-6"><div className="flex items-center justify-between gap-4"><div className="flex items-center gap-3"><div className="rounded-xl bg-cyan-500/10 p-2.5"><FileText className="h-5 w-5 text-cyan-400" /></div><div><p className="text-xs font-medium text-cyan-400">LBC Auto Financial Workspace</p><h2 className="text-lg font-bold text-white">{invoice ? `Invoice ${invoice.invoice_number}` : "Draft Invoice"}</h2></div></div><button onClick={onClose} className="rounded-lg p-2 text-gray-400 hover:bg-gray-800 hover:text-white" aria-label="Close"><X className="h-5 w-5" /></button></div><div className="mt-4 grid grid-cols-3 gap-2">{steps.map((label, index) => <button key={label} onClick={() => onStep(index + 1)} className={`rounded-lg border px-2 py-2 text-left text-xs font-semibold ${step === index + 1 ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-300" : "border-gray-800 text-gray-500"}`}><span className="mr-2">{index + 1}</span><span className="hidden sm:inline">{label}</span></button>)}</div></header>;
+}

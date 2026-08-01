@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation} from 'react-router-dom';
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Car, Pencil, Trash2 } from "lucide-react";
+import { Car, Pencil, Trash2, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { fuzzyMatch } from "@/utils/fuzzySearch";
@@ -12,6 +12,7 @@ import SearchBar from "../components/shared/SearchBar";
 import EmptyState from "../components/shared/EmptyState";
 import VehicleFormDialog from "../components/vehicles/VehicleFormDialog";
 import AutoAIBubble from "@/components/shared/AutoAIBubble";
+import FinancialDocumentDrawer from "@/components/financial-workflow/FinancialDocumentDrawer";
 
 export default function Vehicles() {
   const _location = useLocation();
@@ -25,6 +26,7 @@ export default function Vehicles() {
   const [searchField, setSearchField] = useState(() => new URLSearchParams(window.location.search).get("sf") || "all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState(null);
+  const [invoiceVehicle, setInvoiceVehicle] = useState(null);
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -178,7 +180,11 @@ export default function Vehicles() {
                   </div>
                 </div>
                 <div className="flex gap-1">
-                   <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-white"
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-emerald-400" title="Create invoice"
+                    onClick={(e) => { e.stopPropagation(); setInvoiceVehicle(v); }}>
+                    <FileText className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-white"
                      onClick={(e) => { e.stopPropagation(); setEditingVehicle(v); setDialogOpen(true); }}>
                      <Pencil className="w-3.5 h-3.5" />
                    </Button>
@@ -228,6 +234,14 @@ export default function Vehicles() {
         customers={customers}
         onSaved={() => queryClient.invalidateQueries({ queryKey: ["vehicles"] })}
       />
+      {invoiceVehicle && (
+        <FinancialDocumentDrawer
+          open
+          source={{ type: "vehicle", id: invoiceVehicle.id }}
+          onClose={() => setInvoiceVehicle(null)}
+          onSaved={() => queryClient.invalidateQueries({ queryKey: ["invoices"] })}
+        />
+      )}
       <AutoAIBubble />
     </div>
   );

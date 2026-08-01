@@ -13,6 +13,7 @@ import { Plus, Trash2, Loader2, X, Search, CheckCircle2, CreditCard, Save } from
 import { useNhtsaVinDecode } from "@/hooks/useNhtsaVinDecode";
 import { useToast } from "@/components/ui/use-toast";
 import { toTitleCase, capitalizeFields, capitalizeArrayItems } from "@/utils/capitalize";
+import UnifiedFinancialActionBar from "@/components/financial-workflow/UnifiedFinancialActionBar";
 
 const emptyLaborRow = () => ({ description: "", hours: "", rate: "120", total: 0 });
 const emptyPartRow  = () => ({ name: "", part_number: "", quantity: "", unit_price: "", total: 0 });
@@ -403,24 +404,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
           }
         } catch (e) { console.warn("Sync to repair order failed:", e); }
 
-        // Sync to linked Invoice — match by estimate_id (limit 1)
-        try {
-          const linkedInvs = await base44.entities.Invoice.filter({ estimate_id: estimate.id });
-          const inv = linkedInvs[0] || null;
-          if (inv) {
-            const newBalanceDue = Math.round((payload.grand_total - (inv.amount_paid || 0)) * 100) / 100;
-            await base44.entities.Invoice.update(inv.id, {
-              customer_name: payload.customer_name,
-              vehicle_info: payload.vehicle_info,
-              labor_total: payload.labor_total,
-              parts_total: payload.parts_total,
-              tax_amount: payload.tax_amount,
-              total: payload.grand_total,
-              balance_due: newBalanceDue > 0 ? newBalanceDue : 0,
-            });
-            invUpdated = true;
-          }
-        } catch (e) { console.warn("Sync to invoice failed:", e); }
+        // Linked invoice writes are centralized in financialDocumentAction.
 
         // Single toast — one message reflecting what was updated
         let toastMsg = "Estimate saved successfully";
@@ -897,47 +881,16 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
         </div>{/* end space-y-6 */}
         </div>{/* end scrollable body */}
 
-        {/* ── Bottom Bar ── */}
-        <div className="flex-shrink-0 border-t border-gray-800"
-          style={{ background: "linear-gradient(135deg,#0f172a 0%,#111827 100%)" }}>
-
-          {/* Row 1 — Status + Totals */}
-          <div className="flex items-center gap-4 px-5 pt-3 pb-2 border-b border-gray-800/60">
-            <div style={{
-              background: form.status === "approved" ? "rgba(74,222,128,0.12)" : "rgba(148,163,184,0.08)",
-              border: `1px solid ${form.status === "approved" ? "rgba(74,222,128,0.3)" : "rgba(148,163,184,0.15)"}`,
-              borderRadius: "20px", padding: "3px 12px",
-              color: form.status === "approved" ? "#4ade80" : "#94a3b8",
-              fontSize: "11px", fontWeight: 700, textTransform: "capitalize", whiteSpace: "nowrap",
-            }}>{form.status || "draft"}</div>
-            <div className="flex items-center gap-4 text-xs">
-              <span className="text-gray-500">Total <strong className="text-sky-400">${grandTotal.toFixed(2)}</strong></span>
-              <span className="text-gray-500">Labor <strong className="text-purple-400">${laborTotal.toFixed(2)}</strong></span>
-              <span className="text-gray-500">Parts <strong className="text-orange-400">${partsTotal.toFixed(2)}</strong></span>
-            </div>
-          </div>
-
-          {/* Row 2 — Action buttons always full-width, never wrap */}
-          <div className="flex gap-2 px-5 py-3">
-            <Button variant="outline" onClick={onClose}
-              className="border-gray-700 text-gray-300 h-9 text-sm px-4 shrink-0">
-              Cancel
-            </Button>
-            <Button onClick={handleSave} disabled={saving}
-              className="flex-1 bg-sky-500 hover:bg-sky-600 text-white gap-2 h-9 text-sm font-semibold">
-              {saving ? <><Loader2 className="w-4 h-4 animate-spin" />Saving...</> : "Save Estimate"}
-            </Button>
-            {estimate?.id && (
-              <Button
-                onClick={async () => { await handleSave(); setShowCashout(true); }}
-                disabled={saving}
-                className="flex-1 gap-2 h-9 text-sm font-bold shrink-0"
-                style={{ background: "linear-gradient(135deg,#16a34a,#15803d)", color: "#fff", border: "none", boxShadow: "0 2px 12px rgba(22,163,74,0.45)" }}>
-                <CreditCard className="w-4 h-4" /> Cashout
-              </Button>
-            )}
-          </div>
-        </div>
+        <UnifiedFinancialActionBar
+          step={3}
+          dirty
+          totals={{ total: grandTotal, balance: grandTotal - (estimate?.amount_paid || 0) }}
+          saving={saving}
+          saved={estimate}
+          onBack={onClose}
+          onSave={handleSave}
+          onPayment={estimate?.id ? () => setShowCashout(true) : undefined}
+        />
 
         {/* Unified Cashout Dialog */}
         {showCashout && estimate?.id && (

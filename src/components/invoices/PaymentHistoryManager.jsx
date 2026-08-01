@@ -62,29 +62,14 @@ export default function PaymentHistoryManager({ open, onClose, invoice, onSaved 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const combinedMethod = [...new Set(entries.map(e => e.method).filter(Boolean))].join("+") || "cash";
-      const patch = {
-        payment_history: entries.map(({ _key, ...e }) => e), // strip internal _key
-        amount_paid:     totalPaid,
-        balance_due:     balanceDue,
-        status:          newStatus,
-        payment_method:  combinedMethod,
-        paid_date:       newStatus === "paid" ? (invoice.paid_date || new Date().toISOString().split("T")[0]) : null,
-      };
-      await base44.entities.Invoice.update(invoice.id, patch);
-      // Bug 2: Update customer visit stats on payment edit
-      try {
-        if (invoice.customer_id) {
-          const cust = await base44.entities.Customer.get(invoice.customer_id);
-          if (cust) {
-            await base44.entities.Customer.update(cust.id, {
-              total_visits: (cust.total_visits || 0) + 1,
-              last_visit: new Date().toISOString().split("T")[0],
-              last_vehicle_info: invoice.vehicle_info || cust.last_vehicle_info,
-            });
-          }
-        }
-      } catch (e) { console.warn("Customer visit update failed:", e); }
+      await base44.functions.invoke("financialDocumentAction", {
+        action: "replace_payments",
+        source_type: "invoice",
+        source_id: invoice.id,
+        invoice_id: invoice.id,
+        idempotency_key: crypto.randomUUID(),
+        intent: { payment_history: entries.map(({ _key, ...entry }) => entry) },
+      });
       onSaved?.();
       onClose();
     } catch(e) {

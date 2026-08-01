@@ -1,0 +1,7 @@
+import React from "react";
+import { Car, UserRound } from "lucide-react";
+export default function FinancialSourceContext({ data }) {
+  if (!data) return null;
+  const chain = [data.customer?.full_name, [data.vehicle?.year, data.vehicle?.make, data.vehicle?.model].filter(Boolean).join(" "), data.estimate?.estimate_number && `Estimate ${data.estimate.estimate_number}`, data.repair_order?.order_number && `RO ${data.repair_order.order_number}`, data.invoice?.invoice_number && `Invoice ${data.invoice.invoice_number}`].filter(Boolean);
+  return <section className="border-b border-gray-800 bg-gray-900/50 px-4 py-3 md:px-6"><div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">{chain.map((item, i) => <React.Fragment key={item}><span className={i === chain.length - 1 ? "font-semibold text-cyan-300" : "text-gray-300"}>{item}</span>{i < chain.length - 1 && <span>›</span>}</React.Fragment>)}</div><div className="mt-3 grid gap-2 sm:grid-cols-2"><div className="flex items-center gap-2 rounded-lg border border-gray-800 bg-gray-950/70 px-3 py-2"><UserRound className="h-4 w-4 text-sky-400" /><span className="text-sm text-white">{data.customer?.full_name}</span></div><div className="flex items-center gap-2 rounded-lg border border-gray-800 bg-gray-950/70 px-3 py-2"><Car className="h-4 w-4 text-emerald-400" /><span className="text-sm text-white">{chain[1]}</span></div></div></section>;
+}
