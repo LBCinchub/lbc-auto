@@ -1,7 +1,0 @@
-import React from "react";
-import { Car, AlertTriangle, Activity } from "lucide-react";
-import VehicleSelector from "./VehicleSelector";
-import VehicleHero from "./VehicleHero";
-import ActivityTimeline from "./ActivityTimeline";
-
-export default function CarsView({ vehicles,selectedId,onSelect,vehicle,orders,appointments,recommendations,events,onAction,onOpen }) { const activeRecs=recommendations.filter((r)=>!r.is_resolved); return <><VehicleSelector vehicles={vehicles} selectedId={selectedId} onSelect={onSelect}/><VehicleHero vehicle={vehicle} vehicles={vehicles} orders={orders} appointments={appointments} recommendations={recommendations} onAction={onAction}/>{activeRecs.length>0&&<section className="cd-section"><div className="cd-section-heading"><div><span>From your shop</span><h2>Recommendations</h2></div></div><div className="cd-recommendations">{activeRecs.map((r)=><button key={r.id} onClick={()=>onOpen({type:"recommendation",record:r,title:r.title})}><AlertTriangle/><div><strong>{r.title}</strong><span>{r.description||"View recommendation details"}</span></div><b>{r.urgency}</b></button>)}</div></section>}<ActivityTimeline events={events} onOpen={onOpen} onMessage={()=>onAction("message")}/>{events.length===0&&<div className="cd-empty"><Activity/><strong>Vehicle history starts here</strong></div>}</>; }
