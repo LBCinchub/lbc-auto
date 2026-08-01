@@ -4,6 +4,7 @@ import { Search, X, Wrench, Users, Car, FileText, Package, ChevronRight, Clipboa
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/lib/AuthContext";
 
 function highlight(text, query) {
   if (!text || !query) return text;
@@ -136,16 +137,12 @@ function SearchDropdown({ open, style, results, query, typeConfig, getTitle, get
 export default function GlobalSearch() {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
-  const [user, setUser] = useState(null);
+  const { user } = useAuth();
   const [dropdownStyle, setDropdownStyle] = useState({});
   const ref = useRef(null);
   const inputRef = useRef(null);
   const inputContainerRef = useRef(null);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    base44.auth.me().then(setUser);
-  }, []);
 
   // Close on outside click
   useEffect(() => {

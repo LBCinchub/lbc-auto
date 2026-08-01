@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Wrench, CheckCircle2, Clock, Calendar, Car, ChevronRight, AlertTriangle, Package, ScanLine } from "lucide-react";
@@ -15,16 +15,13 @@ import FinancialSummary from "../components/dashboard/FinancialSummary";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import StatusBadge from "../components/shared/StatusBadge";
 import AutoAIBubble from "@/components/shared/AutoAIBubble";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function Dashboard() {
   const [modal, setModal] = useState(null);
   const [selectedAppt, setSelectedAppt] = useState(null);
-  const [user, setUser] = useState(null);
+  const { user } = useAuth();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    base44.auth.me().then(setUser);
-  }, []);
 
   const { data: orders = [] } = useQuery({
     queryKey: ["repairOrders", user?.email],

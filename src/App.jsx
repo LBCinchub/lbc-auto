@@ -246,6 +246,12 @@ const AuthenticatedApp = () => {
     }
   }
 
+  // Never mount protected pages or their data requests without a confirmed session.
+  if (!user) {
+    navigateToLogin();
+    return null;
+  }
+
   // Check trial and subscription status
   if (user) {
     const trialStarted = user.trial_started_date ? new Date(user.trial_started_date) : new Date(user.created_date);

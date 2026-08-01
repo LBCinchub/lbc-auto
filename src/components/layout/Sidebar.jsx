@@ -36,6 +36,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/lib/ThemeContext";
 import GlobalSearch from "@/components/shared/GlobalSearch";
+import { useAuth } from "@/lib/AuthContext";
 
 const navItems = [
   { name: "Dashboard",     icon: LayoutDashboard, page: "Dashboard",       color: "from-sky-500 to-blue-600",      light: "bg-sky-50 text-sky-700 border-sky-200",           dark: "bg-sky-500/15 text-sky-400 border-sky-500/30",       label: "text-sky-400" },
@@ -60,20 +61,15 @@ const navItems = [
 export default function Sidebar({ currentPage }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [user, setUser] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const { user, checkAppState } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const isLight = theme === "light";
 
   useEffect(() => {
-    const loadUser = async () => {
-      const currentUser = await base44.auth.me();
-      setUser(currentUser);
-    };
-    loadUser();
-    window.addEventListener("lbc:settings-saved", loadUser);
-    return () => window.removeEventListener("lbc:settings-saved", loadUser);
-  }, []);
+    window.addEventListener("lbc:settings-saved", checkAppState);
+    return () => window.removeEventListener("lbc:settings-saved", checkAppState);
+  }, [checkAppState]);
 
   // Poll unread chat messages every 30s
   useEffect(() => {
