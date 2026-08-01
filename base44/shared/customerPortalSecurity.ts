@@ -1,13 +1,13 @@
 import { secrets } from "base44:runtime";
+import { listAllRecords } from "./entityPagination.ts";
+import { classifyRelatedOwnership } from "./legacyPortalMigration.ts";
+import { normalizePortalTenant } from "./portalIdentity.ts";
 
 export const GENERIC_AUTH_ERROR = "Invalid credentials or access unavailable";
 const PASSCODE_ITERATIONS = 100000;
 const encoder = new TextEncoder();
 
-export function normalizeTenantEmail(value) {
-  const email = String(value || "").trim().toLowerCase();
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : "";
-}
+export const normalizeTenantEmail = normalizePortalTenant;
 
 export function normalizePhone(value) {
   let digits = String(value || "").replace(/\D/g, "");
@@ -102,9 +102,18 @@ export async function assertCustomerTenantOwnership(sr, customerId, tenantEmail)
   const customer = await sr.entities.Customer.get(customerId);
   if (!customer) throw new Error("AUTHORIZATION_DENIED");
   const explicit = normalizeTenantEmail(customer.shop_owner_email);
-  const creator = normalizeTenantEmail(customer.created_by);
-  if (explicit && creator && explicit !== creator) throw new Error("AUTHORIZATION_DENIED");
-  const owner = explicit || creator;
+  let creator = normalizeTenantEmail(customer.created_by);
+  if (!creator && customer.created_by_id) {
+    const creatorUser = await sr.entities.User.get(customer.created_by_id);
+    const isShopProfile = creatorUser && (creatorUser.business_name || creatorUser.subscription_status || creatorUser.trial_started_date || creatorUser.setup_fee_paid || creatorUser.plan_tier);
+    if (isShopProfile) creator = normalizeTenantEmail(creatorUser.email);
+  }
+  let owner = explicit || creator;
+  if (explicit && creator && explicit !== creator) {
+    const resolutions = await sr.entities.PortalOwnershipResolution.filter({ customer_id: customerId, resolved_tenant: tenant, active: true }, "-resolved_at", 2);
+    if (resolutions.length !== 1) throw new Error("AUTHORIZATION_DENIED");
+    owner = normalizeTenantEmail(resolutions[0].resolved_tenant);
+  }
   if (!owner || owner !== tenant) throw new Error("AUTHORIZATION_DENIED");
   return customer;
 }
@@ -113,11 +122,14 @@ export async function findTenantCustomersByPhone(sr, tenantEmail, phone) {
   const tenant = normalizeTenantEmail(tenantEmail);
   const normalizedPhone = normalizePhone(phone);
   if (!tenant || !normalizedPhone) return [];
-  const [explicit, legacy] = await Promise.all([
-    sr.entities.Customer.filter({ shop_owner_email: tenant }, "-created_date", 500),
-    sr.entities.Customer.filter({ created_by: tenant }, "-created_date", 500),
+  const tenantUsers = await sr.entities.User.filter({ email: tenant }, null, 10);
+  const creatorIds = tenantUsers.map((user) => user.id);
+  const [explicit, legacyEmail, legacyId] = await Promise.all([
+    listAllRecords(sr.entities.Customer, { shop_owner_email: tenant }, "-created_date"),
+    listAllRecords(sr.entities.Customer, { created_by: tenant }, "-created_date"),
+    creatorIds.length ? listAllRecords(sr.entities.Customer, { created_by_id: { $in: creatorIds } }, "-created_date") : [],
   ]);
-  const unique = new Map([...explicit, ...legacy].map((customer) => [customer.id, customer]));
+  const unique = new Map([...explicit, ...legacyEmail, ...legacyId].map((customer) => [customer.id, customer]));
   const matches = [];
   for (const customer of unique.values()) {
     if (normalizePhone(customer.phone) !== normalizedPhone) continue;
@@ -202,34 +214,61 @@ function pick(record, keys) {
 export async function buildCustomerPortalData(sr, customer, tenantEmail) {
   const tenant = normalizeTenantEmail(tenantEmail);
   const customerId = customer.id;
-  const [shops, vehicles, orders, invoices, estimates, appointments, messages, notifications, offers, recommendations, reviews, diagnostics] = await Promise.all([
-    sr.entities.User.filter({ email: tenant }, null, 1),
-    sr.entities.Vehicle.filter({ customer_id: customerId, shop_owner_email: tenant }, "-created_date", 50),
-    sr.entities.RepairOrder.filter({ customer_id: customerId, created_by: tenant }, "-created_date", 100),
-    sr.entities.Invoice.filter({ customer_id: customerId, created_by: tenant }, "-created_date", 100),
-    sr.entities.Estimate.filter({ customer_id: customerId, created_by: tenant }, "-created_date", 100),
-    sr.entities.Appointment.filter({ customer_id: customerId, shop_email: tenant }, "-date", 100),
-    sr.entities.CustomerMessage.filter({ customer_id: customerId, shop_owner_email: tenant }, "sent_at", 200),
-    sr.entities.CustomerNotification.filter({ customer_id: customerId, shop_owner_email: tenant }, "-sent_at", 100),
-    sr.entities.ShopOffer.filter({ shop_owner_email: tenant, is_active: true }, "-created_date", 50),
-    sr.entities.CarRecommendation.filter({ customer_id: customerId, shop_owner_email: tenant }, "-created_date", 50),
-    sr.entities.CustomerReview.filter({ customer_id: customerId, shop_owner_email: tenant }, "-created_date", 10),
-    sr.entities.DiagnosticScan.filter({ customer_id: customerId, shop_owner_email: tenant }, "-scan_timestamp", 50),
+  const [vehiclesRaw, tenantUsers] = await Promise.all([listAllRecords(sr.entities.Vehicle, { customer_id: customerId }), sr.entities.User.filter({ email: tenant }, null, 10)]);
+  const ownership = new Map([[customerId, { status: "safe", tenant }]]);
+  const baseContext = { Customer: new Map([[customerId, customer]]), Vehicle: new Map(vehiclesRaw.map((row) => [row.id, row])), RepairOrder: new Map(), Estimate: new Map(), Invoice: new Map(), UserById: new Map(tenantUsers.map((user) => [user.id, tenant])) };
+  const vehicles = vehiclesRaw.filter((record) => ["safe", "backfill"].includes(classifyRelatedOwnership("Vehicle", record, baseContext, ownership).status));
+  const vehicleIds = vehicles.map((item) => item.id);
+  const relatedQuery = (extra = []) => ({ $or: [{ customer_id: customerId }, ...(vehicleIds.length ? [{ vehicle_id: { $in: vehicleIds } }] : []), ...extra] });
+  const [ordersRaw, estimatesRaw, appointmentsRaw, messagesRaw, notificationsRaw, recommendationsRaw, reviewsRaw, diagnosticsInitial] = await Promise.all([
+    listAllRecords(sr.entities.RepairOrder, relatedQuery()),
+    listAllRecords(sr.entities.Estimate, relatedQuery()),
+    listAllRecords(sr.entities.Appointment, relatedQuery(), "date"),
+    listAllRecords(sr.entities.CustomerMessage, { customer_id: customerId }, "sent_at"),
+    listAllRecords(sr.entities.CustomerNotification, { customer_id: customerId }, "sent_at"),
+    listAllRecords(sr.entities.CarRecommendation, relatedQuery()),
+    listAllRecords(sr.entities.CustomerReview, { customer_id: customerId }),
+    listAllRecords(sr.entities.DiagnosticScan, relatedQuery(), "scan_timestamp"),
   ]);
-  const shop = shops[0] || {};
+  const estimateIds = estimatesRaw.map((item) => item.id);
+  const ordersLinked = estimateIds.length ? await listAllRecords(sr.entities.RepairOrder, { estimate_id: { $in: estimateIds } }) : [];
+  const allOrdersRaw = [...ordersRaw, ...ordersLinked];
+  const orderIds = allOrdersRaw.map((item) => item.id);
+  const invoiceExtra = [...(orderIds.length ? [{ repair_order_id: { $in: orderIds } }] : []), ...(estimateIds.length ? [{ estimate_id: { $in: estimateIds } }] : [])];
+  const invoicesRaw = await listAllRecords(sr.entities.Invoice, relatedQuery(invoiceExtra));
+  const invoiceIds = invoicesRaw.map((item) => item.id);
+  const diagnosticExtra = [...(orderIds.length ? [{ repair_order_id: { $in: orderIds } }] : []), ...(estimateIds.length ? [{ estimate_id: { $in: estimateIds } }] : [])];
+  const diagnosticsLinked = diagnosticExtra.length ? await listAllRecords(sr.entities.DiagnosticScan, { $or: diagnosticExtra }, "scan_timestamp") : [];
+  const unique = (rows) => [...new Map(rows.map((row) => [row.id, row])).values()];
+  const context = { ...baseContext, RepairOrder: new Map(allOrdersRaw.map((row) => [row.id, row])), Estimate: new Map(estimatesRaw.map((row) => [row.id, row])), Invoice: new Map(invoicesRaw.map((row) => [row.id, row])) };
+  const safe = (name, rows) => unique(rows).filter((record) => {
+    const result = classifyRelatedOwnership(name, record, context, ownership);
+    return ["safe", "backfill"].includes(result.status) && result.customerId === customerId;
+  });
+  const orders = safe("RepairOrder", allOrdersRaw);
+  const estimates = safe("Estimate", estimatesRaw);
+  const invoices = safe("Invoice", invoicesRaw);
+  const appointments = safe("Appointment", appointmentsRaw);
+  const messages = safe("CustomerMessage", messagesRaw);
+  const notifications = safe("CustomerNotification", notificationsRaw);
+  const recommendations = safe("CarRecommendation", recommendationsRaw);
+  const reviews = safe("CustomerReview", reviewsRaw);
+  const diagnostics = safe("DiagnosticScan", [...diagnosticsInitial, ...diagnosticsLinked]);
+  const offers = await listAllRecords(sr.entities.ShopOffer, { shop_owner_email: tenant, is_active: true });
+  const shop = tenantUsers[0] || {};
   return {
     customer: pick(customer, ["id", "full_name"]),
     shop: pick(shop, ["business_name", "phone", "address", "city", "province", "logo_url", "google_review_link"]),
-    vehicles: vehicles.map((v) => pick(v, ["id", "year", "make", "model", "trim", "vin", "license_plate", "engine_type", "fuel_type", "drive_type", "color", "mileage", "mileage_history", "intake_photos", "last_service_date"])),
-    orders: orders.map((r) => pick(r, ["id", "order_number", "vehicle_id", "vehicle_info", "description", "status", "total_cost", "estimated_completion", "created_date"])),
-    invoices: invoices.map((r) => pick(r, ["id", "invoice_number", "vehicle_id", "vehicle_info", "total", "amount_paid", "balance_due", "status", "due_date", "paid_date", "customer_note", "line_items", "created_date"])),
-    estimates: estimates.map((r) => pick(r, ["id", "estimate_number", "vehicle_id", "vehicle_info", "status", "grand_total", "valid_until", "service_reason", "labor_items", "parts_items", "created_date"])),
-    appointments: appointments.map((r) => pick(r, ["id", "vehicle_id", "vehicle_info", "service_type", "date", "time_slot", "status", "created_date"])),
-    messages: messages.map((r) => pick(r, ["id", "sender", "message", "read_by_customer", "read_by_shop", "sent_at"])),
-    notifications: notifications.map((r) => pick(r, ["id", "type", "title", "body", "is_read", "action_url", "sent_at"])),
+    vehicles: vehicles.map((v) => pick(v, ["id", "customer_id", "year", "make", "model", "trim", "vin", "license_plate", "engine_type", "fuel_type", "drive_type", "color", "mileage", "mileage_history", "intake_photos", "last_service_date"])),
+    orders: orders.map((r) => pick(r, ["id", "customer_id", "vehicle_id", "estimate_id", "order_number", "vehicle_info", "description", "status", "estimated_completion", "created_date"])),
+    invoices: invoices.map((r) => pick(r, ["id", "customer_id", "vehicle_id", "repair_order_id", "estimate_id", "invoice_number", "vehicle_info", "total", "amount_paid", "balance_due", "status", "due_date", "paid_date", "customer_note", "payment_history", "line_items", "created_date"])),
+    estimates: estimates.map((r) => pick(r, ["id", "customer_id", "vehicle_id", "linked_invoice_id", "linked_invoice_number", "estimate_number", "vehicle_info", "status", "auth_status", "grand_total", "amount_paid", "payment_history", "valid_until", "service_reason", "labor_items", "parts_items", "created_date"])),
+    appointments: appointments.map((r) => pick(r, ["id", "customer_id", "vehicle_id", "vehicle_info", "service_type", "date", "time_slot", "status", "created_date"])),
+    messages: messages.map((r) => pick(r, ["id", "customer_id", "sender", "message", "read_by_customer", "read_by_shop", "sent_at"])),
+    notifications: notifications.map((r) => pick(r, ["id", "customer_id", "type", "title", "body", "is_read", "action_url", "sent_at"])),
     offers: offers.map((r) => ({ ...pick(r, ["id", "shop_name", "title", "description", "image_url", "valid_until", "reactions", "created_date"]), comments: (r.comments || []).map((c) => pick(c, ["customer_name", "text", "created_at"])) })),
-    recommendations: recommendations.map((r) => pick(r, ["id", "vehicle_id", "vehicle_info", "title", "description", "urgency", "estimated_cost", "is_resolved", "created_date"])),
-    reviews: reviews.map((r) => pick(r, ["id", "rating", "review_text", "is_published", "shop_reply", "shop_replied_at", "created_date"])),
-    diagnostics: diagnostics.map((r) => pick(r, ["id", "vehicle_id", "vehicle_info", "scan_timestamp", "dtc_codes", "status", "created_date"])),
+    recommendations: recommendations.map((r) => pick(r, ["id", "customer_id", "vehicle_id", "vehicle_info", "title", "description", "urgency", "estimated_cost", "is_resolved", "created_date"])),
+    reviews: reviews.map((r) => pick(r, ["id", "customer_id", "rating", "review_text", "is_published", "shop_reply", "shop_replied_at", "created_date"])),
+    diagnostics: diagnostics.map((r) => pick(r, ["id", "customer_id", "vehicle_id", "repair_order_id", "estimate_id", "vehicle_info", "scan_timestamp", "dtc_codes", "status", "created_date"])),
   };
 }

@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import PageHeader from "@/components/shared/PageHeader";
 import { MessageSquare, Mail, Bell, Upload, Sparkles, X, Loader2 } from "lucide-react";
 import { useTheme } from "@/lib/ThemeContext";
+import LegacyPortalMigrationPanel from "@/components/settings/LegacyPortalMigrationPanel";
 
 const NOTIF_SETTINGS = [
   {
@@ -318,6 +319,8 @@ export default function Settings() {
             <p className={`${theme === "light" ? "text-gray-700" : "text-gray-400"} text-sm`}><strong>Email:</strong> {user?.email}</p>
           </div>
         </div>
+
+        {user?.role === "admin" && <LegacyPortalMigrationPanel />}
 
         {/* Notification Preferences */}
         <div className={`${theme === "light" ? "bg-white border-gray-200" : "bg-gray-900 border-gray-800"} border rounded-lg p-6`}>

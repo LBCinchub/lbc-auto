@@ -1,0 +1,65 @@
+{
+  "name": "PortalOwnershipResolution",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string"
+    },
+    "resolved_tenant": {
+      "type": "string",
+      "format": "email"
+    },
+    "resolution_type": {
+      "type": "string",
+      "enum": [
+        "confirm_explicit",
+        "confirm_creator",
+        "assign_current_shop"
+      ]
+    },
+    "resolved_by": {
+      "type": "string",
+      "format": "email"
+    },
+    "resolved_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "customer_id",
+    "resolved_tenant",
+    "resolution_type",
+    "resolved_by",
+    "resolved_at"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "portal_security_service"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "portal_security_service"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "portal_security_service"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "portal_security_service"
+      }
+    }
+  }
+}

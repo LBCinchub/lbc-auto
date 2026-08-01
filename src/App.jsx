@@ -37,6 +37,7 @@ import Diagnostics from './pages/Diagnostics';
 import ChatInbox from './pages/ChatInbox';
 import Alignment from './pages/Alignment';
 import OnboardingFlow from './components/onboarding/OnboardingFlow';
+import CustomerPortalSecurityAnnouncement from './components/shared/CustomerPortalSecurityAnnouncement';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -279,8 +280,9 @@ const AuthenticatedApp = () => {
   // Render the main app
   return (
     <>
-      {/* One-time update notification */}
+      {/* One-time update notifications for authenticated shop owners */}
       {user && <UpdateBanner user={user} />}
+      {user && <CustomerPortalSecurityAnnouncement />}
 
       <Routes>
         <Route path="/" element={

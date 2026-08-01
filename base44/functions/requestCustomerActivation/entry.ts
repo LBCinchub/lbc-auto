@@ -28,8 +28,9 @@ export default async function(req) {
     const code = randomActivationCode();
     const shops = await sr.entities.User.filter({ email: tenant }, null, 1);
     const sent = await sendActivationSms(phone, code, shops[0]?.business_name || "Your auto shop");
-    await sr.entities.PortalActivationCode.create({ customer_id: customer.id, shop_owner_email: tenant, code_hash: await sha256(code), created_at: new Date().toISOString(), expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(), issued_by: "customer_request", delivery_method: sent ? "sms" : "shop_issued", attempts: 0, revoked: false });
-    await auditEvent(sr, req, "activation_code_issued", { customerId: customer.id, shopOwnerEmail: tenant, metadata: { delivery_method: sent ? "sms" : "shop_issued", phone_hash: phoneHash, ip_hash: ipHash } });
+    if (!sent) return Response.json(GENERIC);
+    await sr.entities.PortalActivationCode.create({ customer_id: customer.id, shop_owner_email: tenant, code_hash: await sha256(code), created_at: new Date().toISOString(), expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(), issued_by: "customer_request", delivery_method: "sms", attempts: 0, revoked: false });
+    await auditEvent(sr, req, "activation_code_issued", { customerId: customer.id, shopOwnerEmail: tenant, metadata: { delivery_method: "sms", phone_hash: phoneHash, ip_hash: ipHash } });
     return Response.json(GENERIC);
   } catch {
     return Response.json(GENERIC);

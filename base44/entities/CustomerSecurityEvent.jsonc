@@ -17,7 +17,10 @@
         "estimate_decision",
         "message_sent",
         "contact_updated",
-        "authorization_denied"
+        "authorization_denied",
+        "migration_summary",
+        "migration_conflict",
+        "ownership_resolved"
       ]
     },
     "customer_id": {

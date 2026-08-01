@@ -1,5 +1,5 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.40";
-import { assertCustomerTenantOwnership, auditEvent, normalizeTenantEmail, randomActivationCode, revokeSessions, sha256 } from "../../shared/customerPortalSecurity.ts";
+import { assertCustomerTenantOwnership, auditEvent, normalizePhone, normalizeTenantEmail, randomActivationCode, revokeSessions, sha256 } from "../../shared/customerPortalSecurity.ts";
 
 export default async function(req) {
   try {
@@ -15,9 +15,10 @@ export default async function(req) {
     const record = records[0] || null;
     if (action === "status") {
       const sessions = await sr.entities.CustomerPortalSession.filter({ customer_id: customer.id, shop_owner_email: tenant, revoked: false }, "-created_at", 500);
-      return Response.json({ enabled: record ? record.portal_access_enabled !== false : false, configured: Boolean(record), failed_attempts: record?.failed_attempts || 0, locked_until: record?.locked_until && new Date(record.locked_until).getTime() > Date.now() ? record.locked_until : null, active_sessions: sessions.filter((s) => new Date(s.expires_at).getTime() > Date.now()).length });
+      return Response.json({ enabled: record ? record.portal_access_enabled !== false : false, configured: Boolean(record), activation_required: !record, eligible_for_activation: Boolean(normalizePhone(customer.phone)), failed_attempts: record?.failed_attempts || 0, locked_until: record?.locked_until && new Date(record.locked_until).getTime() > Date.now() ? record.locked_until : null, active_sessions: sessions.filter((s) => new Date(s.expires_at).getTime() > Date.now()).length });
     }
     if (action === "issue_shop_code") {
+      if (!normalizePhone(customer.phone)) return Response.json({ error: "A valid customer phone is required" }, { status: 400 });
       const code = randomActivationCode();
       const now = new Date();
       await sr.entities.PortalActivationCode.create({ customer_id: customer.id, shop_owner_email: tenant, code_hash: await sha256(code), created_at: now.toISOString(), expires_at: new Date(now.getTime() + 10 * 60 * 1000).toISOString(), issued_by: user.email, delivery_method: "shop_issued", attempts: 0, revoked: false });
