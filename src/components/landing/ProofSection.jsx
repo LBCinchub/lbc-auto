@@ -1,0 +1,5 @@
+import React from "react";
+import { Bot, CarFront, FileStack, LayoutDashboard, ShieldCheck, Wrench } from "lucide-react";
+import { proofItems } from "./landingData";
+const icons=[LayoutDashboard,CarFront,FileStack,Wrench,ShieldCheck,Bot];
+export default function ProofSection(){return <section className="lp-section"><div className="lp-container"><div className="lp-section-head"><span className="lp-eyebrow">FEATURE PROOF</span><h2>One system, built around real shop work.</h2></div><div className="lp-proof-grid">{proofItems.map(([title,lead,copy],i)=>{const Icon=icons[i];return <article key={title}><div><Icon/><span>{String(i+1).padStart(2,"0")}</span></div><h3>{title}</h3><strong>{lead}</strong><p>{copy}</p><div className="lp-proof-sample"><i/><i/><i/><span>DEMO INTERFACE</span></div></article>})}</div></div></section>;}
