@@ -96,9 +96,49 @@ export async function auditEvent(sr, req, eventType, details = {}) {
   await sr.entities.CustomerSecurityEvent.create(payload);
 }
 
+export async function customerIsQuarantined(sr, customerId) {
+  if (!customerId) return false;
+  const records = await sr.entities.PortalOwnershipQuarantine.filter({ customer_id: customerId, active: true }, "-created_at", 1);
+  return records.length > 0;
+}
+
+export async function assertCustomerNotQuarantined(sr, customerId) {
+  if (await customerIsQuarantined(sr, customerId)) throw new Error("CUSTOMER_HARD_QUARANTINED");
+}
+
+export async function resolveCustomerFromEvidence(sr, req, customer, evidence, actorEmail) {
+  const tenant = normalizeTenantEmail(evidence.supported_tenant);
+  if (!tenant || evidence.tenants.length !== 1 || evidence.relationship_conflicts.length) throw new Error("AUTHORITATIVE_EVIDENCE_REQUIRED");
+  await sr.entities.Customer.update(customer.id, { shop_owner_email: tenant });
+  const active = await sr.entities.PortalOwnershipResolution.filter({ customer_id: customer.id, active: true }, "-resolved_at", 50);
+  if (active.length) await sr.entities.PortalOwnershipResolution.bulkUpdate(active.map((item) => ({ id: item.id, active: false })));
+  await sr.entities.PortalOwnershipResolution.create({ customer_id: customer.id, resolved_tenant: tenant, resolution_type: "relationship_evidence", resolved_by: normalizeTenantEmail(actorEmail), resolved_at: new Date().toISOString(), active: true });
+  const quarantines = await sr.entities.PortalOwnershipQuarantine.filter({ customer_id: customer.id, active: true }, "-created_at", 50);
+  if (quarantines.length) await sr.entities.PortalOwnershipQuarantine.bulkUpdate(quarantines.map((item) => ({ id: item.id, active: false, reviewed_at: new Date().toISOString() })));
+  await auditEvent(sr, req, "ownership_resolved", { customerId: customer.id, shopOwnerEmail: tenant, metadata: { action: "relationship_evidence", evidence: evidence.evidence_summary } });
+  return tenant;
+}
+
+export async function hardQuarantineCustomer(sr, req, customerId, reason, evidenceSummary, actorEmail, reviewNotes = "") {
+  const now = new Date().toISOString();
+  const active = await sr.entities.PortalOwnershipQuarantine.filter({ customer_id: customerId, active: true }, "-created_at", 50);
+  const payload = { reason, evidence_summary: evidenceSummary, active: true, reviewed_at: null, review_notes: String(reviewNotes || "").slice(0, 1000) || null };
+  if (active.length) {
+    await sr.entities.PortalOwnershipQuarantine.update(active[0].id, payload);
+    if (active.length > 1) await sr.entities.PortalOwnershipQuarantine.bulkUpdate(active.slice(1).map((item) => ({ id: item.id, active: false, reviewed_at: now })));
+  } else await sr.entities.PortalOwnershipQuarantine.create({ customer_id: customerId, ...payload, created_at: now, created_by_admin: normalizeTenantEmail(actorEmail) });
+  const [sessions, passcodes] = await Promise.all([listAllRecords(sr.entities.CustomerPortalSession, { customer_id: customerId, revoked: false }), listAllRecords(sr.entities.CustomerPasscode, { customer_id: customerId })]);
+  if (sessions.length) await sr.entities.CustomerPortalSession.bulkUpdate(sessions.map((item) => ({ id: item.id, revoked: true, revoked_at: now })));
+  const enabled = passcodes.filter((item) => item.portal_access_enabled !== false);
+  if (enabled.length) await sr.entities.CustomerPasscode.bulkUpdate(enabled.map((item) => ({ id: item.id, portal_access_enabled: false, updated_at: now })));
+  await auditEvent(sr, req, "authorization_denied", { customerId, shopOwnerEmail: normalizeTenantEmail(actorEmail), metadata: { action: "hard_quarantine", reason } });
+  return { sessions_revoked: sessions.length, passcodes_disabled: enabled.length };
+}
+
 export async function assertCustomerTenantOwnership(sr, customerId, tenantEmail) {
   const tenant = normalizeTenantEmail(tenantEmail);
   if (!customerId || !tenant) throw new Error("AUTHORIZATION_DENIED");
+  await assertCustomerNotQuarantined(sr, customerId);
   const customer = await sr.entities.Customer.get(customerId);
   if (!customer) throw new Error("AUTHORIZATION_DENIED");
   const explicit = normalizeTenantEmail(customer.shop_owner_email);
@@ -172,6 +212,7 @@ export async function revokeSessions(sr, customerId, tenantEmail, exceptSessionI
 }
 
 export async function issueSession(sr, req, customerId, tenantEmail) {
+  await assertCustomerNotQuarantined(sr, customerId);
   const token = randomToken(32);
   const sessionId = randomToken(24);
   const now = new Date();

@@ -1,5 +1,6 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.40";
 import { classifyCustomerOwnership, classifyRelatedOwnership } from "../../shared/legacyPortalMigration.ts";
+import { evaluateEvidence, verifiedBatchPlan } from "../../shared/portalOwnershipEvidence.ts";
 import { assertCustomerTenantOwnership, buildCustomerPortalData, hashPasscode, normalizeTenantEmail, sha256, verifyPasscode } from "../../shared/customerPortalSecurity.ts";
 
 export default async function(req) {
@@ -38,6 +39,13 @@ export default async function(req) {
     const first = classifyCustomerOwnership({ ...legacy }, tenants);
     const second = classifyCustomerOwnership({ ...legacy, shop_owner_email: first.tenant }, tenants);
     test("migration plan is idempotent after deterministic backfill", first.status === "backfill" && second.status === "safe");
+    const oneTenant = evaluateEvidence([{ tenant: shopA }, { tenant: shopA }]);
+    test("relationship evidence resolves exactly one registered tenant", oneTenant.supported_tenant === shopA);
+    const conflictingEvidence = evaluateEvidence([{ tenant: shopA }, { tenant: shopB }]);
+    test("conflicting relationship evidence blocks assignment", conflictingEvidence.supported_tenant === "");
+    test("verified batch dry run plans changes without mutation", verifiedBatchPlan("unresolved", "hard_quarantined") === "hard_quarantined" && JSON.stringify(financial) === before);
+    test("verified batch apply plan is idempotent", verifiedBatchPlan("hard_quarantined", "hard_quarantined") === "untouched" && verifiedBatchPlan("relationship_evidence", "relationship_evidence") === "untouched");
+    test("verified ownership operations preserve financial and service values", JSON.stringify(financial) === before);
     const body = await req.json().catch(() => ({}));
     if (body.live === true) {
       const base44 = createClientFromRequest(req);

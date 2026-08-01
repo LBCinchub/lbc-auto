@@ -1,46 +1,53 @@
 {
-  "name": "PortalOwnershipResolution",
+  "name": "PortalOwnershipQuarantine",
   "type": "object",
   "properties": {
     "customer_id": {
       "type": "string"
     },
-    "resolved_tenant": {
-      "type": "string",
-      "format": "email"
-    },
-    "resolution_type": {
+    "reason": {
       "type": "string",
       "enum": [
-        "confirm_explicit",
-        "confirm_creator",
-        "assign_current_shop",
-        "relationship_evidence",
-        "hard_quarantine"
+        "no_authoritative_tenant_evidence",
+        "conflicting_tenant_evidence",
+        "test_or_anonymous_record",
+        "manual_security_hold"
       ]
     },
-    "resolved_by": {
-      "type": "string",
-      "format": "email"
+    "evidence_summary": {
+      "type": "object"
     },
-    "resolved_at": {
+    "created_at": {
       "type": "string",
       "format": "date-time"
+    },
+    "created_by_admin": {
+      "type": "string",
+      "format": "email"
     },
     "active": {
       "type": "boolean",
       "default": true
     },
-    "notes": {
-      "type": "string"
+    "reviewed_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "review_notes": {
+      "type": [
+        "string",
+        "null"
+      ]
     }
   },
   "required": [
     "customer_id",
-    "resolved_tenant",
-    "resolution_type",
-    "resolved_by",
-    "resolved_at"
+    "reason",
+    "created_at",
+    "created_by_admin"
   ],
   "rls": {
     "read": {

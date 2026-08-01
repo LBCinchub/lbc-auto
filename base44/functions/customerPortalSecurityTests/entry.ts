@@ -1,4 +1,4 @@
-import { assertCustomerTenantOwnership, hashPasscode, normalizePhone, normalizeTenantEmail, projectSafeRecord, randomToken, requireCustomerSession, sessionIsActive, sha256, validateNewPasscode, verifyPasscode } from "../../shared/customerPortalSecurity.ts";
+import { assertCustomerTenantOwnership, findTenantCustomersByPhone, hardQuarantineCustomer, hashPasscode, normalizePhone, normalizeTenantEmail, projectSafeRecord, randomToken, requireCustomerSession, sessionIsActive, sha256, validateNewPasscode, verifyPasscode } from "../../shared/customerPortalSecurity.ts";
 
 export default async function() {
   try {
@@ -24,6 +24,7 @@ export default async function() {
     const makeMock = (session) => ({ asServiceRole: { entities: {
       CustomerPortalSession: { filter: async () => [session], update: async () => ({}) },
       CustomerPasscode: { filter: async () => [{ portal_access_enabled: true }] },
+      PortalOwnershipQuarantine: { filter: async () => [] },
       Customer: { get: async () => ({ id: "customer-a", shop_owner_email: tenant }) },
     } } });
     const request = new Request("https://test.local", { method: "POST", headers: { Authorization: "Bearer opaque-test-token", "Content-Type": "application/json" }, body: JSON.stringify({ customer_id: "forged-customer-b", shop_email: "other@example.com" }) });
@@ -36,8 +37,30 @@ export default async function() {
     const derived = await requireCustomerSession(makeMock({ id: "session-record", session_id: "safe-session-id", customer_id: "customer-a", shop_owner_email: tenant, revoked: false, expires_at: new Date(now + 10000).toISOString() }), request);
     test("forged payload identity is ignored", derived.session.customer_id === "customer-a" && derived.session.shop_owner_email === tenant);
     let tenantDenied = false;
-    try { await assertCustomerTenantOwnership({ entities: { Customer: { get: async () => ({ id: "customer-b", shop_owner_email: "other@example.com" }) } } }, "customer-b", tenant); } catch { tenantDenied = true; }
+    try { await assertCustomerTenantOwnership({ entities: { PortalOwnershipQuarantine: { filter: async () => [] }, Customer: { get: async () => ({ id: "customer-b", shop_owner_email: "other@example.com" }) } } }, "customer-b", tenant); } catch { tenantDenied = true; }
     test("cross-tenant customer ownership denied", tenantDenied);
+    const quarantinedCustomer = { id: "customer-a", phone: "6135550199", shop_owner_email: tenant };
+    const quarantinedSr = { entities: { PortalOwnershipQuarantine: { filter: async () => [{ id: "q1", active: true }] }, Customer: { get: async () => quarantinedCustomer } } };
+    const lookupSr = { entities: { ...quarantinedSr.entities, User: { filter: async () => [{ id: "u1" }] }, Customer: { ...quarantinedSr.entities.Customer, filter: async () => [quarantinedCustomer] } } };
+    const quarantinedMatches = await findTenantCustomersByPhone(lookupSr, tenant, "6135550199");
+    test("active quarantine blocks activation and login lookup", quarantinedMatches.length === 0);
+    let setupDenied = false;
+    try { await assertCustomerTenantOwnership(quarantinedSr, "customer-a", tenant); } catch { setupDenied = true; }
+    test("active quarantine blocks passcode setup", setupDenied);
+    const quarantinedSession = makeMock({ id: "session-record", customer_id: "customer-a", shop_owner_email: tenant, revoked: false, expires_at: new Date(now + 10000).toISOString() });
+    quarantinedSession.asServiceRole.entities.PortalOwnershipQuarantine.filter = async () => [{ id: "q1", active: true }];
+    let sessionDenied = false;
+    try { await requireCustomerSession(quarantinedSession, request); } catch { sessionDenied = true; }
+    test("active quarantine blocks session validation and portal data", sessionDenied);
+    const writes = { sessions: [], passcodes: [] };
+    const quarantineMock = { entities: {
+      PortalOwnershipQuarantine: { filter: async () => [], create: async () => ({ id: "q1" }) },
+      CustomerPortalSession: { filter: async () => [{ id: "s1" }], bulkUpdate: async (rows) => { writes.sessions.push(...rows); } },
+      CustomerPasscode: { filter: async () => [{ id: "p1", portal_access_enabled: true }], bulkUpdate: async (rows) => { writes.passcodes.push(...rows); } },
+      CustomerSecurityEvent: { create: async () => ({}) },
+    } };
+    await hardQuarantineCustomer(quarantineMock, new Request("https://test.local"), "customer-a", "no_authoritative_tenant_evidence", { tenants: [] }, tenant, "test");
+    test("quarantine revokes sessions and disables passcodes", writes.sessions[0]?.revoked === true && writes.passcodes[0]?.portal_access_enabled === false);
     const safe = projectSafeRecord({ id: "1", status: "paid", technician_notes: "private", discount: 99, cost_price: 10, customer_id: "secret" }, ["id", "status"]);
     test("customer response strips internal fields", safe.id === "1" && safe.status === "paid" && !("technician_notes" in safe) && !("discount" in safe) && !("cost_price" in safe) && !("customer_id" in safe));
     return Response.json({ passed: checks.every((item) => item.pass), checks });

@@ -1,5 +1,6 @@
 import { normalizePortalTenant as normalizeTenantEmail } from "./portalIdentity.ts";
 import { listAllRecords } from "./entityPagination.ts";
+import { summarizeLoadedTenantEvidence } from "./portalOwnershipEvidence.ts";
 export const RELATED_CONFIG = {
   Vehicle: { tenantField: "shop_owner_email" },
   RepairOrder: { authority: "created_by" },
@@ -75,22 +76,32 @@ function chunks(items, size = 500) {
 
 export async function runLegacyOwnershipScan(sr, mode = "dry_run", actorEmail = "") {
   const entityNames = ["Customer", ...Object.keys(RELATED_CONFIG)];
-  const [users, resolutions, ...sets] = await Promise.all([listAllRecords(sr.entities.User), listAllRecords(sr.entities.PortalOwnershipResolution), ...entityNames.map((name) => listAllRecords(sr.entities[name]))]);
+  const users = await listAllRecords(sr.entities.User);
+  const resolutions = await listAllRecords(sr.entities.PortalOwnershipResolution);
+  const quarantines = await listAllRecords(sr.entities.PortalOwnershipQuarantine);
+  const sets = [];
+  for (const name of entityNames) sets.push(await listAllRecords(sr.entities[name]));
   const shopUsers = users.filter((user) => user.business_name || user.subscription_status || user.trial_started_date || user.setup_fee_paid || user.plan_tier);
   const validTenants = new Set(shopUsers.map((user) => normalizeTenantEmail(user.email)).filter(Boolean));
   const creatorById = new Map(shopUsers.map((user) => [user.id, normalizeTenantEmail(user.email)]));
   const resolutionMap = new Map(resolutions.filter((item) => item.active).map((item) => [item.customer_id, item]));
+  const quarantineIds = new Set(quarantines.filter((item) => item.active).map((item) => item.customer_id));
   const data = Object.fromEntries(entityNames.map((name, index) => [name, sets[index]]));
   const context = { ...Object.fromEntries(entityNames.map((name) => [name, new Map(data[name].map((row) => [row.id, row]))])), UserById: creatorById };
   const ownership = new Map();
   const report = {
     mode, total_customers_scanned: data.Customer.length, safe_already_scoped: 0,
     deterministic_customer_ownership_backfills: 0, related_record_ownership_backfills: {},
-    ambiguous_customer_ids: [], unscoped_customer_ids: [], conflicting_related_records: [],
+    ambiguous_customer_ids: [], hard_quarantined_customer_ids: [], unresolved_unscoped_customer_ids: [], conflicting_related_records: [],
     orphaned_relationships: [], skipped_records: [], applied_updates: 0,
   };
   const customerUpdates = [];
   for (const customer of data.Customer) {
+    if (quarantineIds.has(customer.id)) {
+      ownership.set(customer.id, { status: "hard_quarantined", reason: "active_hard_quarantine" });
+      report.hard_quarantined_customer_ids.push(customer.id);
+      continue;
+    }
     const result = classifyCustomerOwnership(customer, validTenants, resolutionMap.get(customer.id), creatorById);
     ownership.set(customer.id, result);
     if (result.status === "safe") report.safe_already_scoped += 1;
@@ -98,8 +109,12 @@ export async function runLegacyOwnershipScan(sr, mode = "dry_run", actorEmail = 
       report.deterministic_customer_ownership_backfills += 1;
       customerUpdates.push({ id: customer.id, shop_owner_email: result.tenant });
     } else if (result.status === "ambiguous") report.ambiguous_customer_ids.push(customer.id);
-    else report.unscoped_customer_ids.push(customer.id);
+    else report.unresolved_unscoped_customer_ids.push(customer.id);
   }
+  report.ownership_evidence = {};
+  const reviewIds = [...report.unresolved_unscoped_customer_ids, ...report.hard_quarantined_customer_ids];
+  const relatedEvidenceData = Object.fromEntries(Object.keys(RELATED_CONFIG).map((name) => [name, data[name]]));
+  for (const customerId of reviewIds) report.ownership_evidence[customerId] = summarizeLoadedTenantEvidence(customerId, users, relatedEvidenceData).evidence_summary;
   const relatedUpdates = {};
   for (const entityName of Object.keys(RELATED_CONFIG)) {
     report.related_record_ownership_backfills[entityName] = 0;
@@ -135,7 +150,8 @@ export function reportCounts(report) {
     deterministic_customer_ownership_backfills: report.deterministic_customer_ownership_backfills,
     related_record_ownership_backfills: report.related_record_ownership_backfills,
     ambiguous_customers: report.ambiguous_customer_ids.length,
-    unscoped_customers: report.unscoped_customer_ids.length,
+    hard_quarantined_customers: report.hard_quarantined_customer_ids.length,
+    unresolved_unscoped_customers: report.unresolved_unscoped_customer_ids.length,
     conflicting_related_records: report.conflicting_related_records.length,
     orphaned_relationships: report.orphaned_relationships.length,
     skipped_records: report.skipped_records.length,
