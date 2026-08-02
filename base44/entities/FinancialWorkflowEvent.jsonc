@@ -15,8 +15,16 @@
         "send",
         "record_payment",
         "void",
-        "link"
+        "link",
+        "estimate_approved",
+        "estimate_declined"
       ]
+    },
+    "customer_id": {
+      "type": "string"
+    },
+    "estimate_id": {
+      "type": "string"
     },
     "invoice_id": {
       "type": "string"
@@ -25,6 +33,9 @@
       "type": "string"
     },
     "source_id": {
+      "type": "string"
+    },
+    "session_id": {
       "type": "string"
     },
     "idempotency_key": {

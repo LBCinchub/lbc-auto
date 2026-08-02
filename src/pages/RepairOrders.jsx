@@ -147,17 +147,13 @@ export default function RepairOrders() {
   const handleGenerateInvoice = async (order) => {
     setGeneratingInvoice(order.id);
     try {
-      const vehicleId = await resolveVehicleId({ customerId: order.customer_id, vehicleId: order.vehicle_id, vehicleInfo: order.vehicle_info });
-      if (!vehicleId) throw new Error("No matching customer vehicle could be found.");
-      const savedRO = await base44.entities.RepairOrder.update(order.id, { vehicle_id: vehicleId });
-      const invoiceNumber = `INV-${Date.now().toString(36).toUpperCase().slice(-8)}`;
-      const inv = await base44.entities.Invoice.create({ ...invoiceFieldsFromRepairOrder(savedRO, vehicleId, invoiceNumber), tax_rate: order.tax_rate || 0, tax_applies_to: order.tax_applies_to || "both", tax_amount: order.tax_amount || 0, status: "unpaid" });
-      await base44.entities.RepairOrder.update(savedRO.id, { linked_invoice_id: inv.id, linked_invoice_number: inv.invoice_number });
-
+      const response = await base44.functions.invoke("financialDocumentAction", { action: "create", source_type: "repair_order", source_id: order.id, idempotency_key: `repair-order-invoice:${order.id}` });
+      const invoice = response.data?.invoice;
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      navigate(`/InvoiceDetail/${inv.id}`);
+      queryClient.invalidateQueries({ queryKey: ["repairOrders"] });
+      if (invoice?.id) navigate(`/InvoiceDetail/${invoice.id}`);
     } catch (err) {
-      alert("Could not generate invoice: " + (err?.message || err));
+      alert("Could not generate invoice: " + (err?.response?.data?.error || err?.message || err));
     } finally {
       setGeneratingInvoice(null);
     }

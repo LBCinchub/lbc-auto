@@ -19,17 +19,7 @@ export default async function(req) {
       if (unread.length) await auth.sr.entities.CustomerMessage.bulkUpdate(unread.map((item) => ({ id: item.id, read_by_customer: true })));
       return Response.json({ success: true, updated: unread.length });
     }
-    if (body.action === "estimate_decision") {
-      const decision = body.decision === "approve" ? "approved" : body.decision === "decline" ? "declined" : "";
-      if (!decision) return Response.json({ error: "Invalid decision" }, { status: 400 });
-      const portal = await buildCustomerPortalData(auth.sr, auth.customer, auth.session.shop_owner_email);
-      const estimate = portal.estimates.find((item) => item.id === body.estimate_id);
-      if (!estimate) return Response.json({ error: "Estimate unavailable" }, { status: 404 });
-      if (["invoiced", "cancelled"].includes(estimate.status)) return Response.json({ error: "This estimate can no longer be changed" }, { status: 409 });
-      await auth.sr.entities.Estimate.update(estimate.id, { status: decision, auth_status: decision === "approved" ? "approved" : "none" });
-      await auditEvent(auth.sr, req, "estimate_decision", { customerId: auth.session.customer_id, shopOwnerEmail: auth.session.shop_owner_email, sessionId: auth.session.session_id, metadata: { estimate_id: estimate.id, decision } });
-      return Response.json({ success: true, status: decision });
-    }
+    if (body.action === "estimate_decision") return Response.json({ error: "Use the secure financial decision flow" }, { status: 410 });
     if (body.action === "book_appointment") {
       const portal = await buildCustomerPortalData(auth.sr, auth.customer, auth.session.shop_owner_email);
       const vehicle = portal.vehicles.find((item) => item.id === body.vehicle_id);

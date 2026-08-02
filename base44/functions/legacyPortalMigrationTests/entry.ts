@@ -62,8 +62,10 @@ export default async function(req) {
       if (liveCustomer) {
         const portalData = await buildCustomerPortalData(base44.asServiceRole, liveCustomer, tenant);
         const vehicleIds = new Set(portalData.vehicles.map((item) => item.id));
-        const owned = [...portalData.orders, ...portalData.invoices, ...portalData.estimates, ...portalData.appointments, ...portalData.recommendations, ...portalData.diagnostics].every((item) => item.customer_id === liveCustomer.id || vehicleIds.has(item.vehicle_id));
-        test("live historical portal traversal returns only owned relationships", owned);
+        const projected = [...portalData.orders, ...portalData.invoices, ...portalData.estimates, ...portalData.appointments, ...portalData.recommendations, ...portalData.diagnostics];
+        const identifiersStripped = projected.every((item) => !("customer_id" in item));
+        const owned = projected.every((item) => !item.vehicle_id || vehicleIds.has(item.vehicle_id));
+        test("live historical portal traversal returns only owned relationships", identifiersStripped && owned);
       }
       const foreign = await base44.asServiceRole.entities.Customer.filter({ shop_owner_email: { $ne: tenant } }, "-created_date", 20);
       let foreignDenied = true;

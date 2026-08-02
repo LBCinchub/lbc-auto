@@ -81,8 +81,8 @@ export default async function(req) {
     }
     const vehicle = await getOwned('Vehicle', vehicleId, 'Vehicle');
     if (vehicle.customer_id !== customer.id) throw new Error('Customer and vehicle relationship is invalid');
-    const estimate = invoice?.estimate_id ? await getOwned('Estimate', invoice.estimate_id, 'Estimate') : sourceType === 'estimate' ? source : null;
     const repairOrder = invoice?.repair_order_id ? await getOwned('RepairOrder', invoice.repair_order_id, 'Repair Order') : sourceType === 'repair_order' ? source : null;
+    const estimate = invoice?.estimate_id ? await getOwned('Estimate', invoice.estimate_id, 'Estimate') : sourceType === 'estimate' ? source : repairOrder?.estimate_id ? await getOwned('Estimate', repairOrder.estimate_id, 'Estimate') : null;
 
     const initialLines = invoice ? cleanLines(invoice.line_items || [], 'Invoice') : sourceLines(sourceType, source);
     const defaultTaxRate = invoice?.tax_rate ?? source?.tax_rate ?? user.tax_rate ?? 0;

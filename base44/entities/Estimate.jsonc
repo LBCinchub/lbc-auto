@@ -36,9 +36,53 @@
       "default": "draft",
       "description": "Estimate status"
     },
+    "auth_status": {
+      "type": "string",
+      "enum": [
+        "none",
+        "pending",
+        "approved",
+        "declined"
+      ],
+      "default": "none",
+      "description": "Customer authorization state"
+    },
+    "customer_decision": {
+      "type": "string",
+      "enum": [
+        "approved",
+        "declined"
+      ],
+      "description": "Authenticated customer decision"
+    },
+    "customer_decision_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Server timestamp of customer decision"
+    },
+    "customer_decision_name": {
+      "type": "string",
+      "description": "Customer-confirmed signer name"
+    },
+    "customer_decision_note": {
+      "type": "string",
+      "description": "Customer-provided decision note"
+    },
+    "customer_decision_reference": {
+      "type": "string",
+      "description": "Private idempotent decision reference"
+    },
+    "linked_repair_order_id": {
+      "type": "string",
+      "description": "ID of Repair Order created from this estimate"
+    },
+    "linked_repair_order_number": {
+      "type": "string",
+      "description": "Repair Order number created from this estimate"
+    },
     "linked_invoice_id": {
       "type": "string",
-      "description": "ID of the invoice created from this estimate (cashout or convert)"
+      "description": "ID of the invoice created from this estimate"
     },
     "linked_invoice_number": {
       "type": "string",
@@ -51,7 +95,7 @@
     },
     "payment_history": {
       "type": "array",
-      "description": "Record of all payments made against this estimate",
+      "description": "Record of payments associated with this estimate",
       "items": {
         "type": "object",
         "properties": {
@@ -72,7 +116,7 @@
     },
     "service_reason": {
       "type": "string",
-      "description": "Reason for visit / customer complaint / what the car came in for"
+      "description": "Reason for visit or customer concern"
     },
     "notes": {
       "type": "string",
@@ -153,15 +197,15 @@
     },
     "discount": {
       "type": "number",
-      "description": "Discount value \u2014 dollar amount or percentage depending on discount_type"
+      "description": "Discount value"
     },
     "discount_type": {
       "type": "string",
-      "description": "Discount type \u2014 $ for fixed dollar, % for percentage",
       "enum": [
         "$",
         "%"
-      ]
+      ],
+      "description": "Discount type"
     },
     "grand_total": {
       "type": "number",
@@ -175,7 +219,7 @@
     "estimate_date": {
       "type": "string",
       "format": "date",
-      "description": "Editable estimate date shown on the document (defaults to created_date)"
+      "description": "Editable estimate date shown on the document"
     }
   },
   "required": [

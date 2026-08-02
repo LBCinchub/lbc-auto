@@ -128,35 +128,13 @@ export default function Estimates() {
 
   const handleConvertToRepairOrder = async (e, estimate) => {
     e.stopPropagation();
-
     setConvertingId(estimate.id);
     try {
-      const description = estimate.notes || estimate.labor_items?.map(i => i.description).filter(Boolean).join(", ") || "Created from estimate #" + estimate.estimate_number;
-      await base44.entities.RepairOrder.create({
-        customer_id: estimate.customer_id,
-        customer_name: estimate.customer_name,
-        vehicle_id: estimate.vehicle_id,
-        vehicle_info: estimate.vehicle_info,
-        description: description,
-        status: "waiting",
-        labor_hours: estimate.labor_items?.reduce((sum, item) => sum + (parseFloat(item.hours) || 0), 0) || 0,
-        labor_cost: estimate.labor_total || 0,
-        labor_items: estimate.labor_items || [],
-        parts_used: estimate.parts_items?.map(item => ({
-          name: item.name,
-          part_number: item.part_number,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          total: item.total
-        })) || [],
-        parts_cost: estimate.parts_total || 0,
-        total_cost: estimate.grand_total || 0,
-        notes: estimate.notes || "",
-      });
-      await base44.entities.Estimate.update(estimate.id, { status: "approved" });
-      queryClient.invalidateQueries({ queryKey: ["estimates", "repairOrders"] });
-    } catch (error) {
-      console.error("Error converting estimate:", error);
+      const response = await base44.functions.invoke("convertEstimateToRepairOrder", { estimate_id: estimate.id });
+      const order = response.data?.repair_order;
+      queryClient.invalidateQueries({ queryKey: ["estimates"] });
+      queryClient.invalidateQueries({ queryKey: ["repairOrders"] });
+      if (order?.id) navigate(`/RepairOrderDetail/${order.id}`);
     } finally {
       setConvertingId(null);
     }
@@ -189,10 +167,14 @@ export default function Estimates() {
 
   const { sending: sendingEmail, sendEmail } = useEmailSend();
 
-  const sendEstimateEmail = (e, est) => {
+  const sendEstimateEmail = async (e, est) => {
     e.stopPropagation();
     const cachedEmail = customers.find(c => c.id === est.customer_id)?.email || null;
-    sendEmail(est.id, "estimate", cachedEmail, est.customer_id, est.customer_name, est);
+    const sent = await sendEmail(est.id, "estimate", cachedEmail, est.customer_id, est.customer_name, est);
+    if (sent) {
+      await base44.entities.Estimate.update(est.id, { status: "sent", auth_status: "pending" });
+      queryClient.invalidateQueries({ queryKey: ["estimates"] });
+    }
   };
 
   const openNew = () => { setEditing(null); setDialogOpen(true); };
@@ -355,19 +337,17 @@ export default function Estimates() {
                     )}
                     {est.status === "approved" && (
                       <span className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Approved
+                        <CheckCircle2 className="w-3.5 h-3.5" /> {est.customer_decision === "approved" ? "Customer Approved" : "Approved"}{est.customer_decision_name ? ` · ${est.customer_decision_name}` : ""}{est.customer_decision_at ? ` · ${new Date(est.customer_decision_at).toLocaleDateString()}` : ""}
                       </span>
                     )}
-                    <button
+                    {est.status === "approved" && <button
                       onClick={e => handleConvertToRepairOrder(e, est)}
                       disabled={convertingId === est.id}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-500/15 text-sky-400 border border-sky-500/30 hover:bg-sky-500/25 transition-all disabled:opacity-50"
-                      title="Send to Repair Order">
-                      {convertingId === est.id
-                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        : <Wrench className="w-3.5 h-3.5" />}
-                      → Repair Order
-                    </button>
+                      title="Convert approved estimate to Repair Order">
+                      {convertingId === est.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wrench className="w-3.5 h-3.5" />}
+                      Convert to Repair Order
+                    </button>}
                   </div>
                   {/* Secondary action row */}
                   <div className="flex gap-1.5 flex-wrap">

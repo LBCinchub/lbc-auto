@@ -1,4 +1,5 @@
-import { assertCustomerTenantOwnership, findTenantCustomersByPhone, hardQuarantineCustomer, hashPasscode, normalizePhone, normalizeTenantEmail, projectSafeRecord, randomToken, requireCustomerSession, sessionIsActive, sha256, validateNewPasscode, verifyPasscode } from "../../shared/customerPortalSecurity.ts";
+import { assertCustomerTenantOwnership, findTenantCustomersByPhone, hardQuarantineCustomer, hashPasscode, normalizePhone, normalizeTenantEmail, projectSafeRecord, randomToken, requireCustomerSession, safeEstimateLaborItems, safeEstimatePartsItems, safeInvoiceLineItems, safePayments, sessionIsActive, sha256, validateNewPasscode, verifyPasscode } from "../../shared/customerPortalSecurity.ts";
+import { estimateDecisionState, priorDecisionResult } from "../../shared/customerFinancialDecision.ts";
 
 export default async function() {
   try {
@@ -63,6 +64,21 @@ export default async function() {
     test("quarantine revokes sessions and disables passcodes", writes.sessions[0]?.revoked === true && writes.passcodes[0]?.portal_access_enabled === false);
     const safe = projectSafeRecord({ id: "1", status: "paid", technician_notes: "private", discount: 99, cost_price: 10, customer_id: "secret" }, ["id", "status"]);
     test("customer response strips internal fields", safe.id === "1" && safe.status === "paid" && !("technician_notes" in safe) && !("discount" in safe) && !("cost_price" in safe) && !("customer_id" in safe));
+    const labor = safeEstimateLaborItems([{ description: "Brake service", hours: 2, rate: 120, total: 240, cost_price: 40, markup: 3, technician_note: "private" }])[0];
+    const parts = safeEstimatePartsItems([{ name: "Pad", part_number: "P1", quantity: 1, unit_price: 80, total: 80, supplier_cost: 20, markup_formula: "private" }])[0];
+    const lines = safeInvoiceLineItems([{ description: "Brake service", type: "labor", quantity: 2, unit_price: 120, total: 240, source: "private", cost: 10 }])[0];
+    const payments = safePayments([{ date: "2026-08-01", amount: 50, method: "card", note: "cashier-private", cashier_name: "private" }])[0];
+    test("nested estimate labor fields are allowlisted", labor.description === "Brake service" && !("cost_price" in labor) && !("markup" in labor) && !("technician_note" in labor));
+    test("nested estimate parts fields are allowlisted", parts.name === "Pad" && !("supplier_cost" in parts) && !("markup_formula" in parts));
+    test("nested invoice and payment fields are allowlisted", lines.total === 240 && !("source" in lines) && !("cost" in lines) && payments.amount === 50 && !("note" in payments) && !("cashier_name" in payments));
+    const future = new Date(Date.now() + 86400000).toISOString().slice(0, 10); const past = "2020-01-01";
+    test("sent estimate decision is allowed", estimateDecisionState({ status: "sent", valid_until: future }).allowed);
+    for (const status of ["draft", "approved", "declined", "invoiced", "cancelled"]) test(`${status} estimate decision is rejected`, !estimateDecisionState({ status, valid_until: future }).allowed);
+    test("expired estimate decision is rejected", !estimateDecisionState({ status: "sent", valid_until: past }).allowed && estimateDecisionState({ status: "sent", valid_until: past }).currentStatus === "expired");
+    test("explicit pending authorization maps to sent eligibility", estimateDecisionState({ status: "draft", auth_status: "pending", valid_until: future }).allowed);
+    const event = { estimate_id: "estimate-a", action: "estimate_approved", session_id: "session-a" };
+    test("matching decision replay is idempotent", priorDecisionResult([event], "estimate-a", "estimate_approved", "session-a") === "replay");
+    test("cross-document decision key mismatch is rejected", priorDecisionResult([event], "estimate-b", "estimate_approved", "session-a") === "mismatch");
     return Response.json({ passed: checks.every((item) => item.pass), checks });
   } catch (error) {
     return Response.json({ passed: false, error: error.message }, { status: 500 });

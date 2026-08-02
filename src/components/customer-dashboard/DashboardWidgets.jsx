@@ -5,7 +5,7 @@ import { formatDate, formatMoney, statusLabel } from "@/components/customer-dash
 export default function DashboardWidgets({ data, onOpen }) {
   const newest = (rows) => [...rows].sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
   const openOrders = newest(data.orders.filter((row) => !["completed", "delivered"].includes(row.status)));
-  const openEstimates = newest(data.estimates.filter((row) => ["draft", "sent"].includes(row.status) || row.auth_status === "pending"));
+  const openEstimates = newest(data.estimates.filter((row) => row.status === "sent" || row.auth_status === "pending"));
   const dueInvoices = newest(data.invoices.filter((row) => Number(row.balance_due) > 0));
   const upcoming = data.appointments.filter((row) => !["completed", "cancelled"].includes(row.status) && new Date(row.date) >= new Date(new Date().toDateString())).sort((a, b) => new Date(a.date) - new Date(b.date));
   const widgets = [

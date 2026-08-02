@@ -266,7 +266,10 @@ function notificationTarget(notification, collections) {
   return { view: viewByType[notification.type] || "home" };
 }
 
-const safePayments = (rows) => (rows || []).map((row) => pick(row, ["date", "amount", "method"]));
+export const safePayments = (rows) => (rows || []).map((row) => pick(row, ["date", "amount", "method"]));
+export const safeEstimateLaborItems = (rows) => (rows || []).map((row) => pick(row, ["description", "hours", "rate", "total"]));
+export const safeEstimatePartsItems = (rows) => (rows || []).map((row) => pick(row, ["name", "part_number", "quantity", "unit_price", "total"]));
+export const safeInvoiceLineItems = (rows) => (rows || []).map((row) => pick(row, ["description", "type", "quantity", "unit_price", "total", "customer_note"]));
 const safeCodes = (rows) => (rows || []).map((row) => pick(row, ["code", "description", "type"]));
 
 export async function buildCustomerPortalData(sr, customer, tenantEmail) {
@@ -299,12 +302,15 @@ export async function buildCustomerPortalData(sr, customer, tenantEmail) {
   const diagnosticsLinked = diagnosticExtra.length ? await listAllRecords(sr.entities.DiagnosticScan, { $or: diagnosticExtra }, "scan_timestamp") : [];
   const unique = (rows) => [...new Map(rows.map((row) => [row.id, row])).values()];
   const context = { ...baseContext, RepairOrder: new Map(allOrdersRaw.map((row) => [row.id, row])), Estimate: new Map(estimatesRaw.map((row) => [row.id, row])), Invoice: new Map(invoicesRaw.map((row) => [row.id, row])) };
+  const deniedRelationships = [];
   const safe = (name, rows) => unique(rows).filter((record) => {
     const result = classifyRelatedOwnership(name, record, context, ownership);
-    return ["safe", "backfill"].includes(result.status) && result.customerId === customerId;
+    const allowed = ["safe", "backfill"].includes(result.status) && result.customerId === customerId;
+    if (!allowed) deniedRelationships.push(name);
+    return allowed;
   });
   const orders = safe("RepairOrder", allOrdersRaw);
-  const estimates = safe("Estimate", estimatesRaw);
+  const estimates = safe("Estimate", estimatesRaw).filter((record) => record.status !== "draft" || record.auth_status === "pending");
   const invoices = safe("Invoice", invoicesRaw);
   const appointments = safe("Appointment", appointmentsRaw);
   const messages = safe("CustomerMessage", messagesRaw);
@@ -312,6 +318,7 @@ export async function buildCustomerPortalData(sr, customer, tenantEmail) {
   const recommendations = safe("CarRecommendation", recommendationsRaw);
   const reviews = safe("CustomerReview", reviewsRaw);
   const diagnostics = safe("DiagnosticScan", [...diagnosticsInitial, ...diagnosticsLinked]);
+  if (deniedRelationships.length) await sr.entities.CustomerSecurityEvent.create({ event_type: "authorization_denied", customer_id: customerId, shop_owner_email: tenant, created_at: new Date().toISOString(), metadata: { reason: "conflicting_or_unverified_relationship", entity_types: [...new Set(deniedRelationships)] } });
   const offers = await listAllRecords(sr.entities.ShopOffer, { shop_owner_email: tenant, is_active: true });
   const shop = tenantUsers[0] || {};
   const collections = { orders, estimates, invoices, appointments, recommendations, diagnostics };
@@ -319,9 +326,9 @@ export async function buildCustomerPortalData(sr, customer, tenantEmail) {
     customer: pick(customer, ["full_name"]),
     shop: pick(shop, ["business_name", "phone", "address", "city", "province", "logo_url", "google_review_link"]),
     vehicles: vehicles.map((v) => pick(v, ["id", "year", "make", "model", "trim", "vin", "license_plate", "engine_type", "fuel_type", "drive_type", "color", "mileage", "mileage_history", "intake_photos", "last_service_date", "last_service_mileage", "service_interval_km", "service_interval_months"])),
-    orders: orders.map((r) => pick(r, ["id", "vehicle_id", "estimate_id", "order_number", "vehicle_info", "description", "status", "estimated_completion", "created_date"])),
-    invoices: invoices.map((r) => ({ ...pick(r, ["id", "vehicle_id", "repair_order_id", "estimate_id", "invoice_number", "vehicle_info", "total", "amount_paid", "balance_due", "status", "due_date", "paid_date", "customer_note", "line_items", "created_date"]), payment_history: safePayments(r.payment_history) })),
-    estimates: estimates.map((r) => ({ ...pick(r, ["id", "vehicle_id", "linked_invoice_id", "linked_invoice_number", "estimate_number", "vehicle_info", "status", "auth_status", "grand_total", "amount_paid", "valid_until", "service_reason", "labor_items", "parts_items", "created_date"]), payment_history: safePayments(r.payment_history) })),
+    orders: orders.map((r) => ({ ...pick(r, ["id", "vehicle_id", "order_number", "vehicle_info", "description", "status", "estimated_completion", "created_date"]), ...(estimates.some((item) => item.id === r.estimate_id) ? { estimate_id: r.estimate_id } : {}) })),
+    invoices: invoices.map((r) => ({ ...pick(r, ["id", "vehicle_id", "invoice_number", "vehicle_info", "labor_total", "parts_total", "tax_amount", "total", "amount_paid", "balance_due", "status", "invoice_date", "due_date", "paid_date", "customer_note", "created_date"]), ...(orders.some((item) => item.id === r.repair_order_id) ? { repair_order_id: r.repair_order_id } : {}), ...(estimates.some((item) => item.id === r.estimate_id) ? { estimate_id: r.estimate_id } : {}), line_items: safeInvoiceLineItems(r.line_items), payment_history: safePayments(r.payment_history) })),
+    estimates: estimates.map((r) => { const linkedOrder = orders.find((item) => item.estimate_id === r.id || item.id === r.linked_repair_order_id); const linkedInvoice = invoices.find((item) => item.estimate_id === r.id || item.id === r.linked_invoice_id); return { ...pick(r, ["id", "vehicle_id", "estimate_number", "vehicle_info", "status", "auth_status", "grand_total", "labor_total", "parts_total", "tax_amount", "amount_paid", "estimate_date", "valid_until", "service_reason", "customer_decision", "customer_decision_at", "customer_decision_name", "customer_decision_note", "created_date"]), ...(linkedOrder ? { linked_repair_order_id: linkedOrder.id, linked_repair_order_number: linkedOrder.order_number } : {}), ...(linkedInvoice ? { linked_invoice_id: linkedInvoice.id, linked_invoice_number: linkedInvoice.invoice_number } : {}), labor_items: safeEstimateLaborItems(r.labor_items), parts_items: safeEstimatePartsItems(r.parts_items), payment_history: safePayments(r.payment_history) }; }),
     appointments: appointments.map((r) => pick(r, ["id", "vehicle_id", "vehicle_info", "service_type", "date", "time_slot", "status", "created_date"])),
     messages: messages.map((r) => pick(r, ["id", "sender", "message", "read_by_customer", "read_by_shop", "sent_at"])),
     notifications: notifications.map((r) => ({ ...pick(r, ["id", "type", "title", "body", "is_read", "sent_at"]), target: notificationTarget(r, collections) })),

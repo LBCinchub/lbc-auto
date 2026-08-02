@@ -31,7 +31,7 @@ export function useEmailSend() {
           description: "Add an email address to this customer's profile and try again.",
           variant: "destructive",
         });
-        return;
+        return false;
       }
 
       // Pass shop_email for tenant-aware email rendering (shop name, phone, logo)
@@ -50,6 +50,7 @@ export function useEmailSend() {
       });
 
       toast({ title: `✅ Email sent to ${email}` });
+      return true;
     } catch (err) {
       const detail = err?.response?.data?.error || err?.message || "Unknown error";
       toast({
@@ -57,6 +58,7 @@ export function useEmailSend() {
         description: detail,
         variant: "destructive",
       });
+      return false;
     } finally {
       setSending(null);
     }

@@ -257,37 +257,13 @@ export default function EstimateDetail() {
   const handleConvertToInvoice = () => setShowInvoiceWorkflow(true);
 
   const handleConvertToRepairOrder = async () => {
-    if (!window.confirm("Convert this estimate to a repair order?")) return;
-    try {
-      const ro = await base44.entities.RepairOrder.create({
-        estimate_id: estimate.id,
-        order_number: `RO-${Date.now().toString(36).toUpperCase().slice(-8)}`,
-        customer_id: estimate.customer_id,
-        customer_name: estimate.customer_name,
-        vehicle_id: estimate.vehicle_id,
-        vehicle_info: estimate.vehicle_info,
-        description: estimate.notes || "Created from estimate #" + estimate.estimate_number,
-        status: "waiting",
-        labor_hours: estimate.labor_items?.reduce((sum, item) => sum + (parseFloat(item.hours) || 0), 0) || 0,
-        labor_cost: estimate.labor_total || 0,
-        labor_items: estimate.labor_items || [],
-        parts_used: estimate.parts_items?.map(item => ({
-          name: item.name,
-          part_number: item.part_number || "",
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          total: item.total
-        })) || [],
-        parts_cost: estimate.parts_total || 0,
-        total_cost: estimate.grand_total || 0,
-      });
-      await base44.entities.Estimate.update(estimate.id, { status: "approved" });
-      queryClient.invalidateQueries({ queryKey: ["estimates", "repairOrders"] });
-      // Consistent with "Convert to Invoice" — land on the new record itself, not the list.
-      navigate(`/RepairOrderDetail/${ro.id}`);
-    } catch (error) {
-      console.error("Error converting estimate:", error);
-    }
+    if (!window.confirm("Convert this approved estimate to a repair order?")) return;
+    const response = await base44.functions.invoke("convertEstimateToRepairOrder", { estimate_id: estimate.id });
+    const order = response.data?.repair_order;
+    queryClient.invalidateQueries({ queryKey: ["estimate", estimateId] });
+    queryClient.invalidateQueries({ queryKey: ["estimates"] });
+    queryClient.invalidateQueries({ queryKey: ["repairOrders"] });
+    if (order?.id) navigate(`/RepairOrderDetail/${order.id}`);
   };
 
   // Build line items for print template
@@ -354,12 +330,13 @@ export default function EstimateDetail() {
               <CheckCircle2 className="w-3.5 h-3.5" /> Convert to Invoice
             </Button>
           )}
-          {estimate.status !== "approved" && (
+          {estimate.status === "approved" && !linkedRO && (
             <Button size="sm" onClick={handleConvertToRepairOrder}
               className="bg-green-500/20 text-green-400 hover:bg-green-500/30 gap-1.5 h-9 text-xs">
               <CheckCircle2 className="w-3.5 h-3.5" /> Convert to Repair Order
             </Button>
           )}
+          {linkedRO && <Button size="sm" onClick={() => navigate(`/RepairOrderDetail/${linkedRO.id}`)} className="bg-sky-500/20 text-sky-400 hover:bg-sky-500/30 gap-1.5 h-9 text-xs"><FileText className="w-3.5 h-3.5" /> View Repair Order</Button>}
         </div>
       </div>
 
@@ -426,6 +403,7 @@ export default function EstimateDetail() {
             }`}>
               {estimate.status}
             </span>
+            {estimate.customer_decision === "approved" && <span className="px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Customer Approved{estimate.customer_decision_name ? ` · ${estimate.customer_decision_name}` : ""}{estimate.customer_decision_at ? ` · ${new Date(estimate.customer_decision_at).toLocaleDateString()}` : ""}</span>}
             {estimate.status === "approved" && linkedRO && linkedRO.status !== "waiting" && (
               <span className="px-3 py-1 rounded-full text-xs font-medium bg-sky-500/20 text-sky-400 border border-sky-500/30">
                 → In Progress (RO: {linkedRO.status})
