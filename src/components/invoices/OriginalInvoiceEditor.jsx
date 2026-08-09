@@ -18,7 +18,7 @@ export default function OriginalInvoiceEditor({ source, onClose, onSaved, closeA
   return <>
     <InvoiceEditorHeader data={flow.data} />
     <div className="max-h-[72vh] overflow-y-auto px-5 py-5 md:px-6"><InvoiceDetailsFields draft={flow.draft} onChange={flow.setDraft} /><InvoiceLineItemsTable lines={flow.draft.line_items || []} onChange={line_items => flow.setDraft({ ...flow.draft, line_items })} /><InvoiceTotalsSection draft={flow.draft} totals={flow.totals} onChange={flow.setDraft} />{flow.error && <p className="mt-4 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-300">{flow.error}</p>}</div>
-    <InvoiceEditorActions invoice={flow.data?.invoice} saving={flow.saving} dirty={flow.dirty} onCancel={cancel} onSave={save} onPrint={() => setPrinting(true)} onPayment={() => setPayment(true)} />
+    <InvoiceEditorActions invoice={flow.data?.invoice} saving={flow.saving} sending={flow.saving} dirty={flow.dirty} onCancel={cancel} onSave={save} onPrint={() => setPrinting(true)} onSend={flow.send} onPayment={() => setPayment(true)} />
     {printing && flow.data?.invoice && <InvoicePrintView invoice={flow.data.invoice} onClose={() => setPrinting(false)} />}
     {payment && flow.data?.invoice && <PaymentReceiptDialog open invoice={flow.data.invoice} source={source} onClose={() => setPayment(false)} onSaved={async () => { setPayment(false); await flow.reload(); }} />}
   </>;
