@@ -35,7 +35,9 @@ export default function InvoicePrintView({ invoice, onClose }) {
     : (invoice.parts_used || []);
 
   partsRows.forEach(p => {
+    const isUnified = !!p.name;
     const descParts = [];
+    if (isUnified && p.description) descParts.push(p.description);
     if (p.part_number) descParts.push(`Part #: ${p.part_number}`);
     if (p.supplier) descParts.push(`Supplier: ${p.supplier}`);
     lineItems.push({
@@ -55,11 +57,15 @@ export default function InvoicePrintView({ invoice, onClose }) {
 
   if (laborRows.length > 0) {
     laborRows.forEach(l => {
+      const isUnified = !!l.name;
+      const hours = l.hours || l.quantity || 0;
+      const rate = l.rate || l.unit_price || 0;
+      const autoDesc = hours ? `${hours}h @ $${rate}/h` : "";
       lineItems.push({
-        name: l.description || "Labor",
-        description: l.hours ? `${l.hours}h @ $${l.rate}/h` : "",
-        unit_price: l.rate || l.unit_price || 0,
-        qty: l.hours || l.quantity || 1,
+        name: l.name || l.description || "Labor",
+        description: isUnified ? (l.description || autoDesc) : autoDesc,
+        unit_price: rate,
+        qty: hours || 1,
         amount: l.total || 0,
       });
     });

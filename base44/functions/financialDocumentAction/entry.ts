@@ -4,17 +4,24 @@ const r2 = (value) => Math.round((Number(value) || 0) * 100) / 100;
 const normalizeDiscount = (type) => type === '%' || type === 'percent' || type === 'percentage' ? '%' : type === '$' || type === 'fixed' ? '$' : '$';
 const cleanLines = (lines = [], source = 'Manual') => lines.filter(Boolean).map((line) => ({
   type: line.type === 'labor' ? 'labor' : 'part',
-  description: String(line.description || line.name || '').trim(),
+  name: String(line.name || line.description || '').trim(),
+  // `description` is the per-line details (print DESCRIPTION column). For legacy
+  // rows that only carried the item name in `description`, clear it so the name
+  // isn't duplicated into the description; new rows keep their typed details.
+  description: line.name ? String(line.description || '').trim() : '',
   quantity: Number(line.quantity ?? line.hours) || 0,
   unit_price: Number(line.unit_price ?? line.rate) || 0,
   taxable: line.taxable !== false,
   customer_note: String(line.customer_note || ''),
+  part_number: String(line.part_number || ''),
   source: line.source || source,
 }));
+const mapLaborLine = (x) => ({ type: 'labor', name: x.description || '', description: x.details || '', quantity: Number(x.hours) || 0, unit_price: Number(x.rate) || 0, part_number: '' });
+const mapPartsLine = (x) => ({ type: 'part', name: x.name || '', description: x.details || '', quantity: Number(x.quantity) || 0, unit_price: Number(x.unit_price) || 0, part_number: x.part_number || '' });
 const sourceLines = (type, record) => type === 'estimate'
-  ? cleanLines([...(record.labor_items || []).map((x) => ({ ...x, type: 'labor' })), ...(record.parts_items || []).map((x) => ({ ...x, type: 'part' }))], 'Estimate')
+  ? cleanLines([...(record.labor_items || []).map(mapLaborLine), ...(record.parts_items || []).map(mapPartsLine)], 'Estimate')
   : type === 'repair_order'
-    ? cleanLines([...(record.labor_items || []).map((x) => ({ ...x, type: 'labor' })), ...(record.parts_used || []).map((x) => ({ ...x, type: 'part' }))], 'Repair Order')
+    ? cleanLines([...(record.labor_items || []).map(mapLaborLine), ...(record.parts_used || []).map(mapPartsLine)], 'Repair Order')
     : [];
 const calculate = (lines, taxRate, taxAppliesTo, discount, discountType, paid = 0) => {
   const labor = r2(lines.filter((x) => x.type === 'labor' && x.quantity > 0).reduce((sum, x) => sum + x.quantity * x.unit_price, 0));
@@ -121,7 +128,7 @@ export default async function(req) {
         const invoiceNumber = `INV-${suffix}`;
         const existing = await base44.asServiceRole.entities.Invoice.filter({ invoice_number: invoiceNumber }, '-created_date', 1);
         invoice = existing.find(owns) || null;
-        if (!invoice) invoice = await base44.entities.Invoice.create({ invoice_number: invoiceNumber, customer_id: customer.id, customer_name: customer.full_name, vehicle_id: vehicle.id, vehicle_info: `${vehicle.year} ${vehicle.make} ${vehicle.model}`.trim(), estimate_id: estimate?.id || '', repair_order_id: repairOrder?.id || '', status: 'unpaid', amount_paid: 0, payment_history: [], line_items: lines.map((x) => ({ ...x, total: r2(x.quantity * x.unit_price) })), parts_used: lines.filter((x) => x.type !== 'labor').map((x) => ({ name: x.description, part_number: '', quantity: x.quantity, unit_price: x.unit_price, total: r2(x.quantity * x.unit_price) })), labor_total: totals.labor, parts_total: totals.parts, tax_rate: taxRate, tax_applies_to: taxTarget, tax_amount: totals.tax, discount: Number(intent.discount) || 0, discount_type: normalizeDiscount(intent.discount_type), total: totals.total, balance_due: totals.balance, invoice_date: intent.invoice_date || new Date().toISOString().slice(0, 10), due_date: intent.due_date || '', customer_note: intent.customer_note || '', service_reason: intent.service_reason || '' });
+        if (!invoice) invoice = await base44.entities.Invoice.create({ invoice_number: invoiceNumber, customer_id: customer.id, customer_name: customer.full_name, vehicle_id: vehicle.id, vehicle_info: `${vehicle.year} ${vehicle.make} ${vehicle.model}`.trim(), estimate_id: estimate?.id || '', repair_order_id: repairOrder?.id || '', status: 'unpaid', amount_paid: 0, payment_history: [], line_items: lines.map((x) => ({ ...x, total: r2(x.quantity * x.unit_price) })), parts_used: lines.filter((x) => x.type !== 'labor').map((x) => ({ name: x.name || x.description || '', part_number: '', quantity: x.quantity, unit_price: x.unit_price, total: r2(x.quantity * x.unit_price) })), labor_total: totals.labor, parts_total: totals.parts, tax_rate: taxRate, tax_applies_to: taxTarget, tax_amount: totals.tax, discount: Number(intent.discount) || 0, discount_type: normalizeDiscount(intent.discount_type), total: totals.total, balance_due: totals.balance, invoice_date: intent.invoice_date || new Date().toISOString().slice(0, 10), due_date: intent.due_date || '', customer_note: intent.customer_note || '', service_reason: intent.service_reason || '' });
         try {
           if (estimate) await base44.entities.Estimate.update(estimate.id, { status: 'invoiced', linked_invoice_id: invoice.id, linked_invoice_number: invoice.invoice_number });
           if (repairOrder) await base44.entities.RepairOrder.update(repairOrder.id, { linked_invoice_id: invoice.id, linked_invoice_number: invoice.invoice_number });
@@ -133,7 +140,7 @@ export default async function(req) {
       }
     } else if (['update', 'finalize', 'sync_source'].includes(action)) {
       if (!invoice) throw new Error('No linked invoice exists');
-      const update = { line_items: lines.map((x) => ({ ...x, total: r2(x.quantity * x.unit_price) })), parts_used: lines.filter((x) => x.type !== 'labor').map((x) => ({ name: x.description, part_number: '', quantity: x.quantity, unit_price: x.unit_price, total: r2(x.quantity * x.unit_price) })), labor_total: totals.labor, parts_total: totals.parts, tax_rate: taxRate, tax_applies_to: taxTarget, tax_amount: totals.tax, discount: Number(intent.discount ?? invoice.discount) || 0, discount_type: normalizeDiscount(intent.discount_type || invoice.discount_type), total: totals.total, balance_due: totals.balance, due_date: intent.due_date ?? invoice.due_date, invoice_date: intent.invoice_date ?? invoice.invoice_date, customer_note: intent.customer_note ?? invoice.customer_note, service_reason: intent.service_reason ?? invoice.service_reason };
+      const update = { line_items: lines.map((x) => ({ ...x, total: r2(x.quantity * x.unit_price) })), parts_used: lines.filter((x) => x.type !== 'labor').map((x) => ({ name: x.name || x.description || '', part_number: '', quantity: x.quantity, unit_price: x.unit_price, total: r2(x.quantity * x.unit_price) })), labor_total: totals.labor, parts_total: totals.parts, tax_rate: taxRate, tax_applies_to: taxTarget, tax_amount: totals.tax, discount: Number(intent.discount ?? invoice.discount) || 0, discount_type: normalizeDiscount(intent.discount_type || invoice.discount_type), total: totals.total, balance_due: totals.balance, due_date: intent.due_date ?? invoice.due_date, invoice_date: intent.invoice_date ?? invoice.invoice_date, customer_note: intent.customer_note ?? invoice.customer_note, service_reason: intent.service_reason ?? invoice.service_reason };
       invoice = await base44.entities.Invoice.update(invoice.id, update);
       await base44.asServiceRole.entities.FinancialWorkflowEvent.create({ shop_owner_email: tenant, action: action === 'finalize' ? 'finalize' : 'edit', invoice_id: invoice.id, source_type: sourceType, source_id: sourceId, idempotency_key: body.idempotency_key || '', created_at: new Date().toISOString(), actor_email: tenant, metadata: { total: totals.total } });
     } else if (action === 'replace_payments') {

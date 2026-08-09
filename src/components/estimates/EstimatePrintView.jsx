@@ -22,7 +22,7 @@ export default function EstimatePrintView({ estimate, onClose }) {
   (estimate?.parts_items || []).forEach(p => {
     lineItems.push({
       name: p.name || "Part",
-      description: p.part_number ? `Part #: ${p.part_number}` : "",
+      description: p.details || (p.part_number ? `Part #: ${p.part_number}` : ""),
       unit_price: p.unit_price || 0,
       qty: p.quantity || 1,
       amount: p.total || 0,
@@ -31,7 +31,7 @@ export default function EstimatePrintView({ estimate, onClose }) {
   (estimate?.labor_items || []).forEach(l => {
     lineItems.push({
       name: l.description || "Labor",
-      description: `${l.hours}h @ $${l.rate}/h`,
+      description: l.details || `${l.hours}h @ $${l.rate}/h`,
       unit_price: l.rate || 0,
       qty: l.hours || 0,
       amount: l.total || 0,

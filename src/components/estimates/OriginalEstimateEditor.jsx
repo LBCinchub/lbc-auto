@@ -22,7 +22,8 @@ const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 const toLines = (estimate) => [
   ...(estimate?.labor_items || []).map((l) => ({
     type: "labor",
-    description: l.description || "",
+    name: l.description || "",
+    description: l.details || "",
     quantity: Number(l.hours) || 0,
     unit_price: Number(l.rate) || 0,
     taxable: true,
@@ -30,7 +31,8 @@ const toLines = (estimate) => [
   })),
   ...(estimate?.parts_items || []).map((p) => ({
     type: "part",
-    description: p.name || "",
+    name: p.name || "",
+    description: p.details || "",
     part_number: p.part_number || "",
     quantity: Number(p.quantity) || 0,
     unit_price: Number(p.unit_price) || 0,
@@ -108,7 +110,8 @@ export default function OriginalEstimateEditor({ estimateId, onClose }) {
       const laborItems = draft.line_items
         .filter((l) => l.type === "labor")
         .map((l) => ({
-          description: l.description,
+          description: l.name,
+          details: l.description || "",
           hours: Number(l.quantity) || 0,
           rate: Number(l.unit_price) || 0,
           total: r2((Number(l.quantity) || 0) * (Number(l.unit_price) || 0)),
@@ -116,7 +119,8 @@ export default function OriginalEstimateEditor({ estimateId, onClose }) {
       const partsItems = draft.line_items
         .filter((l) => l.type !== "labor")
         .map((p) => ({
-          name: p.description,
+          name: p.name,
+          details: p.description || "",
           part_number: p.part_number || "",
           quantity: Number(p.quantity) || 0,
           unit_price: Number(p.unit_price) || 0,

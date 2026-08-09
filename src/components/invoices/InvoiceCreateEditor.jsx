@@ -120,6 +120,7 @@ export default function InvoiceCreateEditor({ prefill, customers = [], onClose, 
     try {
       const lineItems = (draft.line_items || []).map((l) => ({
         type: l.type || "part",
+        name: l.name || "",
         description: l.description || "",
         quantity: Number(l.quantity) || 0,
         unit_price: Number(l.unit_price) || 0,
@@ -128,7 +129,7 @@ export default function InvoiceCreateEditor({ prefill, customers = [], onClose, 
         source: l.source || "Manual",
       }));
       const partsUsed = lineItems.filter((l) => l.type !== "labor").map((p) => ({
-        name: p.description, quantity: p.quantity, unit_price: p.unit_price, total: p.total,
+        name: p.name || p.description || "", quantity: p.quantity, unit_price: p.unit_price, total: p.total,
       }));
       const invoice_number = `INV-${Date.now().toString().slice(-6)}`;
       await base44.entities.Invoice.create({

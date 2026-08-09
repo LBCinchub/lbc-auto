@@ -19,7 +19,8 @@ const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 const toLines = (prefill) => [
   ...(prefill?.labor_items || []).map((l) => ({
     type: "labor",
-    description: l.description || "",
+    name: l.description || "",
+    description: l.details || "",
     quantity: Number(l.hours) || 0,
     unit_price: Number(l.rate) || 0,
     taxable: true,
@@ -27,7 +28,8 @@ const toLines = (prefill) => [
   })),
   ...(prefill?.parts_items || []).map((p) => ({
     type: "part",
-    description: p.name || "",
+    name: p.name || "",
+    description: p.details || "",
     part_number: p.part_number || "",
     quantity: Number(p.quantity) || 0,
     unit_price: Number(p.unit_price) || 0,
@@ -132,10 +134,10 @@ export default function EstimateCreateEditor({ prefill, customers = [], onClose,
     try {
       const laborItems = draft.line_items
         .filter((l) => l.type === "labor")
-        .map((l) => ({ description: l.description, hours: Number(l.quantity) || 0, rate: Number(l.unit_price) || 0, total: r2((Number(l.quantity) || 0) * (Number(l.unit_price) || 0)) }));
+        .map((l) => ({ description: l.name, details: l.description || "", hours: Number(l.quantity) || 0, rate: Number(l.unit_price) || 0, total: r2((Number(l.quantity) || 0) * (Number(l.unit_price) || 0)) }));
       const partsItems = draft.line_items
         .filter((l) => l.type !== "labor")
-        .map((p) => ({ name: p.description, part_number: p.part_number || "", quantity: Number(p.quantity) || 0, unit_price: Number(p.unit_price) || 0, total: r2((Number(p.quantity) || 0) * (Number(p.unit_price) || 0)) }));
+        .map((p) => ({ name: p.name, details: p.description || "", part_number: p.part_number || "", quantity: Number(p.quantity) || 0, unit_price: Number(p.unit_price) || 0, total: r2((Number(p.quantity) || 0) * (Number(p.unit_price) || 0)) }));
       const estimate_number = `EST-${Date.now().toString().slice(-6)}`;
       await base44.entities.Estimate.create({
         estimate_number,
