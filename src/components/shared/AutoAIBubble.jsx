@@ -1,7 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { Bot, Send, Loader2, Wrench, Camera, Paperclip, X, Pin, CalendarPlus } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import SavePhotoToProfile from "@/components/photos/SavePhotoToProfile";
+
+// Detail pages with a sticky bottom financial action bar — lift the widget above it.
+const DETAIL_PATTERN = /\/(EstimateDetail|RepairOrderDetail|InvoiceDetail)/i;
 
 
 const QUICK_PROMPTS = [
@@ -118,6 +122,10 @@ function injectLEDStyle() {
 
 export default function AutoAIBubble({ vehicle = "", description = "" }) {
   injectLEDStyle();
+  const location = useLocation();
+  // On financial detail pages, lift the widget above the sticky action bar.
+  const detailMode = DETAIL_PATTERN.test(location.pathname);
+  const bottomOffset = detailMode ? 92 : 20;
 
   const [open, setOpen]       = useState(false);
   const [messages, setMessages] = useState([]);
@@ -211,7 +219,7 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
   };
 
   return (
-    <div style={{ position: "fixed", bottom: 20, right: 20, zIndex: 9998, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
+    <div style={{ position: "fixed", bottom: bottomOffset, right: 20, zIndex: 9998, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
 
       {/* ── Chat Panel (opens above the button) ── */}
       {open && (
@@ -234,7 +242,7 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
           </div>
 
           {/* Messages */}
-          <div className="lbc-ai-messages">
+          <div className="lbc-ai-messages" style={detailMode ? { height: 150 } : undefined}>
             {messages.length === 0 && (
               <div style={{ textAlign:"center", padding:"16px 0" }}>
                 <Wrench style={{ width:28, height:28, color:"#1a4a6a", margin:"0 auto 8px" }} />
