@@ -239,6 +239,18 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
               color:"#00ff88", fontSize:9, fontWeight:700,
               padding:"2px 8px", borderRadius:20,
             }}>● LIVE</span>
+            <button
+              onClick={() => setOpen(false)}
+              aria-label="Close LBC Auto AI"
+              style={{
+                width: 32, height: 32, borderRadius: 8, cursor: "pointer",
+                background: "transparent", border: "1px solid #00aaff44",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: "#80d8ff", flexShrink: 0, marginLeft: 4, padding: 0,
+              }}
+            >
+              <X style={{ width: 16, height: 16 }} />
+            </button>
           </div>
 
           {/* Messages */}
