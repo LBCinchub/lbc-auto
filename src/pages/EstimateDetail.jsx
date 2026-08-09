@@ -12,7 +12,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import PrintTemplate from "@/components/shared/PrintTemplate";
 import PaymentReceiptDialog from "@/components/invoices/PaymentReceiptDialog";
 import { normalizeDiscountType } from "@/utils/discount";
-import AutoAIBubble from "@/components/shared/AutoAIBubble";
 import FinancialDocumentDrawer from "@/components/financial-workflow/FinancialDocumentDrawer";
 import UnifiedFinancialActionBar from "@/components/financial-workflow/UnifiedFinancialActionBar";
 
@@ -700,7 +699,6 @@ export default function EstimateDetail() {
           queryClient.invalidateQueries({ queryKey: ["estimates"] });
         }}
       />
-      <AutoAIBubble />
     </div>
   );
 }

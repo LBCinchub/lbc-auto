@@ -17,7 +17,6 @@ import EstimateFormDialog from "../components/estimates/EstimateFormDialog";
 import RepairOrderFormDialog from "../components/orders/RepairOrderFormDialog";
 import InvoiceFormDialog from "../components/invoices/InvoiceFormDialog";
 import DateFilter, { applyDateFilter } from "../components/shared/DateFilter";
-import AutoAIBubble from "@/components/shared/AutoAIBubble";
 
 const PAGE_SIZE = 30;
 const AVATAR_COLORS = [
@@ -503,7 +502,6 @@ export default function Customers() {
         orders={orders}
         customers={customers}
       />
-      <AutoAIBubble />
     </div>
   );
 }

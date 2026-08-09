@@ -15,7 +15,6 @@ import FinancialDocumentDrawer from "@/components/financial-workflow/FinancialDo
 import UnifiedFinancialActionBar from "@/components/financial-workflow/UnifiedFinancialActionBar";
 import SignaturePad from "@/components/orders/SignaturePad";
 import PaymentHistoryManager from "@/components/invoices/PaymentHistoryManager";
-import AutoAIBubble from "@/components/shared/AutoAIBubble";
 import { resolveVehicleId } from "@/utils/recordLinking";
 
 export default function RepairOrderDetail() {
@@ -205,7 +204,7 @@ export default function RepairOrderDetail() {
 
   return (
     <div className="space-y-6">
-      <div className="sticky bottom-0 z-30 bg-gray-950 border-t border-gray-800 py-3 px-4 flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <Button variant="ghost" onClick={() => navigate(-1)} className="text-gray-400 hover:text-white gap-2">
           <ArrowLeft className="w-4 h-4" /> Back
         </Button>
@@ -815,7 +814,6 @@ export default function RepairOrderDetail() {
           </div>
         </DialogContent>
       </Dialog>
-      <AutoAIBubble />
     </div>
   );
 

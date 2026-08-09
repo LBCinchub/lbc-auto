@@ -20,7 +20,6 @@ import InvoicePrintView from "../components/invoices/InvoicePrintView";
 import PaymentReceiptDialog from "../components/invoices/PaymentReceiptDialog";
 import PaymentHistoryManager from "../components/invoices/PaymentHistoryManager";
 import DateFilter, { applyDateFilter } from "../components/shared/DateFilter";
-import AutoAIBubble from "@/components/shared/AutoAIBubble";
 
 const PAGE_SIZE = 20;
 
@@ -606,7 +605,6 @@ export default function Invoices() {
         invoice={paymentInvoice}
         onSaved={() => queryClient.invalidateQueries({ queryKey: ["invoices"] })}
       />
-      <AutoAIBubble />
     </div>
   );
 }

@@ -14,7 +14,6 @@ import KpiCards from "../components/dashboard/KpiCards";
 import FinancialSummary from "../components/dashboard/FinancialSummary";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import StatusBadge from "../components/shared/StatusBadge";
-import AutoAIBubble from "@/components/shared/AutoAIBubble";
 import { useAuth } from "@/lib/AuthContext";
 
 export default function Dashboard() {
@@ -240,7 +239,6 @@ export default function Dashboard() {
           </div>
         </DialogContent>
       </Dialog>
-      <AutoAIBubble />
     </div>
   );
 }

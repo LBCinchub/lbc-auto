@@ -18,7 +18,6 @@ import RepairOrderFormDialog from "../components/orders/RepairOrderFormDialog";
 import InvoiceFormDialog from "../components/invoices/InvoiceFormDialog";
 import PaymentReceiptDialog from "../components/invoices/PaymentReceiptDialog";
 import DateFilter, { applyDateFilter } from "../components/shared/DateFilter";
-import AutoAIBubble from "@/components/shared/AutoAIBubble";
 import { invoiceFieldsFromRepairOrder, resolveVehicleId } from "@/utils/recordLinking";
 
 const statusFilters = [
@@ -466,7 +465,6 @@ export default function RepairOrders() {
           setPaymentOrder(null);
         }}
       />
-      <AutoAIBubble />
     </div>
   );
 }

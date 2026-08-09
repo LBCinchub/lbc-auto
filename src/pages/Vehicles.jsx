@@ -11,7 +11,6 @@ import PageHeader from "../components/shared/PageHeader";
 import SearchBar from "../components/shared/SearchBar";
 import EmptyState from "../components/shared/EmptyState";
 import VehicleFormDialog from "../components/vehicles/VehicleFormDialog";
-import AutoAIBubble from "@/components/shared/AutoAIBubble";
 import FinancialDocumentDrawer from "@/components/financial-workflow/FinancialDocumentDrawer";
 
 export default function Vehicles() {
@@ -242,7 +241,6 @@ export default function Vehicles() {
           onSaved={() => queryClient.invalidateQueries({ queryKey: ["invoices"] })}
         />
       )}
-      <AutoAIBubble />
     </div>
   );
 }
