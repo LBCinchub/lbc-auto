@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { syncCustomerActivity } from "@/utils/syncCustomerActivity";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, CreditCard, CheckCircle2, Plus, Trash2, Save, Loader2, Share2, History, FileText } from "lucide-react";
+import { ArrowLeft, CreditCard, CheckCircle2, Plus, Trash2, Save, Loader2, Share2, History, FileText, Printer, Send } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import PaymentHistoryManager from "@/components/invoices/PaymentHistoryManager";
 import { Button } from "@/components/ui/button";
@@ -12,8 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import PrintTemplate from "@/components/shared/PrintTemplate";
 import PaymentReceiptDialog from "@/components/invoices/PaymentReceiptDialog";
 import { normalizeDiscountType } from "@/utils/discount";
-import FinancialDocumentDrawer from "@/components/financial-workflow/FinancialDocumentDrawer";
-import UnifiedFinancialActionBar from "@/components/financial-workflow/UnifiedFinancialActionBar";
+import InvoiceFormDialog from "@/components/invoices/InvoiceFormDialog";
+import { useEmailSend } from "@/hooks/useEmailSend";
 
 
 // Auto-capitalise: first letter of every word
@@ -29,12 +29,14 @@ export default function EstimateDetail() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { sending: sendingEmail, sendEmail } = useEmailSend();
   const [user, setUser] = useState(null);
   const [saving, setSaving] = useState(false);
   const [savedOk, setSavedOk] = useState(false);
   const [showCashoutDialog, setShowCashoutDialog] = useState(false);
   const [showHistoryManager, setShowHistoryManager] = useState(false);
-  const [showInvoiceWorkflow, setShowInvoiceWorkflow] = useState(false);
+  const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
+  const [invoiceFromEstimate, setInvoiceFromEstimate] = useState(null);
   
   // Editable line items state
   const [laborItems, setLaborItems] = useState([]);
@@ -173,6 +175,16 @@ export default function EstimateDetail() {
     }
   };
 
+  const sendEstimateEmail = async () => {
+    const cachedEmail = customer?.email || null;
+    const sent = await sendEmail(estimate.id, "estimate", cachedEmail, estimate.customer_id, estimate.customer_name, estimate);
+    if (sent) {
+      await base44.entities.Estimate.update(estimate.id, { status: "sent", auth_status: "pending" });
+      queryClient.invalidateQueries({ queryKey: ["estimate", estimateId] });
+      queryClient.invalidateQueries({ queryKey: ["estimates"] });
+    }
+  };
+
   const updateLabor = (idx, field, value) => {
     setLaborItems(prev => prev.map((r, i) => {
       if (i !== idx) return r;
@@ -253,7 +265,7 @@ export default function EstimateDetail() {
     setTimeout(() => setSavedOk(false), 3000);
   };
 
-  const handleConvertToInvoice = () => setShowInvoiceWorkflow(true);
+  const handleConvertToInvoice = () => { setInvoiceFromEstimate(estimate); setInvoiceDialogOpen(true); };
 
   const handleConvertToRepairOrder = async () => {
     if (!window.confirm("Convert this approved estimate to a repair order?")) return;
@@ -311,22 +323,33 @@ export default function EstimateDetail() {
             className="border-gray-700 text-gray-300 h-9 gap-1.5 text-xs hover:border-violet-500 hover:text-violet-400">
             <Share2 className="w-3.5 h-3.5" /> Share
           </Button>
-          {/* Save */}
+          {/* Save Draft */}
           <Button size="sm" onClick={handleSave} disabled={saving}
             className="bg-sky-500 hover:bg-sky-600 gap-1.5 h-9 text-xs">
             {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-            {saving ? "Saving..." : "Save Changes"}
+            {saving ? "Saving..." : "Save Draft"}
           </Button>
-          {estimate.linked_invoice_id && (
-            <Button size="sm" onClick={() => setShowInvoiceWorkflow(true)}
-              className="bg-purple-600 hover:bg-purple-700 text-white gap-1.5 h-9 text-xs">
-              <FileText className="w-3.5 h-3.5" /> View Invoice
-            </Button>
-          )}
+          {/* Print */}
+          <Button variant="outline" size="sm" onClick={() => window.print()}
+            className="border-gray-700 text-gray-300 h-9 gap-1.5 text-xs hover:text-white">
+            <Printer className="w-3.5 h-3.5" /> Print
+          </Button>
+          {/* Send to Customer */}
+          <Button variant="outline" size="sm" onClick={sendEstimateEmail} disabled={sendingEmail}
+            className="border-gray-700 text-gray-300 h-9 gap-1.5 text-xs hover:text-sky-400">
+            {sendingEmail ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+            {sendingEmail ? "Sending..." : "Send to Customer"}
+          </Button>
           {estimate.status === "approved" && !estimate.linked_invoice_id && (
             <Button size="sm" onClick={handleConvertToInvoice}
               className="bg-emerald-500 hover:bg-emerald-600 text-white gap-1.5 h-9 text-xs">
               <CheckCircle2 className="w-3.5 h-3.5" /> Convert to Invoice
+            </Button>
+          )}
+          {estimate.linked_invoice_id && (
+            <Button size="sm" onClick={() => navigate(`/InvoiceDetail/${estimate.linked_invoice_id}`)}
+              className="bg-purple-600 hover:bg-purple-700 text-white gap-1.5 h-9 text-xs">
+              <FileText className="w-3.5 h-3.5" /> View Invoice
             </Button>
           )}
           {estimate.status === "approved" && !linkedRO && (
@@ -335,7 +358,12 @@ export default function EstimateDetail() {
               <CheckCircle2 className="w-3.5 h-3.5" /> Convert to Repair Order
             </Button>
           )}
-          {linkedRO && <Button size="sm" onClick={() => navigate(`/RepairOrderDetail/${linkedRO.id}`)} className="bg-sky-500/20 text-sky-400 hover:bg-sky-500/30 gap-1.5 h-9 text-xs"><FileText className="w-3.5 h-3.5" /> View Repair Order</Button>}
+          {linkedRO && (
+            <Button size="sm" onClick={() => navigate(`/RepairOrderDetail/${linkedRO.id}`)}
+              className="bg-sky-500/20 text-sky-400 hover:bg-sky-500/30 gap-1.5 h-9 text-xs">
+              <FileText className="w-3.5 h-3.5" /> View Repair Order
+            </Button>
+          )}
         </div>
       </div>
 
@@ -676,27 +704,16 @@ export default function EstimateDetail() {
         />
       )}
 
-      <div className="no-print sticky bottom-0 z-30">
-        <UnifiedFinancialActionBar
-          step={3}
-          dirty={false}
-          totals={{ total: grandTotal, balance: grandTotal - (estimate.amount_paid || 0) }}
-          saving={saving}
-          saved={estimate}
-          onBack={() => navigate(-1)}
-          onSave={handleSave}
-          onPrint={() => window.print()}
-          onPayment={() => setShowCashoutDialog(true)}
-          onFinalize={handleConvertToInvoice}
-        />
-      </div>
-      <FinancialDocumentDrawer
-        open={showInvoiceWorkflow}
-        source={{ type: "estimate", id: estimateId }}
-        onClose={() => setShowInvoiceWorkflow(false)}
+      <InvoiceFormDialog
+        open={invoiceDialogOpen}
+        onClose={() => { setInvoiceDialogOpen(false); setInvoiceFromEstimate(null); }}
+        invoice={null}
+        customers={customer ? [customer] : []}
+        sourceEstimate={invoiceFromEstimate}
         onSaved={() => {
           queryClient.invalidateQueries({ queryKey: ["estimate", estimateId] });
           queryClient.invalidateQueries({ queryKey: ["estimates"] });
+          queryClient.invalidateQueries({ queryKey: ["invoices"] });
         }}
       />
     </div>

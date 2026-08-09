@@ -11,8 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import EstimateFormDialog from "@/components/estimates/EstimateFormDialog";
-import FinancialDocumentDrawer from "@/components/financial-workflow/FinancialDocumentDrawer";
-import UnifiedFinancialActionBar from "@/components/financial-workflow/UnifiedFinancialActionBar";
+import InvoiceFormDialog from "@/components/invoices/InvoiceFormDialog";
 import SignaturePad from "@/components/orders/SignaturePad";
 import PaymentHistoryManager from "@/components/invoices/PaymentHistoryManager";
 import { resolveVehicleId } from "@/utils/recordLinking";
@@ -627,19 +626,6 @@ export default function RepairOrderDetail() {
         </div>
       )}
 
-      <div className="no-print sticky bottom-0 z-30">
-        <UnifiedFinancialActionBar
-          step={3}
-          dirty={false}
-          totals={{ total: order.total_cost || 0, balance: Math.max(0, (order.total_cost || 0) - (linkedInvoicesList[0]?.amount_paid || 0)) }}
-          saving={generatingInvoice}
-          saved={order}
-          onBack={() => navigate(-1)}
-          onPrint={handlePrintWorkerCopy}
-          onFinalize={() => setShowInvoiceDialog(true)}
-        />
-      </div>
-
       <EstimateFormDialog
         open={showEstimateDialog}
         onClose={() => setShowEstimateDialog(false)}
@@ -654,13 +640,18 @@ export default function RepairOrderDetail() {
         }}
       />
 
-      <FinancialDocumentDrawer
+      <InvoiceFormDialog
         open={showInvoiceDialog}
-        source={{ type: "repair_order", id: orderId }}
         onClose={() => setShowInvoiceDialog(false)}
+        invoice={null}
+        initialOrderId={orderId}
+        orders={[]}
+        customers={customers}
+        vehicles={vehicles}
         onSaved={() => {
           queryClient.invalidateQueries({ queryKey: ["repairOrder", orderId] });
           queryClient.invalidateQueries({ queryKey: ["invoices", "byRO", orderId] });
+          queryClient.invalidateQueries({ queryKey: ["invoices"] });
         }}
       />
 
