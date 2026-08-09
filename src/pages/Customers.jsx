@@ -458,7 +458,7 @@ export default function Customers() {
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         customer={editingCustomer}
-        onSaved={() => queryClient.invalidateQueries({ queryKey: ["customers"] })}
+        onSaved={() => { queryClient.invalidateQueries({ queryKey: ["customers"] }); queryClient.invalidateQueries({ queryKey: ["vehicles"] }); }}
         onQuickAction={handleQuickAction}
       />
       <CustomerProfileDialog

@@ -12,12 +12,14 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { FileText, Wrench, Receipt, CheckCircle2, CalendarDays } from "lucide-react";
 import { useNhtsaVinDecode } from "@/hooks/useNhtsaVinDecode";
 import { capWords, capitalizeFields } from "@/utils/capitalize";
 
 export default function CustomerFormDialog({ open, onClose, customer, onSaved, onQuickAction }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [form, setForm] = useState({
     full_name: "", phone: "", email: "", address: "", notes: ""
   });
@@ -120,8 +122,13 @@ export default function CustomerFormDialog({ open, onClose, customer, onSaved, o
               year: Number(vehicleForm.year),
               customer_id: newCustomer.id,
               customer_name: cappedForm.full_name,
+              shop_owner_email: user?.email || undefined,
             });
-          } catch (_) {}
+            queryClient.invalidateQueries({ queryKey: ["vehicles"] });
+          } catch (vehErr) {
+            console.error("Vehicle creation failed:", vehErr);
+            alert(`Customer saved, but the vehicle could not be saved: ${vehErr?.message || "unknown error"}. You can add it from the customer profile.`);
+          }
         }
 
         _latestVehicle.current = createdVehicleData;

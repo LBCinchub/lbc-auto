@@ -107,7 +107,14 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
     if (!form.customer_id) { setFetchedVehicles([]); return; }
     setLoadingVehicles(true);
     base44.entities.Vehicle.filter({ customer_id: form.customer_id })
-      .then(vehs => setFetchedVehicles(vehs))
+      .then(vehs => {
+        // Preserve the prefill vehicle if the fetch hasn't returned it yet
+        if (form.vehicle_id && !vehs.some(v => v.id === form.vehicle_id)) {
+          const parts = (form.vehicle_info || "").trim().split(" ");
+          vehs = [{ id: form.vehicle_id, year: parts[0] || "", make: parts[1] || "", model: parts.slice(2).join(" ") || "", customer_id: form.customer_id }, ...vehs];
+        }
+        setFetchedVehicles(vehs);
+      })
       .finally(() => setLoadingVehicles(false));
   }, [form.customer_id]);
 
@@ -445,7 +452,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
         {/* Fixed header */}
         <div className="flex-shrink-0 px-6 pt-6 pb-4 border-b border-gray-800">
           <DialogHeader>
-            <DialogTitle>{estimate ? "Edit Estimate" : "New Service Estimate"}</DialogTitle>
+            <DialogTitle>{estimate?.id ? "Edit Estimate" : "New Service Estimate"}</DialogTitle>
           </DialogHeader>
           {saveError && (
             <div className="mt-3 px-3 py-2 rounded-md bg-rose-500/10 border border-rose-500/40 text-rose-400 text-sm">
