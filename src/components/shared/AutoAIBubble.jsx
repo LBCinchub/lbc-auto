@@ -211,7 +211,7 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
   };
 
   return (
-    <div style={{ position: "fixed", bottom: 20, right: 20, zIndex: 50, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
+    <div style={{ position: "fixed", bottom: 20, right: 20, zIndex: 9998, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
 
       {/* ── Chat Panel (opens above the button) ── */}
       {open && (
