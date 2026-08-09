@@ -1,8 +1,9 @@
 import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import FinancialDocumentDrawer from "@/components/financial-workflow/FinancialDocumentDrawer";
+import OriginalInvoiceEditor from "@/components/invoices/OriginalInvoiceEditor";
+
 export default function InvoiceDetail() {
   const { invoiceId } = useParams();
   const navigate = useNavigate();
-  return <FinancialDocumentDrawer open source={{ type: "invoice", id: invoiceId }} onClose={() => navigate(-1)} />;
+  return <div className="overflow-hidden rounded-xl border border-gray-800 bg-gray-900"><OriginalInvoiceEditor source={{ type: "invoice", id: invoiceId }} onClose={() => navigate(-1)} /></div>;
 }
