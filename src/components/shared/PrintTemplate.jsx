@@ -179,6 +179,12 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
               {vehicle?.engine_type && (
                 <div style={{ gridColumn: "span 2" }}><span style={{ color: "#94a3b8", fontWeight: 600, textTransform: "uppercase", fontSize: 8, letterSpacing: 0.8 }}>Engine</span><br/><span style={{ fontWeight: 700, color: "#0f172a" }}>{vehicle.engine_type}</span></div>
               )}
+              {vehicle?.engine_liters && (
+                <div><span style={{ color: "#94a3b8", fontWeight: 600, textTransform: "uppercase", fontSize: 8, letterSpacing: 0.8 }}>Engine Liters</span><br/><span style={{ fontWeight: 700, color: "#0f172a" }}>{vehicle.engine_liters}</span></div>
+              )}
+              {vehicle?.trim && (
+                <div><span style={{ color: "#94a3b8", fontWeight: 600, textTransform: "uppercase", fontSize: 8, letterSpacing: 0.8 }}>Trim</span><br/><span style={{ fontWeight: 700, color: "#0f172a" }}>{vehicle.trim}</span></div>
+              )}
               {vehicle?.mileage && (
                 <div><span style={{ color: "#94a3b8", fontWeight: 600, textTransform: "uppercase", fontSize: 8, letterSpacing: 0.8 }}>Mileage</span><br/><span style={{ fontWeight: 700, color: "#0f172a" }}>{Number(vehicle.mileage).toLocaleString()} km</span></div>
               )}

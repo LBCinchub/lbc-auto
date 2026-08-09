@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { base44 } from "@/api/base44Client";
 import { TAX_RATE } from "@/lib/constants";
 import PrintTemplate from "@/components/shared/PrintTemplate";
+import { buildVehicleInfo } from "@/utils/buildVehicleInfo";
 
 export default function InvoicePrintView({ invoice, onClose }) {
   const [customer, setCustomer] = useState(null);
@@ -122,7 +123,7 @@ export default function InvoicePrintView({ invoice, onClose }) {
           createdDate={invoice.created_date ? new Date(invoice.created_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ""}
           user={user}
           customer={{ name: invoice.customer_name, phone: customer?.phone, email: customer?.email }}
-          vehicle={{ info: invoice.vehicle_info, vin: vehicleData?.vin, mileage: vehicleData?.mileage, license_plate: vehicleData?.license_plate, color: vehicleData?.color }}
+          vehicle={{ ...vehicleData, info: buildVehicleInfo(vehicleData) || invoice.vehicle_info }}
           lineItems={filteredLineItems}
           paymentHistory={paymentHistory}
           financials={financials}

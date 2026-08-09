@@ -38,6 +38,10 @@
       "type": "string",
       "description": "Trim level (e.g. LX, EX, Sport)"
     },
+    "engine_liters": {
+      "type": "string",
+      "description": "Engine displacement in liters (e.g. 1.5L, 2.0L)"
+    },
     "engine_type": {
       "type": "string",
       "description": "Engine size and type (e.g. 2.4L 4-Cyl)"

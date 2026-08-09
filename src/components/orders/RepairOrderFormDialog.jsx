@@ -16,6 +16,7 @@ import { Plus, Trash2, X, Loader2, CreditCard } from "lucide-react";
 import { useNhtsaVinDecode } from "@/hooks/useNhtsaVinDecode";
 import { useToast } from "@/components/ui/use-toast";
 import { resolveVehicleId } from "@/utils/recordLinking";
+import { buildVehicleInfo } from "@/utils/buildVehicleInfo";
 
 import CustomerSearchInput from "@/components/shared/CustomerSearchInput";
 import { capWords, toTitleCase, capitalizeFields, capitalizeArrayItems } from "@/utils/capitalize";
@@ -178,7 +179,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
 
   const handleVehicleChange = (id) => {
     const v = customerVehicles.find(v => v.id === id);
-    setForm({ ...form, vehicle_id: id, vehicle_info: v ? `${v.year} ${v.make} ${v.model}` : "" });
+    setForm({ ...form, vehicle_id: id, vehicle_info: buildVehicleInfo(v) });
   };
 
   const handleMechanicChange = (id) => {
@@ -227,7 +228,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
       engine_type: newVehicleForm.engine_type || "",
     });
     setLocalVehicles(prev => [...prev, created]);
-    setForm({ ...form, vehicle_id: created.id, vehicle_info: `${created.year} ${created.make} ${created.model}` });
+    setForm({ ...form, vehicle_id: created.id, vehicle_info: buildVehicleInfo(created) });
     setNewVehicleForm(null);
     queryClient.invalidateQueries({ queryKey: ["vehicles"] });
     queryClient.refetchQueries({ queryKey: ["vehicles"] });
@@ -548,7 +549,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                      <SelectContent className="bg-gray-800 border-gray-700">
                        {loadingVehicles && <div className="px-3 py-2 text-xs text-gray-500">Loading vehicles...</div>}
                        {!loadingVehicles && customerVehicles.map(v => (
-                         <SelectItem key={v.id} value={v.id}>{v.year} {v.make} {v.model}</SelectItem>
+                         <SelectItem key={v.id} value={v.id}>{buildVehicleInfo(v)}</SelectItem>
                        ))}
                        {!loadingVehicles && form.customer_id && customerVehicles.length === 0 && (
                          <button onClick={() => setNewVehicleForm({ vin: "", year: "", make: "", model: "", license_plate: "", color: "", engine_type: "" })}

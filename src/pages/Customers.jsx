@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { fuzzyMatch } from "@/utils/fuzzySearch";
 import { formatPhone } from "@/utils/formatPhone";
+import { buildVehicleInfo } from "@/utils/buildVehicleInfo";
 import PageHeader from "../components/shared/PageHeader";
 import SearchBar from "../components/shared/SearchBar";
 import EmptyState from "../components/shared/EmptyState";
@@ -221,7 +222,7 @@ export default function Customers() {
       const customerVehicles = vehiclesByCustomer[c.id] || [];
       const vins = customerVehicles.map(v => v.vin).join(" ");
       const plates = customerVehicles.map(v => v.license_plate).join(" ");
-      const carInfo = customerVehicles.map(v => `${v.year} ${v.make} ${v.model}`).join(" ");
+      const carInfo = customerVehicles.map(v => buildVehicleInfo(v)).join(" ");
       if (searchField === "name") return fuzzyMatch(search, [c.full_name]);
       if (searchField === "phone") return fuzzyMatch(search, [c.phone]);
       if (searchField === "email") return fuzzyMatch(search, [c.email]);
@@ -422,7 +423,7 @@ export default function Customers() {
                             <Car className="w-3 h-3 text-sky-400" />
                           </div>
                           <p className="text-sm text-green-400 font-medium group-hover:text-green-300 capitalize leading-tight">
-                            {[v.year, v.make, v.model].filter(Boolean).join(" ")}
+                            {buildVehicleInfo(v)}
                             {v.license_plate ? ` — ${v.license_plate}` : ""}
                           </p>
                         </div>

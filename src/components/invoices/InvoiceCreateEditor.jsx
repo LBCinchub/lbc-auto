@@ -11,6 +11,7 @@ import InvoiceTotalsSection from "@/components/invoices/InvoiceTotalsSection";
 import { calculateFinancials } from "@/components/financial-workflow/financialMath";
 import { syncCustomerActivity } from "@/utils/syncCustomerActivity";
 import { useToast } from "@/components/ui/use-toast";
+import { buildVehicleInfo } from "@/utils/buildVehicleInfo";
 
 const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
@@ -103,7 +104,7 @@ export default function InvoiceCreateEditor({ prefill, customers = [], onClose, 
 
   const handleVehicleChange = (vid) => {
     const v = customerVehicles.find((x) => x.id === vid);
-    setDraft((d) => ({ ...d, vehicle_id: vid, vehicle_info: v ? `${v.year || ""} ${v.make || ""} ${v.model || ""}`.trim() : "" }));
+    setDraft((d) => ({ ...d, vehicle_id: vid, vehicle_info: buildVehicleInfo(v) }));
   };
 
   const onCustSearchChange = (val) => {
@@ -204,7 +205,7 @@ export default function InvoiceCreateEditor({ prefill, customers = [], onClose, 
                     {customerVehicles.length === 0 && <div className="px-3 py-2 text-xs text-gray-500">No vehicles on file</div>}
                     {customerVehicles.map((v) => (
                       <SelectItem key={v.id} value={v.id}>
-                        {`${v.year || ""} ${v.make || ""} ${v.model || ""}`.trim()}{v.license_plate ? ` · ${v.license_plate}` : ""}
+                        {buildVehicleInfo(v)}{v.license_plate ? ` · ${v.license_plate}` : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>

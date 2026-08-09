@@ -7,7 +7,7 @@ export const RECORD_CONFIG = {
   diagnostic: { label: "Diagnostic Scan", view: "cars" },
 };
 
-export const vehicleName = (vehicle) => vehicle ? [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ") : "All Vehicles";
+export const vehicleName = (vehicle) => vehicle ? [vehicle.year, vehicle.make, vehicle.model, vehicle.engine_liters, vehicle.trim_level || vehicle.trim].filter(Boolean).join(" ") : "All Vehicles";
 export const statusLabel = (value) => String(value || "pending").replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 export const titleCase = (value) => String(value || "Service").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
 export const formatMoney = (value) => new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" }).format(Number(value || 0));

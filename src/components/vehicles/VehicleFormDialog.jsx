@@ -12,10 +12,11 @@ import { useNhtsaVinDecode } from "@/hooks/useNhtsaVinDecode";
 import CustomerSearchInput from "@/components/shared/CustomerSearchInput";
 import VinScanner from "./VinScanner";
 import { capitalizeFields } from "@/utils/capitalize";
+import { buildVehicleInfo } from "@/utils/buildVehicleInfo";
 
 const emptyForm = {
   customer_id: "", customer_name: "", vin: "", license_plate: "",
-  make: "", model: "", year: "", engine_type: "", color: "", mileage: ""
+  make: "", model: "", year: "", engine_type: "", engine_liters: "", trim: "", color: "", mileage: ""
 };
 
 
@@ -52,6 +53,8 @@ export default function VehicleFormDialog({ open, onClose, vehicle, onSaved, cus
         model: vehicle.model || "",
         year: vehicle.year || "",
         engine_type: vehicle.engine_type || "",
+        engine_liters: vehicle.engine_liters || "",
+        trim: vehicle.trim || "",
         color: vehicle.color || "",
         mileage: vehicle.mileage || "",
       });
@@ -75,17 +78,19 @@ export default function VehicleFormDialog({ open, onClose, vehicle, onSaved, cus
 
   const handleSave = async () => {
     setSaving(true);
-    const data = capitalizeFields({ ...form, year: Number(form.year), mileage: Number(form.mileage) || 0 }, ["make", "model", "color", "engine_type", "customer_name", "trim"]);
+    const data = capitalizeFields({ ...form, year: Number(form.year), mileage: Number(form.mileage) || 0 }, ["make", "model", "color", "engine_type", "engine_liters", "customer_name", "trim"]);
     if (vehicle?.id) {
       await base44.entities.Vehicle.update(vehicle.id, data);
 
       // ── CENTER CONTROL: vehicle info changed → propagate to all linked records ──
-      const newVehicleInfo = [data.year, data.make, data.model].filter(Boolean).join(" ");
-      const prevVehicleInfo = [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ");
+      const newVehicleInfo = buildVehicleInfo(data);
+      const prevVehicleInfo = buildVehicleInfo(vehicle);
       const vehicleChanged =
         vehicle.make  !== data.make  ||
         vehicle.model !== data.model ||
         vehicle.year  !== data.year  ||
+        vehicle.engine_liters !== data.engine_liters ||
+        vehicle.trim !== data.trim ||
         vehicle.license_plate !== data.license_plate ||
         vehicle.color !== data.color;
 
@@ -216,6 +221,19 @@ export default function VehicleFormDialog({ open, onClose, vehicle, onSaved, cus
             <Label className="text-gray-400">Engine Type</Label>
             <Input value={form.engine_type} autoCapitalize="words" onChange={e => setForm({...form, engine_type: toTitleCase(e.target.value)})}
               className="bg-gray-800 border-gray-700 text-white mt-1" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-gray-400">Engine Liters</Label>
+              <Input value={form.engine_liters} onChange={e => setForm({...form, engine_liters: e.target.value})}
+                className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="e.g. 1.5L, 2.0L" />
+            </div>
+            <div>
+              <Label className="text-gray-400">Trim Level</Label>
+              <Input value={form.trim} autoCapitalize="words" onChange={e => setForm({...form, trim: toTitleCase(e.target.value)})}
+                className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="e.g. EX, Sport" />
+            </div>
           </div>
 
           <div className="flex gap-3 pt-2">

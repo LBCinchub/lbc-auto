@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { fuzzyMatch } from "@/utils/fuzzySearch";
 import { formatPhone } from "@/utils/formatPhone";
+import { buildVehicleInfo } from "@/utils/buildVehicleInfo";
 import PageHeader from "../components/shared/PageHeader";
 import SearchBar from "../components/shared/SearchBar";
 import EmptyState from "../components/shared/EmptyState";
@@ -80,7 +81,7 @@ export default function Vehicles() {
     if (searchField === "customer") return fuzzyMatch(search, [v.customer_name]);
     if (searchField === "plate") return fuzzyMatch(search, [v.license_plate]);
     if (searchField === "vin") return fuzzyMatch(search, [v.vin]);
-    return fuzzyMatch(search, [v.customer_name, v.make, v.model, String(v.year || ""), v.license_plate, v.vin, v.color, v.engine_type]);
+    return fuzzyMatch(search, [v.customer_name, v.make, v.model, String(v.year || ""), v.license_plate, v.vin, v.color, v.engine_type, v.engine_liters, v.trim]);
   });
 
   const handleDelete = async (id) => {
@@ -159,7 +160,7 @@ export default function Vehicles() {
                   </div>
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="text-green-400 font-semibold capitalize hover:underline">{v.year} {v.make} {v.model}</h3>
+                      <h3 className="text-green-400 font-semibold capitalize hover:underline">{buildVehicleInfo(v)}</h3>
                       {isDueForService(v.id) && (
                         <span className="text-xs bg-orange-500/20 text-orange-400 border border-orange-500/30 px-1.5 py-0.5 rounded-full font-medium">Due for Service</span>
                       )}
@@ -205,6 +206,12 @@ export default function Vehicles() {
                 )}
                 {v.engine_type && (
                   <div className="text-gray-400"><span className="text-gray-600">Engine:</span> {v.engine_type}</div>
+                )}
+                {v.engine_liters && (
+                  <div className="text-gray-400"><span className="text-gray-600">Liters:</span> {v.engine_liters}</div>
+                )}
+                {v.trim && (
+                  <div className="text-gray-400"><span className="text-gray-600">Trim:</span> {v.trim}</div>
                 )}
               </div>
               {v.vin && (

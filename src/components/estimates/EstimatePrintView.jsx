@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { base44 } from "@/api/base44Client";
 import PrintTemplate from "@/components/shared/PrintTemplate";
+import { buildVehicleInfo } from "@/utils/buildVehicleInfo";
 
 export default function EstimatePrintView({ estimate, onClose }) {
   const [customer, setCustomer] = useState(null);
@@ -76,7 +77,7 @@ export default function EstimatePrintView({ estimate, onClose }) {
           createdDate={estimate?.estimate_date || (estimate?.created_date ? new Date(estimate.created_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "")}
           user={user}
           customer={{ name: estimate?.customer_name || customer?.full_name, phone: customer?.phone, email: customer?.email, address: customer?.address }}
-          vehicle={{ info: estimate?.vehicle_info, vin: vehicleData?.vin, mileage: vehicleData?.mileage, license_plate: vehicleData?.license_plate, color: vehicleData?.color }}
+          vehicle={{ ...vehicleData, info: buildVehicleInfo(vehicleData) || estimate?.vehicle_info }}
           lineItems={filteredLineItems}
           paymentHistory={[]}
           financials={financials}

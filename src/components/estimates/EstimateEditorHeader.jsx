@@ -1,5 +1,6 @@
 import React from "react";
 import StatusBadge from "@/components/shared/StatusBadge";
+import { buildVehicleInfo } from "@/utils/buildVehicleInfo";
 
 export default function EstimateEditorHeader({ estimate, customer, vehicle, linkedInvoice, linkedRO }) {
   return (
@@ -20,7 +21,7 @@ export default function EstimateEditorHeader({ estimate, customer, vehicle, link
         <div className="text-right text-sm">
           <p className="font-medium text-white">{customer?.full_name || estimate?.customer_name || "—"}</p>
           <p className="text-gray-400">
-            {vehicle ? `${vehicle.year || ""} ${vehicle.make || ""} ${vehicle.model || ""}`.trim() : estimate?.vehicle_info || ""}
+            {buildVehicleInfo(vehicle) || estimate?.vehicle_info || ""}
           </p>
         </div>
       </div>

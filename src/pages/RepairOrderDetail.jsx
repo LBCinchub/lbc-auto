@@ -15,6 +15,7 @@ import InvoiceFormDialog from "@/components/invoices/InvoiceFormDialog";
 import SignaturePad from "@/components/orders/SignaturePad";
 import PaymentHistoryManager from "@/components/invoices/PaymentHistoryManager";
 import { resolveVehicleId } from "@/utils/recordLinking";
+import { buildVehicleInfo } from "@/utils/buildVehicleInfo";
 
 export default function RepairOrderDetail() {
   const { orderId } = useParams();
@@ -81,7 +82,7 @@ export default function RepairOrderDetail() {
         </div>
         <div style="flex:1;background:#f8fafc;border-radius:10px;padding:14px 16px;border-left:3px solid #6366f1">
           <div style="font-size:8px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px">Vehicle</div>
-          <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:4px">${order.vehicle_info}</div>
+          <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:4px">${buildVehicleInfo(vehicleRecord) || order.vehicle_info}</div>
           ${vehicleRecord?.license_plate ? `<div style="font-size:10px;color:#475569;font-weight:600;letter-spacing:0.5px">Plate: ${vehicleRecord.license_plate.toUpperCase()}</div>` : ""}
           ${vehicleRecord?.vin ? `<div style="font-size:9px;color:#64748b;font-family:monospace;margin-top:2px">VIN: ${vehicleRecord.vin.toUpperCase()}</div>` : ""}
           ${order.mechanic_name ? `<div style="font-size:10px;color:#475569;margin-top:2px">Mechanic: ${order.mechanic_name}</div>` : ""}
@@ -293,7 +294,7 @@ export default function RepairOrderDetail() {
              <button
                onClick={() => order.vehicle_id && navigate(`/VehicleTimeline/${order.vehicle_id}`)}
                className="text-emerald-400 hover:text-emerald-300 hover:underline cursor-pointer transition-colors font-semibold text-left"
-             >{order.vehicle_info || "—"}</button>
+             >{buildVehicleInfo(vehicleRecord) || order.vehicle_info || "—"}</button>
              {vehicleRecord?.license_plate && (
                <p className="text-gray-400 text-xs mt-1 font-mono tracking-wide">🪪 {vehicleRecord.license_plate.toUpperCase()}</p>
              )}
