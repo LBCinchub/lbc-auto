@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subWeeks, subMonths, isWithinInterval, parseISO } from "date-fns";
@@ -42,21 +42,32 @@ export default function Payroll() {
   const [selectedMechanic, setSelectedMechanic] = useState(null);
   const [paymentForm, setPaymentForm] = useState({ amount: "", payment_date: format(new Date(), "yyyy-MM-dd"), notes: "" });
   const [saving, setSaving] = useState(false);
+  const [user, setUser] = useState(null);
   const queryClient = useQueryClient();
 
+  // Tenant scope: only this shop's mechanics, time entries & payments. Derived
+  // from the authenticated session (never a URL/client param) so payroll never
+  // exposes another shop's people or hours.
+  useEffect(() => {
+    base44.auth.me().then(setUser).catch(() => {});
+  }, []);
+
   const { data: mechanics = [] } = useQuery({
-    queryKey: ["mechanics"],
-    queryFn: () => base44.entities.Mechanic.list(),
+    queryKey: ["mechanics", user?.email],
+    queryFn: () => user ? base44.entities.Mechanic.filter({ created_by: user.email }, "-created_date", 10000) : Promise.resolve([]),
+    enabled: !!user,
   });
 
   const { data: timeEntries = [] } = useQuery({
-    queryKey: ["timeEntries", "all"],
-    queryFn: () => base44.entities.TimeEntry.list("-clock_in", 1000),
+    queryKey: ["timeEntries", "all", user?.email],
+    queryFn: () => user ? base44.entities.TimeEntry.filter({ created_by: user.email }, "-clock_in", 1000) : Promise.resolve([]),
+    enabled: !!user,
   });
 
   const { data: paymentRecords = [] } = useQuery({
-    queryKey: ["paymentRecords"],
-    queryFn: () => base44.entities.PaymentRecord.list("-payment_date", 500),
+    queryKey: ["paymentRecords", user?.email],
+    queryFn: () => user ? base44.entities.PaymentRecord.filter({ created_by: user.email }, "-payment_date", 500) : Promise.resolve([]),
+    enabled: !!user,
   });
 
   const { start, end } = getPeriodRange(period);

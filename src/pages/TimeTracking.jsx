@@ -9,6 +9,7 @@ export default function TimeTracking() {
   const queryClient = useQueryClient();
   const [loadingId, setLoadingId] = useState(null);
   const [, setTick] = useState(0);
+  const [user, setUser] = useState(null);
 
   // Re-render every 30 seconds so live durations update
   useEffect(() => {
@@ -16,22 +17,32 @@ export default function TimeTracking() {
     return () => clearInterval(interval);
   }, []);
 
+  // Tenant scope: only this shop's mechanics & time entries. The tenant is
+  // derived from the authenticated session (never a URL/client param) so one
+  // shop can never see another shop's people or hours.
+  useEffect(() => {
+    base44.auth.me().then(setUser).catch(() => {});
+  }, []);
+
   const { data: mechanics = [] } = useQuery({
-    queryKey: ["mechanics"],
-    queryFn: () => base44.entities.Mechanic.list(),
+    queryKey: ["mechanics", user?.email],
+    queryFn: () => user ? base44.entities.Mechanic.filter({ created_by: user.email }, "-created_date", 10000) : Promise.resolve([]),
+    enabled: !!user,
   });
 
   const today = format(new Date(), "yyyy-MM-dd");
 
   const { data: todayEntries = [] } = useQuery({
-    queryKey: ["timeEntries", today],
-    queryFn: () => base44.entities.TimeEntry.filter({ date: today }),
+    queryKey: ["timeEntries", today, user?.email],
+    queryFn: () => user ? base44.entities.TimeEntry.filter({ date: today, created_by: user.email }) : Promise.resolve([]),
+    enabled: !!user,
     refetchInterval: 30000,
   });
 
   const { data: allEntries = [] } = useQuery({
-    queryKey: ["timeEntries", "all"],
-    queryFn: () => base44.entities.TimeEntry.list("-clock_in", 100),
+    queryKey: ["timeEntries", "all", user?.email],
+    queryFn: () => user ? base44.entities.TimeEntry.filter({ created_by: user.email }, "-clock_in", 500) : Promise.resolve([]),
+    enabled: !!user,
   });
 
   const getActiveEntry = (mechanicId) =>
