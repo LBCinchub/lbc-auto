@@ -25,11 +25,14 @@ export default function InvoicePrintView({ invoice, onClose }) {
     loadData();
   }, [invoice]);
 
-  // Build line items from parts + labor
+  // Build line items from parts + labor — prefer the unified line_items (which
+  // always carries both Labor and Parts from the estimate/RO), fall back to
+  // the legacy parts_used/labor_items fields only when line_items lacks them.
   const lineItems = [];
-  const partsRows = (invoice.parts_used && invoice.parts_used.length > 0)
-    ? invoice.parts_used
-    : (invoice.line_items || []).filter(li => li.type === "part" || li.type === "parts");
+  const lineItemParts = (invoice.line_items || []).filter(li => li.type === "part" || li.type === "parts");
+  const partsRows = lineItemParts.length > 0
+    ? lineItemParts
+    : (invoice.parts_used || []);
 
   partsRows.forEach(p => {
     const descParts = [];
@@ -45,9 +48,10 @@ export default function InvoicePrintView({ invoice, onClose }) {
     });
   });
 
-  const laborRows = (invoice.labor_items && invoice.labor_items.length > 0)
-    ? invoice.labor_items
-    : (invoice.line_items || []).filter(li => li.type === "labor");
+  const lineItemLabor = (invoice.line_items || []).filter(li => li.type === "labor");
+  const laborRows = lineItemLabor.length > 0
+    ? lineItemLabor
+    : (invoice.labor_items || []);
 
   if (laborRows.length > 0) {
     laborRows.forEach(l => {

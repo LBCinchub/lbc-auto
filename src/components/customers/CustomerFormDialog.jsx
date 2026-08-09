@@ -244,11 +244,11 @@ export default function CustomerFormDialog({ open, onClose, customer, onSaved, o
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-md">
+      <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-md max-h-[85vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle>{customer ? "Edit Customer" : "New Customer"}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 mt-2 max-h-[70vh] overflow-y-auto pr-1">
+        <div className="space-y-4 mt-2 flex-1 overflow-y-auto pr-2">
           <div>
             <Label htmlFor="cf-full-name" className="text-gray-400">Full Name *</Label>
             <Input id="cf-full-name" ref={fullNameRef} value={form.full_name} autoCapitalize="words" onChange={e => capWords(e, setForm, "full_name")}
@@ -333,13 +333,13 @@ export default function CustomerFormDialog({ open, onClose, customer, onSaved, o
               )}
             </div>
           )}
-          <div className="flex gap-3 pt-2">
-            <Button variant="outline" onClick={onClose} className="flex-1 border-gray-700 text-gray-300">Cancel</Button>
-            <Button onClick={handleSave} disabled={saving || !form.full_name || !form.phone}
-              className="flex-1 bg-sky-500 hover:bg-sky-600">
-              {saving ? "Saving..." : "Save Customer"}
-            </Button>
-          </div>
+        </div>
+        <div className="flex gap-3 pt-2">
+          <Button variant="outline" onClick={onClose} className="flex-1 border-gray-700 text-gray-300">Cancel</Button>
+          <Button onClick={handleSave} disabled={saving || !form.full_name || !form.phone}
+            className="flex-1 bg-sky-500 hover:bg-sky-600">
+            {saving ? "Saving..." : "Save Customer"}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
