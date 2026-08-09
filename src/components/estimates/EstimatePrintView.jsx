@@ -38,6 +38,16 @@ export default function EstimatePrintView({ estimate, onClose }) {
     });
   });
 
+  // Exclude any line item that duplicates the Service Description / Notes
+  // (those live in their own boxes) so the items table only shows real Labor/Part rows.
+  const _norm = (s) => String(s || "").trim().toLowerCase().replace(/\s+/g, " ");
+  const _sr = _norm(estimate?.service_reason);
+  const _notes = _norm(estimate?.notes);
+  const filteredLineItems = lineItems.filter((item) => {
+    const n = _norm(item.name || item.description || "");
+    return !((_sr && n === _sr) || (_notes && n === _notes));
+  });
+
   const grandTotal = estimate?.grand_total || 0;
   const amountPaid = estimate?.amount_paid || 0;
   const financials = {
@@ -67,7 +77,7 @@ export default function EstimatePrintView({ estimate, onClose }) {
           user={user}
           customer={{ name: estimate?.customer_name || customer?.full_name, phone: customer?.phone, email: customer?.email, address: customer?.address }}
           vehicle={{ info: estimate?.vehicle_info, vin: vehicleData?.vin, mileage: vehicleData?.mileage, license_plate: vehicleData?.license_plate, color: vehicleData?.color }}
-          lineItems={lineItems}
+          lineItems={filteredLineItems}
           paymentHistory={[]}
           financials={financials}
           notes={estimate?.notes}

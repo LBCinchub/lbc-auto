@@ -73,6 +73,16 @@ export default function InvoicePrintView({ invoice, onClose }) {
     });
   }
 
+  // Exclude any line item that duplicates the Service Description / Customer Note
+  // (those live in their own boxes) so the items table only shows real Labor/Part rows.
+  const _norm = (s) => String(s || "").trim().toLowerCase().replace(/\s+/g, " ");
+  const _sr = _norm(invoice.service_reason);
+  const _cn = _norm(invoice.customer_note);
+  const filteredLineItems = lineItems.filter((item) => {
+    const n = _norm(item.name || item.description || "");
+    return !((_sr && n === _sr) || (_cn && n === _cn));
+  });
+
   const subtotal = (invoice.parts_total || 0) + (invoice.labor_total || 0);
   const financials = {
     partsTotal: invoice.parts_total || 0,
@@ -107,7 +117,7 @@ export default function InvoicePrintView({ invoice, onClose }) {
           user={user}
           customer={{ name: invoice.customer_name, phone: customer?.phone, email: customer?.email }}
           vehicle={{ info: invoice.vehicle_info, vin: vehicleData?.vin, mileage: vehicleData?.mileage, license_plate: vehicleData?.license_plate, color: vehicleData?.color }}
-          lineItems={lineItems}
+          lineItems={filteredLineItems}
           paymentHistory={paymentHistory}
           financials={financials}
           notes={invoice.customer_note}

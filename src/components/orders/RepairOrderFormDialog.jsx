@@ -122,7 +122,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         description: order.description || "",
         status: order.status || "waiting",
         labor_hours: order.labor_hours || "",
-        labor_items: order.labor_items?.length ? order.labor_items.map(i => ({ ...i, rate: String(i.rate ?? 120) })) : [{ description: order.description || "", hours: String(order.labor_hours || ""), rate: "120", total: (order.labor_hours || 0) * 120 }],
+        labor_items: order.labor_items?.length ? order.labor_items.map(i => ({ ...i, rate: String(i.rate ?? 120) })) : [{ description: "", hours: String(order.labor_hours || ""), rate: "120", total: (order.labor_hours || 0) * 120 }],
         notes: order.notes || "",
         parts_used: order.parts_used || [],
         estimated_completion: order.estimated_completion || "",
