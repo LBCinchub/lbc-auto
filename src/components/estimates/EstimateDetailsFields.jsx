@@ -17,7 +17,7 @@ export default function EstimateDetailsFields({ draft, onChange }) {
       </div>
       <div className="md:col-span-2">
         <Label className="text-gray-300">Service Description</Label>
-        <Textarea value={draft.service_reason || ""} onChange={e => set("service_reason", e.target.value)} className="mt-2 border-gray-700 bg-gray-950 text-white" />
+        <Textarea value={draft.service_reason || ""} onChange={e => set("service_reason", e.target.value)} className="mt-2 flex min-h-[60px] w-full rounded-md border border-gray-700 bg-gray-950 px-3 py-2 text-white shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
       </div>
       <div className="md:col-span-2">
         <Label className="text-gray-300">Notes (shown on print)</Label>
