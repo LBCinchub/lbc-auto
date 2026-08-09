@@ -248,7 +248,7 @@ export default function CustomerFormDialog({ open, onClose, customer, onSaved, o
         <DialogHeader>
           <DialogTitle>{customer ? "Edit Customer" : "New Customer"}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 mt-2">
+        <div className="space-y-4 mt-2 max-h-[70vh] overflow-y-auto pr-1">
           <div>
             <Label htmlFor="cf-full-name" className="text-gray-400">Full Name *</Label>
             <Input id="cf-full-name" ref={fullNameRef} value={form.full_name} autoCapitalize="words" onChange={e => capWords(e, setForm, "full_name")}
