@@ -2,6 +2,11 @@
   "name": "PaymentRecord",
   "type": "object",
   "properties": {
+    "shop_owner_email": {
+      "type": "string",
+      "format": "email",
+      "description": "Shop owner email \u2014 tenant scope key for cross-tenant isolation. Stamped on create from the authenticated session."
+    },
     "mechanic_id": {
       "type": "string",
       "description": "Mechanic ID"
@@ -34,16 +39,16 @@
     "payment_date"
   ],
   "rls": {
-    "create": true,
+    "create": {
+      "data.shop_owner_email": "{{user.email}}"
+    },
     "read": {
       "$or": [
         {
           "created_by_id": "{{user.id}}"
         },
         {
-          "user_condition": {
-            "role": "admin"
-          }
+          "data.shop_owner_email": "{{user.email}}"
         }
       ]
     },
@@ -53,9 +58,7 @@
           "created_by_id": "{{user.id}}"
         },
         {
-          "user_condition": {
-            "role": "admin"
-          }
+          "data.shop_owner_email": "{{user.email}}"
         }
       ]
     },
@@ -65,9 +68,7 @@
           "created_by_id": "{{user.id}}"
         },
         {
-          "user_condition": {
-            "role": "admin"
-          }
+          "data.shop_owner_email": "{{user.email}}"
         }
       ]
     }
