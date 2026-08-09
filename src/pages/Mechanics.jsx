@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import PageHeader from "../components/shared/PageHeader";
 import EmptyState from "../components/shared/EmptyState";
 import StatusBadge from "../components/shared/StatusBadge";
+import { backfillTenantOwnership } from "@/utils/backfillTenantOwnership";
 
 export default function Mechanics() {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -24,12 +25,18 @@ export default function Mechanics() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    base44.auth.me().then(setUser);
+    base44.auth.me().then(async (u) => {
+      setUser(u);
+      if (u?.email) {
+        await backfillTenantOwnership(u.email);
+        queryClient.invalidateQueries({ queryKey: ["mechanics"] });
+      }
+    });
   }, []);
 
   const { data: mechanics = [] } = useQuery({
     queryKey: ["mechanics", user?.email],
-    queryFn: () => user ? base44.entities.Mechanic.filter({ created_by: user.email }, "-created_date", 50) : Promise.resolve([]),
+    queryFn: () => user ? base44.entities.Mechanic.list("-created_date", 10000) : Promise.resolve([]),
     enabled: !!user,
   });
 
@@ -59,7 +66,7 @@ export default function Mechanics() {
     if (editing) {
       await base44.entities.Mechanic.update(editing.id, data);
     } else {
-      await base44.entities.Mechanic.create(data);
+      await base44.entities.Mechanic.create({ ...data, shop_owner_email: user?.email });
     }
     setSaving(false);
     queryClient.invalidateQueries({ queryKey: ["mechanics"] });
@@ -77,7 +84,7 @@ export default function Mechanics() {
 
   const { data: todayEntries = [] } = useQuery({
     queryKey: ["timeEntries", today, user?.email],
-    queryFn: () => user ? base44.entities.TimeEntry.filter({ date: today, created_by: user.email }) : Promise.resolve([]),
+    queryFn: () => user ? base44.entities.TimeEntry.filter({ date: today }) : Promise.resolve([]),
     enabled: !!user,
     refetchInterval: 30000,
   });
@@ -95,6 +102,7 @@ export default function Mechanics() {
           mechanic_name: mech.name,
           clock_in: new Date().toISOString(),
           date: today,
+          shop_owner_email: user?.email,
         });
         queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
       }

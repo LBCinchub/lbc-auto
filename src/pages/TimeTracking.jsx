@@ -4,6 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Clock, LogIn, LogOut, Timer, CalendarDays } from "lucide-react";
 import { format, differenceInMinutes, parseISO } from "date-fns";
+import { backfillTenantOwnership } from "@/utils/backfillTenantOwnership";
 
 export default function TimeTracking() {
   const queryClient = useQueryClient();
@@ -17,32 +18,39 @@ export default function TimeTracking() {
     return () => clearInterval(interval);
   }, []);
 
-  // Tenant scope: only this shop's mechanics & time entries. The tenant is
-  // derived from the authenticated session (never a URL/client param) so one
-  // shop can never see another shop's people or hours.
+  // Tenant scope: RLS on the Mechanic / TimeEntry entities scopes every read
+  // to the authenticated shop (shop_owner_email == user.email, or records the
+  // user created) — with NO admin bypass, so one shop can never see another
+  // shop's people or hours. The tenant is derived from the session, never a
+  // URL/client param. We also backfill shop_owner_email onto legacy records
+  // the current user owns so the tenant field is populated going forward.
   useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => {});
+    base44.auth.me().then(async (u) => {
+      setUser(u);
+      if (u?.email) {
+        await backfillTenantOwnership(u.email);
+        queryClient.invalidateQueries({ queryKey: ["mechanics"] });
+        queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
+      }
+    }).catch(() => {});
   }, []);
 
   const { data: mechanics = [] } = useQuery({
-    queryKey: ["mechanics", user?.email],
-    queryFn: () => user ? base44.entities.Mechanic.filter({ created_by: user.email }, "-created_date", 10000) : Promise.resolve([]),
-    enabled: !!user,
+    queryKey: ["mechanics"],
+    queryFn: () => base44.entities.Mechanic.list("-created_date", 10000),
   });
 
   const today = format(new Date(), "yyyy-MM-dd");
 
   const { data: todayEntries = [] } = useQuery({
-    queryKey: ["timeEntries", today, user?.email],
-    queryFn: () => user ? base44.entities.TimeEntry.filter({ date: today, created_by: user.email }) : Promise.resolve([]),
-    enabled: !!user,
+    queryKey: ["timeEntries", today],
+    queryFn: () => base44.entities.TimeEntry.filter({ date: today }),
     refetchInterval: 30000,
   });
 
   const { data: allEntries = [] } = useQuery({
-    queryKey: ["timeEntries", "all", user?.email],
-    queryFn: () => user ? base44.entities.TimeEntry.filter({ created_by: user.email }, "-clock_in", 500) : Promise.resolve([]),
-    enabled: !!user,
+    queryKey: ["timeEntries", "all"],
+    queryFn: () => base44.entities.TimeEntry.list("-clock_in", 500),
   });
 
   const getActiveEntry = (mechanicId) =>
@@ -56,6 +64,7 @@ export default function TimeTracking() {
       mechanic_name: mechanic.name,
       clock_in: now,
       date: today,
+      shop_owner_email: user?.email,
     });
     await base44.entities.Mechanic.update(mechanic.id, { status: "available" });
     queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
