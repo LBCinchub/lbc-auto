@@ -339,14 +339,14 @@ export default function Estimates() {
                         <CheckCircle2 className="w-3.5 h-3.5" /> {est.customer_decision === "approved" ? "Customer Approved" : "Approved"}{est.customer_decision_name ? ` · ${est.customer_decision_name}` : ""}{est.customer_decision_at ? ` · ${new Date(est.customer_decision_at).toLocaleDateString()}` : ""}
                       </span>
                     )}
-                    {est.status === "approved" && <button
+                    <button
                       onClick={e => handleConvertToRepairOrder(e, est)}
                       disabled={convertingId === est.id}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-500/15 text-sky-400 border border-sky-500/30 hover:bg-sky-500/25 transition-all disabled:opacity-50"
-                      title="Convert approved estimate to Repair Order">
+                      title="Convert estimate to Repair Order">
                       {convertingId === est.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wrench className="w-3.5 h-3.5" />}
                       Convert to Repair Order
-                    </button>}
+                    </button>
                   </div>
                   {/* Secondary action row */}
                   <div className="flex gap-1.5 flex-wrap">

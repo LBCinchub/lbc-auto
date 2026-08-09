@@ -268,7 +268,7 @@ export default function EstimateDetail() {
   const handleConvertToInvoice = () => { setInvoiceFromEstimate(estimate); setInvoiceDialogOpen(true); };
 
   const handleConvertToRepairOrder = async () => {
-    if (!window.confirm("Convert this approved estimate to a repair order?")) return;
+    if (!window.confirm("Convert this estimate to a repair order?")) return;
     const response = await base44.functions.invoke("convertEstimateToRepairOrder", { estimate_id: estimate.id });
     const order = response.data?.repair_order;
     queryClient.invalidateQueries({ queryKey: ["estimate", estimateId] });
@@ -340,7 +340,7 @@ export default function EstimateDetail() {
             {sendingEmail ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
             {sendingEmail ? "Sending..." : "Send to Customer"}
           </Button>
-          {estimate.status === "approved" && !estimate.linked_invoice_id && (
+          {!estimate.linked_invoice_id && (
             <Button size="sm" onClick={handleConvertToInvoice}
               className="bg-emerald-500 hover:bg-emerald-600 text-white gap-1.5 h-9 text-xs">
               <CheckCircle2 className="w-3.5 h-3.5" /> Convert to Invoice
@@ -352,7 +352,7 @@ export default function EstimateDetail() {
               <FileText className="w-3.5 h-3.5" /> View Invoice
             </Button>
           )}
-          {estimate.status === "approved" && !linkedRO && (
+          {!linkedRO && (
             <Button size="sm" onClick={handleConvertToRepairOrder}
               className="bg-green-500/20 text-green-400 hover:bg-green-500/30 gap-1.5 h-9 text-xs">
               <CheckCircle2 className="w-3.5 h-3.5" /> Convert to Repair Order
