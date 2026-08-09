@@ -177,7 +177,9 @@ export default function Estimates() {
   };
 
   const openNew = () => { setEditing(null); setDialogOpen(true); };
-  const openEdit = (e) => { setEditing(e); setDialogOpen(true); };
+  // Editing an existing estimate always opens the canonical EstimateDetail page
+  // (the reference layout) — never a separate modal — so edit UI is unified.
+  const openEdit = (est) => navigate(`/EstimateDetail/${est.id}`);
   const openInvoiceFromEstimate = (est) => { setInvoiceFromEstimate(est); setInvoiceDialogOpen(true); };
 
 
