@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Globe, ChevronRight, ExternalLink, Sparkles } from "lucide-react";
+import { base44 } from "@/api/base44Client";
 
 /**
  * Web Bookings tile — tenant-aware.
@@ -14,12 +15,20 @@ import { Globe, ChevronRight, ExternalLink, Sparkles } from "lucide-react";
 export default function WebBookings({ appointments = [], user = null }) {
   const navigate = useNavigate();
 
-  // Determine if this shop has a connected LBC website
-  // We check if any appointment has source === "web_booking" as a proxy,
-  // OR if the user has a business_name (used to build their slug).
-  // Only Haj Rims (hajwheels@gmail.com) is currently live — all others get the promo.
-  const LIVE_WEBSITE_SHOPS = ["hajwheels@gmail.com"];
-  const hasWebsite = user?.email && LIVE_WEBSITE_SHOPS.includes(user.email);
+  // Determine if this shop has a connected website by looking up its WebBookingKey.
+  // The website_domain on the key is the source of truth for the connected domain.
+  const [webKey, setWebKey] = useState(null);
+  useEffect(() => {
+    if (!user?.email) return;
+    let active = true;
+    base44.entities.WebBookingKey.filter({ shop_owner_email: user.email })
+      .then((rows) => { if (active) setWebKey(rows[0] || null); })
+      .catch(() => { if (active) setWebKey(null); });
+    return () => { active = false; };
+  }, [user?.email]);
+
+  const hasWebsite = Boolean(webKey && webKey.is_active !== false && webKey.website_domain);
+  const websiteDomain = webKey?.website_domain || "";
 
   // ── NO WEBSITE — show promo ─────────────────────────────────────────────────
   if (!hasWebsite) {
@@ -85,11 +94,6 @@ export default function WebBookings({ appointments = [], user = null }) {
     .sort((a, b) => (b.created_date || b.date || "").localeCompare(a.created_date || a.date || ""))
     .slice(0, 3);
 
-  // Build their slug from business_name
-  const shopSlug = (user?.business_name || "shop")
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, "");
-
   return (
     <div className="rounded-xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 to-gray-900/50 p-6">
       {/* Connected indicator */}
@@ -100,7 +104,7 @@ export default function WebBookings({ appointments = [], user = null }) {
             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
           </span>
           <span className="text-emerald-400 text-xs font-bold tracking-wide">
-            🌐 Connected: lbchub.ink/{shopSlug}
+            🌐 Connected: {websiteDomain}
           </span>
         </div>
         <button

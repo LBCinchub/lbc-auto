@@ -47,6 +47,10 @@
       "type": "string",
       "description": "Service the customer asked about"
     },
+    "related_appointment_id": {
+      "type": "string",
+      "description": "Appointment ID linked to this chat session (set on the booking message so the Chat Inbox can link to the appointment record)"
+    },
     "status": {
       "type": "string",
       "enum": [

@@ -159,6 +159,7 @@ export default async function (req) {
         customer_email: first.customer_email || "",
         vehicle_info: first.vehicle_info || "",
         service_requested: first.service_requested || "",
+        related_appointment_id: first.related_appointment_id || "",
         status: "active",
         is_read: false,
         source: "website",
@@ -349,9 +350,14 @@ export default async function (req) {
 
     // Chat session is deterministically linked to the booking (web_<appointment_id>).
     const sessionId = `web_${appointment.id}`;
+    const preferredDateLabel = preferred_date
+      ? new Date(preferred_date + "T12:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+      : "—";
     const bookingMessage =
-      `New booking request: ${service_type} for ${vehicle_make} ${vehicle_model}` +
-      (notes ? `. Notes: ${notes}` : "");
+      `New booking: ${service_type} for ${vehicle_make} ${vehicle_model} ${vehicle_year}.` +
+      ` Preferred date: ${preferredDateLabel}. Preferred time: ${time_slot}.` +
+      ` Customer: ${customer_name}, Phone: ${customer_phone}.` +
+      (notes ? ` Notes: ${notes}` : "");
 
     await base44.asServiceRole.entities.ChatMessage.create({
       shop_email: tenant,
@@ -364,6 +370,7 @@ export default async function (req) {
       customer_email: customer_email,
       vehicle_info: vehicleInfo,
       service_requested: service_type,
+      related_appointment_id: appointment.id,
       status: "active",
       is_read: false,
       source: "website",

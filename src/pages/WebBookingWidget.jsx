@@ -25,7 +25,7 @@ export default function WebBookingWidget() {
   const [booking, setBooking] = useState(null); // { booking_id, session_id, ... }
   const [form, setForm] = useState({
     customer_name: "", customer_phone: "", customer_email: "",
-    service_type: "", preferred_date: "",
+    service_type: "", preferred_date: "", time_slot: "",
     vehicle_make: "", vehicle_model: "", vehicle_year: "", vehicle_plate: "", notes: "",
   });
 
@@ -58,7 +58,7 @@ export default function WebBookingWidget() {
 
   const submit = async () => {
     setError("");
-    if (!form.customer_name || !form.customer_phone || !form.service_type || !form.preferred_date || !form.vehicle_make || !form.vehicle_model || !form.vehicle_year) {
+    if (!form.customer_name || !form.customer_phone || !form.service_type || !form.preferred_date || !form.time_slot || !form.vehicle_make || !form.vehicle_model || !form.vehicle_year) {
       setError("Please fill in all required fields.");
       return;
     }
@@ -147,9 +147,14 @@ export default function WebBookingWidget() {
               </select>
             </Field>
 
-            <Field label="Preferred Date *">
-              <input type="date" value={form.preferred_date} onChange={(e) => setField("preferred_date", e.target.value)} className="widget-input" />
-            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Preferred Date *">
+                <input type="date" value={form.preferred_date} onChange={(e) => setField("preferred_date", e.target.value)} className="widget-input" />
+              </Field>
+              <Field label="Preferred Time *">
+                <input value={form.time_slot} onChange={(e) => setField("time_slot", e.target.value)} className="widget-input" placeholder="10:00 AM" />
+              </Field>
+            </div>
 
             <div className="pt-2 border-t border-slate-100">
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Vehicle</p>
