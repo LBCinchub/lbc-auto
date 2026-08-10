@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { backfillTenantOwnership } from "@/utils/backfillTenantOwnership";
 
 const PAY_PERIODS = [
   { label: "This Week", value: "this_week" },
@@ -46,37 +45,29 @@ export default function Payroll() {
   const [user, setUser] = useState(null);
   const queryClient = useQueryClient();
 
-  // Tenant scope: RLS on the Mechanic / TimeEntry / PaymentRecord entities
-  // scopes every read to the authenticated shop (shop_owner_email == user.email,
-  // or records the user created) — with NO admin bypass, so payroll never
-  // exposes another shop's people, hours, or payments. The tenant is derived
-  // from the session, never a URL/client param. Backfill stamps shop_owner_email
-  // onto legacy records the current user owns.
+  // Tenant scope: every query is filtered at the entity level by shop_owner_email
+  // == the authenticated shop's owner email, so payroll never exposes another
+  // shop's people, hours, or payments (admin bypass does not defeat this filter).
   useEffect(() => {
-    base44.auth.me().then(async (u) => {
-      setUser(u);
-      if (u?.email) {
-        await backfillTenantOwnership(u.email);
-        queryClient.invalidateQueries({ queryKey: ["mechanics"] });
-        queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
-        queryClient.invalidateQueries({ queryKey: ["paymentRecords"] });
-      }
-    }).catch(() => {});
+    base44.auth.me().then((u) => setUser(u)).catch(() => {});
   }, []);
 
   const { data: mechanics = [] } = useQuery({
-    queryKey: ["mechanics"],
-    queryFn: () => base44.entities.Mechanic.list("-created_date", 10000),
+    queryKey: ["mechanics", user?.email],
+    queryFn: () => user ? base44.entities.Mechanic.filter({ shop_owner_email: user.email }, "-created_date", 10000) : Promise.resolve([]),
+    enabled: !!user,
   });
 
   const { data: timeEntries = [] } = useQuery({
-    queryKey: ["timeEntries", "all"],
-    queryFn: () => base44.entities.TimeEntry.list("-clock_in", 1000),
+    queryKey: ["timeEntries", "all", user?.email],
+    queryFn: () => user ? base44.entities.TimeEntry.filter({ shop_owner_email: user.email }, "-clock_in", 1000) : Promise.resolve([]),
+    enabled: !!user,
   });
 
   const { data: paymentRecords = [] } = useQuery({
-    queryKey: ["paymentRecords"],
-    queryFn: () => base44.entities.PaymentRecord.list("-payment_date", 500),
+    queryKey: ["paymentRecords", user?.email],
+    queryFn: () => user ? base44.entities.PaymentRecord.filter({ shop_owner_email: user.email }, "-payment_date", 500) : Promise.resolve([]),
+    enabled: !!user,
   });
 
   const { start, end } = getPeriodRange(period);

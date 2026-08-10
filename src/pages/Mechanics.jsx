@@ -14,7 +14,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import PageHeader from "../components/shared/PageHeader";
 import EmptyState from "../components/shared/EmptyState";
 import StatusBadge from "../components/shared/StatusBadge";
-import { backfillTenantOwnership } from "@/utils/backfillTenantOwnership";
 
 export default function Mechanics() {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -24,19 +23,15 @@ export default function Mechanics() {
   const [user, setUser] = useState(null);
   const queryClient = useQueryClient();
 
+  // Tenant scope: team list is filtered at the entity level by shop_owner_email
+  // == the authenticated shop's owner email (admin bypass does not defeat this).
   useEffect(() => {
-    base44.auth.me().then(async (u) => {
-      setUser(u);
-      if (u?.email) {
-        await backfillTenantOwnership(u.email);
-        queryClient.invalidateQueries({ queryKey: ["mechanics"] });
-      }
-    });
+    base44.auth.me().then((u) => setUser(u)).catch(() => {});
   }, []);
 
   const { data: mechanics = [] } = useQuery({
     queryKey: ["mechanics", user?.email],
-    queryFn: () => user ? base44.entities.Mechanic.list("-created_date", 10000) : Promise.resolve([]),
+    queryFn: () => user ? base44.entities.Mechanic.filter({ shop_owner_email: user.email }, "-created_date", 10000) : Promise.resolve([]),
     enabled: !!user,
   });
 
@@ -84,7 +79,7 @@ export default function Mechanics() {
 
   const { data: todayEntries = [] } = useQuery({
     queryKey: ["timeEntries", today, user?.email],
-    queryFn: () => user ? base44.entities.TimeEntry.filter({ date: today }) : Promise.resolve([]),
+    queryFn: () => user ? base44.entities.TimeEntry.filter({ date: today, shop_owner_email: user.email }) : Promise.resolve([]),
     enabled: !!user,
     refetchInterval: 30000,
   });
