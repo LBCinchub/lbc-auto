@@ -42,7 +42,7 @@ export default function InvoicePrintView({ invoice, onClose }) {
     if (p.part_number) descParts.push(`Part #: ${p.part_number}`);
     if (p.supplier) descParts.push(`Supplier: ${p.supplier}`);
     lineItems.push({
-      name: p.name || p.description || "Part",
+      name: p.name || p.description || "",
       description: descParts.join(" · "),
       unit_price: p.unit_price || 0,
       qty: p.quantity || 1,
@@ -63,7 +63,7 @@ export default function InvoicePrintView({ invoice, onClose }) {
       const rate = l.rate || l.unit_price || 0;
       const autoDesc = hours ? `${hours}h @ $${rate}/h` : "";
       lineItems.push({
-        name: l.name || l.description || "Labor",
+        name: l.name || l.description || "",
         description: isUnified ? (l.description || autoDesc) : autoDesc,
         unit_price: rate,
         qty: hours || 1,

@@ -158,8 +158,13 @@
       "items": {
         "type": "object",
         "properties": {
+          "name": {
+            "type": "string",
+            "description": "Item name shown in the ITEM column (e.g. CALIPER, REAR PADS)"
+          },
           "description": {
-            "type": "string"
+            "type": "string",
+            "description": "Line item description / details shown in the DESCRIPTION column"
           },
           "type": {
             "type": "string"
