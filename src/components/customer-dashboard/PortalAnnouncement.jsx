@@ -3,7 +3,7 @@ import { Sparkles } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function PortalAnnouncement({ open, onClose }) {
-  return <Dialog open={open}>
+  return <Dialog open={open} onOpenChange={(open) => { if (!open) onClose(); }}>
     <DialogContent className="portal-dialog max-w-md" onInteractOutside={(event) => event.preventDefault()} onEscapeKeyDown={(event) => event.preventDefault()}>
       <DialogHeader>
         <div className="portal-icon-box mb-3"><Sparkles /></div>
