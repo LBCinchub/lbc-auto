@@ -22,7 +22,7 @@ export default async function(req) {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
-    if (user.role !== "admin" || normalizeTenantEmail(user.email) !== OWNER) return Response.json({ error: "Forbidden" }, { status: 403 });
+    if ((user.role !== "admin" && user.role !== "owner") || normalizeTenantEmail(user.email) !== OWNER) return Response.json({ error: "Forbidden" }, { status: 403 });
     const body = await req.json().catch(() => ({}));
     const mode = body.mode === "apply" ? "apply" : "dry_run";
     if (mode === "apply" && body.confirm !== "RESOLVE_VERIFIED_17") return Response.json({ error: "Explicit confirmation required" }, { status: 400 });

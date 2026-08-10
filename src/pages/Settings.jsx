@@ -306,7 +306,7 @@ export default function Settings() {
                 <Button type="button" variant="outline" size="sm" onClick={handleGenerateLogo}
                   disabled={generatingLogo} className={`${theme === "light" ? "border-purple-400 text-purple-600 hover:text-purple-700" : "border-purple-700 text-purple-400 hover:text-purple-300"} gap-2`}>
                   {generatingLogo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                  {generatingLogo ? "Generating..." : "Generate with Lumina AI"}
+                  {generatingLogo ? "Generating..." : "Generate with LBC AI"}
                 </Button>
               </div>
               <p className={`${theme === "light" ? "text-gray-600" : "text-gray-500"} text-sm`}>Logo will appear on all your invoices and estimates</p>
@@ -320,7 +320,7 @@ export default function Settings() {
           </div>
         </div>
 
-        {user?.role === "admin" && <LegacyPortalMigrationPanel />}
+        {(user?.role === "admin" || user?.role === "owner") && <LegacyPortalMigrationPanel />}
 
         {/* Notification Preferences */}
         <div className={`${theme === "light" ? "bg-white border-gray-200" : "bg-gray-900 border-gray-800"} border rounded-lg p-6`}>
