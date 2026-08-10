@@ -12,6 +12,7 @@ import {
   Clock, Plus, StickyNote, CalendarPlus, Trash2, Lock, Printer, Loader2, Camera, AlertTriangle
 } from "lucide-react";
 import { formatPhone } from "@/utils/formatPhone";
+import { buildVehicleInfo } from "@/utils/buildVehicleInfo";
 import CustomerFormDialog from "../components/customers/CustomerFormDialog";
 import RepairOrderFormDialog from "../components/orders/RepairOrderFormDialog";
 import AppointmentFormDialog from "../components/appointments/AppointmentFormDialog";
@@ -692,6 +693,12 @@ export default function CustomerDetails() {
         <InvoiceFormDialog
           open
           onClose={() => setNewInvoiceOpen(false)}
+          invoice={{
+            customer_id: customer.id,
+            customer_name: customer.full_name,
+            vehicle_id: vehicles.length === 1 ? vehicles[0].id : "",
+            vehicle_info: vehicles.length === 1 ? buildVehicleInfo(vehicles[0]) : "",
+          }}
           customers={[customer]}
           vehicles={vehicles}
           onSaved={() => { reload(); queryClient.invalidateQueries({ queryKey: ["invoices"] }); }}
