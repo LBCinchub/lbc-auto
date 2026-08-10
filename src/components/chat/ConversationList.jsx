@@ -80,6 +80,11 @@ export default function ConversationList({ sessions, selectedSessionId, onSelect
                         {session.unread_count > 99 ? "99+" : session.unread_count}
                       </span>
                     )}
+                    {session.is_website && (
+                      <span className="flex-shrink-0 bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400 text-[10px] font-semibold rounded-full px-2 py-0.5">
+                        Website
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
                     {session.last_message || "No messages"}

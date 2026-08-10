@@ -48,7 +48,8 @@ export default function ChatInbox() {
       }
       const s = map[m.session_id];
       s.messages.push(m);
-      if (!m.is_read) s.unread_count++;
+      if (!m.is_read && m.sender_type === "customer") s.unread_count++;
+      if (m.source === "website") s.is_website = true;
       if (!s.customer_name && m.customer_name) s.customer_name = m.customer_name;
       if (!s.customer_phone && m.customer_phone) s.customer_phone = m.customer_phone;
       if (!s.customer_email && m.customer_email) s.customer_email = m.customer_email;
@@ -83,11 +84,11 @@ export default function ChatInbox() {
     setSelectedSessionId(sessionId);
     try {
       await base44.entities.ChatMessage.updateMany(
-        { session_id: sessionId, is_read: false },
+        { session_id: sessionId, is_read: false, sender_type: "customer" },
         { $set: { is_read: true } }
       );
       setMessages(prev => prev.map(m =>
-        m.session_id === sessionId ? { ...m, is_read: true } : m
+        m.session_id === sessionId && m.sender_type === "customer" ? { ...m, is_read: true } : m
       ));
     } catch (e) {
       console.error("Failed to mark as read:", e);
@@ -126,7 +127,7 @@ export default function ChatInbox() {
         vehicle_info: session?.vehicle_info || "",
         service_requested: session?.service_requested || "",
         status: "owner_replied",
-        is_read: true,
+        is_read: false,
         source: "dashboard",
       });
       await loadMessages();

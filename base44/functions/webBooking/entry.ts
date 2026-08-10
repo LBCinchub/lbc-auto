@@ -13,16 +13,16 @@ const DEFAULT_SERVICES = [
   "Other",
 ];
 
-const RATE_LIMIT_PER_HOUR = 20;
+const RATE_LIMIT_BOOKINGS_PER_HOUR = 20;
+const RATE_LIMIT_MESSAGES_PER_HOUR = 30;
 const HOUR_MS = 60 * 60 * 1000;
 
 const norm = (s) => String(s ?? "").trim();
 const normPhone = (s) => String(s ?? "").replace(/[\s\-().]/g, "");
 
 /**
- * Look up the WebBookingKey by api_key. Returns the active key record or an
- * error envelope. The key is the ONLY authentication mechanism — there is no
- * user session, so all entity access uses the service role (bypassing RLS) and
+ * Look up the WebBookingKey by api_key. The key is the ONLY authentication
+ * mechanism (no user session), so all entity access uses the service role and
  * every created record is explicitly stamped with the shop's tenant email.
  */
 async function getKey(base44, rawKey) {
@@ -69,7 +69,6 @@ export default async function (req) {
 
       const appt = await base44.asServiceRole.entities.Appointment.get(bookingId).catch(() => null);
       if (!appt) return Response.json({ error: "Booking not found" }, { status: 404 });
-      // Tenant guard — never expose another shop's booking.
       if (norm(appt.shop_email).toLowerCase() !== norm(key.shop_owner_email).toLowerCase()) {
         return Response.json({ error: "Booking not found" }, { status: 404 });
       }
@@ -95,6 +94,18 @@ export default async function (req) {
       else if (estStatus === "approved") label = "Estimate Approved";
       else label = "Booking Received — Estimate Being Prepared";
 
+      // Chat session is deterministically linked to the booking (web_<appointment_id>).
+      const chatSessionId = `web_${appt.id}`;
+      let unreadShopReplies = 0;
+      try {
+        const chatMsgs = await base44.asServiceRole.entities.ChatMessage.filter(
+          { shop_email: key.shop_owner_email, session_id: chatSessionId },
+          "-created_date",
+          100
+        );
+        unreadShopReplies = chatMsgs.filter((m) => m.sender_type === "owner" && !m.is_read).length;
+      } catch (_) {}
+
       return Response.json({
         success: true,
         booking_id: appt.id,
@@ -103,6 +114,122 @@ export default async function (req) {
         status_label: label,
         service_type: appt.service_type,
         preferred_date: appt.date,
+        chat_session_id: chatSessionId,
+        unread_shop_replies: unreadShopReplies,
+      });
+    }
+
+    // ── send_chat_message ────────────────────────────────────────────────
+    if (action === "send_chat_message") {
+      const { key, error, status } = await getKey(base44, body.shop_api_key);
+      if (error) return Response.json({ error }, { status });
+      const tenant = key.shop_owner_email;
+      const sessionId = norm(body.session_id);
+      const senderName = norm(body.sender_name);
+      const message = norm(body.message);
+      if (!sessionId || !message) return Response.json({ error: "session_id and message are required" }, { status: 400 });
+
+      // Rate limit: 30 customer messages per session per hour.
+      let recent = [];
+      try {
+        recent = await base44.asServiceRole.entities.ChatMessage.filter(
+          { shop_email: tenant, session_id: sessionId },
+          "-created_date",
+          100
+        );
+      } catch (_) {}
+      const now = Date.now();
+      const recentCustomerCount = recent.filter(
+        (m) => m.sender_type === "customer" && new Date(m.created_date).getTime() > now - HOUR_MS
+      ).length;
+      if (recentCustomerCount >= RATE_LIMIT_MESSAGES_PER_HOUR) {
+        return Response.json({ error: "Rate limit exceeded. Maximum 30 messages per hour." }, { status: 429 });
+      }
+
+      // Carry customer/vehicle context from the session's first message.
+      const first = recent.find((m) => m.customer_phone || m.customer_name) || {};
+      const msg = await base44.asServiceRole.entities.ChatMessage.create({
+        shop_email: tenant,
+        session_id: sessionId,
+        sender_type: "customer",
+        sender_name: senderName || first.customer_name || "Customer",
+        message,
+        customer_name: first.customer_name || senderName || "",
+        customer_phone: first.customer_phone || "",
+        customer_email: first.customer_email || "",
+        vehicle_info: first.vehicle_info || "",
+        service_requested: first.service_requested || "",
+        status: "active",
+        is_read: false,
+        source: "website",
+      });
+      return Response.json({ success: true, message_id: msg.id });
+    }
+
+    // ── get_chat_messages ────────────────────────────────────────────────
+    if (action === "get_chat_messages") {
+      const { key, error, status } = await getKey(base44, body.shop_api_key);
+      if (error) return Response.json({ error }, { status });
+      const tenant = key.shop_owner_email;
+      const sessionId = norm(body.session_id);
+      if (!sessionId) return Response.json({ error: "session_id is required" }, { status: 400 });
+
+      let msgs = [];
+      try {
+        msgs = await base44.asServiceRole.entities.ChatMessage.filter(
+          { shop_email: tenant, session_id: sessionId },
+          "created_date",
+          200
+        );
+      } catch (_) {}
+
+      // Customer is viewing the thread — mark shop replies as read.
+      const hasUnreadShop = msgs.some((m) => m.sender_type === "owner" && !m.is_read);
+      if (hasUnreadShop) {
+        try {
+          await base44.asServiceRole.entities.ChatMessage.updateMany(
+            { session_id: sessionId, sender_type: "owner", is_read: false },
+            { $set: { is_read: true } }
+          );
+        } catch (_) {}
+      }
+
+      return Response.json({
+        success: true,
+        messages: msgs.map((m) => ({
+          id: m.id,
+          sender_type: m.sender_type,
+          sender_name: m.sender_name,
+          message: m.message,
+          sent_at: m.created_date,
+          is_read: m.is_read,
+        })),
+      });
+    }
+
+    // ── resume_session ────────────────────────────────────────────────────
+    if (action === "resume_session") {
+      const { key, error, status } = await getKey(base44, body.shop_api_key);
+      if (error) return Response.json({ error }, { status });
+      const tenant = key.shop_owner_email;
+      const phone = normPhone(body.customer_phone);
+      if (!phone) return Response.json({ error: "customer_phone is required" }, { status: 400 });
+      let msgs = [];
+      try {
+        msgs = await base44.asServiceRole.entities.ChatMessage.filter(
+          { shop_email: tenant, customer_phone: phone, source: "website" },
+          "-created_date",
+          1
+        );
+      } catch (_) {}
+      const latest = msgs[0];
+      if (!latest) return Response.json({ success: true, session_id: null });
+      return Response.json({
+        success: true,
+        session_id: latest.session_id,
+        customer_name: latest.customer_name,
+        vehicle_info: latest.vehicle_info,
+        service_requested: latest.service_requested,
       });
     }
 
@@ -115,17 +242,16 @@ export default async function (req) {
     if (error) return Response.json({ error }, { status });
     const tenant = norm(key.shop_owner_email).toLowerCase();
 
-    // Rate limit: max 20 bookings per shop per hour (tracked on the key record).
+    // Booking rate limit: max 20 per shop per hour (tracked on the key record).
     const now = Date.now();
-    const recent = (Array.isArray(key.recent_booking_times) ? key.recent_booking_times : [])
+    const recentBookings = (Array.isArray(key.recent_booking_times) ? key.recent_booking_times : [])
       .filter((t) => now - new Date(t).getTime() < HOUR_MS);
-    if (recent.length >= RATE_LIMIT_PER_HOUR) {
+    if (recentBookings.length >= RATE_LIMIT_BOOKINGS_PER_HOUR) {
       return Response.json({ error: "Rate limit exceeded. Maximum 20 bookings per hour." }, { status: 429 });
     }
-    recent.push(new Date(now).toISOString());
-    await base44.asServiceRole.entities.WebBookingKey.update(key.id, { recent_booking_times: recent });
+    recentBookings.push(new Date(now).toISOString());
+    await base44.asServiceRole.entities.WebBookingKey.update(key.id, { recent_booking_times: recentBookings });
 
-    // Validate required fields.
     const customer_name = norm(body.customer_name);
     const customer_phone = normPhone(body.customer_phone);
     const service_type = norm(body.service_type);
@@ -193,7 +319,6 @@ export default async function (req) {
 
     const vehicleInfo = [vehicle_year, vehicle_make, vehicle_model].filter(Boolean).join(" ");
 
-    // Appointment — source = web_booking, status scheduled (awaiting shop confirmation).
     const appointment = await base44.asServiceRole.entities.Appointment.create({
       customer_id: customer.id,
       customer_name: customer.full_name,
@@ -210,7 +335,6 @@ export default async function (req) {
       shop_email: tenant,
     });
 
-    // Draft estimate — shop finalizes pricing (Estimate-first flow).
     const estimate = await base44.asServiceRole.entities.Estimate.create({
       estimate_number: `EST-${Date.now().toString().slice(-6)}`,
       customer_id: customer.id,
@@ -223,6 +347,28 @@ export default async function (req) {
       notes: notes || "",
     });
 
+    // Chat session is deterministically linked to the booking (web_<appointment_id>).
+    const sessionId = `web_${appointment.id}`;
+    const bookingMessage =
+      `New booking request: ${service_type} for ${vehicle_make} ${vehicle_model}` +
+      (notes ? `. Notes: ${notes}` : "");
+
+    await base44.asServiceRole.entities.ChatMessage.create({
+      shop_email: tenant,
+      session_id: sessionId,
+      sender_type: "customer",
+      sender_name: customer_name,
+      message: bookingMessage,
+      customer_name: customer_name,
+      customer_phone: customer_phone,
+      customer_email: customer_email,
+      vehicle_info: vehicleInfo,
+      service_requested: service_type,
+      status: "active",
+      is_read: false,
+      source: "website",
+    });
+
     return Response.json({
       success: true,
       booking_id: appointment.id,
@@ -230,6 +376,7 @@ export default async function (req) {
       vehicle_id: vehicle.id,
       appointment_id: appointment.id,
       estimate_id: estimate.id,
+      session_id: sessionId,
       message: "Booking received. The shop will confirm your appointment and send an estimate.",
     });
   } catch (error) {

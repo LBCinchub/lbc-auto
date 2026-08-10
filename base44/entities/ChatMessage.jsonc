@@ -51,6 +51,7 @@
       "type": "string",
       "enum": [
         "open",
+        "active",
         "ai_handled",
         "owner_replied",
         "resolved"
@@ -61,13 +62,14 @@
     "is_read": {
       "type": "boolean",
       "default": false,
-      "description": "Whether the shop owner has read this message"
+      "description": "Whether the recipient has read this message (shop read customer msg, or customer read shop reply)"
     },
     "source": {
       "type": "string",
       "enum": [
         "widget",
-        "dashboard"
+        "dashboard",
+        "website"
       ],
       "default": "widget",
       "description": "Where the message originated"

@@ -29,8 +29,13 @@ export default function ConversationThread({ session, messages, onResolve, onSen
       <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-800">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-semibold text-gray-900 dark:text-white">
+            <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
               {session.customer_name || "Unknown Customer"}
+              {session.is_website && (
+                <span className="bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400 text-[10px] font-semibold rounded-full px-2 py-0.5">
+                  Website
+                </span>
+              )}
             </h3>
             <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
               {session.customer_phone && (
