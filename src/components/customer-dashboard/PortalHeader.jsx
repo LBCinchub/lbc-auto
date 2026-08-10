@@ -1,10 +1,13 @@
 import React from "react";
-import { Bell, LogOut, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Bell, LogOut, ShieldCheck } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { vehicleName } from "@/components/customer-dashboard/portalUtils";
 
 export default function PortalHeader({ session, vehicle, unread, onNotifications, onLogout, loggingOut }) {
+  const navigate = useNavigate();
   return <header className="portal-header">
     <div className="portal-header-inner">
+      <button className="portal-secondary-button" onClick={() => navigate(-1)} aria-label="Back"><ArrowLeft /><span className="hidden sm:inline">Back</span></button>
       <div className="flex min-w-0 items-center gap-3">
         {session.logo_url ? <img src={session.logo_url} alt="" className="h-11 w-11 rounded-xl object-cover" /> : <div className="portal-logo"><ShieldCheck /></div>}
         <div className="min-w-0"><p className="truncate text-sm font-semibold text-portal-accent">{session.shop_name}</p><h1 className="truncate text-xl font-bold text-portal-text">Welcome, {session.customer_name?.split(" ")[0]}</h1><p className="truncate text-xs text-portal-muted md:hidden">{vehicleName(vehicle)}</p></div>

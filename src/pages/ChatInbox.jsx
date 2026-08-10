@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
-import { MessageSquare } from "lucide-react";
+import { ArrowLeft, MessageSquare } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import ConversationList from "@/components/chat/ConversationList";
 import ConversationThread from "@/components/chat/ConversationThread";
 
 export default function ChatInbox() {
+  const navigate = useNavigate();
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedSessionId, setSelectedSessionId] = useState(null);
@@ -148,6 +150,10 @@ export default function ChatInbox() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
+        <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" aria-label="Back">
+          <ArrowLeft className="w-4 h-4" />
+          <span className="hidden sm:inline">Back</span>
+        </button>
         <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center">
           <MessageSquare className="w-5 h-5 text-white" />
         </div>
