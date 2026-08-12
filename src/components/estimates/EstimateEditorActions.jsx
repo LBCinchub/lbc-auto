@@ -3,12 +3,13 @@ import { DollarSign, FileText, Loader2, Printer, Save, Send, Wrench } from "luci
 import { Button } from "@/components/ui/button";
 
 export default function EstimateEditorActions({
-  saving, sending, hasLinkedInvoice, hasLinkedRO,
+  saving, sending, hasLinkedInvoice, hasLinkedRO, extraActions,
   onCancel, onSave, onPrint, onSend, onPayment, onViewInvoice, onConvertRO, onViewRO,
 }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-800 bg-gray-900 px-5 py-4 md:px-6">
       <div className="flex flex-wrap gap-2">
+        {extraActions}
         <Button variant="outline" onClick={onPrint}><Printer /> Print</Button>
         <Button variant="outline" onClick={onSend} disabled={sending}>
           {sending ? <Loader2 className="animate-spin" /> : <Send />} {sending ? "Sending…" : "Send"}

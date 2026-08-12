@@ -11,6 +11,9 @@ import EstimateDetailsFields from "./EstimateDetailsFields";
 import EstimateEditorActions from "./EstimateEditorActions";
 import EstimatePrintView from "./EstimatePrintView";
 import QuickNotesEditor from "@/components/shared/QuickNotesEditor";
+import GhostModeButton from "@/components/ghost-mode/GhostModeButton";
+import GhostSection from "@/components/ghost-mode/GhostSection";
+import { calcGhostTotals } from "@/utils/ghostTax";
 import { useEmailSend } from "@/hooks/useEmailSend";
 import { normalizeDiscountType } from "@/utils/discount";
 import { syncCustomerActivity } from "@/utils/syncCustomerActivity";
@@ -213,6 +216,55 @@ export default function OriginalEstimateEditor({ estimateId, onClose }) {
     if (fresh?.linked_invoice_id) navigate(`/InvoiceDetail/${fresh.linked_invoice_id}`);
   };
 
+  // ── Ghost Mode ──
+  const onGhostChanged = () => {
+    setInitialized(false);
+    queryClient.invalidateQueries({ queryKey: ["estimate", estimateId] });
+    queryClient.invalidateQueries({ queryKey: ["estimates"] });
+  };
+  const handleSplit = async ({ doneNowItems, ghostItems, ghostNotes, ghostTotal }) => {
+    try {
+      const doneTotals = calculateFinancials({ ...draft, line_items: doneNowItems }, estimate.amount_paid || 0);
+      const laborItems = doneNowItems.filter((l) => l.type === "labor").map((l) => ({ description: l.name, details: l.description || "", hours: Number(l.quantity) || 0, rate: Number(l.unit_price) || 0, total: r2((Number(l.quantity) || 0) * (Number(l.unit_price) || 0)) }));
+      const partsItems = doneNowItems.filter((l) => l.type !== "labor").map((p) => ({ name: p.name, details: p.description || "", part_number: p.part_number || "", quantity: Number(p.quantity) || 0, unit_price: Number(p.unit_price) || 0, total: r2((Number(p.quantity) || 0) * (Number(p.unit_price) || 0)) }));
+      await base44.entities.Estimate.update(estimateId, {
+        labor_items: laborItems, parts_items: partsItems,
+        labor_total: r2(doneTotals.labor), parts_total: r2(doneTotals.parts),
+        tax_amount: r2(doneTotals.tax), grand_total: r2(doneTotals.total),
+        ghost_items: ghostItems, ghost_status: "active", ghost_notes: ghostNotes, ghost_total: r2(ghostTotal),
+      });
+      onGhostChanged();
+      toast({ title: "Work split — ghost created ✓" });
+    } catch (e) {
+      toast({ title: "Split failed", description: e?.message, variant: "destructive" });
+    }
+  };
+  const handleGhostNotes = async (value) => {
+    try { await base44.entities.Estimate.update(estimateId, { ghost_notes: value }); onGhostChanged(); } catch (e) {}
+  };
+  const handleGhostEdit = async (items, notes) => {
+    try {
+      const t = calcGhostTotals(items, draft.tax_rate, draft.tax_applies_to);
+      await base44.entities.Estimate.update(estimateId, { ghost_items: items, ghost_notes: notes, ghost_total: t.total });
+      onGhostChanged();
+    } catch (e) {}
+  };
+  const handleGhostConvert = async (targetType) => {
+    try {
+      const res = await base44.functions.invoke("convertGhostToDocument", { source_type: "Estimate", source_id: estimateId, target_type: targetType });
+      onGhostChanged();
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["repairOrders"] });
+      if (res.data?.new_id) navigate(targetType === "Invoice" ? `/InvoiceDetail/${res.data.new_id}` : `/RepairOrderDetail/${res.data.new_id}`);
+    } catch (e) {
+      toast({ title: "Convert failed", description: e?.response?.data?.error || e?.message, variant: "destructive" });
+    }
+  };
+  const handleViewConverted = () => {
+    if (!estimate.ghost_converted_to) return;
+    navigate(estimate.ghost_converted_type === "Invoice" ? `/InvoiceDetail/${estimate.ghost_converted_to}` : `/RepairOrderDetail/${estimate.ghost_converted_to}`);
+  };
+
   return (
     <>
       <EstimateEditorHeader
@@ -233,12 +285,16 @@ export default function OriginalEstimateEditor({ estimateId, onClose }) {
           onChange={(v) => setDraft({ ...draft, notes: v })}
         />
         <InvoiceTotalsSection draft={draft} totals={totals} onChange={setDraft} />
+        {(estimate.ghost_status === "active" || estimate.ghost_status === "converted") && (
+          <GhostSection record={estimate} taxRate={draft.tax_rate} taxAppliesTo={draft.tax_applies_to} onNotesChange={handleGhostNotes} onEditGhost={handleGhostEdit} onConvert={handleGhostConvert} onViewConverted={handleViewConverted} />
+        )}
       </div>
       <EstimateEditorActions
         saving={saving}
         sending={sending === estimate.id}
         hasLinkedInvoice={!!estimate.linked_invoice_id}
         hasLinkedRO={!!linkedRO}
+        extraActions={(!estimate.ghost_status || estimate.ghost_status === "none") ? <GhostModeButton lineItems={draft.line_items} taxRate={draft.tax_rate} taxAppliesTo={draft.tax_applies_to} onSplit={handleSplit} /> : null}
         onCancel={() => onClose?.()}
         onSave={save}
         onPrint={() => setPrinting(true)}

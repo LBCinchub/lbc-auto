@@ -20,6 +20,10 @@ import { buildVehicleInfo } from "@/utils/buildVehicleInfo";
 import QuickNotesEditor from "@/components/shared/QuickNotesEditor";
 import ItemNameAutocomplete from "@/components/shared/ItemNameAutocomplete";
 import { syncLineItemLibrary } from "@/utils/syncLineItemLibrary";
+import GhostModeButton from "@/components/ghost-mode/GhostModeButton";
+import GhostSection from "@/components/ghost-mode/GhostSection";
+import { calcGhostTotals, r2 } from "@/utils/ghostTax";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function RepairOrderDetail() {
   const { orderId } = useParams();
@@ -39,6 +43,7 @@ export default function RepairOrderDetail() {
   const [newOrderedPart, setNewOrderedPart] = useState({ name: "", part_number: "", supplier: "", quantity: "", unit_price: "", notes: "" });
   const [generatingInvoice, setGeneratingInvoice] = useState(false);
   const [statusError, setStatusError] = useState("");
+  const { toast } = useToast();
 
   const { data: order, isLoading } = useQuery({
     queryKey: ["repairOrder", orderId],
@@ -198,6 +203,49 @@ export default function RepairOrderDetail() {
 
   const handleQuickGenerateInvoice = () => setShowInvoiceDialog(true);
 
+  // ── Ghost Mode ── Repair Orders carry no tax, so the ghost uses tax 0.
+  const roToLines = (o) => [
+    ...((o && o.parts_used) || []).map((p) => ({ type: "part", name: p.name || "", description: "", quantity: Number(p.quantity) || 0, unit_price: Number(p.unit_price) || 0, taxable: true })),
+    ...((o && o.labor_items) || []).map((l) => ({ type: "labor", name: l.description || "", description: "", quantity: Number(l.hours) || 0, unit_price: Number(l.rate) || 0, taxable: true })),
+  ];
+  const onGhostChanged = () => {
+    queryClient.invalidateQueries({ queryKey: ["repairOrder", orderId] });
+    queryClient.invalidateQueries({ queryKey: ["repairOrders"] });
+  };
+  const handleSplit = async ({ doneNowItems, ghostItems, ghostNotes, ghostTotal }) => {
+    try {
+      const laborItems = doneNowItems.filter((i) => i.type === "labor").map((i) => ({ description: i.name, details: i.description || "", hours: Number(i.quantity) || 0, rate: Number(i.unit_price) || 0, total: r2((Number(i.quantity) || 0) * (Number(i.unit_price) || 0)) }));
+      const partsUsed = doneNowItems.filter((i) => i.type !== "labor").map((i) => ({ name: i.name, quantity: Number(i.quantity) || 0, unit_price: Number(i.unit_price) || 0, total: r2((Number(i.quantity) || 0) * (Number(i.unit_price) || 0)) }));
+      const laborCost = laborItems.reduce((s, l) => s + l.total, 0);
+      const partsCost = partsUsed.reduce((s, p) => s + p.total, 0);
+      await base44.entities.RepairOrder.update(orderId, {
+        labor_items: laborItems, parts_used: partsUsed,
+        labor_cost: r2(laborCost), parts_cost: r2(partsCost), total_cost: r2(laborCost + partsCost),
+        ghost_items: ghostItems, ghost_status: "active", ghost_notes: ghostNotes, ghost_total: r2(ghostTotal),
+      });
+      onGhostChanged();
+      toast({ title: "Work split — ghost created ✓" });
+    } catch (e) {
+      toast({ title: "Split failed", description: e?.message, variant: "destructive" });
+    }
+  };
+  const handleGhostNotes = async (v) => { try { await base44.entities.RepairOrder.update(orderId, { ghost_notes: v }); onGhostChanged(); } catch (e) {} };
+  const handleGhostEdit = async (items, notes) => { try { const t = calcGhostTotals(items, 0, "both"); await base44.entities.RepairOrder.update(orderId, { ghost_items: items, ghost_notes: notes, ghost_total: t.total }); onGhostChanged(); } catch (e) {} };
+  const handleGhostConvert = async (targetType) => {
+    try {
+      const res = await base44.functions.invoke("convertGhostToDocument", { source_type: "RepairOrder", source_id: orderId, target_type: targetType });
+      onGhostChanged();
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      if (res.data?.new_id) navigate(targetType === "Invoice" ? `/InvoiceDetail/${res.data.new_id}` : `/RepairOrderDetail/${res.data.new_id}`);
+    } catch (e) {
+      toast({ title: "Convert failed", description: e?.response?.data?.error || e?.message, variant: "destructive" });
+    }
+  };
+  const handleViewConverted = () => {
+    if (!order.ghost_converted_to) return;
+    navigate(order.ghost_converted_type === "Invoice" ? `/InvoiceDetail/${order.ghost_converted_to}` : `/RepairOrderDetail/${order.ghost_converted_to}`);
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -227,6 +275,9 @@ export default function RepairOrderDetail() {
           <Button onClick={handlePrintWorkerCopy} variant="outline" className="border-gray-700 text-gray-300 hover:text-white gap-2">
             <Printer className="w-4 h-4" /> Print Worker Copy
           </Button>
+          {order && (!order.ghost_status || order.ghost_status === "none") && (
+            <GhostModeButton lineItems={roToLines(order)} taxRate={0} taxAppliesTo="both" onSplit={handleSplit} />
+          )}
           <Button onClick={() => setShowEstimateDialog(true)} className="bg-green-600 hover:bg-green-700 gap-2">
             <Plus className="w-4 h-4" /> Create Estimate
           </Button>
@@ -540,6 +591,10 @@ export default function RepairOrderDetail() {
             </button>
           )}
         </div>
+
+        {order && (order.ghost_status === "active" || order.ghost_status === "converted") && (
+          <GhostSection record={order} taxRate={0} taxAppliesTo="both" onNotesChange={handleGhostNotes} onEditGhost={handleGhostEdit} onConvert={handleGhostConvert} onViewConverted={handleViewConverted} />
+        )}
 
         <div className="mt-8 pt-6 border-t border-gray-800">
           <QuickNotesEditor value={notes} onChange={handleNotesChange} label="Notes (shown on customer documents)" />

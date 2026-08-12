@@ -2,9 +2,10 @@ import React from "react";
 import { DollarSign, Loader2, Printer, Save, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export default function InvoiceEditorActions({ invoice, saving, sending, dirty, onCancel, onSave, onPrint, onSend, onPayment }) {
+export default function InvoiceEditorActions({ invoice, saving, sending, dirty, extraActions, onCancel, onSave, onPrint, onSend, onPayment }) {
   return <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-800 bg-gray-900 px-5 py-4 md:px-6">
     <div className="flex gap-2">
+      {extraActions}
       {invoice && <Button variant="outline" onClick={onPrint}><Printer /> Print</Button>}
       {invoice && <Button variant="outline" onClick={onSend} disabled={sending}>{sending ? <Loader2 className="animate-spin" /> : <Send />} {sending ? "Sending…" : "Send"}</Button>}
       {invoice && invoice.status !== "paid" && <Button variant="outline" onClick={onPayment}><DollarSign /> Record Payment</Button>}
