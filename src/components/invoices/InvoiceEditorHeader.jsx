@@ -13,6 +13,9 @@ export default function InvoiceEditorHeader({ data }) {
   const customerId = invoice?.customer_id || customer?.id;
   const vehicleId = invoice?.vehicle_id || vehicle?.id;
   const vehicleLine = buildVehicleInfo(vehicle) || invoice?.vehicle_info || "";
+  const engineInfo = vehicle?.engine_type
+    || [vehicle?.engine_liters, vehicle?.fuel_type].filter(Boolean).join(" ").trim()
+    || "";
 
   return (
     <div className="border-b border-gray-800 px-5 py-4 md:px-6">
@@ -44,6 +47,7 @@ export default function InvoiceEditorHeader({ data }) {
               </button>
             )}
             <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-gray-500">
+              {engineInfo && <span>Engine: {engineInfo}</span>}
               {vehicle?.vin && <span>VIN: {vehicle.vin}</span>}
               {vehicle?.license_plate && <span>Plate: {vehicle.license_plate}</span>}
             </div>

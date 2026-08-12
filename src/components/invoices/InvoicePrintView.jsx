@@ -48,6 +48,7 @@ export default function InvoicePrintView({ invoice, onClose }) {
       qty: p.quantity || 1,
       amount: p.total || (p.unit_price || 0) * (p.quantity || 1),
       supplier: p.supplier || "",
+      type: "part",
     });
   });
 
@@ -68,6 +69,7 @@ export default function InvoicePrintView({ invoice, onClose }) {
         unit_price: rate,
         qty: hours || 1,
         amount: l.total || 0,
+        type: "labor",
       });
     });
   } else if (invoice.labor_total > 0) {
@@ -77,6 +79,7 @@ export default function InvoicePrintView({ invoice, onClose }) {
       unit_price: invoice.labor_total || 0,
       qty: 1,
       amount: invoice.labor_total || 0,
+      type: "labor",
     });
   }
 

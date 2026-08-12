@@ -27,6 +27,7 @@ export default function EstimatePrintView({ estimate, onClose }) {
       unit_price: p.unit_price || 0,
       qty: p.quantity || 1,
       amount: p.total || 0,
+      type: "part",
     });
   });
   (estimate?.labor_items || []).forEach(l => {
@@ -36,6 +37,7 @@ export default function EstimatePrintView({ estimate, onClose }) {
       unit_price: l.rate || 0,
       qty: l.hours || 0,
       amount: l.total || 0,
+      type: "labor",
     });
   });
 

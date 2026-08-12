@@ -101,6 +101,16 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
     }, 400);
   };
 
+  const renderTypeBadge = (item) => {
+    if (!item?.type) return null;
+    const isLabor = String(item.type).toLowerCase() === "labor";
+    return (
+      <span style={{ marginLeft: 6, fontSize: 8, fontWeight: 700, color: isLabor ? "#4338ca" : "#0369a1", background: isLabor ? "#eef2ff" : "#e0f2fe", borderRadius: 3, padding: "1px 5px", textTransform: "uppercase", letterSpacing: 0.5, verticalAlign: "middle" }}>
+        {isLabor ? "Labor" : "Part"}
+      </span>
+    );
+  };
+
   const headerBlock = (
     <>
       {/* Header */}
@@ -299,6 +309,7 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
                   <td style={{ padding: "4px 7px", fontSize: 9, fontWeight: 600, color: "#94a3b8" }}>{i + 1}</td>
                   <td style={{ padding: "4px 7px", fontSize: 10, fontWeight: 700, color: "#0f172a" }}>
                     {displayName}
+                    {renderTypeBadge(item)}
                     {isRecommended && (
                       <span style={{ marginLeft: 6, fontSize: 8, fontStyle: "italic", color: "#94a3b8", fontWeight: 400 }}>Recommended</span>
                     )}
@@ -411,6 +422,7 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
                   <td style={{ padding: "6px 8px", fontSize: 9, fontWeight: 600, color: "#94a3b8" }}>{i + 1}</td>
                   <td style={{ padding: "6px 8px", fontSize: 10, fontWeight: 700, color: "#0f172a" }}>
                     {displayName}
+                    {renderTypeBadge(item)}
                     {isRecommended && (
                       <span style={{ marginLeft: 6, fontSize: 8, fontStyle: "italic", color: "#94a3b8", fontWeight: 400 }}>Recommended</span>
                     )}
