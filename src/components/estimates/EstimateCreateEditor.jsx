@@ -141,23 +141,21 @@ export default function EstimateCreateEditor({ prefill, customers = [], onClose,
 
   return (
     <>
-      {/* Header — mirrors EstimateEditorHeader styling; "New Estimate" + customer/vehicle selection */}
+      {/* Header — "New Estimate" + prominent Customer & Vehicle card */}
       <div className="border-b border-gray-800 px-5 py-4 md:px-6">
-        <div className="flex items-start justify-between gap-4 pr-8">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-sky-400">Estimate</p>
-            <h2 className="mt-1 text-xl font-bold text-white">New Estimate</h2>
-          </div>
-          <CustomerVehiclePicker
-            customers={customers}
-            customerId={draft.customer_id}
-            customerName={draft.customer_name}
-            vehicleId={draft.vehicle_id}
-            vehicleInfo={draft.vehicle_info}
-            onCustomerChange={onCustomerChange}
-            onVehicleChange={onVehicleChange}
-          />
+        <div className="pr-8">
+          <p className="text-xs font-semibold uppercase tracking-wider text-sky-400">Estimate</p>
+          <h2 className="mt-1 text-xl font-bold text-white">New Estimate</h2>
         </div>
+        <CustomerVehiclePicker
+          customers={customers}
+          customerId={draft.customer_id}
+          customerName={draft.customer_name}
+          vehicleId={draft.vehicle_id}
+          vehicleInfo={draft.vehicle_info}
+          onCustomerChange={onCustomerChange}
+          onVehicleChange={onVehicleChange}
+        />
       </div>
 
       {/* Body — identical shared sub-components as EstimateDetail */}

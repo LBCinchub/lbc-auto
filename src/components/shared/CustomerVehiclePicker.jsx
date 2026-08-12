@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient } from "@tanstack/react-query";
-import { Search, Plus, Loader2 } from "lucide-react";
+import { Search, Plus, Loader2, User, Car, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -51,6 +51,12 @@ export default function CustomerVehiclePicker({
   const [newVeh, setNewVeh] = useState({ make: "", model: "", year: "", trim: "", engine_type: "", vin: "", license_plate: "", color: "" });
 
   const customerSelected = !!customerId;
+  const [vehOpen, setVehOpen] = useState(false);
+  const selectedCustomer = customers.find((c) => c.id === customerId);
+  const selectedVehicle = customerVehicles.find((v) => v.id === vehicleId);
+  const customerPhone = selectedCustomer?.phone || "";
+  const vehicleVin = selectedVehicle?.vin || "";
+  const vehiclePlate = selectedVehicle?.license_plate || "";
 
   // Load vehicles for the selected customer (also covers prefill on mount).
   useEffect(() => {
@@ -168,78 +174,112 @@ export default function CustomerVehiclePicker({
 
   return (
     <>
-      <div className="text-right text-sm min-w-[240px]">
         {customerSelected ? (
-          <>
-            <div className="flex items-center justify-end gap-2">
-              <p className="font-medium text-white">{customerName}</p>
-              <button type="button" onClick={clearCustomer} className="text-xs text-gray-500 underline hover:text-gray-300">Change</button>
+        <div className="mt-4 rounded-xl border border-gray-700 bg-gray-800/40 p-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sky-500/15 text-sky-400">
+                <User className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Customer</p>
+                <p className="truncate text-base font-bold text-white">{customerName}</p>
+                {customerPhone && <p className="truncate text-xs text-gray-400">{customerPhone}</p>}
+              </div>
+              <button
+                type="button"
+                onClick={clearCustomer}
+                className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-gray-600 bg-transparent px-3 text-xs font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
+              >
+                <RefreshCw className="w-3 h-3" /> Change
+              </button>
             </div>
-            <Select value={vehicleId || ""} onValueChange={handleVehicleChange}>
-              <SelectTrigger className="mt-1 h-8 w-full bg-gray-950 border-gray-700 text-white">
-                <SelectValue placeholder="Select vehicle" />
-              </SelectTrigger>
-              <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                {customerVehicles.length === 0 && <div className="px-3 py-2 text-xs text-gray-500">No vehicles on file</div>}
-                {customerVehicles.map((v) => (
-                  <SelectItem key={v.id} value={v.id}>
-                    {buildVehicleInfo(v)}{v.license_plate ? ` · ${v.license_plate}` : ""}
-                  </SelectItem>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => setShowNewVehicle(true)}
-                  className="w-full px-3 py-2 text-left text-sky-400 hover:bg-sky-500/20 flex items-center gap-2 text-sm border-t border-gray-700"
-                >
-                  <Plus className="w-3.5 h-3.5" /> Add New Vehicle
-                </button>
-              </SelectContent>
-            </Select>
-          </>
-        ) : (
-          <>
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-              <Input
-                value={custSearch}
-                onChange={(e) => onCustSearchChange(e.target.value)}
-                onFocus={() => searchCustomers(custSearch)}
-                onBlur={() => setTimeout(() => setShowCustDropdown(false), 150)}
-                placeholder="Search customer by name or phone..."
-                className="bg-gray-950 border-gray-700 text-white pl-8"
-              />
-              {showCustDropdown && (
-                <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg overflow-hidden shadow-xl text-left">
+            <div className="flex items-start gap-3 sm:border-l sm:border-gray-700 sm:pl-4">
+              <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sky-500/15 text-sky-400">
+                <Car className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Vehicle</p>
+                <p className="truncate text-base font-bold text-white">{vehicleInfo || "—"}</p>
+                {(vehicleVin || vehiclePlate) && (
+                  <p className="truncate text-xs text-gray-400">
+                    {vehicleVin && `VIN: ${vehicleVin}`}
+                    {vehicleVin && vehiclePlate && " · "}
+                    {vehiclePlate && `Plate: ${vehiclePlate}`}
+                  </p>
+                )}
+              </div>
+              <Select value={vehicleId || ""} onValueChange={handleVehicleChange} open={vehOpen} onOpenChange={setVehOpen}>
+                <SelectTrigger asChild>
+                  <button type="button" className="inline-flex h-7 w-auto shrink-0 items-center justify-center gap-1.5 rounded-full border border-gray-600 bg-transparent px-3 text-xs font-medium text-gray-300 shadow-none hover:bg-gray-700 hover:text-white">
+                    <RefreshCw className="w-3 h-3" /> Change
+                  </button>
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                  {customerVehicles.length === 0 && <div className="px-3 py-2 text-xs text-gray-500">No vehicles on file</div>}
+                  {customerVehicles.map((v) => (
+                    <SelectItem key={v.id} value={v.id}>
+                      {buildVehicleInfo(v)}{v.license_plate ? ` · ${v.license_plate}` : ""}
+                    </SelectItem>
+                  ))}
                   <button
                     type="button"
-                    onMouseDown={() => { setShowCustDropdown(false); setShowNewCustomer(true); }}
-                    className="w-full px-3 py-2 bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 text-sm flex items-center gap-2 border-b border-gray-700"
+                    onClick={() => { setVehOpen(false); setShowNewVehicle(true); }}
+                    className="w-full px-3 py-2 text-left text-sky-400 hover:bg-sky-500/20 flex items-center gap-2 text-sm border-t border-gray-700"
                   >
-                    <Plus className="w-3.5 h-3.5" /> Add New Customer
+                    <Plus className="w-3.5 h-3.5" /> Add New Vehicle
                   </button>
-                  {custDropdown.length > 0 ? (
-                    custDropdown.map((c) => (
-                      <button key={c.id} type="button" onMouseDown={() => selectCustomer(c)} className="w-full px-3 py-2 hover:bg-sky-500/20 text-sm text-white flex justify-between">
-                        <span>{c.full_name}</span>
-                        <span className="text-gray-400 text-xs">{c.phone}</span>
-                      </button>
-                    ))
-                  ) : (
-                    custSearch.trim() && <div className="px-3 py-2 text-xs text-gray-500">No matching customers</div>
-                  )}
-                </div>
-              )}
+                </SelectContent>
+              </Select>
             </div>
-            <button
-              type="button"
-              onClick={() => setShowNewCustomer(true)}
-              className="mt-1 w-full px-3 py-1 rounded text-xs bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/40 text-sky-400 flex items-center justify-center gap-2"
-            >
-              <Plus className="w-3 h-3" /> New Customer
-            </button>
-          </>
-        )}
-      </div>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-4 rounded-xl border border-gray-700 bg-gray-800/40 p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
+            <User className="w-3.5 h-3.5 text-sky-400" /> Customer
+          </p>
+          <div className="relative mt-2">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+            <Input
+              value={custSearch}
+              onChange={(e) => onCustSearchChange(e.target.value)}
+              onFocus={() => searchCustomers(custSearch)}
+              onBlur={() => setTimeout(() => setShowCustDropdown(false), 150)}
+              placeholder="Search customer by name or phone..."
+              className="bg-gray-950 border-gray-700 text-white pl-8"
+            />
+            {showCustDropdown && (
+              <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg overflow-hidden shadow-xl text-left">
+                <button
+                  type="button"
+                  onMouseDown={() => { setShowCustDropdown(false); setShowNewCustomer(true); }}
+                  className="w-full px-3 py-2 bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 text-sm flex items-center gap-2 border-b border-gray-700"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Add New Customer
+                </button>
+                {custDropdown.length > 0 ? (
+                  custDropdown.map((c) => (
+                    <button key={c.id} type="button" onMouseDown={() => selectCustomer(c)} className="w-full px-3 py-2 hover:bg-sky-500/20 text-sm text-white flex justify-between">
+                      <span>{c.full_name}</span>
+                      <span className="text-gray-400 text-xs">{c.phone}</span>
+                    </button>
+                  ))
+                ) : (
+                  custSearch.trim() && <div className="px-3 py-2 text-xs text-gray-500">No matching customers</div>
+                )}
+              </div>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowNewCustomer(true)}
+            className="mt-2 w-full px-3 py-1 rounded text-xs bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/40 text-sky-400 flex items-center justify-center gap-2"
+          >
+            <Plus className="w-3 h-3" /> New Customer
+          </button>
+        </div>
+      )}
 
       {/* New Customer dialog */}
       <Dialog open={showNewCustomer} onOpenChange={setShowNewCustomer}>

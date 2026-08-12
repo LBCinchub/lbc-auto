@@ -12,7 +12,7 @@ import { base44 } from "@/api/base44Client";
 import PaymentReceiptDialog from "@/components/invoices/PaymentReceiptDialog";
 import { syncCustomerActivity, validateRecord } from "@/utils/syncCustomerActivity";
 import { useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, X, Loader2, CreditCard } from "lucide-react";
+import { Plus, Trash2, X, Loader2, CreditCard, User, Car } from "lucide-react";
 import { useNhtsaVinDecode } from "@/hooks/useNhtsaVinDecode";
 import { useToast } from "@/components/ui/use-toast";
 import { resolveVehicleId } from "@/utils/recordLinking";
@@ -466,28 +466,16 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
             <DialogHeader className="flex-1">
               <DialogTitle>{order ? "Edit Repair Order" : "New Repair Order"}</DialogTitle>
             </DialogHeader>
-            {(form.vehicle_info || form.customer_name) && (
-              <div className="flex flex-col items-end gap-1 shrink-0">
-                {form.vehicle_info && (
-                  <div className="flex items-center gap-1.5 bg-sky-500/15 border border-sky-500/30 text-sky-300 px-3 py-1 rounded-full text-xs font-medium">
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 17H3a2 2 0 01-2-2V9a2 2 0 012-2h1l2-3h10l2 3h1a2 2 0 012 2v6a2 2 0 01-2 2h-2m-4 0a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-                    {form.vehicle_info}
-                  </div>
-                )}
-                {form.customer_name && (
-                  <div className="text-gray-400 text-xs">{form.customer_name}</div>
-                )}
-              </div>
-            )}
           </div>
         </div>
 
         {/* Scrollable body */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
         <div className="space-y-4">
-           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+           <div className="rounded-xl border border-gray-700 bg-gray-800/40 p-4">
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
              <div>
-               <Label className="text-gray-400">Customer *</Label>
+               <Label className="text-gray-400 flex items-center gap-1.5"><User className="w-3.5 h-3.5 text-sky-400" /> Customer *</Label>
                {newCustomerForm !== null && (
                  <div className="bg-gray-800 border border-sky-500/30 rounded-lg p-3 space-y-2 mt-1 mb-1">
                    <div className="flex items-center justify-between">
@@ -516,7 +504,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                </div>
              </div>
              <div>
-               <Label className="text-gray-400">Vehicle *</Label>
+               <Label className="text-gray-400 flex items-center gap-1.5"><Car className="w-3.5 h-3.5 text-sky-400" /> Vehicle *</Label>
                {newVehicleForm !== null ? (
                  <div className="bg-gray-800 border border-sky-500/30 rounded-lg p-2 mt-1 space-y-2">
                    <input value={newVehicleForm.vin} onChange={e => { setNewVehicleForm({...newVehicleForm, vin: e.target.value.toUpperCase()}); setVinDecodeError(""); }}
@@ -568,10 +556,11 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                  </div>
                )}
              </div>
-           </div>
+             </div>
+             </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+             <div>
               <Label className="text-gray-400">Mechanic</Label>
               <Select value={form.mechanic_id} onValueChange={handleMechanicChange}>
                 <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
