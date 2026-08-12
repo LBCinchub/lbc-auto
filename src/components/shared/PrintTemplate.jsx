@@ -228,12 +228,23 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
     </div>
   );
 
-  const notesBlock = notes && (
-    <div style={{ marginTop: 5, background: "#fffbeb", borderRadius: 6, borderLeft: "3px solid #f59e0b", padding: "6px 10px" }}>
-      <div style={{ fontSize: 9, fontWeight: 700, color: "#92400e", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 2 }}>Note</div>
-      <div style={{ fontSize: 10, color: "#78350f", lineHeight: 1.5 }}>{notes}</div>
-    </div>
-  );
+  const notesBlock = notes && (() => {
+    const lines = String(notes).split("\n").map((l) => l.trim()).filter(Boolean);
+    if (!lines.length) return null;
+    return (
+      <div style={{ marginTop: 6, marginBottom: 6, background: "#f0fdf4", borderRadius: 6, borderLeft: "4px solid #10b981", padding: "8px 12px" }}>
+        <div style={{ fontSize: 8.5, fontWeight: 700, color: "#047857", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 4 }}>✓ Shop Notes &amp; Recommendations</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+          {lines.map((line, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 6, fontSize: 10, color: "#064e3b", lineHeight: 1.5 }}>
+              <span style={{ color: "#10b981", fontWeight: 700, flexShrink: 0 }}>✓</span>
+              <span>{line}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  })();
 
   const signatureBlock = (
     <div style={{ marginTop: 8, display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
@@ -324,6 +335,8 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
           </tbody>
         </table>
 
+        {notesBlock}
+
         {/* Bottom: Payment History + Summary */}
         <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginTop: 4 }}>
           <div style={{ flex: 1.3 }}>
@@ -390,7 +403,6 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
           </div>
         </div>
 
-        {notesBlock}
         {signatureBlock}
         {disclaimerBlock}
       </div>

@@ -1,0 +1,52 @@
+{
+  "name": "LineItemLibrary",
+  "type": "object",
+  "properties": {
+    "shop_owner_email": {
+      "type": "string",
+      "format": "email",
+      "description": "Shop owner email \u2014 tenant scope key for cross-tenant isolation. Stamped on create from the authenticated session."
+    },
+    "item_name": {
+      "type": "string",
+      "description": "Line item name as typed by the shop (part name or labor description)"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "part",
+        "labor"
+      ],
+      "description": "Whether this entry is a part or a labor line item"
+    },
+    "last_unit_price": {
+      "type": "number",
+      "default": 0,
+      "description": "Most recent unit price (or labor rate) used for this item"
+    },
+    "times_used": {
+      "type": "number",
+      "default": 1,
+      "description": "How many times this item has been saved across documents \u2014 drives autocomplete ranking"
+    }
+  },
+  "required": [
+    "shop_owner_email",
+    "item_name",
+    "type"
+  ],
+  "rls": {
+    "create": {
+      "data.shop_owner_email": "{{user.email}}"
+    },
+    "read": {
+      "data.shop_owner_email": "{{user.email}}"
+    },
+    "update": {
+      "data.shop_owner_email": "{{user.email}}"
+    },
+    "delete": {
+      "data.shop_owner_email": "{{user.email}}"
+    }
+  }
+}

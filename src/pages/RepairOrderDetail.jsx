@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -17,6 +17,7 @@ import SignaturePad from "@/components/orders/SignaturePad";
 import PaymentHistoryManager from "@/components/invoices/PaymentHistoryManager";
 import { resolveVehicleId } from "@/utils/recordLinking";
 import { buildVehicleInfo } from "@/utils/buildVehicleInfo";
+import QuickNotesEditor from "@/components/shared/QuickNotesEditor";
 
 export default function RepairOrderDetail() {
   const { orderId } = useParams();
@@ -42,6 +43,16 @@ export default function RepairOrderDetail() {
     queryFn: () => base44.entities.RepairOrder.get(orderId),
     enabled: !!orderId,
   });
+  const [notes, setNotes] = useState("");
+  const notesTimer = useRef(null);
+  useEffect(() => { setNotes(order?.notes || ""); }, [order?.id]);
+  const handleNotesChange = (val) => {
+    setNotes(val);
+    clearTimeout(notesTimer.current);
+    notesTimer.current = setTimeout(() => {
+      base44.entities.RepairOrder.update(orderId, { notes: val }).catch(() => {});
+    }, 500);
+  };
 
   const handlePrintWorkerCopy = () => {
     if (!order) return;
@@ -528,12 +539,9 @@ export default function RepairOrderDetail() {
           )}
         </div>
 
-        {order.notes && (
-          <div className="mt-8 pt-6 border-t border-gray-800">
-            <h3 className="text-lg font-bold text-white mb-3">Notes</h3>
-            <p className="text-gray-300">{order.notes}</p>
-          </div>
-        )}
+        <div className="mt-8 pt-6 border-t border-gray-800">
+          <QuickNotesEditor value={notes} onChange={handleNotesChange} label="Notes (shown on customer documents)" />
+        </div>
 
         {/* Customer Signature Section */}
         <div className="mt-8 pt-6 border-t border-gray-800">

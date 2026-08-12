@@ -9,6 +9,5 @@ export default function InvoiceDetailsFields({ draft, onChange }) {
     <div><Label className="text-gray-300">Invoice Date</Label><Input type="date" value={draft.invoice_date || ""} onChange={e => set("invoice_date", e.target.value)} className="mt-2 border-gray-700 bg-gray-950 text-white" /></div>
     <div><Label className="text-gray-300">Due Date</Label><Input type="date" value={draft.due_date || ""} onChange={e => set("due_date", e.target.value)} className="mt-2 border-gray-700 bg-gray-950 text-white" /></div>
     <div className="md:col-span-2"><Label className="text-gray-300">Service Description</Label><Textarea value={draft.service_reason || ""} onChange={e => set("service_reason", e.target.value)} className="mt-2 flex min-h-[60px] w-full rounded-md border border-gray-700 bg-gray-950 px-3 py-2 text-white shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" /></div>
-    <div className="md:col-span-2"><Label className="text-gray-300">Customer Note</Label><Textarea value={draft.customer_note || ""} onChange={e => set("customer_note", e.target.value)} className="mt-2 border-gray-700 bg-gray-950 text-white" /></div>
   </div>;
 }

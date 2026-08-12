@@ -7,6 +7,7 @@ import PageHeader from "@/components/shared/PageHeader";
 import { MessageSquare, Mail, Bell, Upload, Sparkles, X, Loader2 } from "lucide-react";
 import { useTheme } from "@/lib/ThemeContext";
 import LegacyPortalMigrationPanel from "@/components/settings/LegacyPortalMigrationPanel";
+import QuickNotesManager from "@/components/settings/QuickNotesManager";
 
 const NOTIF_SETTINGS = [
   {
@@ -386,6 +387,8 @@ export default function Settings() {
             <p className="text-xs text-gray-600 mt-1">Paste your Google Maps review link — it will appear as a button at the bottom of every customer email.</p>
           </div>
         </div>
+
+        <QuickNotesManager />
 
         <Button
           onClick={handleSave}
