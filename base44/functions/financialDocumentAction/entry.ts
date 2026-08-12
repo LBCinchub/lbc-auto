@@ -117,6 +117,14 @@ export default async function(req) {
     const taxTarget = ['both', 'labor', 'parts', 'none'].includes(intent.tax_applies_to) ? intent.tax_applies_to : defaultTaxTarget;
     const totals = calculate(lines, taxRate, taxTarget, intent.discount ?? invoice?.discount ?? 0, intent.discount_type || invoice?.discount_type || '$', paid);
 
+    // Ghost carryover — when creating an invoice from an Estimate or Repair Order
+    // that has an active ghost, the ghost moves to the new invoice (stays active),
+    // recalculated using THIS invoice's tax_rate/tax_applies_to. Completed totals
+    // (above) and ghost totals are calculated independently and never mixed.
+    const createGhostItems = Array.isArray(source?.ghost_items) ? source.ghost_items : [];
+    const createGhostActive = source?.ghost_status === 'active' && createGhostItems.length > 0;
+    const createGhostTotals = createGhostActive ? calculate(cleanLines(createGhostItems), taxRate, taxTarget, 0, '$', 0) : null;
+
     if (action === 'relink') {
       if (!invoice) throw new Error('Invoice is required');
       const nextVehicle = intent.vehicle_id ? await getOwned('Vehicle', intent.vehicle_id, 'Vehicle') : vehicle;
@@ -140,10 +148,10 @@ export default async function(req) {
         const invoiceNumber = `INV-${suffix}`;
         const existing = await base44.asServiceRole.entities.Invoice.filter({ invoice_number: invoiceNumber }, '-created_date', 1);
         invoice = existing.find(owns) || null;
-        if (!invoice) invoice = await base44.entities.Invoice.create({ invoice_number: invoiceNumber, customer_id: customer.id, customer_name: customer.full_name, vehicle_id: vehicle.id, vehicle_info: [vehicle.year, vehicle.make, vehicle.model, vehicle.engine_liters, vehicle.trim].filter(Boolean).join(' '), estimate_id: estimate?.id || '', repair_order_id: repairOrder?.id || '', status: 'unpaid', amount_paid: 0, payment_history: [], line_items: lines.map((x) => ({ ...x, total: r2(x.quantity * x.unit_price) })), parts_used: lines.filter((x) => x.type !== 'labor').map((x) => ({ name: x.name || x.description || '', part_number: '', quantity: x.quantity, unit_price: x.unit_price, total: r2(x.quantity * x.unit_price) })), labor_total: totals.labor, parts_total: totals.parts, tax_rate: taxRate, tax_applies_to: taxTarget, tax_amount: totals.tax, discount: Number(intent.discount) || 0, discount_type: normalizeDiscount(intent.discount_type), total: totals.total, balance_due: totals.balance, invoice_date: intent.invoice_date || new Date().toISOString().slice(0, 10), due_date: intent.due_date || '', customer_note: intent.customer_note || '', service_reason: intent.service_reason || '' });
+        if (!invoice) invoice = await base44.entities.Invoice.create({ invoice_number: invoiceNumber, customer_id: customer.id, customer_name: customer.full_name, vehicle_id: vehicle.id, vehicle_info: [vehicle.year, vehicle.make, vehicle.model, vehicle.engine_liters, vehicle.trim].filter(Boolean).join(' '), estimate_id: estimate?.id || '', repair_order_id: repairOrder?.id || '', status: 'unpaid', amount_paid: 0, payment_history: [], line_items: lines.map((x) => ({ ...x, total: r2(x.quantity * x.unit_price) })), parts_used: lines.filter((x) => x.type !== 'labor').map((x) => ({ name: x.name || x.description || '', part_number: '', quantity: x.quantity, unit_price: x.unit_price, total: r2(x.quantity * x.unit_price) })), labor_total: totals.labor, parts_total: totals.parts, tax_rate: taxRate, tax_applies_to: taxTarget, tax_amount: totals.tax, discount: Number(intent.discount) || 0, discount_type: normalizeDiscount(intent.discount_type), total: totals.total, balance_due: totals.balance, invoice_date: intent.invoice_date || new Date().toISOString().slice(0, 10), due_date: intent.due_date || '', customer_note: intent.customer_note || '', service_reason: intent.service_reason || '', ghost_items: createGhostActive ? createGhostItems : [], ghost_status: createGhostActive ? 'active' : 'none', ghost_notes: source?.ghost_notes || '', ghost_total: createGhostTotals ? createGhostTotals.total : 0 });
         try {
-          if (estimate) await base44.entities.Estimate.update(estimate.id, { status: 'invoiced', linked_invoice_id: invoice.id, linked_invoice_number: invoice.invoice_number });
-          if (repairOrder) await base44.entities.RepairOrder.update(repairOrder.id, { linked_invoice_id: invoice.id, linked_invoice_number: invoice.invoice_number });
+          if (estimate) await base44.entities.Estimate.update(estimate.id, { status: 'invoiced', linked_invoice_id: invoice.id, linked_invoice_number: invoice.invoice_number, ...(createGhostActive && sourceType === 'estimate' ? { ghost_status: 'converted', ghost_converted_to: invoice.id, ghost_converted_type: 'Invoice', ghost_converted_number: invoice.invoice_number } : {}) });
+          if (repairOrder) await base44.entities.RepairOrder.update(repairOrder.id, { linked_invoice_id: invoice.id, linked_invoice_number: invoice.invoice_number, ...(createGhostActive && sourceType === 'repair_order' ? { ghost_status: 'converted', ghost_converted_to: invoice.id, ghost_converted_type: 'Invoice', ghost_converted_number: invoice.invoice_number } : {}) });
         } catch (linkError) {
           await base44.entities.Invoice.delete(invoice.id).catch(() => null);
           throw new Error(`Invoice link failed: ${linkError.message}`);
@@ -152,7 +160,12 @@ export default async function(req) {
       }
     } else if (['update', 'finalize', 'sync_source'].includes(action)) {
       if (!invoice) throw new Error('No linked invoice exists');
-      const update = { line_items: lines.map((x) => ({ ...x, total: r2(x.quantity * x.unit_price) })), parts_used: lines.filter((x) => x.type !== 'labor').map((x) => ({ name: x.name || x.description || '', part_number: '', quantity: x.quantity, unit_price: x.unit_price, total: r2(x.quantity * x.unit_price) })), labor_total: totals.labor, parts_total: totals.parts, tax_rate: taxRate, tax_applies_to: taxTarget, tax_amount: totals.tax, discount: Number(intent.discount ?? invoice.discount) || 0, discount_type: normalizeDiscount(intent.discount_type || invoice.discount_type), total: totals.total, balance_due: totals.balance, due_date: intent.due_date ?? invoice.due_date, invoice_date: intent.invoice_date ?? invoice.invoice_date, customer_note: intent.customer_note ?? invoice.customer_note, service_reason: intent.service_reason ?? invoice.service_reason };
+      // Keep the stored ghost_total in sync when tax_rate/tax_applies_to change.
+      // (Display already recalculates live; this keeps the persisted snapshot correct.)
+      const upGhostItems = Array.isArray(invoice?.ghost_items) ? invoice.ghost_items : [];
+      const upGhostActive = invoice?.ghost_status === 'active' && upGhostItems.length > 0;
+      const upGhostTotals = upGhostActive ? calculate(cleanLines(upGhostItems), taxRate, taxTarget, 0, '$', 0) : null;
+      const update = { line_items: lines.map((x) => ({ ...x, total: r2(x.quantity * x.unit_price) })), parts_used: lines.filter((x) => x.type !== 'labor').map((x) => ({ name: x.name || x.description || '', part_number: '', quantity: x.quantity, unit_price: x.unit_price, total: r2(x.quantity * x.unit_price) })), labor_total: totals.labor, parts_total: totals.parts, tax_rate: taxRate, tax_applies_to: taxTarget, tax_amount: totals.tax, discount: Number(intent.discount ?? invoice.discount) || 0, discount_type: normalizeDiscount(intent.discount_type || invoice.discount_type), total: totals.total, balance_due: totals.balance, due_date: intent.due_date ?? invoice.due_date, invoice_date: intent.invoice_date ?? invoice.invoice_date, customer_note: intent.customer_note ?? invoice.customer_note, service_reason: intent.service_reason ?? invoice.service_reason, ghost_total: upGhostTotals ? upGhostTotals.total : (invoice?.ghost_total || 0) };
       invoice = await base44.entities.Invoice.update(invoice.id, update);
       await base44.asServiceRole.entities.FinancialWorkflowEvent.create({ shop_owner_email: tenant, action: action === 'finalize' ? 'finalize' : 'edit', invoice_id: invoice.id, source_type: sourceType, source_id: sourceId, idempotency_key: body.idempotency_key || '', created_at: new Date().toISOString(), actor_email: tenant, metadata: { total: totals.total } });
     } else if (action === 'replace_payments') {
