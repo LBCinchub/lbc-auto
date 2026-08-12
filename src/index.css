@@ -291,3 +291,18 @@
 @media print {
   .no-print { display: none !important; }
 }
+
+/* ── Global Title Case for text inputs ──
+   Visual feedback for the real-time JS title-casing in autoCapitalize.js.
+   Excluded fields (VIN, plate, URL, passcode…) carry data-no-capitalize. */
+input[type="text"],
+input[type="search"],
+input:not([type]),
+textarea {
+  text-transform: capitalize;
+}
+[data-no-capitalize],
+[data-no-capitalize] input,
+[data-no-capitalize] textarea {
+  text-transform: none !important;
+}

@@ -167,7 +167,7 @@ export default function VehicleFormDialog({ open, onClose, vehicle, onSaved, cus
             <div className="flex-1">
               <Label className="text-gray-400">VIN</Label>
               <Input value={form.vin} onChange={e => { setForm({...form, vin: e.target.value}); setVinError(""); }}
-                className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="17-character VIN" />
+                className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="17-character VIN" data-no-capitalize />
             </div>
             <Button onClick={() => setScanning(true)} title="Scan VIN with camera"
               className="mt-7 bg-purple-600 hover:bg-purple-700" size="sm">
@@ -183,6 +183,7 @@ export default function VehicleFormDialog({ open, onClose, vehicle, onSaved, cus
           <div>
             <Label className="text-gray-400">License Plate</Label>
             <Input value={form.license_plate} onChange={e => setForm({...form, license_plate: e.target.value})}
+              data-no-capitalize
               className="bg-gray-800 border-gray-700 text-white mt-1" />
           </div>
 

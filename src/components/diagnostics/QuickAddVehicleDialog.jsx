@@ -130,6 +130,7 @@ export default function QuickAddVehicleDialog({ open, onClose, onSaved, customer
               <div>
                 <Label className="text-gray-400">Plate</Label>
                 <Input value={form.license_plate} onChange={e => setForm({ ...form, license_plate: e.target.value.toUpperCase() })}
+                  data-no-capitalize
                   className="bg-gray-800 border-gray-700 text-white mt-1" />
               </div>
             </div>

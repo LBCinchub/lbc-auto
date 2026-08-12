@@ -383,7 +383,7 @@ export default function Settings() {
             <label className="text-xs text-gray-500 uppercase tracking-wider">Google Review Link</label>
             <Input value={googleReviewLink} onChange={e => setGoogleReviewLink(e.target.value)}
               placeholder="https://g.page/r/YOUR_ID/review"
-              className="bg-gray-800 border-gray-700 text-white mt-1" />
+              className="bg-gray-800 border-gray-700 text-white mt-1" data-no-capitalize />
             <p className="text-xs text-gray-600 mt-1">Paste your Google Maps review link — it will appear as a button at the bottom of every customer email.</p>
           </div>
         </div>
