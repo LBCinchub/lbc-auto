@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import InvoiceDetailsFields from "@/components/invoices/InvoiceDetailsFields";
+import QuickNotesEditor from "@/components/shared/QuickNotesEditor";
 import InvoiceLineItemsTable from "@/components/invoices/InvoiceLineItemsTable";
 import InvoiceTotalsSection from "@/components/invoices/InvoiceTotalsSection";
 import { calculateFinancials } from "@/components/financial-workflow/financialMath";
@@ -246,6 +247,10 @@ export default function InvoiceCreateEditor({ prefill, customers = [], onClose, 
         <InvoiceLineItemsTable
           lines={draft.line_items}
           onChange={(line_items) => setDraft({ ...draft, line_items })}
+        />
+        <QuickNotesEditor
+          value={draft.customer_note}
+          onChange={(v) => setDraft({ ...draft, customer_note: v })}
         />
         <InvoiceTotalsSection draft={draft} totals={totals} onChange={setDraft} />
       </div>

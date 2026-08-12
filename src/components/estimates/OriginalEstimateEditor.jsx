@@ -10,6 +10,7 @@ import EstimateEditorHeader from "./EstimateEditorHeader";
 import EstimateDetailsFields from "./EstimateDetailsFields";
 import EstimateEditorActions from "./EstimateEditorActions";
 import EstimatePrintView from "./EstimatePrintView";
+import QuickNotesEditor from "@/components/shared/QuickNotesEditor";
 import { useEmailSend } from "@/hooks/useEmailSend";
 import { normalizeDiscountType } from "@/utils/discount";
 import { syncCustomerActivity } from "@/utils/syncCustomerActivity";
@@ -226,6 +227,10 @@ export default function OriginalEstimateEditor({ estimateId, onClose }) {
         <InvoiceLineItemsTable
           lines={draft.line_items}
           onChange={(line_items) => setDraft({ ...draft, line_items })}
+        />
+        <QuickNotesEditor
+          value={draft.notes}
+          onChange={(v) => setDraft({ ...draft, notes: v })}
         />
         <InvoiceTotalsSection draft={draft} totals={totals} onChange={setDraft} />
       </div>

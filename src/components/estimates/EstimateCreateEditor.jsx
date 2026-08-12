@@ -9,6 +9,7 @@ import InvoiceLineItemsTable from "@/components/invoices/InvoiceLineItemsTable";
 import InvoiceTotalsSection from "@/components/invoices/InvoiceTotalsSection";
 import { calculateFinancials } from "@/components/financial-workflow/financialMath";
 import EstimateDetailsFields from "@/components/estimates/EstimateDetailsFields";
+import QuickNotesEditor from "@/components/shared/QuickNotesEditor";
 import { syncCustomerActivity } from "@/utils/syncCustomerActivity";
 import { syncLineItemLibrary } from "@/utils/syncLineItemLibrary";
 import { useToast } from "@/components/ui/use-toast";
@@ -252,6 +253,10 @@ export default function EstimateCreateEditor({ prefill, customers = [], onClose,
         <InvoiceLineItemsTable
           lines={draft.line_items}
           onChange={(line_items) => setDraft({ ...draft, line_items })}
+        />
+        <QuickNotesEditor
+          value={draft.notes}
+          onChange={(v) => setDraft({ ...draft, notes: v })}
         />
         <InvoiceTotalsSection draft={draft} totals={totals} onChange={setDraft} />
       </div>
