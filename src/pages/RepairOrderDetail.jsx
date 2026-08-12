@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, FileText, Plus, Trash2, MoreVertical, Clock, History, Wrench, PenLine, Pencil, CheckCircle2, XCircle, Printer, ShoppingCart, Loader2 } from "lucide-react";
+import { ArrowLeft, FileText, Plus, Trash2, MoreVertical, Clock, History, Wrench, PenLine, Pencil, CheckCircle2, XCircle, Printer, ShoppingCart, Loader2, Mail } from "lucide-react";
 import { formatPhone } from "@/utils/formatPhone";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -340,7 +340,9 @@ export default function RepairOrderDetail() {
              <h1 className="text-3xl font-bold text-white">Repair Order #{order.order_number}</h1>
              <button onClick={() => order.customer_id && navigate(`/CustomerDetails?id=${order.customer_id}`)} className="text-sky-400 hover:text-sky-300 hover:underline mt-1 text-left transition-colors font-medium">{order.customer_name}</button>
              {customer?.phone && <p className="text-sky-400 text-sm mt-1">{formatPhone(customer.phone)}</p>}
-           </div>
+             {customer?.email && <p className="flex items-center gap-1 text-gray-400 text-sm mt-1"><Mail className="w-3 h-3" />{customer.email}</p>}
+             {customer?.address && <p className="text-gray-500 text-xs mt-1">{customer.address}</p>}
+             </div>
            <div>
            <Select value={order.status} onValueChange={handleStatusChange} disabled={updatingStatus}>
              <SelectTrigger className="w-48 bg-gray-800 border-gray-700 text-white">
@@ -371,7 +373,13 @@ export default function RepairOrderDetail() {
              {vehicleRecord?.vin && (
                <p className="text-gray-500 text-xs mt-0.5 font-mono">VIN: {vehicleRecord.vin.toUpperCase()}</p>
              )}
-          </div>
+             {(vehicleRecord?.engine_type || vehicleRecord?.engine_liters || vehicleRecord?.fuel_type) && (
+               <p className="text-gray-500 text-xs mt-0.5">Engine: {[vehicleRecord?.engine_type || vehicleRecord?.engine_liters, vehicleRecord?.fuel_type].filter(Boolean).join(" · ")}</p>
+             )}
+             {vehicleRecord?.color && (
+               <p className="text-gray-500 text-xs mt-0.5">Color: {vehicleRecord.color}</p>
+             )}
+             </div>
           <div>
             <p className="text-gray-500 text-xs uppercase mb-1">Mechanic</p>
             <p className="text-white">{order.mechanic_name || "Unassigned"}</p>

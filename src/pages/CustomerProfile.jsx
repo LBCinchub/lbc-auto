@@ -8,6 +8,7 @@ import {
   MessageSquare, AlertCircle, RefreshCw, X
 } from "lucide-react";
 import { useSmartBack } from "@/components/shared/useSmartBack";
+import { formatPhone } from "@/utils/formatPhone";
 
 function RetentionDot({ lastVisit }) {
   if (!lastVisit) return <span style={{ color:"#64748b", fontSize:11 }}>No visits</span>;
@@ -240,12 +241,17 @@ export default function CustomerProfile() {
             <h1 style={{ color:"#fff", fontSize:22, fontWeight:800, margin:"0 0 4px" }}>{customer.full_name}</h1>
             {customer.phone && (
               <a href={`tel:${customer.phone}`} style={{ color:"#38bdf8", fontSize:14, display:"flex", alignItems:"center", gap:5, marginBottom:3, textDecoration:"none" }}>
-                <Phone style={{ width:13, height:13 }}/> {customer.phone}
+                <Phone style={{ width:13, height:13 }}/> {formatPhone(customer.phone)}
               </a>
             )}
             {customer.email && (
-              <p style={{ color:"#64748b", fontSize:13, display:"flex", alignItems:"center", gap:5, margin:"2px 0" }}>
+              <p style={{ color:"#38bdf8", fontSize:13, display:"flex", alignItems:"center", gap:5, margin:"2px 0" }}>
                 <Mail style={{ width:12, height:12 }}/> {customer.email}
+              </p>
+            )}
+            {customer.address && (
+              <p style={{ color:"#64748b", fontSize:12, display:"flex", alignItems:"center", gap:5, margin:"2px 0" }}>
+                <MapPin style={{ width:12, height:12 }}/> {customer.address}
               </p>
             )}
             <div style={{ marginTop:6 }}>

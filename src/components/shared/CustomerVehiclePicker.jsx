@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient } from "@tanstack/react-query";
-import { Search, Plus, Loader2, User, Car, RefreshCw } from "lucide-react";
+import { Search, Plus, Loader2, User, Car, RefreshCw, Phone, Mail, MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -305,46 +305,63 @@ export default function CustomerVehiclePicker({
           <DialogHeader>
             <DialogTitle>Add New Customer</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <User className="w-4 h-4 text-sky-400" />
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Customer Information</h4>
+            <div className="flex-1 h-px bg-gray-700" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <Label className="text-gray-400">Full Name *</Label>
-              <Input
-                value={newCust.full_name}
-                onChange={(e) => setNewCust({ ...newCust, full_name: capWords(e.target.value) })}
-                className="bg-gray-800 border-gray-700 text-white mt-1"
-                placeholder="John Smith"
-              />
+              <div className="relative mt-1">
+                <User className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+                <Input
+                  value={newCust.full_name}
+                  onChange={(e) => setNewCust({ ...newCust, full_name: capWords(e.target.value) })}
+                  className="bg-gray-800 border-gray-700 text-white pl-8"
+                  placeholder="John Smith"
+                />
+              </div>
             </div>
             <div>
               <Label className="text-gray-400">Phone *</Label>
-              <Input
-                type="tel"
-                data-no-capitalize
-                value={newCust.phone}
-                onChange={(e) => setNewCust({ ...newCust, phone: e.target.value })}
-                className="bg-gray-800 border-gray-700 text-white mt-1"
-                placeholder="(613) 555-0100"
-              />
+              <div className="relative mt-1">
+                <Phone className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+                <Input
+                  type="tel"
+                  data-no-capitalize
+                  value={newCust.phone}
+                  onChange={(e) => setNewCust({ ...newCust, phone: e.target.value })}
+                  className="bg-gray-800 border-gray-700 text-white pl-8"
+                  placeholder="(613) 555-0100"
+                />
+              </div>
             </div>
-            <div>
+            <div className="sm:col-span-2">
               <Label className="text-gray-400">Email (optional)</Label>
-              <Input
-                type="email"
-                data-no-capitalize
-                value={newCust.email}
-                onChange={(e) => setNewCust({ ...newCust, email: e.target.value })}
-                className="bg-gray-800 border-gray-700 text-white mt-1"
-                placeholder="john@example.com"
-              />
+              <div className="relative mt-1">
+                <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+                <Input
+                  type="email"
+                  data-no-capitalize
+                  value={newCust.email}
+                  onChange={(e) => setNewCust({ ...newCust, email: e.target.value })}
+                  className="bg-gray-800 border-gray-700 text-white pl-8"
+                  placeholder="john@example.com"
+                />
+              </div>
             </div>
-            <div>
+            <div className="sm:col-span-2">
               <Label className="text-gray-400">Address (optional)</Label>
-              <Input
-                value={newCust.address}
-                onChange={(e) => setNewCust({ ...newCust, address: capWords(e.target.value) })}
-                className="bg-gray-800 border-gray-700 text-white mt-1"
-                placeholder="123 Main St"
-              />
+              <div className="relative mt-1">
+                <MapPin className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+                <Input
+                  value={newCust.address}
+                  onChange={(e) => setNewCust({ ...newCust, address: capWords(e.target.value) })}
+                  className="bg-gray-800 border-gray-700 text-white pl-8"
+                  placeholder="123 Main St"
+                />
+              </div>
             </div>
           </div>
           <div className="flex gap-2 pt-2">
@@ -362,36 +379,46 @@ export default function CustomerVehiclePicker({
           <DialogHeader>
             <DialogTitle>Add New Vehicle — {customerName}</DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="flex items-center gap-2">
+            <Car className="w-4 h-4 text-sky-400" />
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Vehicle Information</h4>
+            <div className="flex-1 h-px bg-gray-700" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <Label className="text-gray-400">Year *</Label>
+              <Input type="number" value={newVeh.year} onChange={(e) => setNewVeh({ ...newVeh, year: e.target.value })} className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="2019" />
+            </div>
             <div>
               <Label className="text-gray-400">Make *</Label>
-              <Input value={newVeh.make} onChange={(e) => setNewVeh({ ...newVeh, make: capWords(e.target.value) })} className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="Honda" />
+              <div className="relative mt-1">
+                <Car className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+                <Input value={newVeh.make} onChange={(e) => setNewVeh({ ...newVeh, make: capWords(e.target.value) })} className="bg-gray-800 border-gray-700 text-white pl-8" placeholder="Honda" />
+              </div>
             </div>
             <div>
               <Label className="text-gray-400">Model *</Label>
               <Input value={newVeh.model} onChange={(e) => setNewVeh({ ...newVeh, model: capWords(e.target.value) })} className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="Civic" />
             </div>
             <div>
-              <Label className="text-gray-400">Year *</Label>
-              <Input type="number" value={newVeh.year} onChange={(e) => setNewVeh({ ...newVeh, year: e.target.value })} className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="2019" />
-            </div>
-            <div>
               <Label className="text-gray-400">Trim (optional)</Label>
               <Input value={newVeh.trim} onChange={(e) => setNewVeh({ ...newVeh, trim: capWords(e.target.value) })} className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="EX" />
             </div>
-            <div className="col-span-2">
+            <div className="sm:col-span-2">
               <Label className="text-gray-400">Engine (optional)</Label>
               <Input value={newVeh.engine_type} onChange={(e) => setNewVeh({ ...newVeh, engine_type: e.target.value })} className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="1.5L 4-Cyl" />
             </div>
-            <div className="col-span-2">
+            <div>
               <Label className="text-gray-400">VIN (optional)</Label>
               <Input data-no-capitalize value={newVeh.vin} onChange={(e) => setNewVeh({ ...newVeh, vin: e.target.value.toUpperCase() })} className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="17 characters" />
+              <p className="mt-1 text-[10px] text-gray-500">VIN is optional</p>
             </div>
             <div>
               <Label className="text-gray-400">License Plate (optional)</Label>
               <Input data-no-capitalize value={newVeh.license_plate} onChange={(e) => setNewVeh({ ...newVeh, license_plate: e.target.value.toUpperCase() })} className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="ABCD123" />
+              <p className="mt-1 text-[10px] text-gray-500">Plate is optional</p>
             </div>
-            <div>
+            <div className="sm:col-span-2">
               <Label className="text-gray-400">Color (optional)</Label>
               <Input value={newVeh.color} onChange={(e) => setNewVeh({ ...newVeh, color: capWords(e.target.value) })} className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="Black" />
             </div>

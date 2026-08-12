@@ -12,7 +12,7 @@ import { base44 } from "@/api/base44Client";
 import PaymentReceiptDialog from "@/components/invoices/PaymentReceiptDialog";
 import { syncCustomerActivity, validateRecord } from "@/utils/syncCustomerActivity";
 import { useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, X, Loader2, CreditCard, User, Car } from "lucide-react";
+import { Plus, Trash2, X, Loader2, CreditCard, User, Car, Phone, Mail, MapPin } from "lucide-react";
 import { useNhtsaVinDecode } from "@/hooks/useNhtsaVinDecode";
 import { useToast } from "@/components/ui/use-toast";
 import { resolveVehicleId } from "@/utils/recordLinking";
@@ -193,6 +193,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
       full_name: newCustomerForm.full_name,
       phone: newCustomerForm.phone,
       email: newCustomerForm.email || "",
+      address: newCustomerForm.address || "",
     });
     handleCustomerChange(created.id, created.full_name);
     setNewCustomerForm(null);
@@ -223,6 +224,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
       make: newVehicleForm.make,
       model: newVehicleForm.model,
       year: Number(newVehicleForm.year),
+      trim: newVehicleForm.trim || "",
       license_plate: newVehicleForm.license_plate || "",
       color: newVehicleForm.color || "",
       engine_type: newVehicleForm.engine_type || "",
@@ -472,92 +474,157 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         {/* Scrollable body */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
         <div className="space-y-4">
-           <div className="rounded-xl border border-gray-700 bg-gray-800/40 p-4">
-             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-             <div>
-               <Label className="text-gray-400 flex items-center gap-1.5"><User className="w-3.5 h-3.5 text-sky-400" /> Customer *</Label>
-               {newCustomerForm !== null && (
-                 <div className="bg-gray-800 border border-sky-500/30 rounded-lg p-3 space-y-2 mt-1 mb-1">
-                   <div className="flex items-center justify-between">
-                     <p className="text-xs text-sky-400 font-medium">New Customer</p>
-                     <button onClick={() => setNewCustomerForm(null)} className="text-gray-500 hover:text-gray-300">
-                       <X className="w-3.5 h-3.5" />
-                     </button>
-                   </div>
-                   <Input value={newCustomerForm.full_name} autoCapitalize="words" autoCapitalize="words" onChange={e => setNewCustomerForm(p => ({...p, full_name: e.target.value.replace(/(^|\s)(\S)/g,(_,s,c)=>s+c.toUpperCase())}))}
-                     className="bg-gray-700 border-gray-600 text-white" placeholder="Full name *" />
-                   <Input value={newCustomerForm.phone} onChange={e => setNewCustomerForm({...newCustomerForm, phone: e.target.value})}
-                     className="bg-gray-700 border-gray-600 text-white" placeholder="Phone number *" />
-                   <Input value={newCustomerForm.email} onChange={e => setNewCustomerForm({...newCustomerForm, email: e.target.value})}
-                     className="bg-gray-700 border-gray-600 text-white" placeholder="Email" />
-                   <div className="flex gap-2">
-                     <Button size="sm" onClick={saveNewCustomer} disabled={!newCustomerForm.full_name || !newCustomerForm.phone} className="bg-sky-500 hover:bg-sky-600 text-white flex-1">Save</Button>
-                   </div>
-                 </div>
-               )}
-               <div className="mt-1">
-                 <CustomerSearchInput customers={[...customers, ...localCustomers.filter(lc => !customers.find(c => c.id === lc.id))]} value={form.customer_id} onChange={handleCustomerChange} />
-                 <button onClick={() => setNewCustomerForm({ full_name: "", phone: "", email: "" })}
-                   className="mt-2 w-full px-3 py-1 rounded text-xs bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/40 text-sky-400 flex items-center justify-center gap-2">
-                   <Plus className="w-3 h-3" /> New customer
-                 </button>
-               </div>
-             </div>
-             <div>
-               <Label className="text-gray-400 flex items-center gap-1.5"><Car className="w-3.5 h-3.5 text-sky-400" /> Vehicle *</Label>
-               {newVehicleForm !== null ? (
-                 <div className="bg-gray-800 border border-sky-500/30 rounded-lg p-2 mt-1 space-y-2">
-                   <input value={newVehicleForm.vin} onChange={e => { setNewVehicleForm({...newVehicleForm, vin: e.target.value.toUpperCase()}); setVinDecodeError(""); }}
-                     className="w-full px-2 py-1 bg-gray-700 border-gray-600 text-white rounded text-xs" placeholder="VIN (17 characters, optional)" />
-                   {newVehicleForm.vin && (
-                     <Button size="sm" onClick={decodeVinForNewVehicle} disabled={decodingVin} className="w-full bg-purple-600 hover:bg-purple-700 text-white text-xs">
-                       {decodingVin ? <><Loader2 className="w-3 h-3 animate-spin mr-1" /> Decoding...</> : "Decode VIN"}
-                     </Button>
-                   )}
-                   {vinDecodeError && <p className="text-rose-400 text-xs">{vinDecodeError}</p>}
-                   <input value={newVehicleForm.year} onChange={e => setNewVehicleForm({...newVehicleForm, year: e.target.value})}
-                     className="w-full px-2 py-1 bg-gray-700 border-gray-600 text-white rounded text-xs" placeholder="Year *" />
-                   <input value={newVehicleForm.make} onChange={e => setNewVehicleForm({...newVehicleForm, make: e.target.value})}
-                     className="w-full px-2 py-1 bg-gray-700 border-gray-600 text-white rounded text-xs" placeholder="Make *" />
-                   <input value={newVehicleForm.model} onChange={e => setNewVehicleForm({...newVehicleForm, model: e.target.value})}
-                     className="w-full px-2 py-1 bg-gray-700 border-gray-600 text-white rounded text-xs" placeholder="Model *" />
-                   <input value={newVehicleForm.license_plate} onChange={e => setNewVehicleForm({...newVehicleForm, license_plate: e.target.value})}
-                     className="w-full px-2 py-1 bg-gray-700 border-gray-600 text-white rounded text-xs" placeholder="License plate" />
-                   <div className="flex gap-2">
-                     <Button size="sm" onClick={saveNewVehicle} disabled={!newVehicleForm.year || !newVehicleForm.make || !newVehicleForm.model} className="bg-sky-500 hover:bg-sky-600 text-white flex-1">Save</Button>
-                     <Button size="sm" variant="ghost" onClick={() => setNewVehicleForm(null)} className="text-gray-400 flex-1">Cancel</Button>
-                   </div>
-                 </div>
-               ) : (
-                 <div>
-                   <Select value={form.vehicle_id} onValueChange={handleVehicleChange} disabled={loadingVehicles}>
-                     <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
-                       <SelectValue placeholder={loadingVehicles ? "Loading vehicles..." : "Select vehicle"} />
-                     </SelectTrigger>
-                     <SelectContent className="bg-gray-800 border-gray-700">
-                       {loadingVehicles && <div className="px-3 py-2 text-xs text-gray-500">Loading vehicles...</div>}
-                       {!loadingVehicles && customerVehicles.map(v => (
-                         <SelectItem key={v.id} value={v.id}>{buildVehicleInfo(v)}</SelectItem>
-                       ))}
-                       {!loadingVehicles && form.customer_id && customerVehicles.length === 0 && (
-                         <button onClick={() => setNewVehicleForm({ vin: "", year: "", make: "", model: "", license_plate: "", color: "", engine_type: "" })}
-                           className="w-full px-3 py-2 text-left text-sky-400 hover:bg-sky-500/20 flex items-center gap-2 text-sm">
-                           <Plus className="w-3.5 h-3.5" /> Add vehicle
-                         </button>
-                       )}
-                     </SelectContent>
-                   </Select>
-                   {form.customer_id && customerVehicles.length > 0 && (
-                   <button onClick={() => setNewVehicleForm({ vin: "", year: "", make: "", model: "", license_plate: "", color: "", engine_type: "" })}
-                   className="mt-2 w-full px-3 py-1 rounded text-xs bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/40 text-sky-400 flex items-center justify-center gap-2">
-                   <Plus className="w-3 h-3" /> Add vehicle
-                   </button>
-                   )}
-                 </div>
-               )}
-             </div>
-             </div>
-             </div>
+           <div className="rounded-xl border border-gray-700 bg-gray-800/40 p-4 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label className="text-gray-400 flex items-center gap-1.5"><User className="w-3.5 h-3.5 text-sky-400" /> Customer *</Label>
+                <div className="mt-1">
+                  <CustomerSearchInput customers={[...customers, ...localCustomers.filter(lc => !customers.find(c => c.id === lc.id))]} value={form.customer_id} onChange={handleCustomerChange} />
+                  <button onClick={() => setNewCustomerForm({ full_name: "", phone: "", email: "", address: "" })}
+                    className="mt-2 w-full px-3 py-1 rounded text-xs bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/40 text-sky-400 flex items-center justify-center gap-2">
+                    <Plus className="w-3 h-3" /> New customer
+                  </button>
+                </div>
+              </div>
+              <div>
+                <Label className="text-gray-400 flex items-center gap-1.5"><Car className="w-3.5 h-3.5 text-sky-400" /> Vehicle *</Label>
+                <div className="mt-1">
+                  <Select value={form.vehicle_id} onValueChange={handleVehicleChange} disabled={loadingVehicles}>
+                    <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                      <SelectValue placeholder={loadingVehicles ? "Loading vehicles..." : "Select vehicle"} />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-800 border-gray-700">
+                      {loadingVehicles && <div className="px-3 py-2 text-xs text-gray-500">Loading vehicles...</div>}
+                      {!loadingVehicles && customerVehicles.map(v => (
+                        <SelectItem key={v.id} value={v.id}>{buildVehicleInfo(v)}</SelectItem>
+                      ))}
+                      {!loadingVehicles && form.customer_id && customerVehicles.length === 0 && (
+                        <button onClick={() => setNewVehicleForm({ vin: "", year: "", make: "", model: "", trim: "", license_plate: "", color: "", engine_type: "" })}
+                          className="w-full px-3 py-2 text-left text-sky-400 hover:bg-sky-500/20 flex items-center gap-2 text-sm">
+                          <Plus className="w-3.5 h-3.5" /> Add vehicle
+                        </button>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  {form.customer_id && customerVehicles.length > 0 && (
+                    <button onClick={() => setNewVehicleForm({ vin: "", year: "", make: "", model: "", trim: "", license_plate: "", color: "", engine_type: "" })}
+                      className="mt-2 w-full px-3 py-1 rounded text-xs bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/40 text-sky-400 flex items-center justify-center gap-2">
+                      <Plus className="w-3 h-3" /> Add vehicle
+                    </button>
+                  )}
+                </div>
+              </div>
+              </div>
+
+              {newCustomerForm !== null && (
+                <div className="rounded-lg border border-sky-500/30 bg-gray-800 p-3">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2 flex-1">
+                      <User className="w-4 h-4 text-sky-400" />
+                      <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Customer Information</h4>
+                      <div className="flex-1 h-px bg-gray-700 ml-1" />
+                    </div>
+                    <button onClick={() => setNewCustomerForm(null)} className="text-gray-500 hover:text-gray-300"><X className="w-4 h-4" /></button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-gray-400">Full Name *</Label>
+                      <div className="relative mt-1">
+                        <User className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+                        <Input value={newCustomerForm.full_name} onChange={e => setNewCustomerForm(p => ({...p, full_name: e.target.value.replace(/(^|\s)(\S)/g,(_,s,c)=>s+c.toUpperCase())}))} className="bg-gray-700 border-gray-600 text-white pl-8" placeholder="John Smith" />
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-gray-400">Phone *</Label>
+                      <div className="relative mt-1">
+                        <Phone className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+                        <Input type="tel" data-no-capitalize value={newCustomerForm.phone} onChange={e => setNewCustomerForm({...newCustomerForm, phone: e.target.value})} className="bg-gray-700 border-gray-600 text-white pl-8" placeholder="(613) 555-0100" />
+                      </div>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <Label className="text-gray-400">Email (optional)</Label>
+                      <div className="relative mt-1">
+                        <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+                        <Input type="email" data-no-capitalize value={newCustomerForm.email} onChange={e => setNewCustomerForm({...newCustomerForm, email: e.target.value})} className="bg-gray-700 border-gray-600 text-white pl-8" placeholder="john@example.com" />
+                      </div>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <Label className="text-gray-400">Address (optional)</Label>
+                      <div className="relative mt-1">
+                        <MapPin className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+                        <Input value={newCustomerForm.address || ""} onChange={e => setNewCustomerForm({...newCustomerForm, address: e.target.value.replace(/(^|\s)(\S)/g,(_,s,c)=>s+c.toUpperCase())})} className="bg-gray-700 border-gray-600 text-white pl-8" placeholder="123 Main St" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mt-3">
+                    <Button size="sm" onClick={saveNewCustomer} disabled={!newCustomerForm.full_name || !newCustomerForm.phone} className="bg-sky-500 hover:bg-sky-600 text-white flex-1">Save Customer</Button>
+                    <Button size="sm" variant="ghost" onClick={() => setNewCustomerForm(null)} className="text-gray-400">Cancel</Button>
+                  </div>
+                </div>
+              )}
+
+              {newVehicleForm !== null && (
+                <div className="rounded-lg border border-sky-500/30 bg-gray-800 p-3">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2 flex-1">
+                      <Car className="w-4 h-4 text-sky-400" />
+                      <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Vehicle Information</h4>
+                      <div className="flex-1 h-px bg-gray-700 ml-1" />
+                    </div>
+                    <button onClick={() => setNewVehicleForm(null)} className="text-gray-500 hover:text-gray-300"><X className="w-4 h-4" /></button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-gray-400">Year *</Label>
+                      <Input type="number" value={newVehicleForm.year} onChange={e => setNewVehicleForm({...newVehicleForm, year: e.target.value})} className="bg-gray-700 border-gray-600 text-white mt-1" placeholder="2019" />
+                    </div>
+                    <div>
+                      <Label className="text-gray-400">Make *</Label>
+                      <div className="relative mt-1">
+                        <Car className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+                        <Input value={newVehicleForm.make} onChange={e => setNewVehicleForm({...newVehicleForm, make: e.target.value.replace(/(^|\s)(\S)/g,(_,s,c)=>s+c.toUpperCase())})} className="bg-gray-700 border-gray-600 text-white pl-8" placeholder="Honda" />
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-gray-400">Model *</Label>
+                      <Input value={newVehicleForm.model} onChange={e => setNewVehicleForm({...newVehicleForm, model: e.target.value.replace(/(^|\s)(\S)/g,(_,s,c)=>s+c.toUpperCase())})} className="bg-gray-700 border-gray-600 text-white mt-1" placeholder="Civic" />
+                    </div>
+                    <div>
+                      <Label className="text-gray-400">Trim (optional)</Label>
+                      <Input value={newVehicleForm.trim || ""} onChange={e => setNewVehicleForm({...newVehicleForm, trim: e.target.value.replace(/(^|\s)(\S)/g,(_,s,c)=>s+c.toUpperCase())})} className="bg-gray-700 border-gray-600 text-white mt-1" placeholder="EX" />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <Label className="text-gray-400">Engine (optional)</Label>
+                      <Input value={newVehicleForm.engine_type} onChange={e => setNewVehicleForm({...newVehicleForm, engine_type: e.target.value})} className="bg-gray-700 border-gray-600 text-white mt-1" placeholder="1.5L 4-Cyl" />
+                    </div>
+                    <div>
+                      <Label className="text-gray-400">VIN (optional)</Label>
+                      <Input data-no-capitalize value={newVehicleForm.vin} onChange={e => { setNewVehicleForm({...newVehicleForm, vin: e.target.value.toUpperCase()}); setVinDecodeError(""); }} className="bg-gray-700 border-gray-600 text-white mt-1" placeholder="17 characters" />
+                      {newVehicleForm.vin && (
+                        <Button size="sm" onClick={decodeVinForNewVehicle} disabled={decodingVin} className="w-full bg-purple-600 hover:bg-purple-700 text-white text-xs mt-2">
+                          {decodingVin ? <><Loader2 className="w-3 h-3 animate-spin mr-1" /> Decoding...</> : "Decode VIN"}
+                        </Button>
+                      )}
+                      {vinDecodeError && <p className="text-rose-400 text-xs mt-1">{vinDecodeError}</p>}
+                      <p className="mt-1 text-[10px] text-gray-500">VIN is optional</p>
+                    </div>
+                    <div>
+                      <Label className="text-gray-400">License Plate (optional)</Label>
+                      <Input data-no-capitalize value={newVehicleForm.license_plate} onChange={e => setNewVehicleForm({...newVehicleForm, license_plate: e.target.value.toUpperCase()})} className="bg-gray-700 border-gray-600 text-white mt-1" placeholder="ABCD123" />
+                      <p className="mt-1 text-[10px] text-gray-500">Plate is optional</p>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <Label className="text-gray-400">Color (optional)</Label>
+                      <Input value={newVehicleForm.color} onChange={e => setNewVehicleForm({...newVehicleForm, color: e.target.value.replace(/(^|\s)(\S)/g,(_,s,c)=>s+c.toUpperCase())})} className="bg-gray-700 border-gray-600 text-white mt-1" placeholder="Black" />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mt-3">
+                    <Button size="sm" onClick={saveNewVehicle} disabled={!newVehicleForm.year || !newVehicleForm.make || !newVehicleForm.model} className="bg-sky-500 hover:bg-sky-600 text-white flex-1">Save Vehicle</Button>
+                    <Button size="sm" variant="ghost" onClick={() => setNewVehicleForm(null)} className="text-gray-400">Cancel</Button>
+                  </div>
+                </div>
+              )}
+            </div>
 
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
              <div>

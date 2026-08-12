@@ -2,6 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import StatusBadge from "@/components/shared/StatusBadge";
 import BackButton from "@/components/shared/BackButton";
+import { Mail } from "lucide-react";
 import { buildVehicleInfo } from "@/utils/buildVehicleInfo";
 import { formatPhone } from "@/utils/formatPhone";
 
@@ -33,6 +34,12 @@ export default function EstimateEditorHeader({ estimate, customer, vehicle, link
             {customer?.phone && (
               <p className="text-sm text-gray-400">{formatPhone(customer.phone)}</p>
             )}
+            {customer?.email && (
+              <p className="flex items-center gap-1 text-sm text-gray-400"><Mail className="h-3 w-3" />{customer.email}</p>
+            )}
+            {customer?.address && (
+              <p className="text-xs text-gray-500">{customer.address}</p>
+            )}
             {vehicleLine && (
               <button
                 disabled={!vehicleId}
@@ -47,6 +54,7 @@ export default function EstimateEditorHeader({ estimate, customer, vehicle, link
               {engineInfo && <span>Engine: {engineInfo}</span>}
               {vehicle?.vin && <span>VIN: {vehicle.vin}</span>}
               {vehicle?.license_plate && <span>Plate: {vehicle.license_plate}</span>}
+              {vehicle?.color && <span>Color: {vehicle.color}</span>}
             </div>
             {estimate?.customer_decision === "approved" && (
               <p className="mt-1 text-xs text-emerald-400">
