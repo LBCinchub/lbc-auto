@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { useSmartBack } from "@/components/shared/useSmartBack";
 
 const statusColors = {
   paid: "bg-emerald-500/20 text-emerald-400",
@@ -35,6 +36,7 @@ const fmt = (n) => `$${(parseFloat(n) || 0).toFixed(2)}`;
 export default function VehicleTimeline() {
   const { vehicleId } = useParams();
   const navigate = useNavigate();
+  const goBack = useSmartBack("/Vehicles");
 
   const { data: vehicle, isLoading: vehicleLoading } = useQuery({
     queryKey: ["vehicle", vehicleId],
@@ -75,7 +77,7 @@ export default function VehicleTimeline() {
   if (vehicleLoading) {
     return (
       <div className="space-y-6">
-        <Button variant="ghost" onClick={() => navigate("/Vehicles")} className="text-gray-400 hover:text-white gap-2">
+        <Button variant="ghost" onClick={goBack} className="text-gray-400 hover:text-white gap-2">
           <ArrowLeft className="w-4 h-4" /> Back
         </Button>
         <div className="h-40 rounded-xl bg-gray-800/30 animate-pulse" />
@@ -93,7 +95,7 @@ export default function VehicleTimeline() {
 
   return (
     <div className="space-y-6">
-      <Button variant="ghost" onClick={() => navigate("/Vehicles")} className="text-gray-400 hover:text-white gap-2">
+      <Button variant="ghost" onClick={goBack} className="text-gray-400 hover:text-white gap-2">
         <ArrowLeft className="w-4 h-4" /> Back to Vehicles
       </Button>
 

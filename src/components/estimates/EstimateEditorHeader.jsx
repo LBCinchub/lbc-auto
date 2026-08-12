@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
 import StatusBadge from "@/components/shared/StatusBadge";
+import BackButton from "@/components/shared/BackButton";
 import { buildVehicleInfo } from "@/utils/buildVehicleInfo";
 import { formatPhone } from "@/utils/formatPhone";
 
@@ -16,13 +16,7 @@ export default function EstimateEditorHeader({ estimate, customer, vehicle, link
       <div className="flex items-start justify-between gap-4">
         {/* LEFT — back button + customer/vehicle info block */}
         <div className="flex items-start gap-3 min-w-0 flex-1">
-          <button
-            onClick={() => navigate(-1)}
-            className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-700 text-gray-300 transition-colors hover:border-sky-500 hover:text-sky-400"
-            title="Back"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </button>
+          <BackButton fallbackTo="/Estimates" className="mt-0.5 shrink-0" />
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-wider text-sky-400">Estimate</p>
             <button

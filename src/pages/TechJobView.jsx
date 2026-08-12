@@ -6,6 +6,7 @@ import {
   Image, Trash2, ChevronDown, ChevronUp, Zap, Fuel,
   RotateCcw, AlertCircle
 } from "lucide-react";
+import { useSmartBack } from "@/components/shared/useSmartBack";
 
 function parseTotalHours(order) {
   let total = 0;
@@ -29,6 +30,7 @@ const INTAKE_SLOTS = [
 ];
 
 export default function TechJobView() {
+  const goBack = useSmartBack("/TechDashboard");
   const [order, setOrder] = useState(null);
   const [vehicle, setVehicle] = useState(null);
   const [tech, setTech] = useState(null);
@@ -241,7 +243,7 @@ export default function TechJobView() {
         padding:"16px 20px", display:"flex", alignItems:"center", gap:14,
         position:"sticky", top:0, zIndex:100,
       }}>
-        <button onClick={() => window.location.href="/TechDashboard"} style={{background:"transparent",border:"none",color:"#38bdf8",cursor:"pointer",display:"flex",alignItems:"center",gap:6,fontSize:14,fontWeight:600,padding:0}}>
+        <button onClick={goBack} style={{background:"transparent",border:"none",color:"#38bdf8",cursor:"pointer",display:"flex",alignItems:"center",gap:6,fontSize:14,fontWeight:600,padding:0}}>
           <ArrowLeft style={{width:18,height:18}}/> Back
         </button>
         <div style={{flex:1}}>

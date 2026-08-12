@@ -7,6 +7,7 @@ import {
   Calendar, Gauge, Image, ChevronRight, Plus, Edit2,
   MessageSquare, AlertCircle, RefreshCw, X
 } from "lucide-react";
+import { useSmartBack } from "@/components/shared/useSmartBack";
 
 function RetentionDot({ lastVisit }) {
   if (!lastVisit) return <span style={{ color:"#64748b", fontSize:11 }}>No visits</span>;
@@ -54,6 +55,7 @@ function MileageChart({ history }) {
 export default function CustomerProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const goBack = useSmartBack("/Customers");
 
   const [customer, setCustomer] = useState(null);
   const [vehicles, setVehicles] = useState([]);
@@ -215,7 +217,7 @@ export default function CustomerProfile() {
         background:"linear-gradient(135deg,#0f172a,#1e293b)",
         borderBottom:"1px solid #1e293b", padding:"20px 20px 0",
       }}>
-        <button onClick={() => navigate(-1)} style={{
+        <button onClick={goBack} style={{
           background:"transparent", border:"none", color:"#38bdf8",
           cursor:"pointer", display:"flex", alignItems:"center", gap:6,
           fontSize:13, fontWeight:600, marginBottom:16, padding:0,

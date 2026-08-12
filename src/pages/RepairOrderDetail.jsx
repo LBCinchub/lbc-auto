@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import EstimateFormDialog from "@/components/estimates/EstimateFormDialog";
 import InvoiceFormDialog from "@/components/invoices/InvoiceFormDialog";
+import { useSmartBack } from "@/components/shared/useSmartBack";
 import SignaturePad from "@/components/orders/SignaturePad";
 import PaymentHistoryManager from "@/components/invoices/PaymentHistoryManager";
 import { resolveVehicleId } from "@/utils/recordLinking";
@@ -21,6 +22,7 @@ export default function RepairOrderDetail() {
   const { orderId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const goBack = useSmartBack("/RepairOrders");
   const [showEstimateDialog, setShowEstimateDialog] = useState(false);
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
   const [showPartDialog, setShowPartDialog] = useState(false);
@@ -186,7 +188,7 @@ export default function RepairOrderDetail() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <Button variant="ghost" onClick={() => navigate(-1)} className="text-gray-400 hover:text-white gap-2">
+        <Button variant="ghost" onClick={goBack} className="text-gray-400 hover:text-white gap-2">
           <ArrowLeft className="w-4 h-4" /> Back
         </Button>
         <div className="h-40 rounded-xl bg-gray-800/30 animate-pulse" />
@@ -205,7 +207,7 @@ export default function RepairOrderDetail() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <Button variant="ghost" onClick={() => navigate(-1)} className="text-gray-400 hover:text-white gap-2">
+        <Button variant="ghost" onClick={goBack} className="text-gray-400 hover:text-white gap-2">
           <ArrowLeft className="w-4 h-4" /> Back
         </Button>
         <div className="flex items-center gap-2 flex-wrap">
