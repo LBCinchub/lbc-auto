@@ -28,8 +28,19 @@ const calculate = (lines, taxRate, taxAppliesTo, discount, discountType, paid = 
   const parts = r2(lines.filter((x) => x.type !== 'labor' && x.quantity > 0).reduce((sum, x) => sum + x.quantity * x.unit_price, 0));
   const subtotal = r2(labor + parts);
   const discountAmount = normalizeDiscount(discountType) === '%' ? r2(subtotal * Math.max(0, Number(discount) || 0) / 100) : r2(Math.max(0, Number(discount) || 0));
-  const taxable = lines.filter((x) => x.quantity > 0 && x.taxable !== false && (taxAppliesTo === 'both' || x.type === taxAppliesTo)).reduce((sum, x) => sum + x.quantity * x.unit_price, 0);
-  const taxableBase = taxAppliesTo === 'both' ? Math.max(0, taxable - discountAmount) : taxable;
+  // Normalize tax target — line `type` is "part" (singular) but the stored
+  // setting can be "parts" (plural). Without this, "parts" never matched any
+  // line and tax computed to $0. Default to "both" when missing/invalid.
+  const appliesTo = String(taxAppliesTo || 'both').toLowerCase();
+  const lineIsTaxable = (x) => {
+    if (appliesTo === 'none') return false;
+    if (appliesTo === 'both' || appliesTo === 'all') return true;
+    if (appliesTo === 'labor') return x.type === 'labor';
+    if (appliesTo === 'parts' || appliesTo === 'part') return x.type !== 'labor';
+    return true;
+  };
+  const taxable = lines.filter((x) => x.quantity > 0 && x.taxable !== false && lineIsTaxable(x)).reduce((sum, x) => sum + x.quantity * x.unit_price, 0);
+  const taxableBase = (appliesTo === 'both' || appliesTo === 'all') ? Math.max(0, taxable - discountAmount) : taxable;
   const tax = r2(taxableBase * Math.max(0, Number(taxRate) || 0) / 100);
   const total = r2(Math.max(0, subtotal - discountAmount + tax));
   return { labor, parts, subtotal, discountAmount, tax, total, balance: r2(Math.max(0, total - paid)) };
