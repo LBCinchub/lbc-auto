@@ -55,8 +55,24 @@ export default function CustomerVehiclePicker({
   const selectedCustomer = customers.find((c) => c.id === customerId);
   const selectedVehicle = customerVehicles.find((v) => v.id === vehicleId);
   const customerPhone = selectedCustomer?.phone || "";
+  const customerEmail = selectedCustomer?.email || "";
   const vehicleVin = selectedVehicle?.vin || "";
   const vehiclePlate = selectedVehicle?.license_plate || "";
+  const vehicleColor = selectedVehicle?.color || "";
+  const vehicleTrim = selectedVehicle?.trim_level || selectedVehicle?.trim || "";
+  const vehicleEngine = selectedVehicle?.engine_type || "";
+  const vehicleFuel = selectedVehicle?.fuel_type || "";
+  const vehicleEngineLiters = selectedVehicle?.engine_liters || "";
+  // Bold identity line: Year Make Model Trim (engine lives in a muted line below)
+  const vehicleHeadline = [selectedVehicle?.year, selectedVehicle?.make, selectedVehicle?.model, vehicleTrim]
+    .map((x) => (x == null ? "" : String(x).trim()))
+    .filter(Boolean)
+    .join(" ");
+  // Engine detail line: prefer engine_type, else liters, plus fuel type
+  const engineLine = [vehicleEngine || vehicleEngineLiters, vehicleFuel]
+    .map((x) => (x == null ? "" : String(x).trim()))
+    .filter(Boolean)
+    .join(" · ");
 
   // Load vehicles for the selected customer (also covers prefill on mount).
   useEffect(() => {
@@ -185,6 +201,7 @@ export default function CustomerVehiclePicker({
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Customer</p>
                 <p className="truncate text-base font-bold text-white">{customerName}</p>
                 {customerPhone && <p className="truncate text-xs text-gray-400">{customerPhone}</p>}
+                {customerEmail && <p className="truncate text-xs text-gray-400">{customerEmail}</p>}
               </div>
               <button
                 type="button"
@@ -200,12 +217,15 @@ export default function CustomerVehiclePicker({
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Vehicle</p>
-                <p className="truncate text-base font-bold text-white">{vehicleInfo || "—"}</p>
-                {(vehicleVin || vehiclePlate) && (
+                <p className="truncate text-base font-bold text-white">{vehicleHeadline || vehicleInfo || "—"}</p>
+                {engineLine && <p className="truncate text-xs text-gray-400">{engineLine}</p>}
+                {(vehicleVin || vehiclePlate || vehicleColor) && (
                   <p className="truncate text-xs text-gray-400">
                     {vehicleVin && `VIN: ${vehicleVin}`}
-                    {vehicleVin && vehiclePlate && " · "}
+                    {vehicleVin && (vehiclePlate || vehicleColor) && " · "}
                     {vehiclePlate && `Plate: ${vehiclePlate}`}
+                    {vehiclePlate && vehicleColor && " · "}
+                    {vehicleColor && `Color: ${vehicleColor}`}
                   </p>
                 )}
               </div>
