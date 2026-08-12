@@ -3,6 +3,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import ItemNameAutocomplete from "@/components/shared/ItemNameAutocomplete";
 
 // Auto-growing textarea that starts at one line (matching the input height)
 // and expands vertically as the user types, so long descriptions wrap instead
@@ -44,7 +45,7 @@ export default function InvoiceLineItemsTable({ lines, onChange }) {
       <thead className="bg-gray-800/70 text-left text-xs uppercase tracking-wide text-gray-400"><tr><th className="px-3 py-3">Type</th><th className="px-3 py-3">Item</th><th className="px-3 py-3">Description</th><th className="px-3 py-3 text-right">Qty / Hours</th><th className="px-3 py-3 text-right">Rate / Price</th><th className="px-3 py-3 text-right">Amount</th><th /></tr></thead>
       <tbody className="divide-y divide-gray-800">{lines.map((line, index) => <tr key={`${line.source || "line"}-${index}`} className="bg-gray-900/40 align-top">
         <td className="px-3 py-2"><select value={line.type} onChange={e => update(index, "type", e.target.value)} className="h-9 rounded-md border border-gray-700 bg-gray-950 px-2 text-white"><option value="labor">Labor</option><option value="part">Part</option></select></td>
-        <td className="px-3 py-2"><Input value={line.name || ""} onChange={e => update(index, "name", e.target.value)} className="border-gray-700 bg-gray-950 text-white" /></td>
+        <td className="px-3 py-2"><ItemNameAutocomplete value={line.name || ""} type={line.type} onChange={name => update(index, "name", name)} onPriceSelect={price => update(index, "unit_price", price)} className="border-gray-700 bg-gray-950 text-white" /></td>
         <td className="px-3 py-2"><DescriptionInput value={line.description} onChange={e => update(index, "description", e.target.value)} /></td>
         <td className="px-3 py-2"><Input type="number" min="0" step="0.01" value={line.quantity} onChange={e => update(index, "quantity", e.target.value)} className="border-gray-700 bg-gray-950 text-right text-white" /></td>
         <td className="px-3 py-2"><Input type="number" min="0" step="0.01" value={line.unit_price} onChange={e => update(index, "unit_price", e.target.value)} className="border-gray-700 bg-gray-950 text-right text-white" /></td>

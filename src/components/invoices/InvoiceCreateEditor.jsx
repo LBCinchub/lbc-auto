@@ -6,11 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import InvoiceDetailsFields from "@/components/invoices/InvoiceDetailsFields";
-import QuickNotesEditor from "@/components/shared/QuickNotesEditor";
 import InvoiceLineItemsTable from "@/components/invoices/InvoiceLineItemsTable";
 import InvoiceTotalsSection from "@/components/invoices/InvoiceTotalsSection";
 import { calculateFinancials } from "@/components/financial-workflow/financialMath";
 import { syncCustomerActivity } from "@/utils/syncCustomerActivity";
+import { syncLineItemLibrary } from "@/utils/syncLineItemLibrary";
 import { useToast } from "@/components/ui/use-toast";
 import { buildVehicleInfo } from "@/utils/buildVehicleInfo";
 
@@ -170,6 +170,7 @@ export default function InvoiceCreateEditor({ prefill, customers = [], onClose, 
       } catch (_) {}
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["customers"] });
+      syncLineItemLibrary(lineItems);
       toast({ title: "Invoice saved ✓" });
       onSaved?.();
       onClose?.();
@@ -245,10 +246,6 @@ export default function InvoiceCreateEditor({ prefill, customers = [], onClose, 
         <InvoiceLineItemsTable
           lines={draft.line_items}
           onChange={(line_items) => setDraft({ ...draft, line_items })}
-        />
-        <QuickNotesEditor
-          value={draft.customer_note}
-          onChange={(v) => setDraft({ ...draft, customer_note: v })}
         />
         <InvoiceTotalsSection draft={draft} totals={totals} onChange={setDraft} />
       </div>

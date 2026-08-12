@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+import { upsertLineItems } from '../../shared/lineItemLibrary.ts';
 
 const r2 = (value) => Math.round((Number(value) || 0) * 100) / 100;
 const normalizeDiscount = (type) => type === '%' || type === 'percent' || type === 'percentage' ? '%' : type === '$' || type === 'fixed' ? '$' : '$';
@@ -178,6 +179,9 @@ export default async function(req) {
       await base44.asServiceRole.entities.FinancialWorkflowEvent.create({ shop_owner_email: tenant, action: 'send', invoice_id: invoice.id, source_type: sourceType, source_id: sourceId, created_at: new Date().toISOString(), actor_email: tenant, metadata: { delivery: 'email' } });
     } else throw new Error('Unsupported financial action');
 
+    if (["create", "update", "finalize", "sync_source"].includes(action) && lines.length) {
+      try { await upsertLineItems(base44, tenant, lines); } catch (_) {}
+    }
     const refreshed = invoice ? await getOwned('Invoice', invoice.id, 'Invoice') : null;
     return Response.json({ success: true, invoice: refreshed, customer, vehicle, estimate, repair_order: repairOrder, context });
   } catch (error) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -17,7 +17,8 @@ import SignaturePad from "@/components/orders/SignaturePad";
 import PaymentHistoryManager from "@/components/invoices/PaymentHistoryManager";
 import { resolveVehicleId } from "@/utils/recordLinking";
 import { buildVehicleInfo } from "@/utils/buildVehicleInfo";
-import QuickNotesEditor from "@/components/shared/QuickNotesEditor";
+import ItemNameAutocomplete from "@/components/shared/ItemNameAutocomplete";
+import { syncLineItemLibrary } from "@/utils/syncLineItemLibrary";
 
 export default function RepairOrderDetail() {
   const { orderId } = useParams();
@@ -43,16 +44,6 @@ export default function RepairOrderDetail() {
     queryFn: () => base44.entities.RepairOrder.get(orderId),
     enabled: !!orderId,
   });
-  const [notes, setNotes] = useState("");
-  const notesTimer = useRef(null);
-  useEffect(() => { setNotes(order?.notes || ""); }, [order?.id]);
-  const handleNotesChange = (val) => {
-    setNotes(val);
-    clearTimeout(notesTimer.current);
-    notesTimer.current = setTimeout(() => {
-      base44.entities.RepairOrder.update(orderId, { notes: val }).catch(() => {});
-    }, 500);
-  };
 
   const handlePrintWorkerCopy = () => {
     if (!order) return;
@@ -539,9 +530,12 @@ export default function RepairOrderDetail() {
           )}
         </div>
 
-        <div className="mt-8 pt-6 border-t border-gray-800">
-          <QuickNotesEditor value={notes} onChange={handleNotesChange} label="Notes (shown on customer documents)" />
-        </div>
+        {order.notes && (
+          <div className="mt-8 pt-6 border-t border-gray-800">
+            <h3 className="text-lg font-bold text-white mb-3">Notes</h3>
+            <p className="text-gray-300">{order.notes}</p>
+          </div>
+        )}
 
         {/* Customer Signature Section */}
         <div className="mt-8 pt-6 border-t border-gray-800">
@@ -714,7 +708,7 @@ export default function RepairOrderDetail() {
           <div className="space-y-4">
             <div>
               <Label className="text-gray-400">Description</Label>
-              <Input value={newLabor.description} onChange={e => setNewLabor({...newLabor, description: e.target.value})}
+              <ItemNameAutocomplete value={newLabor.description} type="labor" onChange={name => setNewLabor({...newLabor, description: name})} onPriceSelect={price => setNewLabor({...newLabor, rate: String(price)})}
                 className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="e.g. Oil change, Brake replacement" />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -794,7 +788,7 @@ export default function RepairOrderDetail() {
           <div className="space-y-4">
             <div>
               <Label className="text-gray-400">Part Name</Label>
-              <Input value={newPart.name} onChange={e => setNewPart({...newPart, name: e.target.value})} 
+              <ItemNameAutocomplete value={newPart.name} type="part" onChange={name => setNewPart({...newPart, name: name})} onPriceSelect={price => setNewPart({...newPart, unit_price: String(price)})}
                 className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="e.g. Oil Filter" />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -835,6 +829,7 @@ export default function RepairOrderDetail() {
     setShowPartDialog(false);
     queryClient.invalidateQueries({ queryKey: ["repairOrder", orderId] });
     base44.functions.invoke('updateRepairOrderTotals', { orderId });
+    syncLineItemLibrary([{ name: part.name, type: "part", unit_price: price }]);
     syncLinkedInvoices(updatedParts, currentLabor);
   }
 
@@ -858,6 +853,7 @@ export default function RepairOrderDetail() {
     setShowLaborDialog(false);
     queryClient.invalidateQueries({ queryKey: ["repairOrder", orderId] });
     base44.functions.invoke('updateRepairOrderTotals', { orderId });
+    syncLineItemLibrary([{ name: item.description, type: "labor", unit_price: rate }]);
     syncLinkedInvoices(currentParts, updatedItems);
   }
 

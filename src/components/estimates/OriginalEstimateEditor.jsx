@@ -10,10 +10,10 @@ import EstimateEditorHeader from "./EstimateEditorHeader";
 import EstimateDetailsFields from "./EstimateDetailsFields";
 import EstimateEditorActions from "./EstimateEditorActions";
 import EstimatePrintView from "./EstimatePrintView";
-import QuickNotesEditor from "@/components/shared/QuickNotesEditor";
 import { useEmailSend } from "@/hooks/useEmailSend";
 import { normalizeDiscountType } from "@/utils/discount";
 import { syncCustomerActivity } from "@/utils/syncCustomerActivity";
+import { syncLineItemLibrary } from "@/utils/syncLineItemLibrary";
 import { useToast } from "@/components/ui/use-toast";
 
 const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
@@ -173,6 +173,7 @@ export default function OriginalEstimateEditor({ estimateId, onClose }) {
 
       queryClient.invalidateQueries({ queryKey: ["estimate", estimateId] });
       queryClient.invalidateQueries({ queryKey: ["estimates"] });
+      syncLineItemLibrary(draft.line_items);
       toast({ title: "Estimate saved ✓" });
     } catch (e) {
       toast({ title: "Save failed", description: e?.message, variant: "destructive" });
@@ -225,10 +226,6 @@ export default function OriginalEstimateEditor({ estimateId, onClose }) {
         <InvoiceLineItemsTable
           lines={draft.line_items}
           onChange={(line_items) => setDraft({ ...draft, line_items })}
-        />
-        <QuickNotesEditor
-          value={draft.notes}
-          onChange={(v) => setDraft({ ...draft, notes: v })}
         />
         <InvoiceTotalsSection draft={draft} totals={totals} onChange={setDraft} />
       </div>
