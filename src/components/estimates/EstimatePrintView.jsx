@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { base44 } from "@/api/base44Client";
 import PrintTemplate from "@/components/shared/PrintTemplate";
 import { buildVehicleInfo } from "@/utils/buildVehicleInfo";
+import { calcGhostTotals } from "@/utils/ghostTax";
 
 export default function EstimatePrintView({ estimate, onClose }) {
   const [customer, setCustomer] = useState(null);
@@ -67,6 +68,9 @@ export default function EstimatePrintView({ estimate, onClose }) {
     balanceDue: grandTotal - amountPaid,
   };
 
+  const ghostItems = estimate?.ghost_status === "active" ? (estimate?.ghost_items || []) : [];
+  const ghostTotals = ghostItems.length ? calcGhostTotals(ghostItems, estimate?.tax_rate || 0, estimate?.tax_applies_to || "both") : null;
+
   return (
     <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="bg-white text-gray-900 max-w-3xl max-h-[90vh] overflow-y-auto" onInteractOutside={e => e.preventDefault()} onEscapeKeyDown={e => e.preventDefault()}>
@@ -83,6 +87,9 @@ export default function EstimatePrintView({ estimate, onClose }) {
           lineItems={filteredLineItems}
           paymentHistory={[]}
           financials={financials}
+          ghostItems={ghostItems}
+          ghostTotals={ghostTotals}
+          ghostNotes={estimate?.ghost_notes}
           notes={estimate?.notes}
           serviceReason={estimate?.service_reason}
         />

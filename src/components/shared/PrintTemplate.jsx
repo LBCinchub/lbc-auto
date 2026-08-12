@@ -35,7 +35,7 @@ function buildPrintHTML(contentHTML, title, isWorker) {
   `;
 }
 
-export default function PrintTemplate({ type = "Invoice", docNumber, createdDate, user, customer, vehicle, lineItems = [], paymentHistory = [], financials = {}, notes, serviceReason, onNavigateCustomer, onNavigateVehicle }) {
+export default function PrintTemplate({ type = "Invoice", docNumber, createdDate, user, customer, vehicle, lineItems = [], paymentHistory = [], financials = {}, notes, serviceReason, ghostItems = [], ghostTotals = null, ghostNotes, onNavigateCustomer, onNavigateVehicle }) {
   const {
     partsTotal = 0,
     laborTotal = 0,
@@ -108,6 +108,83 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
       <span style={{ marginLeft: 6, fontSize: 8, fontWeight: 700, color: isLabor ? "#4338ca" : "#0369a1", background: isLabor ? "#eef2ff" : "#e0f2fe", borderRadius: 3, padding: "1px 5px", textTransform: "uppercase", letterSpacing: 0.5, verticalAlign: "middle" }}>
         {isLabor ? "Labor" : "Part"}
       </span>
+    );
+  };
+
+  const renderGhostSection = (hidePrice) => {
+    if (!ghostItems || ghostItems.length === 0 || !ghostTotals) return null;
+    return (
+      <div style={{ marginTop: 12, border: "1.5px dashed #cbd5e1", borderRadius: 8, padding: 10, background: "#f8fafc" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 1.5 }}>
+            ⏳ Remaining Work — Pending
+          </div>
+          <span style={{ fontSize: 8, fontWeight: 700, color: "#b45309", background: "#fef3c7", border: "1px solid #fde68a", borderRadius: 4, padding: "2px 8px", textTransform: "uppercase", letterSpacing: 1 }}>Pending</span>
+        </div>
+        <div style={{ fontSize: 8.5, color: "#94a3b8", marginBottom: 6, fontStyle: "italic" }}>Not included in today's charges — to be completed on your next visit.</div>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ background: "#e2e8f0" }}>
+              <th style={{ padding: "4px 6px", textAlign: "left", fontSize: 8, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, color: "#64748b", width: "4%" }}>#</th>
+              <th style={{ padding: "4px 6px", textAlign: "left", fontSize: 8, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, color: "#64748b" }}>Item</th>
+              <th style={{ padding: "4px 6px", textAlign: "left", fontSize: 8, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, color: "#64748b" }}>Description</th>
+              {!hidePrice && <th style={{ padding: "4px 6px", textAlign: "right", fontSize: 8, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, color: "#64748b", width: "11%" }}>Unit Price</th>}
+              <th style={{ padding: "4px 6px", textAlign: "center", fontSize: 8, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, color: "#64748b", width: "9%" }}>Qty</th>
+              {!hidePrice && <th style={{ padding: "4px 6px", textAlign: "right", fontSize: 8, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, color: "#64748b", width: "12%" }}>Total</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {ghostItems.map((item, i) => {
+              const qty = Number(item.quantity) || 0;
+              const unitPrice = Number(item.unit_price) || 0;
+              const total = Number(item.total) || qty * unitPrice;
+              const displayName = item.name || item.description || "—";
+              return (
+                <tr key={i} style={{ background: i % 2 === 1 ? "#f1f5f9" : "white", borderBottom: "1px solid #e2e8f0" }}>
+                  <td style={{ padding: "4px 6px", fontSize: 9, fontWeight: 600, color: "#94a3b8" }}>{i + 1}</td>
+                  <td style={{ padding: "4px 6px", fontSize: 10, fontWeight: 700, color: "#334155" }}>
+                    {displayName}
+                    {renderTypeBadge(item)}
+                  </td>
+                  <td style={{ padding: "4px 6px", fontSize: 9, color: "#64748b" }}>{item.description || ""}</td>
+                  {!hidePrice && <td style={{ padding: "4px 6px", fontSize: 9, color: "#475569", textAlign: "right" }}>${unitPrice.toFixed(2)}</td>}
+                  <td style={{ padding: "4px 6px", fontSize: 9, color: "#475569", textAlign: "center" }}>{qty || "—"}</td>
+                  {!hidePrice && <td style={{ padding: "4px 6px", fontSize: 10, fontWeight: 700, color: "#334155", textAlign: "right" }}>${total.toFixed(2)}</td>}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        {!hidePrice && (
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 6 }}>
+            <div style={{ minWidth: 230, background: "white", borderRadius: 6, padding: 8, border: "1px solid #e2e8f0" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: 9, color: "#64748b" }}>
+                <span>Subtotal</span><span>${ghostTotals.subtotal.toFixed(2)}</span>
+              </div>
+              {ghostTotals.tax > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: 9, color: "#64748b" }}>
+                  <span>Tax ({Number(taxRate) || 0}%{taxAppliesTo && taxAppliesTo !== "both" ? ` · ${taxAppliesTo === "labor" ? "Labor only" : "Parts only"}` : ""})</span><span>${ghostTotals.tax.toFixed(2)}</span>
+                </div>
+              )}
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: 700, color: "#334155", borderTop: "1.5px solid #cbd5e1", marginTop: 3, paddingTop: 4 }}>
+                <span>Remaining Work Total</span><span>${ghostTotals.total.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+        )}
+        {ghostNotes && (
+          <div style={{ marginTop: 8, background: "#fffbeb", borderRadius: 6, borderLeft: "3px solid #f59e0b", padding: "6px 10px" }}>
+            <div style={{ fontSize: 8.5, fontWeight: 700, color: "#b45309", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 3 }}>📋 What's Next</div>
+            <div style={{ fontSize: 10, color: "#78350f", lineHeight: 1.6 }}>{ghostNotes}</div>
+          </div>
+        )}
+        {!hidePrice && (
+          <div style={{ marginTop: 6, background: "#0f172a", borderRadius: 6, padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ color: "#94a3b8", fontSize: 9, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.8 }}>Remaining Work Total (Not Yet Due)</span>
+            <span style={{ color: "#fbbf24", fontSize: 14, fontWeight: 700 }}>${ghostTotals.total.toFixed(2)}</span>
+          </div>
+        )}
+      </div>
     );
   };
 
@@ -403,6 +480,8 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
           </div>
         </div>
 
+        {renderGhostSection(false)}
+
         {signatureBlock}
         {disclaimerBlock}
       </div>
@@ -448,6 +527,7 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
         </table>
 
         {notesBlock}
+        {renderGhostSection(true)}
         {signatureBlock}
         {disclaimerBlock}
       </div>

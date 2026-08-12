@@ -4,6 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { TAX_RATE } from "@/lib/constants";
 import PrintTemplate from "@/components/shared/PrintTemplate";
 import { buildVehicleInfo } from "@/utils/buildVehicleInfo";
+import { calcGhostTotals } from "@/utils/ghostTax";
 
 export default function InvoicePrintView({ invoice, onClose }) {
   const [customer, setCustomer] = useState(null);
@@ -107,6 +108,9 @@ export default function InvoicePrintView({ invoice, onClose }) {
     balanceDue: invoice.balance_due ?? (invoice.total || 0),
   };
 
+  const ghostItems = invoice?.ghost_status === "active" ? (invoice?.ghost_items || []) : [];
+  const ghostTotals = ghostItems.length ? calcGhostTotals(ghostItems, invoice?.tax_rate || 0, invoice?.tax_applies_to || "both") : null;
+
   const paymentHistory = (invoice.payment_history || []).map(p => ({
     date: p.date ? new Date(p.date).toLocaleString() : "",
     receipt_number: p.receipt_number || invoice.receipt_number || "",
@@ -130,6 +134,9 @@ export default function InvoicePrintView({ invoice, onClose }) {
           lineItems={filteredLineItems}
           paymentHistory={paymentHistory}
           financials={financials}
+          ghostItems={ghostItems}
+          ghostTotals={ghostTotals}
+          ghostNotes={invoice.ghost_notes}
           notes={invoice.customer_note}
           serviceReason={invoice.service_reason}
         />
