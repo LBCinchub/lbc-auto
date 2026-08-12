@@ -1,1 +1,37 @@
-.lp-status-timeline{margin-top:24px;padding:20px;border:1px solid var(--lp-line);border-radius:12px;background:#07111b}.lp-status-head{display:flex;justify-content:space-between;gap:12px;align-items:center}.lp-status-head strong{color:var(--lp-teal);font-size:10px;letter-spacing:.1em}.lp-status-head span{color:var(--lp-muted);font-size:10px}.lp-status-groups,.lp-status-chips{display:flex;gap:7px;overflow-x:auto;padding-top:14px}.lp-status-groups button,.lp-status-chips button{min-height:44px;white-space:nowrap;border:1px solid var(--lp-line);border-radius:7px;background:var(--lp-surface);color:#aebdca;padding:0 13px;cursor:pointer}.lp-status-groups button[aria-selected=true],.lp-status-chips button[aria-pressed=true]{border-color:var(--lp-teal);background:#0d282e;color:white}.lp-status-detail{display:grid;grid-template-columns:1.2fr .7fr 1.1fr;gap:10px;margin-top:14px}.lp-status-detail>div{padding:12px;border:1px solid #1c2d3f;border-radius:7px;background:#0b1723}.lp-status-detail small{color:#63798e;font-size:8px;font-weight:800;letter-spacing:.08em}.lp-status-detail p{display:flex;align-items:flex-start;gap:7px;margin:7px 0 0;color:#c7d2dc;font-size:11px;line-height:1.5}.lp-status-detail svg{width:13px;height:13px;flex:0 0 13px;color:var(--lp-teal);margin-top:2px}.lp-status-timeline.is-compact{padding:14px}.lp-status-timeline.is-compact .lp-status-detail{grid-template-columns:1fr}.lp-status-timeline.is-compact .lp-status-head span{display:none}@media(max-width:700px){.lp-status-detail{grid-template-columns:1fr}.lp-status-head{align-items:flex-start;flex-direction:column}}
+.lp-status-timeline{margin-top:24px;padding:20px;border:1px solid var(--lp-line);border-radius:12px;background:#07111b}.lp-status-head{display:flex;justify-content:space-between;gap:12px;align-items:center}.lp-status-head strong{color:var(--lp-teal);font-size:10px;letter-spacing:.1em}.lp-status-head span{color:var(--lp-muted);font-size:10px}.lp-status-groups,.lp-status-chips{display:flex;gap:7px;overflow-x:auto;padding-top:14px}.lp-status-groups button,.lp-status-chips button{min-height:44px;white-space:nowrap;border:1px solid var(--lp-line);border-radius:7px;background:var(--lp-surface);color:#aebdca;padding:0 13px;cursor:pointer}.lp-status-groups button[aria-selected=true],.lp-status-chips button[aria-pressed=true]{border-color:var(--lp-teal);background:#0d282e;color:white}.lp-status-detail{display:grid;grid-template-columns:1.2fr .7fr 1.1fr;gap:10px;margin-top:14px}.lp-status-detail>div{padding:12px;border:1px solid #1c2d3f;border-radius:7px;background:#0b1723}.lp-status-detail small{color:#63798e;font-size:8px;font-weight:800;letter-spacing:.08em}.lp-status-detail p{display:flex;align-items:flex-start;gap:7px;margin:7px 0 0;color:#c7d2dc;font-size:11px;line-height:1.5}.lp-status-detail svg{width:13px;height:13px;flex:0 0 13px;color:var(--lp-teal);margin-top:2px}/* Color-coded status chips — mirrors the app's internal StatusBadge pills
+   (Draft=grey, Sent=blue, Approved=green, Invoiced=teal, Paid=emerald,
+   Overdue=rose, In Progress=sky, Waiting for Parts=purple, Partial=yellow). */
+.lp-status-chips button[data-status]{position:relative}
+.lp-status-chips button[data-status]::before{content:"";position:absolute;left:11px;top:50%;transform:translateY(-50%);width:6px;height:6px;border-radius:50%;opacity:.55}
+.lp-status-chips button[data-status]{padding-left:26px}
+.lp-status-chips button[data-status="Draft"]::before{background:#94a3b8}
+.lp-status-chips button[data-status="Sent"]::before{background:#38bdf8}
+.lp-status-chips button[data-status="Approved"]::before{background:#34d399}
+.lp-status-chips button[data-status="Declined"]::before{background:#fb7185}
+.lp-status-chips button[data-status="Expired"]::before{background:#94a3b8}
+.lp-status-chips button[data-status="Invoiced"]::before{background:#5fdde0}
+.lp-status-chips button[data-status="Waiting"]::before{background:#fbbf24}
+.lp-status-chips button[data-status="In Progress"]::before{background:#38bdf8}
+.lp-status-chips button[data-status="Waiting for Parts"]::before{background:#c084fc}
+.lp-status-chips button[data-status="Completed"]::before{background:#34d399}
+.lp-status-chips button[data-status="Delivered"]::before{background:#94a3b8}
+.lp-status-chips button[data-status="Unpaid"]::before{background:#fbbf24}
+.lp-status-chips button[data-status="Partial"]::before{background:#facc15}
+.lp-status-chips button[data-status="Paid"]::before{background:#34d399}
+.lp-status-chips button[data-status="Overdue"]::before{background:#fb7185}
+.lp-status-chips button[data-status="Draft"][aria-pressed="true"]{border-color:rgba(148,163,184,.5);background:rgba(148,163,184,.18);color:#cbd5e1}
+.lp-status-chips button[data-status="Sent"][aria-pressed="true"]{border-color:rgba(56,189,248,.5);background:rgba(56,189,248,.18);color:#7dd3fc}
+.lp-status-chips button[data-status="Approved"][aria-pressed="true"]{border-color:rgba(16,185,129,.5);background:rgba(16,185,129,.18);color:#34d399}
+.lp-status-chips button[data-status="Declined"][aria-pressed="true"]{border-color:rgba(244,63,94,.5);background:rgba(244,63,94,.18);color:#fb7185}
+.lp-status-chips button[data-status="Expired"][aria-pressed="true"]{border-color:rgba(148,163,184,.5);background:rgba(148,163,184,.16);color:#cbd5e1}
+.lp-status-chips button[data-status="Invoiced"][aria-pressed="true"]{border-color:rgba(32,198,200,.5);background:rgba(32,198,200,.18);color:#5fdde0}
+.lp-status-chips button[data-status="Waiting"][aria-pressed="true"]{border-color:rgba(245,158,11,.5);background:rgba(245,158,11,.18);color:#fbbf24}
+.lp-status-chips button[data-status="In Progress"][aria-pressed="true"]{border-color:rgba(56,189,248,.5);background:rgba(56,189,248,.18);color:#7dd3fc}
+.lp-status-chips button[data-status="Waiting for Parts"][aria-pressed="true"]{border-color:rgba(168,85,247,.5);background:rgba(168,85,247,.18);color:#c084fc}
+.lp-status-chips button[data-status="Completed"][aria-pressed="true"]{border-color:rgba(16,185,129,.5);background:rgba(16,185,129,.18);color:#34d399}
+.lp-status-chips button[data-status="Delivered"][aria-pressed="true"]{border-color:rgba(148,163,184,.5);background:rgba(148,163,184,.16);color:#cbd5e1}
+.lp-status-chips button[data-status="Unpaid"][aria-pressed="true"]{border-color:rgba(245,158,11,.5);background:rgba(245,158,11,.18);color:#fbbf24}
+.lp-status-chips button[data-status="Partial"][aria-pressed="true"]{border-color:rgba(234,179,8,.5);background:rgba(234,179,8,.18);color:#facc15}
+.lp-status-chips button[data-status="Paid"][aria-pressed="true"]{border-color:rgba(16,185,129,.5);background:rgba(16,185,129,.2);color:#34d399}
+.lp-status-chips button[data-status="Overdue"][aria-pressed="true"]{border-color:rgba(244,63,94,.5);background:rgba(244,63,94,.18);color:#fb7185}
+.lp-status-timeline.is-compact{padding:14px}.lp-status-timeline.is-compact .lp-status-detail{grid-template-columns:1fr}.lp-status-timeline.is-compact .lp-status-head span{display:none}@media(max-width:700px){.lp-status-detail{grid-template-columns:1fr}.lp-status-head{align-items:flex-start;flex-direction:column}}
