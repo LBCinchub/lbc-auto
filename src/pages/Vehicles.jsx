@@ -12,7 +12,7 @@ import PageHeader from "../components/shared/PageHeader";
 import SearchBar from "../components/shared/SearchBar";
 import EmptyState from "../components/shared/EmptyState";
 import VehicleFormDialog from "../components/vehicles/VehicleFormDialog";
-import FinancialDocumentDrawer from "@/components/financial-workflow/FinancialDocumentDrawer";
+import InvoiceFormDialog from "@/components/invoices/InvoiceFormDialog";
 
 export default function Vehicles() {
   const _location = useLocation();
@@ -241,11 +241,18 @@ export default function Vehicles() {
         onSaved={() => queryClient.invalidateQueries({ queryKey: ["vehicles"] })}
       />
       {invoiceVehicle && (
-        <FinancialDocumentDrawer
+        <InvoiceFormDialog
           open
-          source={{ type: "vehicle", id: invoiceVehicle.id }}
           onClose={() => setInvoiceVehicle(null)}
-          onSaved={() => queryClient.invalidateQueries({ queryKey: ["invoices"] })}
+          invoice={{
+            customer_id: invoiceVehicle.customer_id || "",
+            customer_name: invoiceVehicle.customer_name || "",
+            vehicle_id: invoiceVehicle.id,
+            vehicle_info: buildVehicleInfo(invoiceVehicle),
+          }}
+          customers={customers}
+          vehicles={[invoiceVehicle]}
+          onSaved={() => { setInvoiceVehicle(null); queryClient.invalidateQueries({ queryKey: ["invoices"] }); }}
         />
       )}
     </div>

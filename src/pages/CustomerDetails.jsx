@@ -25,7 +25,6 @@ import AutoAIBubble from "@/components/shared/AutoAIBubble";
 import InvoiceLinkGuard from "@/components/customers/InvoiceLinkGuard";
 import PortalAccessPanel from "@/components/customers/PortalAccessPanel";
 import InvoiceFormDialog from "@/components/invoices/InvoiceFormDialog";
-import FinancialDocumentDrawer from "@/components/financial-workflow/FinancialDocumentDrawer";
 
 const AVATAR_COLORS = ["bg-sky-500","bg-violet-500","bg-emerald-500","bg-amber-500","bg-rose-500","bg-indigo-500"];
 function getAvatarColor(name = "") {
@@ -150,7 +149,6 @@ export default function CustomerDetails() {
   const [estimateOpen, setEstimateOpen] = useState(false);
   const [vehicleDialogOpen, setVehicleDialogOpen] = useState(false);
   const [newInvoiceOpen, setNewInvoiceOpen] = useState(false);
-  const [invoiceSource, setInvoiceSource] = useState(null);
   const [editingVehicle, setEditingVehicle] = useState(null);
   const [newNote, setNewNote] = useState("");
   const [savingNote, setSavingNote] = useState(false);
@@ -447,7 +445,7 @@ export default function CustomerDetails() {
               ) : (
                 <div className="space-y-2">
                   {invoices.map(inv => (
-                    <div key={inv.id} onClick={() => setInvoiceSource({ type: "invoice", id: inv.id })}
+                    <div key={inv.id} onClick={() => navigate(`/InvoiceDetail/${inv.id}`)}
                       className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 flex items-center justify-between cursor-pointer hover:border-sky-500/30 hover:bg-gray-800/50 transition-all">
                       <div>
                         <div className="flex items-center gap-2">
@@ -702,14 +700,6 @@ export default function CustomerDetails() {
           customers={[customer]}
           vehicles={vehicles}
           onSaved={() => { reload(); queryClient.invalidateQueries({ queryKey: ["invoices"] }); }}
-        />
-      )}
-      {invoiceSource && (
-        <FinancialDocumentDrawer
-          open
-          source={invoiceSource}
-          onClose={() => setInvoiceSource(null)}
-          onSaved={reload}
         />
       )}
       <AutoAIBubble />
