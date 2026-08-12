@@ -33,7 +33,7 @@ export default function OriginalInvoiceEditor({ source, onClose, onSaved, closeA
         parts_total: r2(doneTotals.parts), labor_total: r2(doneTotals.labor),
         tax_amount: r2(doneTotals.tax), total: r2(doneTotals.total),
         balance_due: Math.max(0, r2(doneTotals.total) - (inv.amount_paid || 0)),
-        ghost_items: ghostItems, ghost_status: "active", ghost_notes: ghostNotes, ghost_total: r2(ghostTotal),
+        ghost_items: ghostItems, ghost_status: "active", ghost_notes: inv?.ghost_status === "active" ? (inv.ghost_notes || ghostNotes) : ghostNotes, ghost_total: r2(ghostTotal),
       });
       await flow.reload();
     } catch (e) {}
@@ -54,10 +54,14 @@ export default function OriginalInvoiceEditor({ source, onClose, onSaved, closeA
   };
   if (flow.loading) return <div className="py-24 text-center text-gray-400">Loading invoice…</div>;
   if (!flow.draft) return <div className="p-6"><p className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-4 text-rose-300">{flow.error || "Invoice unavailable"}</p><button onClick={onClose} className="mt-4 text-sm text-sky-400">Back</button></div>;
+  const invGhostActive = inv?.ghost_status === "active";
+  const invGhostConverted = inv?.ghost_status === "converted";
+  const invSplitLines = invGhostActive ? [...(flow.draft.line_items || []), ...(inv?.ghost_items || [])] : (flow.draft.line_items || []);
+  const invSplitInitial = invGhostActive ? (inv?.ghost_items || []).map((_, i) => (flow.draft.line_items || []).length + i) : [];
   return <>
     <InvoiceEditorHeader data={flow.data} />
     <div className="max-h-[72vh] overflow-y-auto px-5 py-5 md:px-6"><InvoiceDetailsFields draft={flow.draft} onChange={flow.setDraft} /><InvoiceLineItemsTable lines={flow.draft.line_items || []} onChange={line_items => flow.setDraft({ ...flow.draft, line_items })} /><QuickNotesEditor value={flow.draft.customer_note} onChange={v => flow.setDraft({ ...flow.draft, customer_note: v })} /><InvoiceTotalsSection draft={flow.draft} totals={flow.totals} onChange={flow.setDraft} />{inv && (inv.ghost_status === "active" || inv.ghost_status === "converted") && <GhostSection record={inv} taxRate={flow.draft.tax_rate} taxAppliesTo={flow.draft.tax_applies_to} onNotesChange={handleGhostNotes} onEditGhost={handleGhostEdit} onConvert={handleGhostConvert} onViewConverted={handleViewConverted} />}{flow.error && <p className="mt-4 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-300">{flow.error}</p>}</div>
-    <InvoiceEditorActions invoice={flow.data?.invoice} saving={flow.saving} sending={flow.saving} dirty={flow.dirty} extraActions={inv && (!inv.ghost_status || inv.ghost_status === "none") ? <GhostModeButton lineItems={flow.draft.line_items || []} taxRate={flow.draft.tax_rate} taxAppliesTo={flow.draft.tax_applies_to} onSplit={handleSplit} /> : null} onCancel={cancel} onSave={save} onPrint={() => setPrinting(true)} onSend={flow.send} onPayment={() => setPayment(true)} />
+    <InvoiceEditorActions invoice={flow.data?.invoice} saving={flow.saving} sending={flow.saving} dirty={flow.dirty} extraActions={inv && !invGhostConverted ? <GhostModeButton lineItems={invSplitLines} taxRate={flow.draft.tax_rate} taxAppliesTo={flow.draft.tax_applies_to} initialRemaining={invSplitInitial} label={invGhostActive ? "Edit Split" : "Ghost Mode"} onSplit={handleSplit} /> : null} onCancel={cancel} onSave={save} onPrint={() => setPrinting(true)} onSend={flow.send} onPayment={() => setPayment(true)} />
     {printing && flow.data?.invoice && <InvoicePrintView invoice={flow.data.invoice} onClose={() => setPrinting(false)} />}
     {payment && flow.data?.invoice && <PaymentReceiptDialog open invoice={flow.data.invoice} source={source} onClose={() => setPayment(false)} onSaved={async () => { setPayment(false); await flow.reload(); }} />}
   </>;

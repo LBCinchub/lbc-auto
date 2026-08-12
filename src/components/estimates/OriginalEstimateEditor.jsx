@@ -109,6 +109,11 @@ export default function OriginalEstimateEditor({ estimateId, onClose }) {
   if (!estimate) return <div className="py-24 text-center text-gray-400">Loading estimate…</div>;
   if (!draft) return null;
 
+  const ghostActive = estimate.ghost_status === "active";
+  const ghostConverted = estimate.ghost_status === "converted";
+  const splitLineItems = ghostActive ? [...draft.line_items, ...(estimate.ghost_items || [])] : draft.line_items;
+  const splitInitialRemaining = ghostActive ? (estimate.ghost_items || []).map((_, i) => draft.line_items.length + i) : [];
+
   const save = async () => {
     setSaving(true);
     try {
@@ -132,6 +137,9 @@ export default function OriginalEstimateEditor({ estimateId, onClose }) {
           total: r2((Number(p.quantity) || 0) * (Number(p.unit_price) || 0)),
         }));
 
+      const _gItems = estimate.ghost_items || [];
+      const _gActive = estimate.ghost_status === "active" && _gItems.length > 0;
+      const _gTotals = _gActive ? calcGhostTotals(_gItems, Number(draft.tax_rate) || 0, draft.tax_applies_to) : null;
       await base44.entities.Estimate.update(estimateId, {
         labor_items: laborItems,
         parts_items: partsItems,
@@ -143,6 +151,7 @@ export default function OriginalEstimateEditor({ estimateId, onClose }) {
         discount: Number(draft.discount) || 0,
         discount_type: draft.discount_type,
         grand_total: r2(totals.total),
+        ghost_total: _gTotals ? _gTotals.total : (estimate.ghost_total || 0),
         estimate_date: draft.estimate_date,
         valid_until: draft.valid_until,
         notes: draft.notes,
@@ -231,7 +240,7 @@ export default function OriginalEstimateEditor({ estimateId, onClose }) {
         labor_items: laborItems, parts_items: partsItems,
         labor_total: r2(doneTotals.labor), parts_total: r2(doneTotals.parts),
         tax_amount: r2(doneTotals.tax), grand_total: r2(doneTotals.total),
-        ghost_items: ghostItems, ghost_status: "active", ghost_notes: ghostNotes, ghost_total: r2(ghostTotal),
+        ghost_items: ghostItems, ghost_status: "active", ghost_notes: estimate.ghost_status === "active" ? (estimate.ghost_notes || ghostNotes) : ghostNotes, ghost_total: r2(ghostTotal),
       });
       onGhostChanged();
       toast({ title: "Work split — ghost created ✓" });
@@ -294,7 +303,7 @@ export default function OriginalEstimateEditor({ estimateId, onClose }) {
         sending={sending === estimate.id}
         hasLinkedInvoice={!!estimate.linked_invoice_id}
         hasLinkedRO={!!linkedRO}
-        extraActions={(!estimate.ghost_status || estimate.ghost_status === "none") ? <GhostModeButton lineItems={draft.line_items} taxRate={draft.tax_rate} taxAppliesTo={draft.tax_applies_to} onSplit={handleSplit} /> : null}
+        extraActions={ghostConverted ? null : <GhostModeButton lineItems={splitLineItems} taxRate={draft.tax_rate} taxAppliesTo={draft.tax_applies_to} initialRemaining={splitInitialRemaining} label={ghostActive ? "Edit Split" : "Ghost Mode"} onSplit={handleSplit} />}
         onCancel={() => onClose?.()}
         onSave={save}
         onPrint={() => setPrinting(true)}

@@ -225,7 +225,7 @@ export default function RepairOrderDetail() {
       await base44.entities.RepairOrder.update(orderId, {
         labor_items: laborItems, parts_used: partsUsed,
         labor_cost: r2(laborCost), parts_cost: r2(partsCost), total_cost: r2(laborCost + partsCost),
-        ghost_items: ghostItems, ghost_status: "active", ghost_notes: ghostNotes, ghost_total: r2(ghostTotal),
+        ghost_items: ghostItems, ghost_status: "active", ghost_notes: order.ghost_status === "active" ? (order.ghost_notes || ghostNotes) : ghostNotes, ghost_total: r2(ghostTotal),
       });
       onGhostChanged();
       toast({ title: "Work split — ghost created ✓" });
@@ -279,9 +279,13 @@ export default function RepairOrderDetail() {
           <Button onClick={handlePrintWorkerCopy} variant="outline" className="border-gray-700 text-gray-300 hover:text-white gap-2">
             <Printer className="w-4 h-4" /> Print Worker Copy
           </Button>
-          {order && (!order.ghost_status || order.ghost_status === "none") && (
-            <GhostModeButton lineItems={roToLines(order)} taxRate={0} taxAppliesTo="both" onSplit={handleSplit} />
-          )}
+          {order && order.ghost_status !== "converted" && (() => {
+            const gActive = order.ghost_status === "active";
+            const baseLines = roToLines(order);
+            const splitLines = gActive ? [...baseLines, ...(order.ghost_items || [])] : baseLines;
+            const splitInit = gActive ? (order.ghost_items || []).map((_, i) => baseLines.length + i) : [];
+            return <GhostModeButton lineItems={splitLines} taxRate={0} taxAppliesTo="both" initialRemaining={splitInit} label={gActive ? "Edit Split" : "Ghost Mode"} onSplit={handleSplit} />;
+          })()}
           <Button onClick={() => setShowEstimateDialog(true)} className="bg-green-600 hover:bg-green-700 gap-2">
             <Plus className="w-4 h-4" /> Create Estimate
           </Button>

@@ -6,12 +6,13 @@ import { calcGhostTotals, lineTotal, generateGhostNote } from "@/utils/ghostTax"
 
 // Split modal: each line item toggles between "Done Now" (default) and "Remaining".
 // A live dual summary shows Completed vs Ghost totals (tax included).
-export default function GhostSplitDialog({ open, onClose, lineItems, taxRate, taxAppliesTo, onConfirm }) {
+export default function GhostSplitDialog({ open, onClose, lineItems, taxRate, taxAppliesTo, onConfirm, initialRemaining }) {
   const [remaining, setRemaining] = useState(() => new Set());
 
-  // Reset selection each time the dialog opens.
+  // Seed selection each time the dialog opens — pre-check items already in the
+  // ghost so the shop can re-split and move items between Done Now and Remaining.
   React.useEffect(() => {
-    if (open) setRemaining(new Set());
+    if (open) setRemaining(new Set(Array.isArray(initialRemaining) ? initialRemaining : []));
   }, [open]);
 
   const items = lineItems || [];
