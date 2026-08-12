@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft, Phone, Mail, MapPin, FileText, Car, ChevronRight,
   ClipboardList, Pencil, Wrench, DollarSign,
-  Clock, Plus, StickyNote, CalendarPlus, Trash2, Lock, Printer, Loader2, Camera, AlertTriangle
+  Clock, Plus, StickyNote, CalendarPlus, Trash2, Lock, Printer, Loader2, Camera, AlertTriangle, Ghost, User
 } from "lucide-react";
 import { formatPhone } from "@/utils/formatPhone";
 import { buildVehicleInfo } from "@/utils/buildVehicleInfo";
@@ -37,23 +37,37 @@ function SkeletonBlock({ className }) {
 }
 
 const statusColors = {
-  paid: "bg-emerald-500/20 text-emerald-400",
-  unpaid: "bg-rose-500/20 text-rose-400",
-  partial: "bg-amber-500/20 text-amber-400",
-  overdue: "bg-red-500/20 text-red-400",
-  draft: "bg-gray-500/20 text-gray-400",
-  sent: "bg-sky-500/20 text-sky-400",
-  approved: "bg-emerald-500/20 text-emerald-400",
-  declined: "bg-rose-500/20 text-rose-400",
-  scheduled: "bg-sky-500/20 text-sky-400",
-  confirmed: "bg-blue-500/20 text-blue-400",
-  completed: "bg-emerald-500/20 text-emerald-400",
-  cancelled: "bg-gray-500/20 text-gray-400",
-  in_progress: "bg-amber-500/20 text-amber-400",
-  waiting: "bg-gray-500/20 text-gray-400",
-  waiting_for_parts: "bg-orange-500/20 text-orange-400",
-  delivered: "bg-teal-500/20 text-teal-400",
-  invoiced: "bg-emerald-500/20 text-emerald-400",
+  // Estimates
+  draft: "bg-gray-600/20 text-gray-300 border border-gray-500/30",
+  sent: "bg-blue-500/15 text-blue-300 border border-blue-500/30",
+  approved: "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30",
+  declined: "bg-rose-500/15 text-rose-400 border border-rose-500/30",
+  invoiced: "bg-teal-500/15 text-teal-300 border border-teal-500/30",
+  expired: "bg-gray-600/20 text-gray-400 border border-gray-500/30",
+  cancelled: "bg-gray-600/20 text-gray-400 border border-gray-500/30",
+  // Invoices
+  paid: "bg-emerald-600 text-white border border-emerald-500",
+  unpaid: "bg-rose-500/15 text-rose-400 border border-rose-500/30",
+  partial: "bg-amber-500/15 text-amber-400 border border-amber-500/30",
+  overdue: "bg-orange-500/20 text-orange-400 border border-orange-500/40",
+  // Repair Orders
+  waiting: "bg-gray-600/20 text-gray-300 border border-gray-500/30",
+  in_progress: "bg-amber-500/20 text-amber-300 border border-amber-500/30",
+  waiting_for_parts: "bg-orange-500/15 text-orange-300 border border-orange-500/30",
+  completed: "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30",
+  delivered: "bg-teal-500/15 text-teal-300 border border-teal-500/30",
+  // Appointments
+  scheduled: "bg-blue-500/15 text-blue-300 border border-blue-500/30",
+  confirmed: "bg-blue-500/15 text-blue-300 border border-blue-500/30",
+};
+
+const statusLabel = (s) => (s ? s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "");
+
+const summarizeLineItems = (names) => {
+  const clean = (names || []).filter(Boolean);
+  if (!clean.length) return "";
+  if (clean.length <= 2) return clean.join(", ");
+  return `${clean.slice(0, 2).join(", ")} +${clean.length - 2} more`;
 };
 
 function VehicleTimeline({ vehicle, repairOrders, defaultOpen = false }) {
@@ -396,20 +410,37 @@ export default function CustomerDetails() {
                 <div className="text-gray-500 text-sm py-8 text-center">No estimates found for this customer.</div>
               ) : (
                 <div className="space-y-2">
-                  {estimates.map(est => (
+                  {estimates.map(est => {
+                    const items = summarizeLineItems([
+                      ...(est.parts_items || []).map(p => p.name),
+                      ...(est.labor_items || []).map(l => l.description),
+                    ]);
+                    return (
                     <div key={est.id} onClick={() => navigate(`/EstimateDetail/${est.id}`)}
-                      className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 flex items-center justify-between cursor-pointer hover:border-sky-500/30 hover:bg-gray-800/50 transition-all">
-                      <div>
-                        <div className="font-semibold text-white">{est.estimate_number || est.id.slice(0,8)}</div>
+                      className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 flex items-center justify-between gap-3 cursor-pointer hover:border-sky-500/30 hover:bg-gray-800/50 transition-all">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-white">{est.estimate_number || est.id.slice(0,8)}</span>
+                          {est.ghost_status === "active" && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-300 border border-amber-500/30"><Ghost className="w-2.5 h-2.5" /> Remaining Work</span>
+                          )}
+                        </div>
                         <div className="text-xs text-gray-400 mt-0.5">{fmtDate(est.created_date)} · {est.vehicle_info || "—"}</div>
+                        {items && (
+                          <div className="text-xs text-gray-500 mt-1 truncate">
+                            <span className="text-gray-400">{items}</span>
+                            {est.tax_amount > 0 && <span className="ml-2 text-gray-600">· incl. tax</span>}
+                          </div>
+                        )}
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 flex-shrink-0">
                         <span className="font-bold text-white">{fmt(est.grand_total)}</span>
-                        <Badge className={statusColors[est.status] || "bg-gray-700 text-gray-300"}>{est.status}</Badge>
+                        <Badge className={statusColors[est.status] || "bg-gray-700 text-gray-300"}>{statusLabel(est.status)}</Badge>
                         <ChevronRight className="w-4 h-4 text-gray-600" />
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </TabsContent>
@@ -420,20 +451,36 @@ export default function CustomerDetails() {
                 <div className="text-gray-500 text-sm py-8 text-center">No repair orders found for this customer.</div>
               ) : (
                 <div className="space-y-2">
-                  {repairOrders.map(ro => (
+                  {repairOrders.map(ro => {
+                    const items = summarizeLineItems([
+                      ...(ro.parts_used || []).map(p => p.name),
+                      ...(ro.labor_items || []).map(l => l.description),
+                      ...(ro.parts_ordered || []).map(p => p.name),
+                    ]);
+                    return (
                     <div key={ro.id} onClick={() => navigate(`/RepairOrderDetail/${ro.id}`)}
-                      className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 flex items-center justify-between cursor-pointer hover:border-sky-500/30 hover:bg-gray-800/50 transition-all">
-                      <div>
-                        <div className="font-semibold text-white">{ro.order_number || ro.id.slice(0,8)}</div>
+                      className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 flex items-center justify-between gap-3 cursor-pointer hover:border-sky-500/30 hover:bg-gray-800/50 transition-all">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-white">{ro.order_number || ro.id.slice(0,8)}</span>
+                          {ro.ghost_status === "active" && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-300 border border-amber-500/30"><Ghost className="w-2.5 h-2.5" /> Remaining Work</span>
+                          )}
+                        </div>
                         <div className="text-xs text-gray-400 mt-0.5">{fmtDate(ro.created_date)} · {ro.description?.slice(0, 50) || "—"}</div>
+                        <div className="text-xs text-gray-500 mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                          {items && <span className="text-gray-400 truncate max-w-[220px]">{items}</span>}
+                          {ro.mechanic_name && <span className="inline-flex items-center gap-1 text-sky-400/80"><User className="w-3 h-3" />{ro.mechanic_name}</span>}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 flex-shrink-0">
                         <span className="font-bold text-white">{fmt(ro.total_cost)}</span>
-                        <Badge className={statusColors[ro.status] || "bg-gray-700 text-gray-300"}>{ro.status?.replace(/_/g, " ")}</Badge>
+                        <Badge className={statusColors[ro.status] || "bg-gray-700 text-gray-300"}>{statusLabel(ro.status)}</Badge>
                         <ChevronRight className="w-4 h-4 text-gray-600" />
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </TabsContent>
@@ -444,29 +491,45 @@ export default function CustomerDetails() {
                 <div className="text-gray-500 text-sm py-8 text-center">No invoices found for this customer.</div>
               ) : (
                 <div className="space-y-2">
-                  {invoices.map(inv => (
+                  {invoices.map(inv => {
+                    const items = summarizeLineItems([
+                      ...(inv.line_items || []).map(i => i.name),
+                      ...(inv.parts_used || []).map(p => p.name),
+                    ]);
+                    const partialPaid = inv.status === "partial" && (inv.amount_paid || 0) > 0;
+                    return (
                     <div key={inv.id} onClick={() => navigate(`/InvoiceDetail/${inv.id}`)}
-                      className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 flex items-center justify-between cursor-pointer hover:border-sky-500/30 hover:bg-gray-800/50 transition-all">
-                      <div>
-                        <div className="flex items-center gap-2">
+                      className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 flex items-center justify-between gap-3 cursor-pointer hover:border-sky-500/30 hover:bg-gray-800/50 transition-all">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-semibold text-white">{inv.invoice_number || inv.id.slice(0,8)}</span>
-                          {(inv.status === "unpaid" || inv.status === "partial" || inv.status === "overdue") && (
+                          {inv.ghost_status === "active" && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-300 border border-amber-500/30"><Ghost className="w-2.5 h-2.5" /> Remaining Work</span>
+                          )}
+                          {inv.status === "overdue" && <AlertTriangle className="w-3.5 h-3.5 text-orange-400" />}
+                          {(inv.status === "unpaid" || inv.status === "partial") && inv.status !== "overdue" && (
                             <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
                           )}
                         </div>
                         <div className="text-xs text-gray-400 mt-0.5">{fmtDate(inv.created_date)} · {inv.vehicle_info || "—"}</div>
-                        <InvoiceLinkGuard invoice={inv} vehicles={vehicles} repairOrders={repairOrders} onRelink={reload} />
+                        <div className="text-xs text-gray-500 mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                          {items && <span className="text-gray-400 truncate max-w-[220px]">{items}</span>}
+                          {inv.tax_amount > 0 && <span className="text-gray-600">· incl. tax</span>}
+                          {partialPaid && <span className="text-emerald-400 font-medium">Paid {fmt(inv.amount_paid)} of {fmt(inv.total)}</span>}
                         </div>
-                      <div className="flex items-center gap-3">
+                        <InvoiceLinkGuard invoice={inv} vehicles={vehicles} repairOrders={repairOrders} onRelink={reload} />
+                      </div>
+                      <div className="flex items-center gap-3 flex-shrink-0">
                         <span className="font-bold text-white">{fmt(inv.total)}</span>
                         {(inv.status === "partial" || inv.status === "unpaid") && inv.balance_due > 0 && (
                           <span className="text-sm font-bold text-yellow-400">{fmt(inv.balance_due)}</span>
                         )}
-                        <Badge className={statusColors[inv.status] || "bg-gray-700 text-gray-300"}>{inv.status}</Badge>
+                        <Badge className={statusColors[inv.status] || "bg-gray-700 text-gray-300"}>{statusLabel(inv.status)}</Badge>
                         <ChevronRight className="w-4 h-4 text-gray-600" />
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </TabsContent>
