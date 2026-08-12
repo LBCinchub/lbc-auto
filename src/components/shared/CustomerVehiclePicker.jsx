@@ -210,10 +210,8 @@ export default function CustomerVehiclePicker({
                 )}
               </div>
               <Select value={vehicleId || ""} onValueChange={handleVehicleChange} open={vehOpen} onOpenChange={setVehOpen}>
-                <SelectTrigger asChild>
-                  <button type="button" className="inline-flex h-7 w-auto shrink-0 items-center justify-center gap-1.5 rounded-full border border-gray-600 bg-transparent px-3 text-xs font-medium text-gray-300 shadow-none hover:bg-gray-700 hover:text-white">
-                    <RefreshCw className="w-3 h-3" /> Change
-                  </button>
+                <SelectTrigger className="h-7 w-auto shrink-0 items-center gap-1.5 self-start rounded-full border border-gray-600 bg-transparent px-3 text-xs font-medium text-gray-300 shadow-none hover:bg-gray-700 hover:text-white">
+                  <RefreshCw className="w-3 h-3" /> Change
                 </SelectTrigger>
                 <SelectContent className="bg-gray-800 border-gray-700 text-white">
                   {customerVehicles.length === 0 && <div className="px-3 py-2 text-xs text-gray-500">No vehicles on file</div>}
