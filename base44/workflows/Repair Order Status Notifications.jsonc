@@ -1,0 +1,34 @@
+{
+  "name": "Repair Order Status Notifications",
+  "description": "Send SMS when repair order status changes",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "update"
+      ],
+      "entity_name": "RepairOrder"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "repair_order_status_notifications",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "notifyRepairOrderUpdate",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  }
+}

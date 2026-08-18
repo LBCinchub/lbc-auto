@@ -1,0 +1,34 @@
+{
+  "name": "Send SMS on Repair Status Update",
+  "description": "",
+  "trigger": {
+    "condition": "${ ((.trigger.changed_fields | index(\"status\") != null) and (.trigger.data.status == \"completed\" or .trigger.data.status == \"waiting_for_parts\")) }",
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "update"
+      ],
+      "entity_name": "RepairOrder"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "send_sms_on_repair_status_update",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "sendRepairStatusUpdate",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  }
+}

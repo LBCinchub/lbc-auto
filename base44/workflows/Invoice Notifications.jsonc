@@ -1,0 +1,35 @@
+{
+  "name": "Invoice Notifications",
+  "description": "Send SMS when invoice is created (vehicle ready) and when paid",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "create",
+        "update"
+      ],
+      "entity_name": "Invoice"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "invoice_notifications",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "notifyInvoiceUpdate",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  }
+}
