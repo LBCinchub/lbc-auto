@@ -56,7 +56,9 @@ export default function RepairOrderDetail() {
   });
   const [notes, setNotes] = useState("");
   const notesTimer = useRef(null);
-  useEffect(() => { setNotes(order?.notes || ""); }, [order?.id]);
+  // Re-sync notes whenever fresh order data arrives (new updated_date) so the
+  // field is identical regardless of which navigation path opened the RO.
+  useEffect(() => { setNotes(order?.notes || ""); }, [order?.id, order?.updated_date]);
   const handleNotesChange = (val) => {
     setNotes(val);
     clearTimeout(notesTimer.current);

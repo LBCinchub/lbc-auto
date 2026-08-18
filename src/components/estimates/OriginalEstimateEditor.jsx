@@ -53,7 +53,7 @@ export default function OriginalEstimateEditor({ estimateId, onClose }) {
   const { sending, sendEmail } = useEmailSend();
 
   const [draft, setDraft] = useState(null);
-  const [initialized, setInitialized] = useState(false);
+  const [loadedKey, setLoadedKey] = useState(null);
   const [saving, setSaving] = useState(false);
   const [printing, setPrinting] = useState(false);
   const [payment, setPayment] = useState(false);
@@ -85,21 +85,26 @@ export default function OriginalEstimateEditor({ estimateId, onClose }) {
   });
 
   useEffect(() => {
-    if (estimate && !initialized) {
-      setDraft({
-        line_items: toLines(estimate),
-        tax_rate: Number(estimate.tax_rate) || 0,
-        tax_applies_to: estimate.tax_applies_to || "both",
-        discount: Number(estimate.discount) || 0,
-        discount_type: normalizeDiscountType(estimate.discount_type) === "percent" ? "%" : "$",
-        estimate_date: estimate.estimate_date || estimate.created_date?.split("T")[0] || "",
-        valid_until: estimate.valid_until || "",
-        service_reason: estimate.service_reason || "",
-        notes: estimate.notes || "",
-      });
-      setInitialized(true);
-    }
-  }, [estimate, initialized]);
+    if (!estimate) return;
+    // Re-sync the draft whenever fresh estimate data arrives (new updated_date),
+    // so every field — especially service_reason ("Service Description") and
+    // notes — is identical regardless of which navigation path opened the
+    // estimate (Estimates list, Customer Profile, dashboard widget, deep-link).
+    const key = estimate.updated_date || estimate.id;
+    if (key === loadedKey) return;
+    setDraft({
+      line_items: toLines(estimate),
+      tax_rate: Number(estimate.tax_rate) || 0,
+      tax_applies_to: estimate.tax_applies_to || "both",
+      discount: Number(estimate.discount) || 0,
+      discount_type: normalizeDiscountType(estimate.discount_type) === "percent" ? "%" : "$",
+      estimate_date: estimate.estimate_date || estimate.created_date?.split("T")[0] || "",
+      valid_until: estimate.valid_until || "",
+      service_reason: estimate.service_reason || "",
+      notes: estimate.notes || "",
+    });
+    setLoadedKey(key);
+  }, [estimate, loadedKey]);
 
   const totals = useMemo(
     () => calculateFinancials(draft || { line_items: [] }, estimate?.amount_paid || 0),
@@ -227,7 +232,7 @@ export default function OriginalEstimateEditor({ estimateId, onClose }) {
 
   // ── Ghost Mode ──
   const onGhostChanged = () => {
-    setInitialized(false);
+    setLoadedKey(null);
     queryClient.invalidateQueries({ queryKey: ["estimate", estimateId] });
     queryClient.invalidateQueries({ queryKey: ["estimates"] });
   };
