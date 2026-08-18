@@ -95,7 +95,7 @@ export default function ItemNameAutocomplete({
         className={className}
       />
       {open && suggestions.length > 0 && (
-        <div className="absolute z-50 mt-1 w-full overflow-hidden rounded-md border border-gray-700 bg-gray-800 shadow-lg">
+        <div className="absolute top-full left-0 z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-gray-700 bg-gray-800 shadow-lg">
           {suggestions.map((item, i) => (
             <button
               key={item.id}
