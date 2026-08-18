@@ -175,6 +175,7 @@ export default function OriginalEstimateEditor({ estimateId, onClose }) {
             parts_used: partsItems,
             parts_cost: r2(totals.parts),
             total_cost: r2(totals.total),
+            notes: draft.notes,
           });
         } catch (e) { /* non-fatal */ }
       }

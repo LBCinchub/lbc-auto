@@ -129,7 +129,12 @@
         "type": "object",
         "properties": {
           "description": {
-            "type": "string"
+            "type": "string",
+            "description": "Labor task name (the line item NAME)"
+          },
+          "details": {
+            "type": "string",
+            "description": "Per-line item description/details (the DESCRIPTION column)"
           },
           "hours": {
             "type": "number"
@@ -151,6 +156,10 @@
         "properties": {
           "name": {
             "type": "string"
+          },
+          "details": {
+            "type": "string",
+            "description": "Per-line item description/details (the DESCRIPTION column)"
           },
           "part_number": {
             "type": "string"

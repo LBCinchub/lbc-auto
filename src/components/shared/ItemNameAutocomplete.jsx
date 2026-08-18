@@ -95,7 +95,7 @@ export default function ItemNameAutocomplete({
         className={className}
       />
       {open && suggestions.length > 0 && (
-        <div className="absolute top-full left-0 z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-gray-700 bg-gray-800 shadow-lg">
+        <div className="absolute top-full left-0 z-50 mt-1 w-full min-w-[200px] max-h-52 overflow-y-auto overscroll-contain rounded-md border border-gray-700 bg-gray-800 shadow-lg" style={{ maxHeight: "13rem" }}>
           {suggestions.map((item, i) => (
             <button
               key={item.id}
