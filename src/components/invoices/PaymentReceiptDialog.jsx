@@ -58,7 +58,7 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
             <select value={method} onChange={e => setMethod(e.target.value)} className="h-9 w-full rounded-md border border-gray-700 bg-gray-900 px-3 text-white">
               <option value="card">Credit / Debit Card</option>
               <option value="cash">Cash</option>
-              <option value="e_transfer">E-Transfer</option>
+              <option value="e-transfer">E-Transfer</option>
               <option value="cheque">Cheque</option>
               <option value="other">Other</option>
             </select>

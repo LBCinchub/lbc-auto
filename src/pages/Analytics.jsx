@@ -184,7 +184,7 @@ export default function Analytics() {
         if (!day) return;
         if (!dailyPayments[day]) dailyPayments[day] = { date: day, cash: 0, card: 0, etransfer: 0 };
         const method = (p.method || "").toLowerCase();
-        if (method === "e-transfer" || method === "etransfer") {
+        if (method === "e-transfer" || method === "etransfer" || method === "e_transfer") {
           dailyPayments[day].etransfer += amount;
         } else if (method === "card") {
           dailyPayments[day].card += amount;
@@ -198,7 +198,7 @@ export default function Analytics() {
       const amount = parseFloat(inv.amount_paid) || 0;
       if (!dailyPayments[day]) dailyPayments[day] = { date: day, cash: 0, card: 0, etransfer: 0 };
       const method = inv.payment_method?.toLowerCase() || "";
-      if (method === "e-transfer" || method === "etransfer") {
+      if (method === "e-transfer" || method === "etransfer" || method === "e_transfer") {
         dailyPayments[day].etransfer += amount;
       } else if (method === "card" || inv.card_last4) {
         dailyPayments[day].card += amount;
@@ -1401,7 +1401,7 @@ export default function Analytics() {
                   const amount = parseFloat(p.amount) || 0;
                   if (amount <= 0) return;
                   const m = (p.method || "").toLowerCase();
-                  const methodKey = m === "e-transfer" || m === "etransfer" ? "etransfer" : m === "card" ? "card" : "cash";
+                  const methodKey = m === "e-transfer" || m === "etransfer" || m === "e_transfer" ? "etransfer" : m === "card" ? "card" : "cash";
                   dayPayments.push({ invoice: inv, amount, method: methodKey });
                 });
               } else if (inv.amount_paid > 0 && inv.paid_date) {
@@ -1410,7 +1410,7 @@ export default function Analytics() {
                 const amount = parseFloat(inv.amount_paid) || 0;
                 if (amount <= 0) return;
                 const m = inv.payment_method?.toLowerCase() || "";
-                const methodKey = m === "e-transfer" || m === "etransfer" ? "etransfer" : (m === "card" || inv.card_last4) ? "card" : "cash";
+                const methodKey = m === "e-transfer" || m === "etransfer" || m === "e_transfer" ? "etransfer" : (m === "card" || inv.card_last4) ? "card" : "cash";
                 dayPayments.push({ invoice: inv, amount, method: methodKey });
               }
             });

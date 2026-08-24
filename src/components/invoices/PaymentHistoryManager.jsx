@@ -79,7 +79,7 @@ export default function PaymentHistoryManager({ open, onClose, invoice, onSaved 
     }
   };
 
-  const METHOD_LABELS = { card: "Card", cash: "Cash", e_transfer: "E-Transfer", cheque: "Cheque", financing: "Financing", other: "Other" };
+  const METHOD_LABELS = { card: "Card", cash: "Cash", "e-transfer": "E-Transfer", cheque: "Cheque", financing: "Financing", other: "Other" };
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
