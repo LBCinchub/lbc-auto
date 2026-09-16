@@ -237,6 +237,38 @@ export default function RepairOrderDetail() {
   };
   const handleGhostNotes = async (v) => { try { await base44.entities.RepairOrder.update(orderId, { ghost_notes: v }); onGhostChanged(); } catch (e) {} };
   const handleGhostEdit = async (items, notes) => { try { const t = calcGhostTotals(items, 0, "both"); await base44.entities.RepairOrder.update(orderId, { ghost_items: items, ghost_notes: notes, ghost_total: t.total }); onGhostChanged(); } catch (e) {} };
+  // Return a single ghost item to the active repair order — restores it into
+  // parts_used / labor_items, recomputes costs + remaining ghost total in one atomic update.
+  const handleRestoreGhostItem = async (index) => {
+    if (!order || order.ghost_status !== "active") return;
+    const items = order.ghost_items || [];
+    const item = items[index];
+    if (!item) return;
+    const remaining = items.filter((_, i) => i !== index);
+    const laborItems = [...(order.labor_items || [])];
+    const partsUsed = [...(order.parts_used || [])];
+    if (item.type === "labor") {
+      laborItems.push({ description: item.name || item.description || "", details: item.description && item.name ? item.description : "", hours: Number(item.quantity) || 0, rate: Number(item.unit_price) || 0, total: r2((Number(item.quantity) || 0) * (Number(item.unit_price) || 0)) });
+    } else {
+      partsUsed.push({ name: item.name || item.description || "", details: item.description && item.name ? item.description : "", quantity: Number(item.quantity) || 0, unit_price: Number(item.unit_price) || 0, total: r2((Number(item.quantity) || 0) * (Number(item.unit_price) || 0)) });
+    }
+    const laborCost = laborItems.reduce((s, l) => s + (Number(l.total) || 0), 0);
+    const partsCost = partsUsed.reduce((s, p) => s + (Number(p.total) || 0), 0);
+    const patch = {
+      labor_items: laborItems, parts_used: partsUsed,
+      labor_hours: laborItems.reduce((s, l) => s + (Number(l.hours) || 0), 0),
+      labor_cost: r2(laborCost), parts_cost: r2(partsCost), total_cost: r2(laborCost + partsCost),
+      ghost_items: remaining, ghost_total: calcGhostTotals(remaining, 0, "both").total,
+    };
+    if (remaining.length === 0) { patch.ghost_status = "none"; patch.ghost_notes = ""; }
+    try {
+      await base44.entities.RepairOrder.update(orderId, patch);
+      onGhostChanged();
+      toast({ title: "Item returned to repair order ✓" });
+    } catch (e) {
+      toast({ title: "Could not return item", description: e?.message, variant: "destructive" });
+    }
+  };
   const handleGhostConvert = async (targetType) => {
     try {
       const res = await base44.functions.invoke("convertGhostToDocument", { source_type: "RepairOrder", source_id: orderId, target_type: targetType });
@@ -617,7 +649,7 @@ export default function RepairOrderDetail() {
         </div>
 
         {order && (order.ghost_status === "active" || order.ghost_status === "converted") && (
-          <GhostSection record={order} taxRate={0} taxAppliesTo="both" onNotesChange={handleGhostNotes} onEditGhost={handleGhostEdit} onConvert={handleGhostConvert} onViewConverted={handleViewConverted} />
+          <GhostSection record={order} taxRate={0} taxAppliesTo="both" onNotesChange={handleGhostNotes} onEditGhost={handleGhostEdit} onConvert={handleGhostConvert} onViewConverted={handleViewConverted} onRestoreItem={handleRestoreGhostItem} restoreLabel="Return To RO" />
         )}
 
         <div className="mt-8 pt-6 border-t border-gray-800">

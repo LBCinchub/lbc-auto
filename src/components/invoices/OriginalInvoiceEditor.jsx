@@ -40,6 +40,35 @@ export default function OriginalInvoiceEditor({ source, onClose, onSaved, closeA
   };
   const handleGhostNotes = async (v) => { if (!inv) return; try { await base44.entities.Invoice.update(inv.id, { ghost_notes: v }); await flow.reload(); } catch (e) {} };
   const handleGhostEdit = async (items, notes) => { if (!inv) return; try { const t = calcGhostTotals(items, flow.draft.tax_rate, flow.draft.tax_applies_to); await base44.entities.Invoice.update(inv.id, { ghost_items: items, ghost_notes: notes, ghost_total: t.total }); await flow.reload(); } catch (e) {} };
+  // Return a single ghost item to the active invoice — restores it into line_items,
+  // recomputes invoice totals + remaining ghost total in one atomic update.
+  const handleRestoreGhostItem = async (index) => {
+    if (!inv || inv.ghost_status !== "active") return;
+    const items = inv.ghost_items || [];
+    const item = items[index];
+    if (!item) return;
+    const remaining = items.filter((_, i) => i !== index);
+    const newLines = [...(flow.draft.line_items || []), {
+      type: item.type === "labor" ? "labor" : "part",
+      name: item.name || item.description || "",
+      description: item.description && item.name ? item.description : "",
+      quantity: Number(item.quantity) || 0,
+      unit_price: Number(item.unit_price) || 0,
+      total: r2((Number(item.quantity) || 0) * (Number(item.unit_price) || 0)),
+      taxable: item.taxable !== false,
+    }];
+    const t = calculateFinancials({ ...flow.draft, line_items: newLines }, inv.amount_paid || 0);
+    const g = calcGhostTotals(remaining, flow.draft.tax_rate, flow.draft.tax_applies_to);
+    const patch = {
+      line_items: newLines,
+      parts_total: r2(t.parts), labor_total: r2(t.labor),
+      tax_amount: r2(t.tax), total: r2(t.total),
+      balance_due: Math.max(0, r2(t.total) - (inv.amount_paid || 0)),
+      ghost_items: remaining, ghost_total: g.total,
+    };
+    if (remaining.length === 0) { patch.ghost_status = "none"; patch.ghost_notes = ""; }
+    try { await base44.entities.Invoice.update(inv.id, patch); await flow.reload(); } catch (e) {}
+  };
   const handleGhostConvert = async (targetType) => {
     if (!inv) return;
     try {
@@ -60,7 +89,7 @@ export default function OriginalInvoiceEditor({ source, onClose, onSaved, closeA
   const invSplitInitial = invGhostActive ? (inv?.ghost_items || []).map((_, i) => (flow.draft.line_items || []).length + i) : [];
   return <>
     <InvoiceEditorHeader data={flow.data} />
-    <div className="max-h-[72vh] overflow-y-auto px-5 py-5 md:px-6"><InvoiceDetailsFields draft={flow.draft} onChange={flow.setDraft} /><InvoiceLineItemsTable lines={flow.draft.line_items || []} onChange={line_items => flow.setDraft({ ...flow.draft, line_items })} /><QuickNotesEditor value={flow.draft.customer_note} onChange={v => flow.setDraft({ ...flow.draft, customer_note: v })} /><InvoiceTotalsSection draft={flow.draft} totals={flow.totals} onChange={flow.setDraft} />{inv && (inv.ghost_status === "active" || inv.ghost_status === "converted") && <GhostSection record={inv} taxRate={flow.draft.tax_rate} taxAppliesTo={flow.draft.tax_applies_to} onNotesChange={handleGhostNotes} onEditGhost={handleGhostEdit} onConvert={handleGhostConvert} onViewConverted={handleViewConverted} />}{flow.error && <p className="mt-4 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-300">{flow.error}</p>}</div>
+    <div className="max-h-[72vh] overflow-y-auto px-5 py-5 md:px-6"><InvoiceDetailsFields draft={flow.draft} onChange={flow.setDraft} /><InvoiceLineItemsTable lines={flow.draft.line_items || []} onChange={line_items => flow.setDraft({ ...flow.draft, line_items })} /><QuickNotesEditor value={flow.draft.customer_note} onChange={v => flow.setDraft({ ...flow.draft, customer_note: v })} /><InvoiceTotalsSection draft={flow.draft} totals={flow.totals} onChange={flow.setDraft} />{inv && (inv.ghost_status === "active" || inv.ghost_status === "converted") && <GhostSection record={inv} taxRate={flow.draft.tax_rate} taxAppliesTo={flow.draft.tax_applies_to} onNotesChange={handleGhostNotes} onEditGhost={handleGhostEdit} onConvert={handleGhostConvert} onViewConverted={handleViewConverted} onRestoreItem={handleRestoreGhostItem} restoreLabel="Return To Invoice" />}{flow.error && <p className="mt-4 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-300">{flow.error}</p>}</div>
     <InvoiceEditorActions invoice={flow.data?.invoice} saving={flow.saving} sending={flow.saving} dirty={flow.dirty} extraActions={inv && !invGhostConverted ? <GhostModeButton lineItems={invSplitLines} taxRate={flow.draft.tax_rate} taxAppliesTo={flow.draft.tax_applies_to} initialRemaining={invSplitInitial} label={invGhostActive ? "Edit Split" : "Ghost Mode"} onSplit={handleSplit} /> : null} onCancel={cancel} onSave={save} onPrint={() => setPrinting(true)} onSend={flow.send} onPayment={() => setPayment(true)} />
     {printing && flow.data?.invoice && <InvoicePrintView invoice={flow.data.invoice} onClose={() => setPrinting(false)} />}
     {payment && flow.data?.invoice && <PaymentReceiptDialog open invoice={flow.data.invoice} source={source} onClose={() => setPayment(false)} onSaved={async () => { setPayment(false); await flow.reload(); }} />}

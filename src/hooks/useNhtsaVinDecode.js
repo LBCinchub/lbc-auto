@@ -36,6 +36,7 @@ export function useNhtsaVinDecode() {
       const make = get("Make");
       const model = get("Model");
       const year = get("Model Year");
+      const trim = get("Trim");
       const engineCylinders = get("Engine Number of Cylinders");
       const displacementL = get("Displacement (L)");
       const fuelType = get("Fuel Type - Primary");
@@ -54,7 +55,7 @@ export function useNhtsaVinDecode() {
       if (fuelType) engineParts.push(fuelType);
       const engine_type = engineParts.join(" ") || "";
 
-      return { make, model, year, engine_type };
+      return { make, model, year, engine_type, trim };
     } catch (err) {
       setVinError("Could not reach NHTSA. Check your connection.");
       return null;

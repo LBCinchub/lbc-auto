@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Search, Plus, Loader2, User, Car, RefreshCw, Phone, Mail, MapPin } from "lucide-react";
@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { buildVehicleInfo } from "@/utils/buildVehicleInfo";
 import { toTitleCase } from "@/utils/capitalize";
 import { useToast } from "@/components/ui/use-toast";
+import { useNhtsaVinDecode } from "@/hooks/useNhtsaVinDecode";
 
 // Real-time Title Case for word inputs (first letter of every word), mirroring the
 // global autoCapitalize pattern. VIN/plate/email/phone stay as typed.
@@ -49,6 +50,33 @@ export default function CustomerVehiclePicker({
   const [savingVeh, setSavingVeh] = useState(false);
   const [newCust, setNewCust] = useState({ full_name: "", phone: "", email: "", address: "" });
   const [newVeh, setNewVeh] = useState({ make: "", model: "", year: "", trim: "", engine_type: "", vin: "", license_plate: "", color: "" });
+
+  // VIN decode — same NHTSA hook as the Vehicles page & diagnostics quick-add.
+  // Auto-decodes when the VIN reaches 17 characters (typed or pasted).
+  const { decoding: vinDecoding, vinError, decodeVin } = useNhtsaVinDecode();
+  const lastDecodedVinRef = useRef("");
+  const handleVinChange = (raw) => {
+    const vin = raw.toUpperCase().replace(/\s+/g, "");
+    setNewVeh({ ...newVeh, vin });
+    if (vin.length === 17 && vin !== lastDecodedVinRef.current) {
+      lastDecodedVinRef.current = vin;
+      autoDecodeVin(vin);
+    }
+  };
+  const autoDecodeVin = async (vin) => {
+    const result = await decodeVin(vin);
+    if (result) {
+      setNewVeh((prev) => ({
+        ...prev,
+        year: result.year || prev.year,
+        make: result.make ? toTitleCase(result.make) : prev.make,
+        model: result.model ? toTitleCase(result.model) : prev.model,
+        trim: result.trim ? toTitleCase(result.trim) : prev.trim,
+        engine_type: result.engine_type || prev.engine_type,
+      }));
+      toast({ title: "VIN decoded ✓" });
+    }
+  };
 
   const customerSelected = !!customerId;
   const [vehOpen, setVehOpen] = useState(false);
@@ -410,8 +438,10 @@ export default function CustomerVehiclePicker({
             </div>
             <div>
               <Label className="text-gray-400">VIN (optional)</Label>
-              <Input data-no-capitalize value={newVeh.vin} onChange={(e) => setNewVeh({ ...newVeh, vin: e.target.value.toUpperCase() })} className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="17 characters" />
-              <p className="mt-1 text-[10px] text-gray-500">VIN is optional</p>
+              <Input data-no-capitalize maxLength={17} value={newVeh.vin} onChange={(e) => handleVinChange(e.target.value)} className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="17 characters" />
+              {vinDecoding && <p className="mt-1 text-[10px] text-sky-400 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Decoding VIN…</p>}
+              {vinError && <p className="mt-1 text-[10px] text-rose-400">{vinError}</p>}
+              {!vinDecoding && !vinError && <p className="mt-1 text-[10px] text-gray-500">VIN is optional</p>}
             </div>
             <div>
               <Label className="text-gray-400">License Plate (optional)</Label>

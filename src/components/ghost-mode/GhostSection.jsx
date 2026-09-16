@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Ghost, Pencil, FileText, Wrench, ExternalLink, CheckCircle2 } from "lucide-react";
+import { Ghost, Pencil, FileText, Wrench, ExternalLink, CheckCircle2, Undo2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { calcGhostTotals, lineTotal } from "@/utils/ghostTax";
@@ -16,6 +16,8 @@ export default function GhostSection({
   onEditGhost,
   onConvert,
   onViewConverted,
+  onRestoreItem,
+  restoreLabel = "Bring Back",
 }) {
   const items = record.ghost_items || [];
   const totals = calcGhostTotals(items, taxRate, taxAppliesTo);
@@ -24,8 +26,18 @@ export default function GhostSection({
   const [editOpen, setEditOpen] = useState(false);
   const [note, setNote] = useState(record.ghost_notes || "");
   const [converting, setConverting] = useState(null);
+  const canRestore = !readOnly && !converted && !!onRestoreItem;
+  const [restoringIdx, setRestoringIdx] = useState(null);
 
   useEffect(() => { setNote(record.ghost_notes || ""); }, [record.ghost_notes]);
+
+  // Return a single ghost item to the current active document.
+  // In-flight guard makes it idempotent (double-click can't duplicate the item).
+  const handleRestore = async (i) => {
+    if (restoringIdx !== null) return;
+    setRestoringIdx(i);
+    try { await onRestoreItem?.(i); } finally { setRestoringIdx(null); }
+  };
 
   const handleConvert = async (targetType) => {
     setConverting(targetType);
@@ -66,6 +78,7 @@ export default function GhostSection({
                 <th className="px-3 py-2 text-right">Qty</th>
                 <th className="px-3 py-2 text-right">Price</th>
                 <th className="px-3 py-2 text-right">Amount</th>
+                {canRestore && <th className="px-3 py-2 text-right">Return</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-800/60">
@@ -83,6 +96,19 @@ export default function GhostSection({
                   <td className="px-3 py-2 text-right text-gray-300">{it.quantity}</td>
                   <td className="px-3 py-2 text-right text-gray-300">${(Number(it.unit_price) || 0).toFixed(2)}</td>
                   <td className="px-3 py-2 text-right font-medium text-white tabular-nums">${lineTotal(it).toFixed(2)}</td>
+                  {canRestore && (
+                    <td className="px-3 py-2 text-right">
+                      <button
+                        type="button"
+                        disabled={restoringIdx !== null}
+                        onClick={() => handleRestore(i)}
+                        className="inline-flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 disabled:opacity-50"
+                      >
+                        {restoringIdx === i ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Undo2 className="w-3.5 h-3.5" />}
+                        {restoreLabel}
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

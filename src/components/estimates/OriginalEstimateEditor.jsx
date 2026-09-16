@@ -264,6 +264,46 @@ export default function OriginalEstimateEditor({ estimateId, onClose }) {
       onGhostChanged();
     } catch (e) {}
   };
+  // Return a single ghost item to the active estimate — restores it into
+  // labor/parts items, recomputes totals + remaining ghost total in one atomic update.
+  const handleRestoreGhostItem = async (index) => {
+    if (!estimate || estimate.ghost_status !== "active") return;
+    const items = estimate.ghost_items || [];
+    const item = items[index];
+    if (!item) return;
+    const remaining = items.filter((_, i) => i !== index);
+    const restored = {
+      type: item.type === "labor" ? "labor" : "part",
+      name: item.name || item.description || "",
+      description: item.description && item.name ? item.description : "",
+      quantity: Number(item.quantity) || 0,
+      unit_price: Number(item.unit_price) || 0,
+      taxable: item.taxable !== false,
+    };
+    const newLines = [...(draft.line_items || []), restored];
+    const t = calculateFinancials({ ...draft, line_items: newLines }, estimate.amount_paid || 0);
+    const laborItems = newLines
+      .filter((l) => l.type === "labor")
+      .map((l) => ({ description: l.name, details: l.description || "", hours: Number(l.quantity) || 0, rate: Number(l.unit_price) || 0, total: r2((Number(l.quantity) || 0) * (Number(l.unit_price) || 0)) }));
+    const partsItems = newLines
+      .filter((l) => l.type !== "labor")
+      .map((p) => ({ name: p.name, details: p.description || "", part_number: p.part_number || "", quantity: Number(p.quantity) || 0, unit_price: Number(p.unit_price) || 0, total: r2((Number(p.quantity) || 0) * (Number(p.unit_price) || 0)) }));
+    const g = calcGhostTotals(remaining, Number(draft.tax_rate) || 0, draft.tax_applies_to);
+    const patch = {
+      labor_items: laborItems, parts_items: partsItems,
+      labor_total: r2(t.labor), parts_total: r2(t.parts),
+      tax_amount: r2(t.tax), grand_total: r2(t.total),
+      ghost_items: remaining, ghost_total: g.total,
+    };
+    if (remaining.length === 0) { patch.ghost_status = "none"; patch.ghost_notes = ""; }
+    try {
+      await base44.entities.Estimate.update(estimateId, patch);
+      onGhostChanged();
+      toast({ title: "Item returned to estimate ✓" });
+    } catch (e) {
+      toast({ title: "Could not return item", description: e?.message, variant: "destructive" });
+    }
+  };
   const handleGhostConvert = async (targetType) => {
     try {
       const res = await base44.functions.invoke("convertGhostToDocument", { source_type: "Estimate", source_id: estimateId, target_type: targetType });
@@ -301,7 +341,7 @@ export default function OriginalEstimateEditor({ estimateId, onClose }) {
         />
         <InvoiceTotalsSection draft={draft} totals={totals} onChange={setDraft} />
         {(estimate.ghost_status === "active" || estimate.ghost_status === "converted") && (
-          <GhostSection record={estimate} taxRate={draft.tax_rate} taxAppliesTo={draft.tax_applies_to} onNotesChange={handleGhostNotes} onEditGhost={handleGhostEdit} onConvert={handleGhostConvert} onViewConverted={handleViewConverted} />
+          <GhostSection record={estimate} taxRate={draft.tax_rate} taxAppliesTo={draft.tax_applies_to} onNotesChange={handleGhostNotes} onEditGhost={handleGhostEdit} onConvert={handleGhostConvert} onViewConverted={handleViewConverted} onRestoreItem={handleRestoreGhostItem} restoreLabel="Return To Estimate" />
         )}
       </div>
       <EstimateEditorActions
