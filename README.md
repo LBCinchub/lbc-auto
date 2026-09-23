@@ -31,7 +31,7 @@ App: https://LBCHUB.tech
 
 ## Pricing
 
-$2,000 USDC — one-time payment. No subscriptions. No recurring fees.
+$2,999 USDC — Monthley-payment.  subscriptions.  recurring fees 299$ for Pro access, 199$ basic sub 
 
 ---
 
