@@ -21,7 +21,11 @@ LBC Auto is a live, revenue-generating product by LBC Network — currently depl
 
 Shop: Terry Fox Auto Center
 Address: 124 Principale St, Gatineau, QC J9H 3M4
-App: https://lbchub.tech
+App: https://LBCHUB.tech
+
+Shop: Haj Rims And Tires
+Address: 2297 Richardson Side Rd, Ottawa, On KA0lL0
+App: https://LBCHUB.tech 
 
 ---
 
