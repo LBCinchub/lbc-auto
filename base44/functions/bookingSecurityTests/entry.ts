@@ -88,7 +88,6 @@ export default async function (req) {
       return { store, entities };
     }
 
-    console.log("MOCK-SUITE-START");
     const test = (name, pass, detail = "") => results.push({ name, pass: !!pass, detail });
     const codeOf = (r) => (r && r.blocked ? r.blocked.code : null);
 
