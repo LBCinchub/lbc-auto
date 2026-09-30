@@ -1,0 +1,100 @@
+{
+  "name": "ShopBookingAlias",
+  "type": "object",
+  "properties": {
+    "shop_user_id": {
+      "type": "string",
+      "description": "Stable internal shop (owner User) ID \u2014 the authority"
+    },
+    "shop_owner_email": {
+      "type": "string",
+      "format": "email",
+      "description": "Tenant key, server-side only; never returned publicly"
+    },
+    "booking_key_id": {
+      "type": "string",
+      "description": "Legacy WebBookingKey record bound to this shop"
+    },
+    "display_name": {
+      "type": "string",
+      "description": "Allowlisted public shop name"
+    },
+    "public_phone_e164": {
+      "type": "string",
+      "description": "Canonical public business phone (changeable alias, not auth)"
+    },
+    "local_alias": {
+      "type": "string",
+      "description": "Country-local digits alias (NANP only), e.g. 6136722727"
+    },
+    "country": {
+      "type": "string",
+      "description": "Explicit ISO country for phone parsing, e.g. CA"
+    },
+    "timezone": {
+      "type": "string",
+      "description": "IANA shop timezone, e.g. America/Toronto"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "credential_hash": {
+      "type": "string",
+      "description": "SHA-256 of the server-to-server connector credential (value never stored)"
+    },
+    "credential_issued_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "credential_issued_by": {
+      "type": "string"
+    },
+    "verified_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "verified_by": {
+      "type": "string"
+    },
+    "verification_source": {
+      "type": "string",
+      "description": "Which authoritative shop setting the phone was matched against"
+    },
+    "recent_booking_times": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "shop_user_id",
+    "shop_owner_email",
+    "public_phone_e164",
+    "country",
+    "timezone"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

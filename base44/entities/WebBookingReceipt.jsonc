@@ -1,0 +1,81 @@
+{
+  "name": "WebBookingReceipt",
+  "type": "object",
+  "properties": {
+    "shop_owner_email": {
+      "type": "string",
+      "format": "email"
+    },
+    "alias_id": {
+      "type": "string"
+    },
+    "idempotency_hash": {
+      "type": "string",
+      "description": "SHA-256(shop | idempotency key)"
+    },
+    "draft_hash": {
+      "type": "string",
+      "description": "SHA-256 of the approved booking draft"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "completed",
+        "failed"
+      ],
+      "default": "pending"
+    },
+    "customer_id": {
+      "type": "string"
+    },
+    "vehicle_id": {
+      "type": "string"
+    },
+    "appointment_id": {
+      "type": "string"
+    },
+    "session_id": {
+      "type": "string"
+    },
+    "receipt_hash": {
+      "type": "string",
+      "description": "SHA-256 of the opaque customer receipt token"
+    },
+    "requested_start_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "requested_timezone": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "shop_owner_email",
+    "idempotency_hash",
+    "draft_hash",
+    "status"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
