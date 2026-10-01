@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { Bot, Send, Loader2, Wrench, Camera, Paperclip, X, Pin, CalendarPlus } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import SavePhotoToProfile from "@/components/photos/SavePhotoToProfile";
+import AiMessageBody from "@/components/shared/AiMessageBody";
 
 // Detail pages with a sticky bottom financial action bar — lift the widget above it.
 const DETAIL_PATTERN = /\/(EstimateDetail|RepairOrderDetail|InvoiceDetail)/i;
@@ -71,6 +72,12 @@ function injectLEDStyle() {
       background: linear-gradient(90deg, #001533, #002855);
       border-bottom: 1px solid #00aaff44;
     }
+    .lbc-ai-md h1, .lbc-ai-md h2, .lbc-ai-md h3, .lbc-ai-md h4 { font-size: 12px; font-weight: 700; color: #80d8ff; margin: 8px 0 4px; }
+    .lbc-ai-md p { margin: 0 0 6px; }
+    .lbc-ai-md ol { list-style: decimal; padding-left: 18px; margin: 0 0 6px; }
+    .lbc-ai-md ul { list-style: disc; padding-left: 18px; margin: 0 0 6px; }
+    .lbc-ai-md li { margin-bottom: 2px; }
+    .lbc-ai-md button:focus-visible, .lbc-ai-panel button:focus-visible { outline: 2px solid #00aaff; outline-offset: 2px; }
     .lbc-ai-messages {
       height: 220px;
       overflow-y: auto;
@@ -223,7 +230,7 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
 
       {/* ── Chat Panel (opens above the button) ── */}
       {open && (
-        <div className="lbc-ai-panel" style={{ width: 340 }}>
+        <div className="lbc-ai-panel" style={{ width: 340, maxWidth: "calc(100vw - 40px)" }}>
 
           {/* Header */}
           <div className="lbc-ai-header">
@@ -302,7 +309,7 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
                   {m.image && (
                     <img src={m.image} alt="upload" style={{ width:"100%", borderRadius:6, marginBottom: m.content ? 6 : 0, display:"block" }} />
                   )}
-                  {m.content}
+                  {m.role === "assistant" && m.content ? <AiMessageBody content={m.content} /> : m.content}
                   {m.saveable && (
                     <button
                       onClick={() => setSavePhoto({ photoUrl: m.imageUrl, aiAnalysis: m.content })}
