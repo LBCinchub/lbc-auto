@@ -4,6 +4,7 @@ import { Bot, Send, Loader2, Wrench, Camera, Paperclip, X, Pin, CalendarPlus } f
 import { base44 } from "@/api/base44Client";
 import SavePhotoToProfile from "@/components/photos/SavePhotoToProfile";
 import AiMessageBody from "@/components/shared/AiMessageBody";
+import StaffEstimateResult from "@/components/shared/StaffEstimateResult";
 
 // Detail pages with a sticky bottom financial action bar — lift the widget above it.
 const DETAIL_PATTERN = /\/(EstimateDetail|RepairOrderDetail|InvoiceDetail)/i;
@@ -208,7 +209,7 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
 
       const replyRaw = result?.data?.reply || result?.reply || "No response generated.";
       const offerApt  = result?.data?.offer_appointment || result?.offer_appointment || false;
-      const assistantMsg = { role: "assistant", content: replyRaw, offerApt };
+      const assistantMsg = { role: "assistant", content: replyRaw, offerApt, estimateCapability: result?.data?.estimate_capability || null };
       if (imageUrl) {
         assistantMsg.imageUrl = imageUrl;
         assistantMsg.saveable = true;
@@ -310,6 +311,7 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
                     <img src={m.image} alt="upload" style={{ width:"100%", borderRadius:6, marginBottom: m.content ? 6 : 0, display:"block" }} />
                   )}
                   {m.role === "assistant" && m.content ? <AiMessageBody content={m.content} /> : m.content}
+                  {m.role === "assistant" && m.estimateCapability && <StaffEstimateResult capability={m.estimateCapability} />}
                   {m.saveable && (
                     <button
                       onClick={() => setSavePhoto({ photoUrl: m.imageUrl, aiAnalysis: m.content })}
