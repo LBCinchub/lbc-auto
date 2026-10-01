@@ -15,6 +15,7 @@ import { useNavigate } from "react-router-dom";
 import { useNhtsaVinDecode } from "@/hooks/useNhtsaVinDecode";
 import { capWords, toTitleCase, capitalizeFields } from "@/utils/capitalize";
 import AppointmentConfirmModal from "./AppointmentConfirmModal";
+import { createSingleFlight } from "@/lib/singleFlight";
 
 const timeSlots = [
   "8:00 AM", "8:30 AM", "9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM",
@@ -43,6 +44,12 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
   });
   const [saving, setSaving] = useState(false);
   const submittingRef = useRef(false);
+  const customerFlight = useRef(createSingleFlight());
+  const vehicleFlight = useRef(createSingleFlight());
+  const [savingCustomer, setSavingCustomer] = useState(false);
+  const [savingVehicle, setSavingVehicle] = useState(false);
+  const [customerSaveError, setCustomerSaveError] = useState("");
+  const [vehicleSaveError, setVehicleSaveError] = useState("");
   const [shopEmail, setShopEmail] = useState("");
   const [confirmAppt, setConfirmAppt] = useState(null);
   const queryClient = useQueryClient();
@@ -160,11 +167,21 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
 
   const saveNewCustomer = async () => {
     if (!newCustomerForm?.full_name || !newCustomerForm?.phone) return;
-    const created = await base44.entities.Customer.create({
+    if (customerFlight.current.isBusy()) return;
+    setSavingCustomer(true);
+    setCustomerSaveError("");
+    const res = await customerFlight.current.run(() => base44.entities.Customer.create({
       full_name: toTitleCase(newCustomerForm.full_name || ""),
       phone: newCustomerForm.phone,
       email: newCustomerForm.email || "",
-    });
+    }));
+    setSavingCustomer(false);
+    if (res.status === "busy") return;
+    if (res.status === "error") {
+      setCustomerSaveError("Customer may not have saved. Check the customer list before trying again. " + (res.error?.message || ""));
+      return;
+    }
+    const created = res.value;
     // Add to local cache so new customer shows immediately without waiting for refetch
     setLocalCustomers(prev => [...prev, created]);
     setForm(prev => ({ ...prev, customer_id: created.id, customer_name: created.full_name, customer_phone: created.phone || "", vehicle_id: "", vehicle_info: "" }));
@@ -189,17 +206,27 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
 
   const saveNewVehicle = async () => {
     if (!newVehicleForm?.make || !newVehicleForm?.model || !newVehicleForm?.year) return;
-    const created = await base44.entities.Vehicle.create({
-      customer_id: form.customer_id,
-      customer_name: form.customer_name,
-      vin: newVehicleForm.vin || "",
-      make: toTitleCase(newVehicleForm.make || ""),
-      model: toTitleCase(newVehicleForm.model || ""),
-      year: Number(newVehicleForm.year),
-      license_plate: newVehicleForm.license_plate || "",
-      color: toTitleCase(newVehicleForm.color || ""),
-      engine_type: toTitleCase(newVehicleForm.engine_type || ""),
-    });
+    if (vehicleFlight.current.isBusy()) return;
+    setSavingVehicle(true);
+    setVehicleSaveError("");
+    const res = await vehicleFlight.current.run(() => base44.entities.Vehicle.create({
+        customer_id: form.customer_id,
+        customer_name: form.customer_name,
+        vin: newVehicleForm.vin || "",
+        make: toTitleCase(newVehicleForm.make || ""),
+        model: toTitleCase(newVehicleForm.model || ""),
+        year: Number(newVehicleForm.year),
+        license_plate: newVehicleForm.license_plate || "",
+        color: toTitleCase(newVehicleForm.color || ""),
+        engine_type: toTitleCase(newVehicleForm.engine_type || ""),
+    }));
+    setSavingVehicle(false);
+    if (res.status === "busy") return;
+    if (res.status === "error") {
+      setVehicleSaveError("Vehicle may not have saved. Check this customer's vehicles before trying again. " + (res.error?.message || ""));
+      return;
+    }
+    const created = res.value;
     // Add to local cache so vehicle appears in dropdown immediately
     setLocalVehicles(prev => [...prev, created]);
     setForm(prev => ({ ...prev, vehicle_id: created.id, vehicle_info: `${created.year} ${created.make} ${created.model}` }));
@@ -283,9 +310,10 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
                   className="bg-gray-700 border-gray-600 text-white" placeholder="Phone number *" />
                 <Input value={newCustomerForm.email} onChange={e => setNewCustomerForm({...newCustomerForm, email: e.target.value})}
                   className="bg-gray-700 border-gray-600 text-white" placeholder="Email" />
+                {customerSaveError && <p className="text-xs text-rose-400">{customerSaveError}</p>}
                 <div className="flex gap-2">
-                  <Button size="sm" onClick={saveNewCustomer} disabled={!newCustomerForm.full_name || !newCustomerForm.phone} className="bg-sky-500 hover:bg-sky-600 text-white flex-1">Save</Button>
-                  <Button size="sm" variant="ghost" onClick={() => setNewCustomerForm(null)} className="text-gray-400 flex-1">Cancel</Button>
+                  <Button size="sm" onClick={saveNewCustomer} disabled={savingCustomer || !newCustomerForm.full_name || !newCustomerForm.phone} className="bg-sky-500 hover:bg-sky-600 text-white flex-1">{savingCustomer ? <><Loader2 className="w-3 h-3 animate-spin" /> Saving...</> : "Save"}</Button>
+                  <Button size="sm" variant="ghost" disabled={savingCustomer} onClick={() => { setNewCustomerForm(null); setCustomerSaveError(""); }} className="text-gray-400 flex-1">Cancel</Button>
                 </div>
               </div>
             )}
@@ -377,9 +405,11 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
                   className="w-full px-2 py-1 bg-gray-700 border-gray-600 text-white rounded text-xs" placeholder="Model *" />
                 <input value={newVehicleForm.license_plate} onChange={e => setNewVehicleForm({...newVehicleForm, license_plate: e.target.value})}
                   className="w-full px-2 py-1 bg-gray-700 border-gray-600 text-white rounded text-xs" placeholder="License plate" />
+                {vinDecodeError && <p className="text-xs text-amber-400">{vinDecodeError}</p>}
+                {vehicleSaveError && <p className="text-xs text-rose-400">{vehicleSaveError}</p>}
                 <div className="flex gap-2">
-                  <Button size="sm" onClick={saveNewVehicle} disabled={!newVehicleForm.year || !newVehicleForm.make || !newVehicleForm.model} className="bg-sky-500 hover:bg-sky-600 text-white flex-1">Save</Button>
-                  <Button size="sm" variant="ghost" onClick={() => setNewVehicleForm(null)} className="text-gray-400 flex-1">Cancel</Button>
+                  <Button size="sm" onClick={saveNewVehicle} disabled={savingVehicle || !newVehicleForm.year || !newVehicleForm.make || !newVehicleForm.model} className="bg-sky-500 hover:bg-sky-600 text-white flex-1">{savingVehicle ? <><Loader2 className="w-3 h-3 animate-spin" /> Saving...</> : "Save"}</Button>
+                  <Button size="sm" variant="ghost" disabled={savingVehicle} onClick={() => { setNewVehicleForm(null); setVehicleSaveError(""); }} className="text-gray-400 flex-1">Cancel</Button>
                 </div>
               </div>
             ) : (

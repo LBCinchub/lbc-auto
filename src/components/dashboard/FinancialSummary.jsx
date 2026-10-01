@@ -1,39 +1,15 @@
 import React from "react";
 import { DollarSign, TrendingUp, AlertCircle, Wrench } from "lucide-react";
+import { collectedRevenue, countActiveOrders } from "@/lib/dashboardMetrics";
 
 export default function FinancialSummary({ invoices, orders }) {
-  const today = new Date().toISOString().split("T")[0];
-  const now = new Date();
-  const weekStart = new Date(now);
-  const dayOfWeek = now.getDay();
-  weekStart.setDate(now.getDate() - dayOfWeek);
-  const weekStartStr = weekStart.toISOString().split("T")[0];
-
-  let todayRevenue = 0;
-  let weekRevenue = 0;
-
-  for (const inv of invoices) {
-    const history = inv.payment_history || [];
-    for (const p of history) {
-      const pDate = (p.date || "").split("T")[0];
-      if (pDate === today) todayRevenue += parseFloat(p.amount) || 0;
-      if (pDate >= weekStartStr && pDate <= today) weekRevenue += parseFloat(p.amount) || 0;
-    }
-    // Also count amount_paid if paid_date falls in range and no detailed history
-    if (history.length === 0 && inv.amount_paid > 0 && inv.paid_date) {
-      const pd = inv.paid_date.split("T")[0];
-      if (pd === today) todayRevenue += parseFloat(inv.amount_paid) || 0;
-      if (pd >= weekStartStr && pd <= today) weekRevenue += parseFloat(inv.amount_paid) || 0;
-    }
-  }
+  const { today: todayRevenue, week: weekRevenue, needsReview } = collectedRevenue(invoices);
 
   const outstanding = invoices
     .filter(inv => (inv.balance_due || 0) > 0 && inv.status !== "paid")
     .reduce((s, inv) => s + (parseFloat(inv.balance_due) || 0), 0);
 
-  const activeROs = orders.filter(o =>
-    o.status === "in_progress" || o.status === "waiting" || o.status === "waiting_for_parts"
-  ).length;
+  const activeROs = countActiveOrders(orders);
 
   const r2 = (n) => Math.round(n * 100) / 100;
 
@@ -60,7 +36,12 @@ export default function FinancialSummary({ invoices, orders }) {
           <span className="text-xs text-sky-400/70 font-medium uppercase tracking-wide">This Week</span>
         </div>
         <p className="text-2xl font-bold text-sky-400">${r2(weekRevenue).toFixed(2)}</p>
-        <p className="text-xs text-gray-500 mt-0.5">Revenue this week</p>
+        <p className="text-xs text-gray-500 mt-0.5">Collected this week</p>
+        {needsReview > 0 && (
+          <p className="text-xs text-amber-400/80 mt-1" title="Payments with a missing date or invalid amount are not counted">
+            {needsReview} payment{needsReview > 1 ? "s" : ""} need review
+          </p>
+        )}
       </div>
 
       {/* Outstanding */}
@@ -84,7 +65,7 @@ export default function FinancialSummary({ invoices, orders }) {
           <span className="text-xs text-violet-400/70 font-medium uppercase tracking-wide">Active ROs</span>
         </div>
         <p className="text-2xl font-bold text-violet-400">{activeROs}</p>
-        <p className="text-xs text-gray-500 mt-0.5">Repair orders in progress</p>
+        <p className="text-xs text-gray-500 mt-0.5">Waiting, in progress or waiting for parts</p>
       </div>
     </div>
   );
