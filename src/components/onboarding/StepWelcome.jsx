@@ -13,7 +13,7 @@ export default function StepWelcome({ onNext }) {
   return (
     <div style={cardStyle}>
       <div style={{ padding: "36px 32px", textAlign: "center" }}>
-        <div style={{ fontSize: 48, marginBottom: 12 }}>⚡</div>
+        <LbcAutoLogo size="lg" style={{ marginBottom: 12 }} />
         <h1 style={{ color: "#f1f5f9", fontSize: 26, fontWeight: 800, margin: 0, letterSpacing: "-0.02em" }}>
           Welcome to LBC AUTO
         </h1>

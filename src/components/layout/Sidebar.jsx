@@ -33,6 +33,7 @@ import {
   Gauge,
   MessageSquare
 } from "lucide-react";
+import LbcAutoLogo from "@/components/brand/LbcAutoLogo";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/lib/ThemeContext";
 import GlobalSearch from "@/components/shared/GlobalSearch";
@@ -112,9 +113,7 @@ export default function Sidebar({ currentPage }) {
         {/* Logo — fixed, never scrolls */}
         <div className={cn("flex-shrink-0 h-16 flex items-center px-4 border-b", isLight ? "border-gray-200" : "border-gray-800/50")}>
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center flex-shrink-0">
-              <Zap className="w-5 h-5 text-white" />
-            </div>
+            <LbcAutoLogo size="sm" />
             {!collapsed && (
               <div className="min-w-0">
                 <h1 className={cn("font-bold text-lg leading-tight tracking-tight", isLight ? "text-gray-900" : "text-white")}>LBC Auto</h1>
