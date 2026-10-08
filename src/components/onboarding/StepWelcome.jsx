@@ -1,4 +1,5 @@
 import React from "react";
+import LbcAutoLogo from "@/components/brand/LbcAutoLogo";
 import { ArrowRight, Check } from "lucide-react";
 import { cardStyle, btnPrimary, ProgressBar } from "./onboardingStyles.jsx";
 

@@ -40,6 +40,7 @@ import OnboardingFlow from './components/onboarding/OnboardingFlow';
 import CustomerPortalSecurityAnnouncement from './components/shared/CustomerPortalSecurityAnnouncement';
 import WebBookingWidget from './pages/WebBookingWidget';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import LbcAutoLogo from '@/components/brand/LbcAutoLogo';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];

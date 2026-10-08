@@ -1,4 +1,5 @@
 import React from "react";
+import LbcAutoLogo from "@/components/brand/LbcAutoLogo";
 import { KeyRound, LockKeyhole, ShieldCheck, Store } from "lucide-react";
 const trust=[[Store,"Isolated shop workspace","Each shop operates within its own workspace."],[ShieldCheck,"Role-based access","Authenticated access keeps each role focused on its authorized view."],[KeyRound,"Verified customer access","Portal activation is verified before customers create their own passcode."],[LockKeyhole,"Correct shop scope","Customer and shop records remain scoped to the correct shop."]];
 export function TrustSection(){return <section className="lp-section lp-trust"><div className="lp-container"><div className="lp-section-head"><span className="lp-eyebrow">TRUST BY DESIGN</span><h2>Clear access boundaries for a connected shop.</h2></div><div className="lp-trust-grid">{trust.map(([Icon,title,copy])=><article key={title}><Icon/><h3>{title}</h3><p>{copy}</p></article>)}</div></div></section>}

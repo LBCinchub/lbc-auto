@@ -17,7 +17,6 @@ import {
   ChevronRight,
   Menu,
   X,
-  Zap,
   Clock,
   Banknote,
   Settings as SettingsIcon,

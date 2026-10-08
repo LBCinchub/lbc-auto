@@ -1,4 +1,5 @@
 import React from "react";
+import LbcAutoLogo from "@/components/brand/LbcAutoLogo";
 import { Menu, X } from "lucide-react";
 
 const links = [["Product Tour", "tour"], ["How It Works", "how-it-works"], ["For Shops", "for-shops"], ["Pricing", "pricing"]];
