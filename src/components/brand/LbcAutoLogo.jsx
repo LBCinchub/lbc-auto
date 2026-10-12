@@ -4,7 +4,7 @@ import React from "react";
 // Never use for tenant/shop logos.
 export const LBC_AUTO_LOGO_SRC = "/brand/lbc-auto-logo-v1.png";
 
-const SIZES = { xs: 28, sm: 36, md: 48, lg: 72, xl: 96 };
+const SIZES = { xxs: 20, xs: 28, sm: 36, md: 48, lg: 72, xl: 96 };
 
 export default function LbcAutoLogo({ size = "sm", className = "", style }) {
   const px = SIZES[size] || SIZES.sm;
