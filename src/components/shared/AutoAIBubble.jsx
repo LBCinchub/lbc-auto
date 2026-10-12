@@ -5,6 +5,9 @@ import { base44 } from "@/api/base44Client";
 import SavePhotoToProfile from "@/components/photos/SavePhotoToProfile";
 import AiMessageBody from "@/components/shared/AiMessageBody";
 import StaffEstimateResult from "@/components/shared/StaffEstimateResult";
+import AiOverlayLayer from "@/components/shared/AiOverlayLayer";
+import { FocusScope } from "@radix-ui/react-focus-scope";
+import useFinancialShellOpen from "@/hooks/useFinancialShellOpen";
 
 // Detail pages with a sticky bottom financial action bar — lift the widget above it.
 const DETAIL_PATTERN = /\/(EstimateDetail|RepairOrderDetail|InvoiceDetail)/i;
@@ -133,7 +136,9 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
   const location = useLocation();
   // On financial detail pages, lift the widget above the sticky action bar.
   const detailMode = DETAIL_PATTERN.test(location.pathname);
-  const bottomOffset = detailMode ? 92 : 20;
+  // Also lift above the financial editor's bottom action bar while it is open.
+  const shellOpen = useFinancialShellOpen();
+  const bottomOffset = `calc(${detailMode || shellOpen ? 92 : 20}px + env(safe-area-inset-bottom, 0px))`;
 
   const [open, setOpen]       = useState(false);
   const [messages, setMessages] = useState([]);
@@ -227,11 +232,18 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
   };
 
   return (
+    <AiOverlayLayer>
     <div style={{ position: "fixed", bottom: bottomOffset, right: 20, zIndex: 9998, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
 
       {/* ── Chat Panel (opens above the button) ── */}
+      {/* FocusScope pauses any open dialog's focus trap while chat is open,
+          and returns focus to the launcher when chat closes. */}
       {open && (
-        <div className="lbc-ai-panel" style={{ width: 340, maxWidth: "calc(100vw - 40px)" }}>
+        <FocusScope asChild loop={false} trapped={false}
+          onMountAutoFocus={(e) => { e.preventDefault(); inputRef.current?.focus({ preventScroll: true }); }}>
+        <div className="lbc-ai-panel" role="dialog" aria-label="LBC Auto AI Chat" aria-modal="false"
+          style={{ width: 340, maxWidth: "calc(100vw - 40px)" }}
+          onKeyDown={(e) => { if (e.key === "Escape") { e.preventDefault(); setOpen(false); } }}>
 
           {/* Header */}
           <div className="lbc-ai-header">
@@ -453,6 +465,7 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
           </div>
 
         </div>
+        </FocusScope>
       )}
 
       {/* ── Save Photo Dialog ── */}
@@ -467,7 +480,10 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
       )}
 
       {/* ── LED Floating Toggle Button ── */}
-      <div className="lbc-ai-toggle" onClick={() => setOpen(v => !v)}>
+      <div className="lbc-ai-toggle" role="button" tabIndex={0} aria-expanded={open}
+        aria-label={open ? "Close LBC Auto AI" : "Open LBC Auto AI"}
+        onClick={() => setOpen(v => !v)}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen(v => !v); } }}>
         <div className="lbc-ai-icon-ring">
           <Bot style={{ width: 18, height: 18, color: "#ffffff" }} />
         </div>
@@ -483,5 +499,6 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
         <div style={{ width:8, height:8, borderRadius:"50%", background:"#00ff88", boxShadow:"0 0 6px #00ff88", flexShrink:0 }} />
       </div>
     </div>
+    </AiOverlayLayer>
   );
 }
