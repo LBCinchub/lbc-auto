@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import LbcAutoLogo from "@/components/brand/LbcAutoLogo";
+import { shouldAnimate } from "@/lib/typewriter";
 import { Send, Loader2, Wrench, Camera, Paperclip, X, Pin, CalendarPlus } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import SavePhotoToProfile from "@/components/photos/SavePhotoToProfile";
@@ -341,7 +342,7 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
                   {m.role === "assistant" && m.content ? (
                     <AiMessageBody
                       content={m.content}
-                      animate={!!m.animate && !animatedIdsRef.current.has(m.id)}
+                      animate={shouldAnimate(m, animatedIdsRef.current)}
                       onDone={() => animatedIdsRef.current.add(m.id)}
                       onProgress={followIfNear}
                     />

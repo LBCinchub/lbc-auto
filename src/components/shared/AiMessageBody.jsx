@@ -6,7 +6,7 @@ import useTypewriter from "@/hooks/useTypewriter";
 
 const btn = {
   display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, padding: "4px 9px",
-  minHeight: 28, borderRadius: 20, cursor: "pointer", background: "#1f1206",
+  minHeight: 32, borderRadius: 20, cursor: "pointer", background: "#1f1206",
   border: "1px solid #f9731666", color: "#fdba74",
 };
 const srOnly = { position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)", whiteSpace: "nowrap" };
