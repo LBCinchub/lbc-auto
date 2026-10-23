@@ -5,15 +5,14 @@ import BackButton from "@/components/shared/BackButton";
 import { Mail } from "lucide-react";
 import { buildVehicleInfo } from "@/utils/buildVehicleInfo";
 import { formatPhone } from "@/utils/formatPhone";
+import { engineSummary } from "@/lib/vehicleDetails";
 
 export default function EstimateEditorHeader({ estimate, customer, vehicle, linkedInvoice, linkedRO }) {
   const navigate = useNavigate();
   const customerId = estimate?.customer_id || customer?.id;
   const vehicleId = estimate?.vehicle_id || vehicle?.id;
   const vehicleLine = buildVehicleInfo(vehicle) || estimate?.vehicle_info || "";
-  const engineInfo = vehicle?.engine_type
-    || [vehicle?.engine_liters, vehicle?.fuel_type].filter(Boolean).join(" ").trim()
-    || "";
+  const engineInfo = engineSummary(vehicle);
 
   return (
     <div className="border-b border-gray-800 px-5 py-4 md:px-6">

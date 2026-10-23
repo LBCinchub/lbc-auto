@@ -1,6 +1,8 @@
 import { formatPhone } from "@/utils/formatPhone";
 import { normalizeDiscountType } from "@/utils/discount";
 
+const WRAP = { overflowWrap: "anywhere", wordBreak: "break-word", whiteSpace: "pre-line", breakInside: "avoid" };
+
 function buildPrintHTML(contentHTML, title, isWorker) {
   return `
     <html>
@@ -203,8 +205,8 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
             <div style={{ fontSize: 9, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: 2, marginTop: 1 }}>Auto Services</div>
             <div style={{ marginTop: 5, fontSize: 10, color: "#475569", lineHeight: 1.6 }}>
               {user?.phone && <div>{formatPhone(user.phone)}</div>}
-              {user?.email && <div>{user.email}</div>}
-              {user?.address && <div>{user.address}</div>}
+              {user?.email && <div style={WRAP}>{user.email}</div>}
+              {user?.address && <div style={WRAP}>{user.address}</div>}
               {user?.gst_number && <div>GST/Business #: {user.gst_number}</div>}
             </div>
           </div>
@@ -232,8 +234,8 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
           )}
           <div style={{ fontSize: 10, color: "#475569", lineHeight: 1.6 }}>
             {customer?.phone && <div>{formatPhone(customer.phone)}</div>}
-            {customer?.email && <div>{customer.email}</div>}
-            {customer?.address && <div>{customer.address}</div>}
+            {customer?.email && <div style={WRAP}>{customer.email}</div>}
+            {customer?.address && <div style={WRAP}>{customer.address}</div>}
           </div>
         </div>
         {vehicle?.info && (

@@ -1,5 +1,6 @@
 import React from "react";
 import { Car, Hash, Gauge, Palette, Wrench, FileText } from "lucide-react";
+import { engineSummary } from "@/lib/vehicleDetails";
 
 export default function VehicleInfoBanner({ vehicle, customerName }) {
   if (!vehicle) return null;
@@ -10,7 +11,7 @@ export default function VehicleInfoBanner({ vehicle, customerName }) {
     { icon: FileText, label: "VIN", value: vehicle.vin },
     { icon: Hash, label: "Plate", value: vehicle.license_plate },
     { icon: Gauge, label: "Mileage", value: vehicle.mileage != null ? `${vehicle.mileage?.toLocaleString()} km` : null },
-    { icon: Wrench, label: "Engine", value: vehicle.engine_type },
+    { icon: Wrench, label: "Engine", value: engineSummary(vehicle) },
     { icon: Palette, label: "Color", value: vehicle.color },
   ].filter(r => r.value);
 

@@ -78,7 +78,7 @@ export default function Settings() {
       setLaborRate(currentUser?.labor_rate != null ? String(currentUser.labor_rate) : "");
       setTaxAppliesTo(currentUser?.tax_applies_to || "both");
       setLogoUrl(currentUser?.business_logo || "");
-      setShopEmail(currentUser?.email || "");
+      setShopEmail(currentUser?.business_email || currentUser?.email || "");
       setGoogleReviewLink(currentUser?.google_review_link || "");
       // Load notification prefs (default SMS on, email off)
       const prefs = {};
@@ -103,7 +103,7 @@ export default function Settings() {
         notifData[`notif_sms_${key}`] = notifPrefs[`sms_${key}`] !== false;
         notifData[`notif_email_${key}`] = notifPrefs[`email_${key}`] === true;
       });
-      await base44.auth.updateMe({ labor_rate: parseFloat(laborRate) || 0, business_name: businessName, phone: shopPhone, address: shopAddress, gst_number: gstNumber, hst_number: hstNumber, tax_rate: taxRate !== "" ? parseFloat(taxRate) : 0, tax_applies_to: taxAppliesTo, business_logo: logoUrl, email: shopEmail, google_review_link: googleReviewLink, ...notifData });
+      await base44.auth.updateMe({ labor_rate: parseFloat(laborRate) || 0, business_name: businessName, phone: shopPhone, address: shopAddress, gst_number: gstNumber, hst_number: hstNumber, tax_rate: taxRate !== "" ? parseFloat(taxRate) : 0, tax_applies_to: taxAppliesTo, business_logo: logoUrl, business_email: shopEmail.trim(), google_review_link: googleReviewLink, ...notifData });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
       window.dispatchEvent(new Event("lbc:settings-saved"));

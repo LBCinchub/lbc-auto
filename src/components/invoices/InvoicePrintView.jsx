@@ -6,27 +6,26 @@ import { formatRecordDate } from "@/lib/printDate";
 import PrintTemplate from "@/components/shared/PrintTemplate";
 import { buildVehicleInfo } from "@/utils/buildVehicleInfo";
 import { calcGhostTotals } from "@/utils/ghostTax";
+import { shopContact, customerContact, loadInvoiceContacts } from "@/lib/printContacts";
 
 export default function InvoicePrintView({ invoice, onClose }) {
-  const [customer, setCustomer] = useState(null);
-  const [user, setUser] = useState(null);
-  const [vehicleData, setVehicleData] = useState(null);
+  const [state, setState] = useState({ status: "loading" });
+  const [attempt, setAttempt] = useState(0);
+  const { user, customer, vehicle: vehicleData } = state.data || {};
 
   useEffect(() => {
-    const loadData = async () => {
-      const currentUser = await base44.auth.me();
-      setUser(currentUser);
-      if (invoice?.customer_id) {
-        const cust = await base44.entities.Customer.get(invoice.customer_id);
-        setCustomer(cust);
-      }
-      if (invoice?.vehicle_id) {
-        const v = await base44.entities.Vehicle.get(invoice.vehicle_id).catch(() => null);
-        setVehicleData(v);
-      }
-    };
-    loadData();
-  }, [invoice]);
+    let current = true;
+    setState({ status: "loading" });
+    loadInvoiceContacts({
+      invoice,
+      me: () => base44.auth.me(),
+      getCustomer: (id) => base44.entities.Customer.get(id),
+      getVehicle: (id) => base44.entities.Vehicle.get(id),
+    })
+      .then((data) => { if (current) setState({ status: "ready", data }); })
+      .catch(() => { if (current) setState({ status: "error" }); });
+    return () => { current = false; };
+  }, [invoice?.id, invoice?.customer_id, invoice?.vehicle_id, attempt]);
 
   // Build line items from parts + labor — prefer the unified line_items (which
   // always carries both Labor and Parts from the estimate/RO), fall back to
@@ -125,12 +124,19 @@ export default function InvoicePrintView({ invoice, onClose }) {
         <DialogHeader>
           <DialogTitle>Invoice Preview</DialogTitle>
         </DialogHeader>
-        <PrintTemplate
+        {state.status === "loading" && <p className="py-10 text-center text-sm text-gray-500">Loading Contact Details…</p>}
+        {state.status === "error" && (
+          <div className="py-10 text-center text-sm text-red-600">
+            Could Not Load Contact Details. Printing Is Paused So Nothing Is Missing.
+            <button className="ml-2 underline" onClick={() => setAttempt((n) => n + 1)}>Retry</button>
+          </div>
+        )}
+        {state.status === "ready" && <PrintTemplate
           type="Invoice"
           docNumber={invoice.invoice_number}
           createdDate={invoice.created_date ? new Date(invoice.created_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ""}
-          user={user}
-          customer={{ name: invoice.customer_name, phone: customer?.phone, email: customer?.email }}
+          user={{ ...user, ...shopContact(user) }}
+          customer={customerContact(customer, invoice)}
           vehicle={{ ...vehicleData, info: buildVehicleInfo(vehicleData) || invoice.vehicle_info }}
           lineItems={filteredLineItems}
           paymentHistory={paymentHistory}
@@ -140,7 +146,7 @@ export default function InvoicePrintView({ invoice, onClose }) {
           ghostNotes={invoice.ghost_notes}
           notes={invoice.customer_note}
           serviceReason={invoice.service_reason}
-        />
+        />}
       </DialogContent>
     </Dialog>
   );

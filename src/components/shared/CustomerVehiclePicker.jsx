@@ -12,6 +12,8 @@ import { buildVehicleInfo } from "@/utils/buildVehicleInfo";
 import { toTitleCase } from "@/utils/capitalize";
 import { useToast } from "@/components/ui/use-toast";
 import { useNhtsaVinDecode } from "@/hooks/useNhtsaVinDecode";
+import { mergeVinResult } from "@/lib/vin";
+import { vehicleIdentity, engineSummary } from "@/lib/vehicleDetails";
 
 // Real-time Title Case for word inputs (first letter of every word), mirroring the
 // global autoCapitalize pattern. VIN/plate/email/phone stay as typed.
@@ -50,7 +52,7 @@ export default function CustomerVehiclePicker({
   const [savingCust, setSavingCust] = useState(false);
   const [savingVeh, setSavingVeh] = useState(false);
   const [newCust, setNewCust] = useState({ full_name: "", phone: "", email: "", address: "" });
-  const [newVeh, setNewVeh] = useState({ make: "", model: "", year: "", trim: "", engine_type: "", vin: "", license_plate: "", color: "" });
+  const [newVeh, setNewVeh] = useState({ make: "", model: "", year: "", trim: "", engine_type: "", engine_liters: "", fuel_type: "", transmission: "", drive_type: "", vin: "", license_plate: "", color: "" });
 
   // VIN decode — same NHTSA hook as the Vehicles page & diagnostics quick-add.
   // Auto-decodes when the VIN reaches 17 characters (typed or pasted).
@@ -62,23 +64,18 @@ export default function CustomerVehiclePicker({
   const keepFocus = (e) => e.preventDefault();
   const handleVinChange = (raw) => {
     const vin = raw.toUpperCase().replace(/\s+/g, "");
-    setNewVeh({ ...newVeh, vin });
+    const next = { ...newVeh, vin };
+    setNewVeh(next);
     if (vin.length === 17 && vin !== lastDecodedVinRef.current) {
       lastDecodedVinRef.current = vin;
-      autoDecodeVin(vin);
+      autoDecodeVin(vin, next);
     }
   };
-  const autoDecodeVin = async (vin) => {
+  const autoDecodeVin = async (vin, start) => {
     const result = await decodeVin(vin);
     if (result) {
-      setNewVeh((prev) => ({
-        ...prev,
-        year: result.year || prev.year,
-        make: result.make ? toTitleCase(result.make) : prev.make,
-        model: result.model ? toTitleCase(result.model) : prev.model,
-        trim: result.trim ? toTitleCase(result.trim) : prev.trim,
-        engine_type: result.engine_type || prev.engine_type,
-      }));
+      const titled = ["make", "model", "trim"];
+      setNewVeh((prev) => mergeVinResult(prev, result, start, undefined, (f, v) => (titled.includes(f) ? toTitleCase(v) : v)));
       toast({ title: "VIN decoded ✓" });
     }
   };
@@ -93,19 +90,8 @@ export default function CustomerVehiclePicker({
   const vehiclePlate = selectedVehicle?.license_plate || "";
   const vehicleColor = selectedVehicle?.color || "";
   const vehicleTrim = selectedVehicle?.trim_level || selectedVehicle?.trim || "";
-  const vehicleEngine = selectedVehicle?.engine_type || "";
-  const vehicleFuel = selectedVehicle?.fuel_type || "";
-  const vehicleEngineLiters = selectedVehicle?.engine_liters || "";
-  // Bold identity line: Year Make Model Trim (engine lives in a muted line below)
-  const vehicleHeadline = [selectedVehicle?.year, selectedVehicle?.make, selectedVehicle?.model, vehicleTrim]
-    .map((x) => (x == null ? "" : String(x).trim()))
-    .filter(Boolean)
-    .join(" ");
-  // Engine detail line: prefer engine_type, else liters, plus fuel type
-  const engineLine = [vehicleEngine || vehicleEngineLiters, vehicleFuel]
-    .map((x) => (x == null ? "" : String(x).trim()))
-    .filter(Boolean)
-    .join(" · ");
+  const vehicleHeadline = vehicleIdentity(selectedVehicle);
+  const engineLine = engineSummary(selectedVehicle);
 
   // Load vehicles for the selected customer (also covers prefill on mount).
   useEffect(() => {
@@ -205,6 +191,10 @@ export default function CustomerVehiclePicker({
         year: Number(newVeh.year) || 0,
         trim: newVeh.trim ? toTitleCase(newVeh.trim.trim()) : "",
         engine_type: newVeh.engine_type || "",
+        engine_liters: newVeh.engine_liters || "",
+        fuel_type: newVeh.fuel_type || "",
+        transmission: newVeh.transmission || "",
+        drive_type: newVeh.drive_type || "",
         vin: newVeh.vin.toUpperCase(),
         license_plate: newVeh.license_plate.toUpperCase(),
         color: newVeh.color ? toTitleCase(newVeh.color.trim()) : "",
@@ -214,7 +204,7 @@ export default function CustomerVehiclePicker({
       setCustomerVehicles((prev) => [...prev, created]);
       onVehicleChange(created.id, buildVehicleInfo(created));
       setShowNewVehicle(false);
-      setNewVeh({ make: "", model: "", year: "", trim: "", engine_type: "", vin: "", license_plate: "", color: "" });
+      setNewVeh({ make: "", model: "", year: "", trim: "", engine_type: "", engine_liters: "", fuel_type: "", transmission: "", drive_type: "", vin: "", license_plate: "", color: "" });
       toast({ title: "Vehicle created ✓" });
     } catch (e) {
       toast({ title: "Could not create vehicle", description: e?.message, variant: "destructive" });

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { mergeVinResult } from "@/lib/vin";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -63,16 +64,9 @@ export default function VehicleFormDialog({ open, onClose, vehicle, onSaved, cus
   }, [vehicle, open]);
 
   const decodeVin = async () => {
+    const start = form;
     const result = await nhtsaDecode(form.vin);
-    if (result) {
-      setForm(prev => ({
-        ...prev,
-        make: result.make || prev.make,
-        model: result.model || prev.model,
-        year: result.year || prev.year,
-        engine_type: result.engine_type || prev.engine_type,
-      }));
-    }
+    if (result) setForm(prev => mergeVinResult(prev, result, start));
   };
 
   const handleSave = async () => {
