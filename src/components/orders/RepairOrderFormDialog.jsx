@@ -22,6 +22,8 @@ import CustomerSearchInput from "@/components/shared/CustomerSearchInput";
 import { capWords, toTitleCase, capitalizeFields, capitalizeArrayItems } from "@/utils/capitalize";
 import UnifiedFinancialActionBar from "@/components/financial-workflow/UnifiedFinancialActionBar";
 import { laborRate, normalizeLaborItems, normalizeParts, inventoryDeltas, isPersisted } from "@/lib/repairOrderSave";
+import { roFormPolicy, fillFromSourceEstimate, roTotals, roSavePolicy } from "@/lib/repairOrderTotals";
+import { readDiscount, toDocumentDiscount } from "@/lib/financialPolicy";
 
 const statuses = [
   { value: "waiting", label: "Waiting" },
@@ -39,7 +41,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
     labor_hours: "", labor_items: [{ description: "", hours: "", rate: "120", total: 0 }], // rate overridden at load
     notes: "", parts_used: [], estimated_completion: "", estimate_id: "", photos: [], history: [],
     discount_type: "none", discount_value: 0, total_cost: 0, custom_total: false,
-    apply_tax: true, tax_applies_to: "both"
+    apply_tax: true, tax_applies_to: "both", tax_rate: null
   });
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -51,6 +53,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
   const [newVehicleForm, setNewVehicleForm] = useState(null);
   const { decoding: decodingVin, vinError: vinDecodeError, decodeVin: nhtsaDecode, setVinError: setVinDecodeError } = useNhtsaVinDecode();
   const [userTaxRate, setUserTaxRate] = useState(0);
+  const [policyMissing, setPolicyMissing] = useState([]);
   const [userLaborRate, setUserLaborRate] = useState(120);
   const submittingRef = useRef(false);
   // Last persisted state in this dialog session: a retry after a partial save updates the same
@@ -101,28 +104,20 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
   // Live cost calculation (only if not custom/saved)
   const mechanic = mechanics.find(m => m.id === form.mechanic_id);
   // Always compute from raw field values — never rely on stale .total in state
-  const laborCost = (form.labor_items || []).reduce((s, r) => s + (parseFloat(r.hours) || 0) * laborRate(r), 0);
-  const partsCost = (form.parts_used || []).reduce((sum, p) => sum + (parseFloat(p.unit_price) || 0) * (parseFloat(p.quantity) || 0), 0);
-  const TAX_RATE = userTaxRate;
-  const subtotal = laborCost + partsCost;
-  const discountAmount = form.discount_type === "percentage" 
-    ? subtotal * ((form.discount_value || 0) / 100)
-    : form.discount_type === "fixed" ? (form.discount_value || 0) : 0;
-  const afterDiscount = subtotal - discountAmount;
-
-  const taxAppliesTo = form.tax_applies_to || "both";
-  let taxableAmount = 0;
-  if (taxAppliesTo === "both") taxableAmount = afterDiscount;
-  else if (taxAppliesTo === "labor") taxableAmount = laborCost - (form.discount_type !== "none" ? discountAmount : 0);
-  else if (taxAppliesTo === "parts") taxableAmount = partsCost;
-
-  const taxAmount = form.apply_tax ? taxableAmount * (TAX_RATE / 100) : 0;
-  const calculatedTotal = afterDiscount + taxAmount;
-  const totalCost = form.custom_total ? Number(form.total_cost) || 0 : calculatedTotal;
+  // One shared calculation for display and save (document tax rate wins over shop default).
+  const totals = roTotals(form, userTaxRate);
+  const laborCost = totals.labor;
+  const partsCost = totals.parts;
+  const TAX_RATE = totals.taxRate;
+  const taxOn = totals.taxTarget !== "none";
+  const discountAmount = totals.discount;
+  const taxAmount = totals.tax;
+  const totalCost = totals.total;
 
   useEffect(() => {
     if (order && order.id) {
-      // Editing an existing repair order
+      // Editing an existing repair order — its own saved tax/discount policy is authoritative
+      const { missing: editMissing, ...editPolicy } = roFormPolicy(order);
       setForm({
         customer_id: order.customer_id || "",
         customer_name: order.customer_name || "",
@@ -140,15 +135,21 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         estimate_id: order.estimate_id || "",
         photos: order.photos || [],
         history: order.history || [],
-        discount_type: order.discount_type || "none",
-        discount_value: order.discount_value || 0,
+        ...editPolicy,
         total_cost: order.total_cost || 0,
-        custom_total: order.total_cost ? true : false,
-        apply_tax: order.apply_tax !== false,
-        tax_applies_to: order.tax_applies_to || "both",
+        custom_total: order.custom_total ?? !!order.total_cost,
       });
+      setPolicyMissing(editMissing);
+      if (editMissing.length && order.estimate_id) {
+        base44.entities.Estimate.get(order.estimate_id).then((est) => {
+          const { missing, tax_rate, tax_applies_to, apply_tax } = fillFromSourceEstimate({ ...editPolicy, missing: editMissing }, est);
+          setForm((f) => ({ ...f, tax_rate, tax_applies_to, apply_tax }));
+          setPolicyMissing(missing);
+        }).catch(() => {});
+      }
     } else {
       // New repair order (possibly pre-filled with customer info from customer profile or appointment)
+      const { missing: _m, ...newPolicy } = roFormPolicy(order || {});
       setForm({
         customer_id: order?.customer_id || "",
         customer_name: order?.customer_name || "",
@@ -157,9 +158,9 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         mechanic_id: "", mechanic_name: "", description: "", status: "waiting",
         labor_hours: "", labor_items: [{ description: "", hours: "", rate: "120", total: 0 }], // rate overridden at load
         notes: "", parts_used: [], estimated_completion: "", estimate_id: order?.estimate_id || "", photos: order?.photos || [], history: [],
-        discount_type: order?.discount_type || "none", discount_value: order?.discount_value || 0, total_cost: 0, custom_total: false,
-        apply_tax: true, tax_applies_to: "both"
+        ...newPolicy, total_cost: 0, custom_total: false,
       });
+      setPolicyMissing([]);
       // Seed vehicle dropdown immediately — prevents blank select before fetch resolves
       if (order?._prefillVehicleId || order?.vehicle_id) {
         const vid   = order._prefillVehicleId   || order.vehicle_id   || "";
@@ -328,22 +329,13 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
       // Schema fields are numbers; the form holds strings while typing (string rate/hours were rejected on save).
       const laborItems = normalizeLaborItems(form.labor_items || []);
       const partsUsed = normalizeParts(form.parts_used || []);
-      const laborCost = laborItems.reduce((s, r) => s + r.total, 0);
-      const partsCost = partsUsed.reduce((sum, p) => sum + p.total, 0);
       const base = persistedRef.current.order;
       const existingId = persistedRef.current.id;
-      const subtotal = laborCost + partsCost;
-      const discountAmount = form.discount_type === "percentage" 
-        ? subtotal * ((form.discount_value || 0) / 100)
-        : form.discount_type === "fixed" ? (form.discount_value || 0) : 0;
-      const afterDiscount = subtotal - discountAmount;
-      const taxAppliesTo = form.tax_applies_to || "both";
-      let taxableBase = afterDiscount;
-      if (taxAppliesTo === "labor") taxableBase = laborCost;
-      else if (taxAppliesTo === "parts") taxableBase = partsCost;
-      const taxAmt = Math.round((form.apply_tax ? taxableBase * (userTaxRate / 100) : 0) * 100) / 100;
-      const calculatedTotal = Math.round((afterDiscount + taxAmt) * 100) / 100;
-      const finalTotal = form.custom_total ? Math.round((Number(form.total_cost) || 0) * 100) / 100 : calculatedTotal;
+      const saveTotals = roTotals(form, userTaxRate);
+      const laborCost = saveTotals.labor;
+      const partsCost = saveTotals.parts;
+      const savePolicy = roSavePolicy(form, saveTotals);
+      const finalTotal = savePolicy.total_cost;
 
       const timestamp = new Date().toISOString();
       let userEmail = 'system';
@@ -365,8 +357,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         labor_hours: laborHours,
         labor_cost: Math.round(laborCost * 100) / 100,
         parts_cost: Math.round(partsCost * 100) / 100,
-        total_cost: finalTotal,
-        custom_total: form.custom_total,
+        ...savePolicy,
         order_number: base?.order_number || persistedRef.current.number,
       };
       // Capitalize text fields
@@ -409,7 +400,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
             if (est) {
               const estLaborTotal = data.labor_cost;
               const estPartsTotal = data.parts_cost;
-              const estTaxAmount = form.apply_tax ? (estLaborTotal + estPartsTotal) * (userTaxRate / 100) : 0;
+              const estTaxAmount = saveTotals.tax;
               await base44.entities.Estimate.update(estId, {
                 customer_id: data.customer_id,
                 customer_name: data.customer_name,
@@ -417,9 +408,11 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                 vehicle_info: data.vehicle_info,
                 labor_total: estLaborTotal,
                 parts_total: estPartsTotal,
-                tax_rate: form.apply_tax ? userTaxRate : 0,
-                tax_amount: Math.round(estTaxAmount * 100) / 100,
-                grand_total: Math.round((estLaborTotal + estPartsTotal + estTaxAmount) * 100) / 100,
+                tax_rate: saveTotals.taxRate,
+                tax_applies_to: saveTotals.taxTarget,
+                ...toDocumentDiscount(readDiscount(savePolicy)),
+                tax_amount: estTaxAmount,
+                grand_total: saveTotals.calculatedTotal,
                 notes: est.notes,
                 labor_items: data.labor_items || est.labor_items,
                 parts_items: data.parts_used?.map(p => ({ name: p.name, part_number: p.part_number || "", quantity: p.quantity, unit_price: p.unit_price, total: p.total })) || est.parts_items,
@@ -890,17 +883,17 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
               <div className="flex gap-2 items-center">
                 <button
                   type="button"
-                  onClick={() => setForm(f => ({ ...f, apply_tax: !f.apply_tax }))}
+                  onClick={() => setForm(f => { const on = (f.tax_applies_to || "both") !== "none" && f.apply_tax !== false; return { ...f, apply_tax: !on, tax_applies_to: on ? "none" : "both" }; })}
                   className={`text-xs px-3 py-1 rounded-full border font-medium transition-colors flex items-center gap-1.5 ${
-                    form.apply_tax
+                    taxOn
                       ? "bg-sky-500/20 border-sky-500 text-sky-400"
                       : "bg-gray-800 border-gray-700 text-gray-500"
                   }`}
                 >
-                  <span className={`w-1.5 h-1.5 rounded-full ${form.apply_tax ? "bg-sky-400" : "bg-gray-600"}`} />
+                  <span className={`w-1.5 h-1.5 rounded-full ${taxOn ? "bg-sky-400" : "bg-gray-600"}`} />
                   Tax {TAX_RATE}%
                 </button>
-                {form.apply_tax && (
+                {taxOn && (
                   <Select value={form.tax_applies_to || "both"} onValueChange={v => setForm(f => ({ ...f, tax_applies_to: v }))}>
                     <SelectTrigger className="bg-gray-800 border-gray-700 text-white w-20 h-7">
                       <SelectValue />
@@ -932,8 +925,11 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                 )}
                 <div className="flex justify-between text-gray-400">
                   <span>Tax ({TAX_RATE}%)</span>
-                  <span className={form.apply_tax ? "" : "line-through opacity-50"}>{form.apply_tax ? `$${taxAmount.toFixed(2)}` : "Not applied"}</span>
+                  <span className={taxOn ? "" : "line-through opacity-50"}>{taxOn ? `$${taxAmount.toFixed(2)}` : "Not applied"}</span>
                 </div>
+                {policyMissing.length > 0 && (
+                  <p className="text-xs text-amber-400">This older order has no saved tax setting; showing your shop default. Saving will store it.</p>
+                )}
               </>
             ) : null}
             <div className="flex justify-between font-bold text-base border-t border-gray-700 pt-2 mt-2">

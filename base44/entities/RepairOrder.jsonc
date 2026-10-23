@@ -158,6 +158,45 @@
       "type": "number",
       "description": "Total repair cost"
     },
+    "custom_total": {
+      "type": "boolean",
+      "description": "True when total_cost is a manually fixed amount rather than the calculated total"
+    },
+    "tax_rate": {
+      "type": "number",
+      "description": "Tax rate percentage saved on this document (explicit 0 allowed)"
+    },
+    "tax_applies_to": {
+      "type": "string",
+      "enum": [
+        "both",
+        "labor",
+        "parts",
+        "none"
+      ],
+      "description": "Which totals tax applies to; none = No Tax"
+    },
+    "apply_tax": {
+      "type": "boolean",
+      "description": "Legacy tax toggle; false means No Tax"
+    },
+    "tax_amount": {
+      "type": "number",
+      "description": "Tax amount saved with this document"
+    },
+    "discount_type": {
+      "type": "string",
+      "enum": [
+        "none",
+        "fixed",
+        "percentage"
+      ],
+      "description": "Discount type"
+    },
+    "discount_value": {
+      "type": "number",
+      "description": "Discount value: dollars (fixed) or percent (percentage), applied to the pre-tax subtotal"
+    },
     "notes": {
       "type": "string",
       "description": "Additional notes"
