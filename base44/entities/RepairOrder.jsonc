@@ -207,6 +207,14 @@
         }
       }
     },
+    "linked_invoice_id": {
+      "type": "string",
+      "description": "ID of the invoice created from this repair order"
+    },
+    "linked_invoice_number": {
+      "type": "string",
+      "description": "Invoice number of the linked invoice"
+    },
     "ghost_items": {
       "type": "array",
       "description": "Remaining/ghost line items from a Ghost Mode split (split/phased billing)",

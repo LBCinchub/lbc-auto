@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { upsertLineItems } from '../../shared/lineItemLibrary.ts';
+import { assertInvoiceMatchesSource, applyPayments } from '../../shared/invoicePaymentGuard.ts';
 
 const r2 = (value) => Math.round((Number(value) || 0) * 100) / 100;
 const normalizeDiscount = (type) => type === '%' || type === 'percent' || type === 'percentage' ? '%' : type === '$' || type === 'fixed' ? '$' : '$';
@@ -88,6 +89,7 @@ export default async function(req) {
       if (invoice && !owns(invoice)) throw new Error('Linked invoice belongs to another shop');
     }
     if (!invoice && body.invoice_id) invoice = await getOwned('Invoice', body.invoice_id, 'Invoice');
+    assertInvoiceMatchesSource({ sourceType, source, invoice, requestedInvoiceId: body.invoice_id || '' });
 
     const customerId = invoice?.customer_id || source?.customer_id || (sourceType === 'customer' ? source.id : '');
     let vehicleId = invoice?.vehicle_id || source?.vehicle_id || (sourceType === 'vehicle' ? source.id : body.intent?.vehicle_id || body.vehicle_id);
@@ -125,6 +127,7 @@ export default async function(req) {
     const createGhostActive = source?.ghost_status === 'active' && createGhostItems.length > 0;
     const createGhostTotals = createGhostActive ? calculate(cleanLines(createGhostItems), taxRate, taxTarget, 0, '$', 0) : null;
 
+    let replayed = false;
     if (action === 'relink') {
       if (!invoice) throw new Error('Invoice is required');
       const nextVehicle = intent.vehicle_id ? await getOwned('Vehicle', intent.vehicle_id, 'Vehicle') : vehicle;
@@ -158,6 +161,9 @@ export default async function(req) {
         }
         await base44.asServiceRole.entities.FinancialWorkflowEvent.create({ shop_owner_email: tenant, action: 'create', invoice_id: invoice.id, source_type: sourceType, source_id: sourceId, idempotency_key: key, created_at: new Date().toISOString(), actor_email: tenant, metadata: { total: totals.total } });
       }
+    } else if (action === 'create' && invoice) {
+      // Replay: this source already has a verified invoice. Return it untouched (no line/total/payment changes).
+      replayed = true;
     } else if (['update', 'finalize', 'sync_source'].includes(action)) {
       if (!invoice) throw new Error('No linked invoice exists');
       // Keep the stored ghost_total in sync when tax_rate/tax_applies_to change.
@@ -178,13 +184,13 @@ export default async function(req) {
       await base44.asServiceRole.entities.FinancialWorkflowEvent.create({ shop_owner_email: tenant, action: 'edit', invoice_id: invoice.id, source_type: sourceType, source_id: sourceId, idempotency_key: body.idempotency_key || '', created_at: new Date().toISOString(), actor_email: tenant, metadata: { payment_history_updated: true } });
     } else if (action === 'record_payment') {
       if (!invoice) throw new Error('Save the invoice before recording payment');
-      const additions = (intent.payments || []).map((p) => ({ date: new Date().toISOString().slice(0, 10), amount: r2(p.amount), method: String(p.method || 'other'), note: String(p.note || '') }));
-      const added = r2(additions.reduce((sum, p) => sum + p.amount, 0));
-      if (added <= 0 || added > (Number(invoice.balance_due ?? invoice.total) || 0) + 0.01) throw new Error('Payment amount exceeds the balance or is invalid');
-      const amountPaid = r2((Number(invoice.amount_paid) || 0) + added);
-      const balance = r2(Math.max(0, (Number(invoice.total) || 0) - amountPaid));
-      invoice = await base44.entities.Invoice.update(invoice.id, { amount_paid: amountPaid, balance_due: balance, status: balance === 0 ? 'paid' : 'partial', paid_date: balance === 0 ? new Date().toISOString().slice(0, 10) : invoice.paid_date, payment_history: [...(invoice.payment_history || []), ...additions], payment_method: [...new Set([...(invoice.payment_history || []).map((p) => p.method), ...additions.map((p) => p.method)].filter(Boolean))].join('+') });
-      await base44.asServiceRole.entities.FinancialWorkflowEvent.create({ shop_owner_email: tenant, action: 'record_payment', invoice_id: invoice.id, source_type: sourceType, source_id: sourceId, idempotency_key: body.idempotency_key || '', created_at: new Date().toISOString(), actor_email: tenant, metadata: { amount: added } });
+      const payKey = String(body.idempotency_key || '');
+      const priorPay = payKey ? await base44.asServiceRole.entities.FinancialWorkflowEvent.filter({ shop_owner_email: tenant, idempotency_key: payKey, action: 'record_payment', invoice_id: invoice.id }, '-created_date', 1) : [];
+      if (!priorPay.length) {
+        const { added, update } = applyPayments(invoice, intent.payments, new Date().toISOString().slice(0, 10));
+        invoice = await base44.entities.Invoice.update(invoice.id, update);
+        await base44.asServiceRole.entities.FinancialWorkflowEvent.create({ shop_owner_email: tenant, action: 'record_payment', invoice_id: invoice.id, source_type: sourceType, source_id: sourceId, idempotency_key: payKey, created_at: new Date().toISOString(), actor_email: tenant, metadata: { amount: added } });
+      }
     } else if (action === 'send') {
       if (!invoice) throw new Error('Save the invoice before sending');
       if (!customer.email) throw new Error('No email on file');
@@ -192,7 +198,7 @@ export default async function(req) {
       await base44.asServiceRole.entities.FinancialWorkflowEvent.create({ shop_owner_email: tenant, action: 'send', invoice_id: invoice.id, source_type: sourceType, source_id: sourceId, created_at: new Date().toISOString(), actor_email: tenant, metadata: { delivery: 'email' } });
     } else throw new Error('Unsupported financial action');
 
-    if (["create", "update", "finalize", "sync_source"].includes(action) && lines.length) {
+    if (!replayed && ["create", "update", "finalize", "sync_source"].includes(action) && lines.length) {
       try { await upsertLineItems(base44, tenant, lines); } catch (_) {}
     }
     const refreshed = invoice ? await getOwned('Invoice', invoice.id, 'Invoice') : null;

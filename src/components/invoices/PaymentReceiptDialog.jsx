@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
+import { resolvePaymentInvoiceId } from "@/lib/paymentTarget";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +11,8 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  // Reused across retries of the same payment so a replay after an uncertain failure is deduplicated.
+  const keyRef = useRef("");
 
   if (!invoice) return null;
 
@@ -23,13 +26,15 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
     setSaving(true);
     setError("");
     try {
-      const key = crypto.randomUUID();
-      let invoiceId = descriptor.type === "invoice" ? invoice.id : invoice.linked_invoice_id;
+      if (!keyRef.current) keyRef.current = crypto.randomUUID();
+      const key = keyRef.current;
+      let invoiceId = resolvePaymentInvoiceId({ invoice, entityName });
       if (!invoiceId) {
         const created = await base44.functions.invoke("financialDocumentAction", { action: "create", source_type: descriptor.type, source_id: descriptor.id, idempotency_key: key, intent: {} });
         invoiceId = created.data.invoice.id;
       }
       await base44.functions.invoke("financialDocumentAction", { action: "record_payment", source_type: descriptor.type, source_id: descriptor.id, invoice_id: invoiceId, idempotency_key: `${key}-payment`, intent: { payments: [{ amount: value, method, note }] } });
+      keyRef.current = "";
       await onSaved?.();
     } catch (e) {
       setError(e?.response?.data?.error || e.message || "Payment failed");
