@@ -5,7 +5,7 @@ import { Search, Plus, Loader2, User, Car, RefreshCw, Phone, Mail, MapPin } from
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { buildVehicleInfo } from "@/utils/buildVehicleInfo";
 import { toTitleCase } from "@/utils/capitalize";
@@ -190,7 +190,9 @@ export default function CustomerVehiclePicker({
     }
     setSavingVeh(true);
     try {
+      const me = await base44.auth.me();
       const created = await base44.entities.Vehicle.create({
+        shop_owner_email: String(me.email || "").toLowerCase(),
         customer_id: customerId,
         customer_name: customerName,
         make: toTitleCase(newVeh.make.trim()),

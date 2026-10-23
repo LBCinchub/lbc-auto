@@ -5,7 +5,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Camera } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useNhtsaVinDecode } from "@/hooks/useNhtsaVinDecode";
@@ -139,7 +138,8 @@ export default function VehicleFormDialog({ open, onClose, vehicle, onSaved, cus
         }
       }
     } else {
-      await base44.entities.Vehicle.create(data);
+      const me = await base44.auth.me();
+      await base44.entities.Vehicle.create({ ...data, shop_owner_email: String(me.email || "").toLowerCase() });
     }
     setSaving(false);
     onSaved();

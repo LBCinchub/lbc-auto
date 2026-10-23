@@ -19,6 +19,17 @@ export default async function(req) {
       await base44.entities.Estimate.update(estimate.id, { linked_repair_order_id: owned.id, linked_repair_order_number: owned.order_number });
       return Response.json({ success: true, reused: true, repair_order: { id: owned.id, order_number: owned.order_number, status: owned.status } });
     }
+    // New conversions only: replay of an already linked RO above stays allowed.
+    const approved = estimate.status === "approved" || estimate.auth_status === "approved" || estimate.customer_decision === "approved";
+    if (!approved) return Response.json({ error: "Estimate must be approved before conversion" }, { status: 409 });
+    const [customer, vehicle] = await Promise.all([
+      base44.asServiceRole.entities.Customer.get(estimate.customer_id).catch(() => null),
+      base44.asServiceRole.entities.Vehicle.get(estimate.vehicle_id).catch(() => null),
+    ]);
+    const ownedBy = (rec) => { const v = String(rec?.shop_owner_email || rec?.created_by || "").toLowerCase(); return v ? v === tenant : rec?.created_by_id === user.id; };
+    if (!customer || !vehicle || !ownedBy(customer) || !ownedBy(vehicle) || vehicle.customer_id !== customer.id) {
+      return Response.json({ error: "Customer or vehicle does not match this estimate" }, { status: 409 });
+    }
     const ghostActive = estimate.ghost_status === "active" && (estimate.ghost_items || []).length > 0;
     const roGhostTotal = ghostActive ? r2((estimate.ghost_items || []).reduce((s, x) => s + (Number(x.quantity) || 0) * (Number(x.unit_price) || 0), 0)) : 0;
     const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${tenant}:${estimate.id}`));
