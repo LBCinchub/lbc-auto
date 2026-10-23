@@ -19,6 +19,7 @@ import { normalizeDiscountType } from "@/utils/discount";
 import { syncCustomerActivity } from "@/utils/syncCustomerActivity";
 import { syncLineItemLibrary } from "@/utils/syncLineItemLibrary";
 import { useToast } from "@/components/ui/use-toast";
+import { taxFlag } from "@/lib/financialPolicy";
 
 const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
@@ -31,7 +32,7 @@ const toLines = (estimate) => [
     description: l.details || "",
     quantity: Number(l.hours) || 0,
     unit_price: Number(l.rate) || 0,
-    taxable: true,
+    taxable: l.taxable !== false,
     source: "Estimate",
   })),
   ...(estimate?.parts_items || []).map((p) => ({
@@ -41,7 +42,7 @@ const toLines = (estimate) => [
     part_number: p.part_number || "",
     quantity: Number(p.quantity) || 0,
     unit_price: Number(p.unit_price) || 0,
-    taxable: true,
+    taxable: p.taxable !== false,
     source: "Estimate",
   })),
 ];
@@ -130,6 +131,7 @@ export default function OriginalEstimateEditor({ estimateId, onClose }) {
           hours: Number(l.quantity) || 0,
           rate: Number(l.unit_price) || 0,
           total: r2((Number(l.quantity) || 0) * (Number(l.unit_price) || 0)),
+          ...taxFlag(l),
         }));
       const partsItems = draft.line_items
         .filter((l) => l.type !== "labor")
@@ -140,6 +142,7 @@ export default function OriginalEstimateEditor({ estimateId, onClose }) {
           quantity: Number(p.quantity) || 0,
           unit_price: Number(p.unit_price) || 0,
           total: r2((Number(p.quantity) || 0) * (Number(p.unit_price) || 0)),
+          ...taxFlag(p),
         }));
 
       const _gItems = estimate.ghost_items || [];
@@ -240,8 +243,8 @@ export default function OriginalEstimateEditor({ estimateId, onClose }) {
   const handleSplit = async ({ doneNowItems, ghostItems, ghostNotes, ghostTotal }) => {
     try {
       const doneTotals = calculateFinancials({ ...draft, line_items: doneNowItems }, estimate.amount_paid || 0);
-      const laborItems = doneNowItems.filter((l) => l.type === "labor").map((l) => ({ description: l.name, details: l.description || "", hours: Number(l.quantity) || 0, rate: Number(l.unit_price) || 0, total: r2((Number(l.quantity) || 0) * (Number(l.unit_price) || 0)) }));
-      const partsItems = doneNowItems.filter((l) => l.type !== "labor").map((p) => ({ name: p.name, details: p.description || "", part_number: p.part_number || "", quantity: Number(p.quantity) || 0, unit_price: Number(p.unit_price) || 0, total: r2((Number(p.quantity) || 0) * (Number(p.unit_price) || 0)) }));
+      const laborItems = doneNowItems.filter((l) => l.type === "labor").map((l) => ({ description: l.name, details: l.description || "", hours: Number(l.quantity) || 0, rate: Number(l.unit_price) || 0, total: r2((Number(l.quantity) || 0) * (Number(l.unit_price) || 0)), ...taxFlag(l) }));
+      const partsItems = doneNowItems.filter((l) => l.type !== "labor").map((p) => ({ name: p.name, details: p.description || "", part_number: p.part_number || "", quantity: Number(p.quantity) || 0, unit_price: Number(p.unit_price) || 0, total: r2((Number(p.quantity) || 0) * (Number(p.unit_price) || 0)), ...taxFlag(p) }));
       await base44.entities.Estimate.update(estimateId, {
         labor_items: laborItems, parts_items: partsItems,
         labor_total: r2(doneTotals.labor), parts_total: r2(doneTotals.parts),
@@ -284,10 +287,10 @@ export default function OriginalEstimateEditor({ estimateId, onClose }) {
     const t = calculateFinancials({ ...draft, line_items: newLines }, estimate.amount_paid || 0);
     const laborItems = newLines
       .filter((l) => l.type === "labor")
-      .map((l) => ({ description: l.name, details: l.description || "", hours: Number(l.quantity) || 0, rate: Number(l.unit_price) || 0, total: r2((Number(l.quantity) || 0) * (Number(l.unit_price) || 0)) }));
+      .map((l) => ({ description: l.name, details: l.description || "", hours: Number(l.quantity) || 0, rate: Number(l.unit_price) || 0, total: r2((Number(l.quantity) || 0) * (Number(l.unit_price) || 0)), ...taxFlag(l) }));
     const partsItems = newLines
       .filter((l) => l.type !== "labor")
-      .map((p) => ({ name: p.name, details: p.description || "", part_number: p.part_number || "", quantity: Number(p.quantity) || 0, unit_price: Number(p.unit_price) || 0, total: r2((Number(p.quantity) || 0) * (Number(p.unit_price) || 0)) }));
+      .map((p) => ({ name: p.name, details: p.description || "", part_number: p.part_number || "", quantity: Number(p.quantity) || 0, unit_price: Number(p.unit_price) || 0, total: r2((Number(p.quantity) || 0) * (Number(p.unit_price) || 0)), ...taxFlag(p) }));
     const g = calcGhostTotals(remaining, Number(draft.tax_rate) || 0, draft.tax_applies_to);
     const patch = {
       labor_items: laborItems, parts_items: partsItems,

@@ -23,7 +23,7 @@ import { capWords, toTitleCase, capitalizeFields, capitalizeArrayItems } from "@
 import UnifiedFinancialActionBar from "@/components/financial-workflow/UnifiedFinancialActionBar";
 import { laborRate, normalizeLaborItems, normalizeParts, inventoryDeltas, isPersisted } from "@/lib/repairOrderSave";
 import { roFormPolicy, fillFromSourceEstimate, roTotals, roSavePolicy } from "@/lib/repairOrderTotals";
-import { readDiscount, toDocumentDiscount } from "@/lib/financialPolicy";
+import { readDiscount, toDocumentDiscount, taxFlag } from "@/lib/financialPolicy";
 
 const statuses = [
   { value: "waiting", label: "Waiting" },
@@ -415,7 +415,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                 grand_total: saveTotals.calculatedTotal,
                 notes: est.notes,
                 labor_items: data.labor_items || est.labor_items,
-                parts_items: data.parts_used?.map(p => ({ name: p.name, part_number: p.part_number || "", quantity: p.quantity, unit_price: p.unit_price, total: p.total })) || est.parts_items,
+                parts_items: data.parts_used?.map(p => ({ name: p.name, part_number: p.part_number || "", quantity: p.quantity, unit_price: p.unit_price, ...taxFlag(p), total: p.total })) || est.parts_items,
               });
             }
           }

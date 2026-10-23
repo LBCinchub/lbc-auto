@@ -144,6 +144,10 @@
           },
           "total": {
             "type": "number"
+          },
+          "taxable": {
+            "type": "boolean",
+            "description": "Explicit false = tax-exempt line; missing = taxable"
           }
         }
       }
@@ -172,6 +176,10 @@
           },
           "total": {
             "type": "number"
+          },
+          "taxable": {
+            "type": "boolean",
+            "description": "Explicit false = tax-exempt line; missing = taxable"
           }
         }
       }

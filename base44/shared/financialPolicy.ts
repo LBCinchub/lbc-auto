@@ -12,6 +12,13 @@
 
 export const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
+// Carries only an EXPLICIT line exemption across handoffs. Missing flags are never guessed or written.
+export const taxFlag = (x) => (x && x.taxable === false ? { taxable: false } : {});
+
+// Estimate/RO line -> invoice line (allowed fields only).
+export const laborToInvoiceLine = (x) => ({ type: 'labor', name: x.description || '', description: x.details || '', quantity: Number(x.hours) || 0, unit_price: Number(x.rate) || 0, part_number: '', ...taxFlag(x) });
+export const partToInvoiceLine = (x) => ({ type: 'part', name: x.name || '', description: x.details || '', quantity: Number(x.quantity) || 0, unit_price: Number(x.unit_price) || 0, part_number: x.part_number || '', ...taxFlag(x) });
+
 const TARGETS = { both: 'both', all: 'both', labor: 'labor', parts: 'parts', part: 'parts', none: 'none' };
 
 // Returns 'both' | 'labor' | 'parts' | 'none', or null when the record holds no tax target.
@@ -76,8 +83,8 @@ export function computeTotals(lines, { taxRate = 0, taxTarget = 'both', discount
 export function repairOrderLines(ro, defaultRate = 120) {
   const rate = (r) => (r.rate === '' || r.rate == null ? defaultRate : Number(r.rate) || 0);
   return [
-    ...(ro.labor_items || []).map((r) => ({ type: 'labor', quantity: Number(r.hours) || 0, unit_price: rate(r) })),
-    ...(ro.parts_used || []).map((p) => ({ type: 'part', quantity: Number(p.quantity) || 0, unit_price: Number(p.unit_price) || 0 })),
+    ...(ro.labor_items || []).map((r) => ({ type: 'labor', quantity: Number(r.hours) || 0, unit_price: rate(r), ...taxFlag(r) })),
+    ...(ro.parts_used || []).map((p) => ({ type: 'part', quantity: Number(p.quantity) || 0, unit_price: Number(p.unit_price) || 0, ...taxFlag(p) })),
   ];
 }
 

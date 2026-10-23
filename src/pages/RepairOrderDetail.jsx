@@ -211,8 +211,8 @@ export default function RepairOrderDetail() {
 
   // ── Ghost Mode ── Repair Orders carry no tax, so the ghost uses tax 0.
   const roToLines = (o) => [
-    ...((o && o.parts_used) || []).map((p) => ({ type: "part", name: p.name || "", description: "", quantity: Number(p.quantity) || 0, unit_price: Number(p.unit_price) || 0, taxable: true })),
-    ...((o && o.labor_items) || []).map((l) => ({ type: "labor", name: l.description || "", description: "", quantity: Number(l.hours) || 0, unit_price: Number(l.rate) || 0, taxable: true })),
+    ...((o && o.parts_used) || []).map((p) => ({ type: "part", name: p.name || "", description: "", quantity: Number(p.quantity) || 0, unit_price: Number(p.unit_price) || 0, taxable: p.taxable !== false })),
+    ...((o && o.labor_items) || []).map((l) => ({ type: "labor", name: l.description || "", description: "", quantity: Number(l.hours) || 0, unit_price: Number(l.rate) || 0, taxable: l.taxable !== false })),
   ];
   const onGhostChanged = () => {
     queryClient.invalidateQueries({ queryKey: ["repairOrder", orderId] });

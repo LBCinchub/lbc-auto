@@ -2,7 +2,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.57';
 import { upsertLineItems } from '../../shared/lineItemLibrary.ts';
 import { assertInvoiceMatchesSource, applyPayments, paymentAlreadyApplied } from '../../shared/invoicePaymentGuard.ts';
 import { withLease, LeaseBusyError } from '../../shared/recordLease.ts';
-import { computeTotals, canonicalDiscountType, resolveInvoiceInputs } from '../../shared/financialPolicy.ts';
+import { computeTotals, canonicalDiscountType, resolveInvoiceInputs, laborToInvoiceLine, partToInvoiceLine } from '../../shared/financialPolicy.ts';
 import { assertConsistent, resolveEstimateRepairOrder, linkPatches } from '../../shared/financialLinks.ts';
 
 const r2 = (value) => Math.round((Number(value) || 0) * 100) / 100;
@@ -21,8 +21,8 @@ const cleanLines = (lines = [], source = 'Manual') => lines.filter(Boolean).map(
   part_number: String(line.part_number || ''),
   source: line.source || source,
 }));
-const mapLaborLine = (x) => ({ type: 'labor', name: x.description || '', description: x.details || '', quantity: Number(x.hours) || 0, unit_price: Number(x.rate) || 0, part_number: '' });
-const mapPartsLine = (x) => ({ type: 'part', name: x.name || '', description: x.details || '', quantity: Number(x.quantity) || 0, unit_price: Number(x.unit_price) || 0, part_number: x.part_number || '' });
+const mapLaborLine = laborToInvoiceLine;
+const mapPartsLine = partToInvoiceLine;
 const sourceLines = (type, record) => type === 'estimate'
   ? cleanLines([...(record.labor_items || []).map(mapLaborLine), ...(record.parts_items || []).map(mapPartsLine)], 'Estimate')
   : type === 'repair_order'

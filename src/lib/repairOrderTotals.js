@@ -1,4 +1,4 @@
-import { computeTotals, canonicalTaxTarget, readDiscount, toRepairOrderDiscount, r2 } from "@/lib/financialPolicy";
+import { computeTotals, canonicalTaxTarget, readDiscount, toRepairOrderDiscount, r2, taxFlag } from "@/lib/financialPolicy";
 import { normalizeLaborItems, normalizeParts } from "@/lib/repairOrderSave";
 
 // Tax/discount fields of a saved RO (or prefill) in form shape. Explicit values are kept as-is
@@ -31,8 +31,8 @@ export function fillFromSourceEstimate(policy, estimate) {
 
 export function roLines(form) {
   return [
-    ...normalizeLaborItems(form.labor_items || []).map((l) => ({ type: "labor", quantity: l.hours, unit_price: l.rate })),
-    ...normalizeParts(form.parts_used || []).map((p) => ({ type: "part", quantity: p.quantity, unit_price: p.unit_price })),
+    ...normalizeLaborItems(form.labor_items || []).map((l) => ({ type: "labor", quantity: l.hours, unit_price: l.rate, ...taxFlag(l) })),
+    ...normalizeParts(form.parts_used || []).map((p) => ({ type: "part", quantity: p.quantity, unit_price: p.unit_price, ...taxFlag(p) })),
   ];
 }
 

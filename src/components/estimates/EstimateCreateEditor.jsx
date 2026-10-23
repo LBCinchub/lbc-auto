@@ -12,6 +12,7 @@ import QuickNotesEditor from "@/components/shared/QuickNotesEditor";
 import { syncCustomerActivity } from "@/utils/syncCustomerActivity";
 import { syncLineItemLibrary } from "@/utils/syncLineItemLibrary";
 import { useToast } from "@/components/ui/use-toast";
+import { taxFlag } from "@/lib/financialPolicy";
 
 const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
@@ -24,7 +25,7 @@ const toLines = (prefill) => [
     description: l.details || "",
     quantity: Number(l.hours) || 0,
     unit_price: Number(l.rate) || 0,
-    taxable: true,
+    taxable: l.taxable !== false,
     source: "Estimate",
   })),
   ...(prefill?.parts_items || []).map((p) => ({
@@ -34,7 +35,7 @@ const toLines = (prefill) => [
     part_number: p.part_number || "",
     quantity: Number(p.quantity) || 0,
     unit_price: Number(p.unit_price) || 0,
-    taxable: true,
+    taxable: p.taxable !== false,
     source: "Estimate",
   })),
 ];
@@ -88,10 +89,10 @@ export default function EstimateCreateEditor({ prefill, customers = [], onClose,
     try {
       const laborItems = draft.line_items
         .filter((l) => l.type === "labor")
-        .map((l) => ({ description: l.name, details: l.description || "", hours: Number(l.quantity) || 0, rate: Number(l.unit_price) || 0, total: r2((Number(l.quantity) || 0) * (Number(l.unit_price) || 0)) }));
+        .map((l) => ({ description: l.name, details: l.description || "", hours: Number(l.quantity) || 0, rate: Number(l.unit_price) || 0, total: r2((Number(l.quantity) || 0) * (Number(l.unit_price) || 0)), ...taxFlag(l) }));
       const partsItems = draft.line_items
         .filter((l) => l.type !== "labor")
-        .map((p) => ({ name: p.name, details: p.description || "", part_number: p.part_number || "", quantity: Number(p.quantity) || 0, unit_price: Number(p.unit_price) || 0, total: r2((Number(p.quantity) || 0) * (Number(p.unit_price) || 0)) }));
+        .map((p) => ({ name: p.name, details: p.description || "", part_number: p.part_number || "", quantity: Number(p.quantity) || 0, unit_price: Number(p.unit_price) || 0, total: r2((Number(p.quantity) || 0) * (Number(p.unit_price) || 0)), ...taxFlag(p) }));
       const estimate_number = `EST-${Date.now().toString().slice(-6)}`;
       await base44.entities.Estimate.create({
         estimate_number,
