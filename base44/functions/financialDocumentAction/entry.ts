@@ -2,6 +2,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.57';
 import { upsertLineItems } from '../../shared/lineItemLibrary.ts';
 import { assertInvoiceMatchesSource, applyPayments, paymentAlreadyApplied } from '../../shared/invoicePaymentGuard.ts';
 import { withLease, LeaseBusyError } from '../../shared/recordLease.ts';
+import { computeTotals, canonicalDiscountType, resolveInvoiceInputs } from '../../shared/financialPolicy.ts';
 import { assertConsistent, resolveEstimateRepairOrder, linkPatches } from '../../shared/financialLinks.ts';
 
 const r2 = (value) => Math.round((Number(value) || 0) * 100) / 100;
@@ -27,27 +28,10 @@ const sourceLines = (type, record) => type === 'estimate'
   : type === 'repair_order'
     ? cleanLines([...(record.labor_items || []).map(mapLaborLine), ...(record.parts_used || []).map(mapPartsLine)], 'Repair Order')
     : [];
+// Shared policy: discount from pre-tax subtotal only, No Tax always 0 (see shared/financialPolicy.ts).
 const calculate = (lines, taxRate, taxAppliesTo, discount, discountType, paid = 0) => {
-  const labor = r2(lines.filter((x) => x.type === 'labor' && x.quantity > 0).reduce((sum, x) => sum + x.quantity * x.unit_price, 0));
-  const parts = r2(lines.filter((x) => x.type !== 'labor' && x.quantity > 0).reduce((sum, x) => sum + x.quantity * x.unit_price, 0));
-  const subtotal = r2(labor + parts);
-  const discountAmount = normalizeDiscount(discountType) === '%' ? r2(subtotal * Math.max(0, Number(discount) || 0) / 100) : r2(Math.max(0, Number(discount) || 0));
-  // Normalize tax target — line `type` is "part" (singular) but the stored
-  // setting can be "parts" (plural). Without this, "parts" never matched any
-  // line and tax computed to $0. Default to "both" when missing/invalid.
-  const appliesTo = String(taxAppliesTo || 'both').toLowerCase();
-  const lineIsTaxable = (x) => {
-    if (appliesTo === 'none') return false;
-    if (appliesTo === 'both' || appliesTo === 'all') return true;
-    if (appliesTo === 'labor') return x.type === 'labor';
-    if (appliesTo === 'parts' || appliesTo === 'part') return x.type !== 'labor';
-    return true;
-  };
-  const taxable = lines.filter((x) => x.quantity > 0 && x.taxable !== false && lineIsTaxable(x)).reduce((sum, x) => sum + x.quantity * x.unit_price, 0);
-  const taxableBase = (appliesTo === 'both' || appliesTo === 'all') ? Math.max(0, taxable - discountAmount) : taxable;
-  const tax = r2(taxableBase * Math.max(0, Number(taxRate) || 0) / 100);
-  const total = r2(Math.max(0, subtotal - discountAmount + tax));
-  return { labor, parts, subtotal, discountAmount, tax, total, balance: r2(Math.max(0, total - paid)) };
+  const t = computeTotals(lines, { taxRate, taxTarget: taxAppliesTo, discountType: canonicalDiscountType(discountType) || '$', discountValue: discount });
+  return { labor: t.labor, parts: t.parts, subtotal: t.subtotal, discountAmount: t.discount, tax: t.tax, total: t.total, balance: r2(Math.max(0, t.total - paid)) };
 };
 
 export default async function(req) {
@@ -136,18 +120,20 @@ export default async function(req) {
     };
 
     const initialLines = invoice ? cleanLines(invoice.line_items || [], 'Invoice') : sourceLines(sourceType, source);
-    const defaultTaxRate = invoice?.tax_rate ?? source?.tax_rate ?? user.tax_rate ?? 0;
-    const defaultTaxTarget = invoice?.tax_applies_to || source?.tax_applies_to || user.tax_applies_to || 'both';
+    const defaults = resolveInvoiceInputs({ invoice, source, user });
+    const defaultTaxRate = defaults.taxRate;
+    const defaultTaxTarget = defaults.taxTarget;
     const context = { source_type: sourceType, source_id: sourceId, source_number: invoice?.invoice_number || source?.estimate_number || source?.order_number || '', source_status: invoice?.status || source?.status || 'draft' };
-    if (action === 'load') return Response.json({ invoice, customer, vehicle, estimate, repair_order: repairOrder, context, shop: { business_name: user.business_name || 'LBC Auto', logo_url: user.logo_url || '', phone: user.phone || '', address: user.address || '' }, draft: { line_items: initialLines, tax_rate: defaultTaxRate, tax_applies_to: defaultTaxTarget, discount: invoice?.discount ?? source?.discount ?? 0, discount_type: invoice?.discount_type || source?.discount_type || '$', due_date: invoice?.due_date || '', invoice_date: invoice?.invoice_date || new Date().toISOString().slice(0, 10), customer_note: invoice?.customer_note || source?.notes || '', service_reason: invoice?.service_reason || source?.service_reason || source?.description || '' } });
+    if (action === 'load') return Response.json({ invoice, customer, vehicle, estimate, repair_order: repairOrder, context, shop: { business_name: user.business_name || 'LBC Auto', logo_url: user.logo_url || '', phone: user.phone || '', address: user.address || '' }, draft: { line_items: initialLines, tax_rate: defaultTaxRate, tax_applies_to: defaultTaxTarget, discount: defaults.discount, discount_type: defaults.discountType, due_date: invoice?.due_date || '', invoice_date: invoice?.invoice_date || new Date().toISOString().slice(0, 10), customer_note: invoice?.customer_note || source?.notes || '', service_reason: invoice?.service_reason || source?.service_reason || source?.description || '' } });
 
     const intent = body.intent || {};
     let lines = cleanLines(intent.line_items || initialLines);
     const paid = Number(invoice?.amount_paid) || 0;
-    const taxRate = Number(intent.tax_rate ?? defaultTaxRate);
-    if (taxRate < 0 || taxRate > 100) throw new Error('Tax rate is invalid');
-    const taxTarget = ['both', 'labor', 'parts', 'none'].includes(intent.tax_applies_to) ? intent.tax_applies_to : defaultTaxTarget;
-    const totals = calculate(lines, taxRate, taxTarget, intent.discount ?? invoice?.discount ?? 0, intent.discount_type || invoice?.discount_type || '$', paid);
+    const resolved = resolveInvoiceInputs({ intent, invoice, source, user });
+    const taxRate = resolved.taxRate;
+    if (!(taxRate >= 0 && taxRate <= 100)) throw new Error('Tax rate is invalid');
+    const taxTarget = resolved.taxTarget;
+    const totals = calculate(lines, taxRate, taxTarget, resolved.discount, resolved.discountType, paid);
 
     // Ghost carryover — when creating an invoice from an Estimate or Repair Order
     // that has an active ghost, the ghost moves to the new invoice (stays active),
@@ -195,7 +181,7 @@ export default async function(req) {
         const invoiceNumber = `INV-${suffix}`;
         const existing = await base44.asServiceRole.entities.Invoice.filter({ invoice_number: invoiceNumber }, '-created_date', 1);
         invoice = existing.find(owns) || null;
-        if (!invoice) invoice = await base44.entities.Invoice.create({ invoice_number: invoiceNumber, customer_id: customer.id, customer_name: customer.full_name, vehicle_id: vehicle.id, vehicle_info: [vehicle.year, vehicle.make, vehicle.model, vehicle.engine_liters, vehicle.trim].filter(Boolean).join(' '), estimate_id: estimate?.id || '', repair_order_id: repairOrder?.id || '', status: 'unpaid', amount_paid: 0, payment_history: [], line_items: lines.map((x) => ({ ...x, total: r2(x.quantity * x.unit_price) })), parts_used: lines.filter((x) => x.type !== 'labor').map((x) => ({ name: x.name || x.description || '', part_number: '', quantity: x.quantity, unit_price: x.unit_price, total: r2(x.quantity * x.unit_price) })), labor_total: totals.labor, parts_total: totals.parts, tax_rate: taxRate, tax_applies_to: taxTarget, tax_amount: totals.tax, discount: Number(intent.discount) || 0, discount_type: normalizeDiscount(intent.discount_type), total: totals.total, balance_due: totals.balance, invoice_date: intent.invoice_date || new Date().toISOString().slice(0, 10), due_date: intent.due_date || '', customer_note: intent.customer_note || source?.notes || '', service_reason: intent.service_reason || source?.service_reason || source?.description || '', ghost_items: createGhostActive ? createGhostItems : [], ghost_status: createGhostActive ? 'active' : 'none', ghost_notes: source?.ghost_notes || '', ghost_total: createGhostTotals ? createGhostTotals.total : 0 });
+        if (!invoice) invoice = await base44.entities.Invoice.create({ invoice_number: invoiceNumber, customer_id: customer.id, customer_name: customer.full_name, vehicle_id: vehicle.id, vehicle_info: [vehicle.year, vehicle.make, vehicle.model, vehicle.engine_liters, vehicle.trim].filter(Boolean).join(' '), estimate_id: estimate?.id || '', repair_order_id: repairOrder?.id || '', status: 'unpaid', amount_paid: 0, payment_history: [], line_items: lines.map((x) => ({ ...x, total: r2(x.quantity * x.unit_price) })), parts_used: lines.filter((x) => x.type !== 'labor').map((x) => ({ name: x.name || x.description || '', part_number: '', quantity: x.quantity, unit_price: x.unit_price, total: r2(x.quantity * x.unit_price) })), labor_total: totals.labor, parts_total: totals.parts, tax_rate: taxRate, tax_applies_to: taxTarget, tax_amount: totals.tax, discount: resolved.discount, discount_type: resolved.discountType, total: totals.total, balance_due: totals.balance, invoice_date: intent.invoice_date || new Date().toISOString().slice(0, 10), due_date: intent.due_date || '', customer_note: intent.customer_note || source?.notes || '', service_reason: intent.service_reason || source?.service_reason || source?.description || '', ghost_items: createGhostActive ? createGhostItems : [], ghost_status: createGhostActive ? 'active' : 'none', ghost_notes: source?.ghost_notes || '', ghost_total: createGhostTotals ? createGhostTotals.total : 0 });
         // Durable, recoverable linking: never delete a created invoice. If linking fails part-way the
         // invoice stays, the audit event records link_pending, and a retry (same key -> same
         // deterministic invoice number, or the source's estimate_id/repair_order_id) re-finds and re-links it.
@@ -220,7 +206,7 @@ export default async function(req) {
       const upGhostItems = Array.isArray(invoice?.ghost_items) ? invoice.ghost_items : [];
       const upGhostActive = invoice?.ghost_status === 'active' && upGhostItems.length > 0;
       const upGhostTotals = upGhostActive ? calculate(cleanLines(upGhostItems), taxRate, taxTarget, 0, '$', 0) : null;
-      const update = { line_items: lines.map((x) => ({ ...x, total: r2(x.quantity * x.unit_price) })), parts_used: lines.filter((x) => x.type !== 'labor').map((x) => ({ name: x.name || x.description || '', part_number: '', quantity: x.quantity, unit_price: x.unit_price, total: r2(x.quantity * x.unit_price) })), labor_total: totals.labor, parts_total: totals.parts, tax_rate: taxRate, tax_applies_to: taxTarget, tax_amount: totals.tax, discount: Number(intent.discount ?? invoice.discount) || 0, discount_type: normalizeDiscount(intent.discount_type || invoice.discount_type), total: totals.total, balance_due: totals.balance, due_date: intent.due_date ?? invoice.due_date, invoice_date: intent.invoice_date ?? invoice.invoice_date, customer_note: intent.customer_note ?? invoice.customer_note, service_reason: intent.service_reason ?? invoice.service_reason, ghost_total: upGhostTotals ? upGhostTotals.total : (invoice?.ghost_total || 0) };
+      const update = { line_items: lines.map((x) => ({ ...x, total: r2(x.quantity * x.unit_price) })), parts_used: lines.filter((x) => x.type !== 'labor').map((x) => ({ name: x.name || x.description || '', part_number: '', quantity: x.quantity, unit_price: x.unit_price, total: r2(x.quantity * x.unit_price) })), labor_total: totals.labor, parts_total: totals.parts, tax_rate: taxRate, tax_applies_to: taxTarget, tax_amount: totals.tax, discount: resolved.discount, discount_type: resolved.discountType, total: totals.total, balance_due: totals.balance, due_date: intent.due_date ?? invoice.due_date, invoice_date: intent.invoice_date ?? invoice.invoice_date, customer_note: intent.customer_note ?? invoice.customer_note, service_reason: intent.service_reason ?? invoice.service_reason, ghost_total: upGhostTotals ? upGhostTotals.total : (invoice?.ghost_total || 0) };
       invoice = await base44.entities.Invoice.update(invoice.id, update);
       await base44.asServiceRole.entities.FinancialWorkflowEvent.create({ shop_owner_email: tenant, action: action === 'finalize' ? 'finalize' : 'edit', invoice_id: invoice.id, source_type: sourceType, source_id: sourceId, idempotency_key: body.idempotency_key || '', created_at: new Date().toISOString(), actor_email: tenant, metadata: { total: totals.total } });
     } else if (action === 'replace_payments') {
