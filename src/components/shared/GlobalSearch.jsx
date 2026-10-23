@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Search, X, Wrench, Users, Car, FileText, Package, ChevronRight, ClipboardList, CalendarDays } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
+import { withShopRecords } from "@/lib/shopRecords";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
 
@@ -191,12 +192,12 @@ export default function GlobalSearch() {
   });
   const { data: customers = [] } = useQuery({
     queryKey: ["customers", user?.email],
-    queryFn: () => base44.entities.Customer.filter({ created_by: user.email }, "-created_date", 200),
+    queryFn: () => withShopRecords("Customer", base44.entities.Customer.filter({ created_by: user.email }, "-created_date", 200)),
     enabled: !!user,
   });
   const { data: vehicles = [] } = useQuery({
     queryKey: ["vehicles", user?.email],
-    queryFn: () => base44.entities.Vehicle.filter({ created_by: user.email }, "-created_date", 200),
+    queryFn: () => withShopRecords("Vehicle", base44.entities.Vehicle.filter({ created_by: user.email }, "-created_date", 200)),
     enabled: !!user,
   });
   const { data: invoices = [] } = useQuery({
@@ -211,12 +212,12 @@ export default function GlobalSearch() {
   });
   const { data: estimates = [] } = useQuery({
     queryKey: ["estimates", user?.email],
-    queryFn: () => base44.entities.Estimate.filter({ created_by: user.email }, "-created_date", 200),
+    queryFn: () => withShopRecords("Estimate", base44.entities.Estimate.filter({ created_by: user.email }, "-created_date", 200)),
     enabled: !!user,
   });
   const { data: appointments = [] } = useQuery({
     queryKey: ["appointments", user?.email],
-    queryFn: () => base44.entities.Appointment.filter({ created_by: user.email }, "-created_date", 200),
+    queryFn: () => withShopRecords("Appointment", base44.entities.Appointment.filter({ created_by: user.email }, "-created_date", 200)),
     enabled: !!user,
   });
 

@@ -23,6 +23,7 @@ const configs = {
   approved: { label: "Approved", class: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
   declined: { label: "Declined", class: "bg-rose-500/20 text-rose-400 border-rose-500/30" },
   expired: { label: "Expired", class: "bg-gray-500/20 text-gray-400 border-gray-500/30" },
+  invoiced: { label: "Invoiced", class: "bg-violet-500/20 text-violet-400 border-violet-500/30" },
 };
 
 export default function StatusBadge({ status }) {

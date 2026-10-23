@@ -152,18 +152,23 @@ export default async function(req) {
         const existing = await base44.asServiceRole.entities.Invoice.filter({ invoice_number: invoiceNumber }, '-created_date', 1);
         invoice = existing.find(owns) || null;
         if (!invoice) invoice = await base44.entities.Invoice.create({ invoice_number: invoiceNumber, customer_id: customer.id, customer_name: customer.full_name, vehicle_id: vehicle.id, vehicle_info: [vehicle.year, vehicle.make, vehicle.model, vehicle.engine_liters, vehicle.trim].filter(Boolean).join(' '), estimate_id: estimate?.id || '', repair_order_id: repairOrder?.id || '', status: 'unpaid', amount_paid: 0, payment_history: [], line_items: lines.map((x) => ({ ...x, total: r2(x.quantity * x.unit_price) })), parts_used: lines.filter((x) => x.type !== 'labor').map((x) => ({ name: x.name || x.description || '', part_number: '', quantity: x.quantity, unit_price: x.unit_price, total: r2(x.quantity * x.unit_price) })), labor_total: totals.labor, parts_total: totals.parts, tax_rate: taxRate, tax_applies_to: taxTarget, tax_amount: totals.tax, discount: Number(intent.discount) || 0, discount_type: normalizeDiscount(intent.discount_type), total: totals.total, balance_due: totals.balance, invoice_date: intent.invoice_date || new Date().toISOString().slice(0, 10), due_date: intent.due_date || '', customer_note: intent.customer_note || source?.notes || '', service_reason: intent.service_reason || source?.service_reason || source?.description || '', ghost_items: createGhostActive ? createGhostItems : [], ghost_status: createGhostActive ? 'active' : 'none', ghost_notes: source?.ghost_notes || '', ghost_total: createGhostTotals ? createGhostTotals.total : 0 });
+        // Durable, recoverable linking: never delete a created invoice. If linking fails part-way the
+        // invoice stays, the audit event records link_pending, and a retry (same key -> same
+        // deterministic invoice number, or the source's estimate_id/repair_order_id) re-finds and re-links it.
+        let linkError = null;
         try {
           if (estimate) await base44.entities.Estimate.update(estimate.id, { status: 'invoiced', linked_invoice_id: invoice.id, linked_invoice_number: invoice.invoice_number, ...(createGhostActive && sourceType === 'estimate' ? { ghost_status: 'converted', ghost_converted_to: invoice.id, ghost_converted_type: 'Invoice', ghost_converted_number: invoice.invoice_number } : {}) });
           if (repairOrder) await base44.entities.RepairOrder.update(repairOrder.id, { linked_invoice_id: invoice.id, linked_invoice_number: invoice.invoice_number, ...(createGhostActive && sourceType === 'repair_order' ? { ghost_status: 'converted', ghost_converted_to: invoice.id, ghost_converted_type: 'Invoice', ghost_converted_number: invoice.invoice_number } : {}) });
-        } catch (linkError) {
-          await base44.entities.Invoice.delete(invoice.id).catch(() => null);
-          throw new Error(`Invoice link failed: ${linkError.message}`);
-        }
-        await base44.asServiceRole.entities.FinancialWorkflowEvent.create({ shop_owner_email: tenant, action: 'create', invoice_id: invoice.id, source_type: sourceType, source_id: sourceId, idempotency_key: key, created_at: new Date().toISOString(), actor_email: tenant, metadata: { total: totals.total } });
+        } catch (err) { linkError = err; }
+        await base44.asServiceRole.entities.FinancialWorkflowEvent.create({ shop_owner_email: tenant, action: 'create', invoice_id: invoice.id, source_type: sourceType, source_id: sourceId, idempotency_key: key, created_at: new Date().toISOString(), actor_email: tenant, metadata: { total: totals.total, link_status: linkError ? 'pending' : 'linked' } });
+        if (linkError) throw new Error(`Invoice ${invoice.invoice_number} was saved but linking is incomplete (${linkError.message}). Retry to finish linking; no duplicate will be created.`);
       }
     } else if (action === 'create' && invoice) {
       // Replay: this source already has a verified invoice. Return it untouched (no line/total/payment changes).
       replayed = true;
+      // Invoice data is untouched; only a missing source link (e.g. after a partial-link failure) is filled in.
+      if (estimate && !estimate.linked_invoice_id) await base44.entities.Estimate.update(estimate.id, { linked_invoice_id: invoice.id, linked_invoice_number: invoice.invoice_number });
+      if (repairOrder && !repairOrder.linked_invoice_id) await base44.entities.RepairOrder.update(repairOrder.id, { linked_invoice_id: invoice.id, linked_invoice_number: invoice.invoice_number });
     } else if (['update', 'finalize', 'sync_source'].includes(action)) {
       if (!invoice) throw new Error('No linked invoice exists');
       // Keep the stored ghost_total in sync when tax_rate/tax_applies_to change.

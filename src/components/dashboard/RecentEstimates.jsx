@@ -5,13 +5,7 @@ import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatPhone } from "@/utils/formatPhone";
 
-const statusConfig = {
-  draft: { label: "Draft", class: "bg-gray-500/20 text-gray-400 border-gray-500/30" },
-  sent: { label: "Sent", class: "bg-sky-500/20 text-sky-400 border-sky-500/30" },
-  approved: { label: "Approved", class: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
-  declined: { label: "Declined", class: "bg-rose-500/20 text-rose-400 border-rose-500/30" },
-  expired: { label: "Expired", class: "bg-amber-500/20 text-amber-400 border-amber-500/30" },
-};
+import { estimateStatusDisplay } from "@/lib/estimateStatus";
 
 export default function RecentEstimates({ estimates = [], customers = [] }) {
   const navigate = useNavigate();
@@ -30,7 +24,7 @@ export default function RecentEstimates({ estimates = [], customers = [] }) {
           <p className="text-gray-500 text-sm text-center py-8">No estimates yet</p>
         )}
         {sorted.map((est) => {
-          const config = statusConfig[est.status] || statusConfig.draft;
+          const config = estimateStatusDisplay(est.status);
           const total = est.grand_total ?? ((est.labor_total || 0) + (est.parts_total || 0));
           return (
             <button

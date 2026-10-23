@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
+import { withShopRecords } from "@/lib/shopRecords";
 import { useQuery } from "@tanstack/react-query";
 import { Wrench, CheckCircle2, Clock, Calendar, Car, ChevronRight, AlertTriangle, Package, ScanLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -29,12 +30,12 @@ export default function Dashboard() {
   });
   const { data: appointments = [] } = useQuery({
     queryKey: ["appointments", user?.email],
-    queryFn: () => user ? base44.entities.Appointment.filter({$or: [{created_by: user.email}, {shop_email: user.email}]}, "-date", 30000) : Promise.resolve([]),
+    queryFn: () => user ? withShopRecords("Appointment", base44.entities.Appointment.filter({$or: [{created_by: user.email}, {shop_email: user.email}]}, "-date", 30000)) : Promise.resolve([]),
     enabled: !!user,
   });
   const { data: customers = [] } = useQuery({
     queryKey: ["customers", user?.email],
-    queryFn: () => user ? base44.entities.Customer.filter({created_by: user.email}, "-created_date", 30000) : Promise.resolve([]),
+    queryFn: () => user ? withShopRecords("Customer", base44.entities.Customer.filter({created_by: user.email}, "-created_date", 30000)) : Promise.resolve([]),
     enabled: !!user,
   });
   const { data: parts = [] } = useQuery({
@@ -49,7 +50,7 @@ export default function Dashboard() {
   });
   const { data: estimates = [] } = useQuery({
     queryKey: ["estimates", user?.email],
-    queryFn: () => user ? base44.entities.Estimate.filter({created_by: user.email}, "-created_date", 500) : Promise.resolve([]),
+    queryFn: () => user ? withShopRecords("Estimate", base44.entities.Estimate.filter({created_by: user.email}, "-created_date", 500)) : Promise.resolve([]),
     enabled: !!user,
   });
 

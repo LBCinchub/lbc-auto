@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
+import { withShopRecords } from "@/lib/shopRecords";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation} from 'react-router-dom';
 import { Calendar, Pencil, Trash2, User, Car, Wrench, Send, Loader2, ClipboardList } from "lucide-react";
@@ -58,17 +59,17 @@ export default function Appointments() {
 
   const { data: appointments = [], isLoading } = useQuery({
     queryKey: ["appointments", user?.email],
-    queryFn: () => user ? base44.entities.Appointment.filter({ shop_email: user.email }, "-date", 200) : Promise.resolve([]),
+    queryFn: () => user ? withShopRecords("Appointment", base44.entities.Appointment.filter({ shop_email: user.email }, "-date", 200)) : Promise.resolve([]),
     enabled: !!user,
   });
   const { data: customers = [] } = useQuery({
     queryKey: ["customers", user?.email],
-    queryFn: () => user ? base44.entities.Customer.filter({ created_by: user.email }, "-created_date", 10000) : Promise.resolve([]),
+    queryFn: () => user ? withShopRecords("Customer", base44.entities.Customer.filter({ created_by: user.email }, "-created_date", 10000)) : Promise.resolve([]),
     enabled: !!user,
   });
   const { data: vehicles = [] } = useQuery({
     queryKey: ["vehicles", user?.email],
-    queryFn: () => user ? base44.entities.Vehicle.filter({ created_by: user.email }, "-created_date", 200) : Promise.resolve([]),
+    queryFn: () => user ? withShopRecords("Vehicle", base44.entities.Vehicle.filter({ created_by: user.email }, "-created_date", 200)) : Promise.resolve([]),
     enabled: !!user,
   });
   const { data: mechanics = [] } = useQuery({

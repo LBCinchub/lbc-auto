@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation} from 'react-router-dom';
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { withShopRecords } from "@/lib/shopRecords";
 import { Button } from "@/components/ui/button";
 import { ClipboardList, Pencil, Trash2, CheckCircle2, FileText, Phone, Mail, Hash, Sheet, Send, Loader2, ThumbsUp, Wrench, ChevronRight, CreditCard } from "lucide-react";
 import { useEmailSend } from "@/hooks/useEmailSend";
@@ -70,19 +71,19 @@ export default function Estimates() {
 
   const { data: estimates = [], isLoading } = useQuery({
     queryKey: ["estimates", user?.email],
-    queryFn: () => user ? base44.entities.Estimate.filter({created_by: user.email}, "-created_date", 30000) : Promise.resolve([]),
+    queryFn: () => user ? withShopRecords("Estimate", base44.entities.Estimate.filter({created_by: user.email}, "-created_date", 30000)) : Promise.resolve([]),
     enabled: !!user,
   });
 
   const { data: customers = [] } = useQuery({
     queryKey: ["customers", user?.email],
-    queryFn: () => user ? base44.entities.Customer.filter({created_by: user.email}, "-created_date", 30000) : Promise.resolve([]),
+    queryFn: () => user ? withShopRecords("Customer", base44.entities.Customer.filter({created_by: user.email}, "-created_date", 30000)) : Promise.resolve([]),
     enabled: !!user,
   });
 
   const { data: vehicles = [] } = useQuery({
     queryKey: ["vehicles", user?.email],
-    queryFn: () => user ? base44.entities.Vehicle.filter({created_by: user.email}, "-created_date", 30000) : Promise.resolve([]),
+    queryFn: () => user ? withShopRecords("Vehicle", base44.entities.Vehicle.filter({created_by: user.email}, "-created_date", 30000)) : Promise.resolve([]),
     enabled: !!user,
   });
 

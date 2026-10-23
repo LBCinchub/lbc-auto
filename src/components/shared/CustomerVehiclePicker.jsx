@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { base44 } from "@/api/base44Client";
+import { withShopRecords } from "@/lib/shopRecords";
 import { useQueryClient } from "@tanstack/react-query";
 import { Search, Plus, Loader2, User, Car, RefreshCw, Phone, Mail, MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -105,7 +106,7 @@ export default function CustomerVehiclePicker({
   // Load vehicles for the selected customer (also covers prefill on mount).
   useEffect(() => {
     if (customerId) {
-      base44.entities.Vehicle.filter({ customer_id: customerId })
+      withShopRecords("Vehicle", base44.entities.Vehicle.filter({ customer_id: customerId }), { customer_id: customerId })
         .then(setCustomerVehicles)
         .catch(() => {});
     } else {
