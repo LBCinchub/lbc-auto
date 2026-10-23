@@ -52,6 +52,14 @@
     "total_visits": {
       "type": "number",
       "description": "Total number of visits (incremented on each new RO/Invoice)"
+    },
+    "financial_lease_until": {
+      "type": "string",
+      "description": "Server-only lease expiry (ISO) serializing invoice creation for this customer"
+    },
+    "financial_lease_owner": {
+      "type": "string",
+      "description": "Server-only lease holder token"
     }
   },
   "required": [

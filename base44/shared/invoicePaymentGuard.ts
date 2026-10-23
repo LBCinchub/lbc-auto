@@ -8,13 +8,22 @@ export function assertInvoiceMatchesSource({ sourceType, source, invoice, reques
   if (requestedInvoiceId && invoice.id !== requestedInvoiceId) throw new Error('Invoice does not match this source');
   if (sourceType === 'estimate' || sourceType === 'repair_order') {
     const field = sourceType === 'estimate' ? 'estimate_id' : 'repair_order_id';
-    if (invoice[field] !== source?.id && source?.linked_invoice_id !== invoice.id) throw new Error('Invoice does not match this source');
+    // Cross-route: an RO's invoice may be linked only through the RO's estimate, and vice versa.
+    const viaPartner = sourceType === 'repair_order'
+      ? !!source?.estimate_id && invoice.estimate_id === source.estimate_id && (!invoice.repair_order_id || invoice.repair_order_id === source.id)
+      : !!source?.linked_repair_order_id && invoice.repair_order_id === source.linked_repair_order_id && (!invoice.estimate_id || invoice.estimate_id === source.id);
+    if (invoice[field] !== source?.id && source?.linked_invoice_id !== invoice.id && !viaPartner) throw new Error('Invoice does not match this source');
   }
 }
 
 // Builds the invoice update for appending payments. Throws on invalid/over-balance amounts.
-export function applyPayments(invoice: any, payments: any[], today: string) {
-  const additions = (payments || []).map((p) => ({ date: today, amount: r2(p.amount), method: String(p.method || 'other'), note: String(p.note || '') }));
+// True when a payment request with this key is already stored on the invoice (durable replay check).
+export function paymentAlreadyApplied(invoice: any, paymentKey: string) {
+  return !!paymentKey && (invoice?.payment_history || []).some((p: any) => p?.payment_key === paymentKey);
+}
+
+export function applyPayments(invoice: any, payments: any[], today: string, paymentKey = '') {
+  const additions = (payments || []).map((p) => ({ date: today, amount: r2(p.amount), method: String(p.method || 'other'), note: String(p.note || ''), ...(paymentKey ? { payment_key: paymentKey } : {}) }));
   const added = r2(additions.reduce((s, p) => s + p.amount, 0));
   const total = Number(invoice.total) || 0;
   const balanceBefore = Number(invoice.balance_due ?? total) || 0;

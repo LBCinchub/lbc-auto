@@ -56,6 +56,10 @@ export default function CustomerVehiclePicker({
   // Auto-decodes when the VIN reaches 17 characters (typed or pasted).
   const { decoding: vinDecoding, vinError, decodeVin } = useNhtsaVinDecode();
   const lastDecodedVinRef = useRef("");
+  const custListRef = useRef(null);
+  // Mouse/touch: keep input focus so blur doesn't close the list before the click; selection runs once, on click
+  // (also fired by Enter/Space on a focused option), so there is no double invocation.
+  const keepFocus = (e) => e.preventDefault();
   const handleVinChange = (raw) => {
     const vin = raw.toUpperCase().replace(/\s+/g, "");
     setNewVeh({ ...newVeh, vin });
@@ -294,22 +298,24 @@ export default function CustomerVehiclePicker({
               value={custSearch}
               onChange={(e) => onCustSearchChange(e.target.value)}
               onFocus={() => searchCustomers(custSearch)}
-              onBlur={() => setTimeout(() => setShowCustDropdown(false), 150)}
+              onBlur={(e) => { if (!custListRef.current?.contains(e.relatedTarget)) setTimeout(() => setShowCustDropdown(false), 150); }}
+              onKeyDown={(e) => { if (e.key === "ArrowDown") { e.preventDefault(); custListRef.current?.querySelector("button")?.focus(); } }}
               placeholder="Search customer by name or phone..."
               className="bg-gray-950 border-gray-700 text-white pl-8"
             />
             {showCustDropdown && (
-              <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg overflow-hidden shadow-xl text-left">
+              <div ref={custListRef} role="listbox" onBlur={(e) => { if (!custListRef.current?.contains(e.relatedTarget)) setShowCustDropdown(false); }} className="absolute z-50 top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg overflow-hidden shadow-xl text-left">
                 <button
                   type="button"
-                  onMouseDown={() => { setShowCustDropdown(false); setShowNewCustomer(true); }}
+                  onMouseDown={keepFocus}
+                  onClick={() => { setShowCustDropdown(false); setShowNewCustomer(true); }}
                   className="w-full px-3 py-2 bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 text-sm flex items-center gap-2 border-b border-gray-700"
                 >
                   <Plus className="w-3.5 h-3.5" /> Add New Customer
                 </button>
                 {custDropdown.length > 0 ? (
                   custDropdown.map((c) => (
-                    <button key={c.id} type="button" onMouseDown={() => selectCustomer(c)} className="w-full px-3 py-2 hover:bg-sky-500/20 text-sm text-white flex justify-between">
+                    <button key={c.id} type="button" role="option" aria-selected={false} onMouseDown={keepFocus} onClick={() => selectCustomer(c)} className="w-full px-3 py-2 hover:bg-sky-500/20 focus:bg-sky-500/20 focus:outline-none text-sm text-white flex justify-between">
                       <span>{c.full_name}</span>
                       <span className="text-gray-400 text-xs">{c.phone}</span>
                     </button>

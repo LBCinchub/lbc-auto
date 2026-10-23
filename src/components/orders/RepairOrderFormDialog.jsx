@@ -21,6 +21,7 @@ import { buildVehicleInfo } from "@/utils/buildVehicleInfo";
 import CustomerSearchInput from "@/components/shared/CustomerSearchInput";
 import { capWords, toTitleCase, capitalizeFields, capitalizeArrayItems } from "@/utils/capitalize";
 import UnifiedFinancialActionBar from "@/components/financial-workflow/UnifiedFinancialActionBar";
+import { laborRate, normalizeLaborItems, normalizeParts, inventoryDeltas, isPersisted } from "@/lib/repairOrderSave";
 
 const statuses = [
   { value: "waiting", label: "Waiting" },
@@ -52,6 +53,15 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
   const [userTaxRate, setUserTaxRate] = useState(0);
   const [userLaborRate, setUserLaborRate] = useState(120);
   const submittingRef = useRef(false);
+  // Last persisted state in this dialog session: a retry after a partial save updates the same
+  // id, and inventory is only deducted for quantity increases beyond what was already deducted.
+  const persistedRef = useRef({ id: null, order: null, parts: [], number: "" });
+  useEffect(() => {
+    if (!open) return;
+    const saved = isPersisted(order) ? order : null;
+    persistedRef.current = { id: saved?.id || null, order: saved, parts: saved?.parts_used || [], number: saved?.order_number || `RO-${Date.now().toString(36).toUpperCase()}` };
+    setSaveError("");
+  }, [order?.id, open]);
   const [localVehicles, setLocalVehicles] = useState([]);
   const [fetchedVehicles, setFetchedVehicles] = useState([]);
   const [loadingVehicles, setLoadingVehicles] = useState(false);
@@ -91,7 +101,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
   // Live cost calculation (only if not custom/saved)
   const mechanic = mechanics.find(m => m.id === form.mechanic_id);
   // Always compute from raw field values — never rely on stale .total in state
-  const laborCost = (form.labor_items || []).reduce((s, r) => s + (parseFloat(r.hours) || 0) * (parseFloat(r.rate) || 120), 0);
+  const laborCost = (form.labor_items || []).reduce((s, r) => s + (parseFloat(r.hours) || 0) * laborRate(r), 0);
   const partsCost = (form.parts_used || []).reduce((sum, p) => sum + (parseFloat(p.unit_price) || 0) * (parseFloat(p.quantity) || 0), 0);
   const TAX_RATE = userTaxRate;
   const subtotal = laborCost + partsCost;
@@ -305,7 +315,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         setSaveError(validation.errors.join(" "));
         submittingRef.current = false;
         setSaving(false);
-        return;
+        return null;
       }
     } catch (validationErr) {
       setSaveError(validationErr?.message || "Could not validate the customer and vehicle links.");
@@ -315,8 +325,13 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
     }
     try {
       const laborHours = Number(form.labor_hours) || 0;
-      const laborCost = (form.labor_items || []).reduce((s, r) => s + (parseFloat(r.hours) || 0) * (parseFloat(r.rate) || 120), 0);
-      const partsCost = form.parts_used.reduce((sum, p) => sum + (p.total || 0), 0);
+      // Schema fields are numbers; the form holds strings while typing (string rate/hours were rejected on save).
+      const laborItems = normalizeLaborItems(form.labor_items || []);
+      const partsUsed = normalizeParts(form.parts_used || []);
+      const laborCost = laborItems.reduce((s, r) => s + r.total, 0);
+      const partsCost = partsUsed.reduce((sum, p) => sum + p.total, 0);
+      const base = persistedRef.current.order;
+      const existingId = persistedRef.current.id;
       const subtotal = laborCost + partsCost;
       const discountAmount = form.discount_type === "percentage" 
         ? subtotal * ((form.discount_value || 0) / 100)
@@ -342,6 +357,8 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
 
       const data = {
         ...form,
+        labor_items: laborItems,
+        parts_used: partsUsed,
         vehicle_id: resolvedVehicleId,
         estimate_id: form.estimate_id || order?.estimate_id || "",
         photos: form.photos || order?.photos || [],
@@ -350,7 +367,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         parts_cost: Math.round(partsCost * 100) / 100,
         total_cost: finalTotal,
         custom_total: form.custom_total,
-        order_number: order?.order_number || `RO-${Date.now().toString(36).toUpperCase()}`,
+        order_number: base?.order_number || persistedRef.current.number,
       };
       // Capitalize text fields
       Object.assign(data, capitalizeFields(data, ["customer_name", "vehicle_info", "description", "notes"]));
@@ -358,13 +375,13 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
       data.parts_used = capitalizeArrayItems(data.parts_used, ["name"]);
 
       let savedOrder = null;
-      let savedOrderId = order?.id;
-      if (order && order.id) {
+      let savedOrderId = existingId;
+      if (existingId) {
         const changes = {};
-        if (order.status !== data.status) changes.status = { from: order.status, to: data.status };
-        if (order.mechanic_name !== data.mechanic_name) changes.mechanic = { from: order.mechanic_name, to: data.mechanic_name };
-        if (order.labor_hours !== data.labor_hours) changes.labor_hours = { from: order.labor_hours, to: data.labor_hours };
-        if (order.parts_cost !== data.parts_cost) changes.parts_cost = { from: order.parts_cost, to: data.parts_cost };
+        if (base.status !== data.status) changes.status = { from: base.status, to: data.status };
+        if (base.mechanic_name !== data.mechanic_name) changes.mechanic = { from: base.mechanic_name, to: data.mechanic_name };
+        if (base.labor_hours !== data.labor_hours) changes.labor_hours = { from: base.labor_hours, to: data.labor_hours };
+        if (base.parts_cost !== data.parts_cost) changes.parts_cost = { from: base.parts_cost, to: data.parts_cost };
 
         const historyEntry = {
           timestamp,
@@ -373,9 +390,10 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
           changes
         };
 
-        data.history = [...(order.history || []), historyEntry];
-        savedOrder = await base44.entities.RepairOrder.update(order.id, data);
-        savedOrderId = savedOrder?.id || order.id;
+        data.history = [...(base.history || []), historyEntry];
+        savedOrder = await base44.entities.RepairOrder.update(existingId, data);
+        savedOrderId = savedOrder?.id || existingId;
+        persistedRef.current = { ...persistedRef.current, order: { ...base, ...data, ...(savedOrder || {}), id: savedOrderId } };
 
         // Linked invoice writes are centralized in financialDocumentAction.
 
@@ -418,19 +436,20 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         }];
         savedOrder = await base44.entities.RepairOrder.create(data);
         savedOrderId = savedOrder.id;
+        // Any retry from here on updates this same record instead of creating another.
+        persistedRef.current = { ...persistedRef.current, id: savedOrderId, order: { ...data, ...savedOrder } };
       }
-      
-      // ── Deduct parts from inventory ──
-      try {
-        const partsToDeduct = (data.parts_used || []).filter(p => p.part_id && p.quantity > 0);
-        for (const p of partsToDeduct) {
-          const invPart = await base44.entities.Part.get(p.part_id);
-          if (invPart) {
-            const newQty = Math.max(0, (invPart.quantity || 0) - (p.quantity || 0));
-            await base44.entities.Part.update(p.part_id, { quantity: newQty });
-          }
+
+      // ── Deduct parts from inventory (only increases not yet deducted) ──
+      for (const { part_id, delta } of inventoryDeltas(persistedRef.current.parts, data.parts_used)) {
+        try {
+          const invPart = await base44.entities.Part.get(part_id);
+          if (invPart) await base44.entities.Part.update(part_id, { quantity: Math.max(0, (invPart.quantity || 0) - delta) });
+          persistedRef.current.parts = [...persistedRef.current.parts, { part_id, quantity: delta }];
+        } catch (e) {
+          throw new Error(`Repair Order ${data.order_number} was saved, but the inventory update failed (${e?.message || e}). Save again to retry; it will not duplicate the order.`);
         }
-      } catch (e) { console.warn("Inventory deduction failed:", e); }
+      }
 
       const syncResult = await syncCustomerActivity({
         customerId: data.customer_id,
@@ -466,7 +485,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
         <div className="flex-shrink-0 px-6 pt-6 pb-4 border-b border-gray-800">
           <div className="flex items-start justify-between gap-3">
             <DialogHeader className="flex-1">
-              <DialogTitle>{order ? "Edit Repair Order" : "New Repair Order"}</DialogTitle>
+              <DialogTitle>{isPersisted(order) ? "Edit Repair Order" : "New Repair Order"}</DialogTitle>
             </DialogHeader>
           </div>
         </div>
@@ -702,7 +721,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                       <td className="px-2 py-1.5">
                         <Input type="number" onFocus={e => e.target.select()} value={row.hours} onChange={e => {
                           const items = [...(form.labor_items || [])];
-                          items[idx] = { ...items[idx], hours: e.target.value, total: (parseFloat(e.target.value) || 0) * (parseFloat(items[idx].rate) || 120) };
+                          items[idx] = { ...items[idx], hours: e.target.value, total: (parseFloat(e.target.value) || 0) * laborRate(items[idx]) };
                           const totalHours = items.reduce((s, r) => s + (parseFloat(r.hours) || 0), 0);
                           setForm(f => ({ ...f, labor_items: items, labor_hours: totalHours }));
                         }} className="bg-gray-800 border-0 text-white h-8 text-sm text-right" placeholder="0" step="0.5" />
@@ -717,7 +736,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                           <p className="text-amber-400 text-[10px] mt-0.5">⚠️ Non-standard rate (${parseFloat(row.rate)}/hr)</p>
                         )}
                       </td>
-                      <td className="px-3 py-1.5 text-right text-gray-300 font-medium">${((parseFloat(row.hours) || 0) * (parseFloat(row.rate) || 120)).toFixed(2)}</td>
+                      <td className="px-3 py-1.5 text-right text-gray-300 font-medium">${((parseFloat(row.hours) || 0) * laborRate(row)).toFixed(2)}</td>
                       <td className="pr-2 py-1.5">
                         <button onClick={() => {
                           const items = (form.labor_items || []).filter((_, i) => i !== idx);
@@ -926,6 +945,10 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
 
         </div>{/* end space-y-4 */}
         </div>{/* end scrollable body */}
+
+        {saveError && (
+          <div role="alert" className="mx-6 mb-2 rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">{saveError}</div>
+        )}
 
         <UnifiedFinancialActionBar
           step={3}

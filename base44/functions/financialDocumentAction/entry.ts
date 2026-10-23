@@ -1,6 +1,8 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.57';
 import { upsertLineItems } from '../../shared/lineItemLibrary.ts';
-import { assertInvoiceMatchesSource, applyPayments } from '../../shared/invoicePaymentGuard.ts';
+import { assertInvoiceMatchesSource, applyPayments, paymentAlreadyApplied } from '../../shared/invoicePaymentGuard.ts';
+import { withLease, LeaseBusyError } from '../../shared/recordLease.ts';
+import { assertConsistent, resolveEstimateRepairOrder, linkPatches } from '../../shared/financialLinks.ts';
 
 const r2 = (value) => Math.round((Number(value) || 0) * 100) / 100;
 const normalizeDiscount = (type) => type === '%' || type === 'percent' || type === 'percentage' ? '%' : type === '$' || type === 'fixed' ? '$' : '$';
@@ -86,6 +88,18 @@ export default async function(req) {
         const matches = await base44.asServiceRole.entities.Invoice.filter({ [field]: source.id }, '-created_date', 1);
         invoice = matches[0] || null;
       }
+      // Cross-route: an RO cashed out via its estimate (or an estimate via its RO) shares one invoice.
+      if (!invoice) {
+        const partnerId = sourceType === 'repair_order' ? source.estimate_id : source.linked_repair_order_id;
+        const partner = partnerId ? await base44.asServiceRole.entities[sourceType === 'repair_order' ? 'Estimate' : 'RepairOrder'].get(partnerId).catch(() => null) : null;
+        if (partner && owns(partner) && partner.customer_id === source.customer_id) {
+          const back = sourceType === 'repair_order' ? partner.linked_repair_order_id : partner.estimate_id;
+          if (!back || back === source.id) {
+            if (partner.linked_invoice_id) invoice = await base44.asServiceRole.entities.Invoice.get(partner.linked_invoice_id).catch(() => null);
+            if (!invoice) invoice = (await base44.asServiceRole.entities.Invoice.filter({ [sourceType === 'repair_order' ? 'estimate_id' : 'repair_order_id']: partner.id }, '-created_date', 1))[0] || null;
+          }
+        }
+      }
       if (invoice && !owns(invoice)) throw new Error('Linked invoice belongs to another shop');
     }
     if (!invoice && body.invoice_id) invoice = await getOwned('Invoice', body.invoice_id, 'Invoice');
@@ -102,8 +116,24 @@ export default async function(req) {
     }
     const vehicle = await getOwned('Vehicle', vehicleId, 'Vehicle');
     if (vehicle.customer_id !== customer.id) throw new Error('Customer and vehicle relationship is invalid');
-    const repairOrder = invoice?.repair_order_id ? await getOwned('RepairOrder', invoice.repair_order_id, 'Repair Order') : sourceType === 'repair_order' ? source : null;
-    const estimate = invoice?.estimate_id ? await getOwned('Estimate', invoice.estimate_id, 'Estimate') : sourceType === 'estimate' ? source : repairOrder?.estimate_id ? await getOwned('Estimate', repairOrder.estimate_id, 'Estimate') : null;
+    // Authoritative relationships: stored links first (foreign -> 403, mismatched -> 400), then the
+    // estimate's verified converted RO, then the RO's estimate. Every entry route resolves the same set.
+    const findOwned = async (entity, query) => (await base44.asServiceRole.entities[entity].filter(query, '-created_date', 10)).filter(owns);
+    let estimate = invoice?.estimate_id ? await getOwned('Estimate', invoice.estimate_id, 'Estimate') : sourceType === 'estimate' ? source : null;
+    let repairOrder = invoice?.repair_order_id ? await getOwned('RepairOrder', invoice.repair_order_id, 'Repair Order') : sourceType === 'repair_order' ? source : null;
+    if (!repairOrder && estimate) repairOrder = await resolveEstimateRepairOrder({ estimate, customerId: customer.id, vehicleId: vehicle.id, getOwned, findOwned });
+    if (!estimate && repairOrder?.estimate_id) estimate = await getOwned('Estimate', repairOrder.estimate_id, 'Estimate');
+    if (estimate && repairOrder?.estimate_id && repairOrder.estimate_id !== estimate.id) throw new Error('Repair Order belongs to a different estimate');
+    assertConsistent('Estimate', estimate, customer.id, vehicle.id);
+    assertConsistent('Repair Order', repairOrder, customer.id, vehicle.id);
+    assertConsistent('Invoice', invoice, customer.id, vehicle.id);
+    // Idempotent link recovery on mutating actions only (load stays read-only; no bulk backfill).
+    const recoverLinks = async () => {
+      const p = linkPatches({ invoice, estimate, repairOrder });
+      if (Object.keys(p.invoice).length) invoice = await base44.entities.Invoice.update(invoice.id, p.invoice);
+      if (p.estimate) await base44.entities.Estimate.update(estimate.id, p.estimate);
+      if (p.repairOrder) await base44.entities.RepairOrder.update(repairOrder.id, p.repairOrder);
+    };
 
     const initialLines = invoice ? cleanLines(invoice.line_items || [], 'Invoice') : sourceLines(sourceType, source);
     const defaultTaxRate = invoice?.tax_rate ?? source?.tax_rate ?? user.tax_rate ?? 0;
@@ -143,8 +173,22 @@ export default async function(req) {
     } else if ((action === 'create' || action === 'finalize') && !invoice) {
       const key = String(body.idempotency_key || '');
       if (!key) throw new Error('Idempotency key is required');
+      // Serialize invoice creation per customer with a durable atomic lease, then re-check every
+      // recovery path inside it: retry key event, deterministic number, and the source's links.
+      await withLease(base44.asServiceRole.entities, 'Customer', customer.id, async () => {
       const prior = await base44.asServiceRole.entities.FinancialWorkflowEvent.filter({ shop_owner_email: tenant, idempotency_key: key, action: 'create' }, '-created_date', 1);
       if (prior[0]?.invoice_id) invoice = await getOwned('Invoice', prior[0].invoice_id, 'Invoice');
+      if (!invoice && (estimate || repairOrder)) {
+        const freshE = estimate ? await getOwned('Estimate', estimate.id, 'Estimate') : null;
+        const freshR = repairOrder ? await getOwned('RepairOrder', repairOrder.id, 'Repair Order') : null;
+        for (const id of [freshE?.linked_invoice_id, freshR?.linked_invoice_id].filter(Boolean)) {
+          const linked = await base44.asServiceRole.entities.Invoice.get(id).catch(() => null);
+          if (linked && owns(linked)) { invoice = linked; break; }
+        }
+        if (!invoice && estimate) invoice = (await findOwned('Invoice', { estimate_id: estimate.id }))[0] || null;
+        if (!invoice && repairOrder) invoice = (await findOwned('Invoice', { repair_order_id: repairOrder.id }))[0] || null;
+        if (invoice) { replayed = true; await recoverLinks(); }
+      }
       if (!invoice) {
         const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${tenant}:${key}`));
         const suffix = Array.from(new Uint8Array(digest)).slice(0, 5).map((x) => x.toString(16).padStart(2, '0')).join('').toUpperCase();
@@ -162,13 +206,13 @@ export default async function(req) {
         } catch (err) { linkError = err; }
         await base44.asServiceRole.entities.FinancialWorkflowEvent.create({ shop_owner_email: tenant, action: 'create', invoice_id: invoice.id, source_type: sourceType, source_id: sourceId, idempotency_key: key, created_at: new Date().toISOString(), actor_email: tenant, metadata: { total: totals.total, link_status: linkError ? 'pending' : 'linked' } });
         if (linkError) throw new Error(`Invoice ${invoice.invoice_number} was saved but linking is incomplete (${linkError.message}). Retry to finish linking; no duplicate will be created.`);
-      }
+      } else if (!replayed) { replayed = true; await recoverLinks(); }
+      });
     } else if (action === 'create' && invoice) {
-      // Replay: this source already has a verified invoice. Return it untouched (no line/total/payment changes).
+      // Replay: this source already has a verified invoice. Invoice lines/totals/payments are untouched;
+      // only missing links (e.g. empty repair_order_id after an Estimate -> RO -> Cash Out) are filled in.
       replayed = true;
-      // Invoice data is untouched; only a missing source link (e.g. after a partial-link failure) is filled in.
-      if (estimate && !estimate.linked_invoice_id) await base44.entities.Estimate.update(estimate.id, { linked_invoice_id: invoice.id, linked_invoice_number: invoice.invoice_number });
-      if (repairOrder && !repairOrder.linked_invoice_id) await base44.entities.RepairOrder.update(repairOrder.id, { linked_invoice_id: invoice.id, linked_invoice_number: invoice.invoice_number });
+      await recoverLinks();
     } else if (['update', 'finalize', 'sync_source'].includes(action)) {
       if (!invoice) throw new Error('No linked invoice exists');
       // Keep the stored ghost_total in sync when tax_rate/tax_applies_to change.
@@ -190,12 +234,21 @@ export default async function(req) {
     } else if (action === 'record_payment') {
       if (!invoice) throw new Error('Save the invoice before recording payment');
       const payKey = String(body.idempotency_key || '');
-      const priorPay = payKey ? await base44.asServiceRole.entities.FinancialWorkflowEvent.filter({ shop_owner_email: tenant, idempotency_key: payKey, action: 'record_payment', invoice_id: invoice.id }, '-created_date', 1) : [];
-      if (!priorPay.length) {
-        const { added, update } = applyPayments(invoice, intent.payments, new Date().toISOString().slice(0, 10));
-        invoice = await base44.entities.Invoice.update(invoice.id, update);
+      if (!payKey) throw new Error('Idempotency key is required');
+      // Lease the invoice, re-read it, and treat a payment_key already stored on the invoice as a
+      // replay. The key is written in the same update as the payment, so a crash between the
+      // payment write and the audit event can never cause a second charge on retry.
+      await withLease(base44.asServiceRole.entities, 'Invoice', invoice.id, async () => {
+        const current = await getOwned('Invoice', invoice.id, 'Invoice');
+        invoice = current;
+        if (paymentAlreadyApplied(current, payKey)) return;
+        const priorPay = await base44.asServiceRole.entities.FinancialWorkflowEvent.filter({ shop_owner_email: tenant, idempotency_key: payKey, action: 'record_payment', invoice_id: current.id }, '-created_date', 1);
+        if (priorPay.length) return;
+        const { added, update } = applyPayments(current, intent.payments, new Date().toISOString().slice(0, 10), payKey);
+        invoice = await base44.entities.Invoice.update(current.id, update);
         await base44.asServiceRole.entities.FinancialWorkflowEvent.create({ shop_owner_email: tenant, action: 'record_payment', invoice_id: invoice.id, source_type: sourceType, source_id: sourceId, idempotency_key: payKey, created_at: new Date().toISOString(), actor_email: tenant, metadata: { amount: added } });
-      }
+      });
+      await recoverLinks();
     } else if (action === 'send') {
       if (!invoice) throw new Error('Save the invoice before sending');
       if (!customer.email) throw new Error('No email on file');
@@ -210,7 +263,7 @@ export default async function(req) {
     return Response.json({ success: true, invoice: refreshed, customer, vehicle, estimate, repair_order: repairOrder, context });
   } catch (error) {
     const message = error?.message || 'Financial action failed';
-    const status = /another shop|not found in this shop|Owner or admin/.test(message) ? 403 : 400;
+    const status = error instanceof LeaseBusyError ? 409 : /another shop|not found in this shop|Owner or admin/.test(message) ? 403 : 400;
     return Response.json({ error: message }, { status });
   }
 }

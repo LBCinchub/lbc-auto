@@ -148,6 +148,10 @@
           },
           "note": {
             "type": "string"
+          },
+          "payment_key": {
+            "type": "string",
+            "description": "Server idempotency key of the request that added this payment"
           }
         }
       }
@@ -301,6 +305,14 @@
     "ghost_source_number": {
       "type": "string",
       "description": "Number of the origin document (e.g. EST-XXX, INV-XXX)"
+    },
+    "financial_lease_until": {
+      "type": "string",
+      "description": "Server-only lease expiry (ISO) serializing payment recording"
+    },
+    "financial_lease_owner": {
+      "type": "string",
+      "description": "Server-only lease holder token"
     }
   },
   "required": [

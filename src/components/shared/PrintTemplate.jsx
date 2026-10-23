@@ -459,7 +459,7 @@ export default function PrintTemplate({ type = "Invoice", docNumber, createdDate
                 <span>Discount{normDiscountType === "percent" && discountDisplayAmount > 0 ? ` (${parseFloat(discount).toFixed(0)}%)` : ""}</span>
                 <span>{discountDisplayAmount > 0 ? `-$${discountDisplayAmount.toFixed(2)}` : "$0.00"}</span>
               </div>
-              {taxRate > 0 && (
+              {(Number(taxRate) > 0 || Number(taxAmount) > 0) && (
                 <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 10, color: "#475569" }}>
                   <span>Tax ({taxRate}%{taxAppliesTo && taxAppliesTo !== "both" ? ` · ${taxAppliesTo === "labor" ? "Labor only" : "Parts only"}` : ""})</span><span>${taxAmount.toFixed(2)}</span>
                 </div>

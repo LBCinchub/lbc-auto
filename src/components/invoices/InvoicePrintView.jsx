@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { base44 } from "@/api/base44Client";
 import { TAX_RATE } from "@/lib/constants";
+import { formatRecordDate } from "@/lib/printDate";
 import PrintTemplate from "@/components/shared/PrintTemplate";
 import { buildVehicleInfo } from "@/utils/buildVehicleInfo";
 import { calcGhostTotals } from "@/utils/ghostTax";
@@ -100,7 +101,7 @@ export default function InvoicePrintView({ invoice, onClose }) {
     laborTotal: invoice.labor_total || 0,
     subtotal,
     discount: invoice.discount || 0,
-    taxRate: TAX_RATE,
+    taxRate: invoice.tax_rate ?? TAX_RATE,
     taxAmount: invoice.tax_amount || 0,
     taxAppliesTo: invoice.tax_applies_to || "both",
     grandTotal: invoice.total || 0,
@@ -112,7 +113,7 @@ export default function InvoicePrintView({ invoice, onClose }) {
   const ghostTotals = ghostItems.length ? calcGhostTotals(ghostItems, invoice?.tax_rate || 0, invoice?.tax_applies_to || "both") : null;
 
   const paymentHistory = (invoice.payment_history || []).map(p => ({
-    date: p.date ? new Date(p.date).toLocaleString() : "",
+    date: formatRecordDate(p.date),
     receipt_number: p.receipt_number || invoice.receipt_number || "",
     method: p.method || invoice.payment_method || "",
     amount: p.amount || 0,

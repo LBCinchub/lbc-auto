@@ -289,7 +289,7 @@ export default function AppointmentFormDialog({ open, onClose, appointment, onSa
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-md max-h-[90vh] overflow-y-auto" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
         <DialogHeader>
-          <DialogTitle>{appointment ? "Edit Appointment" : "New Appointment"}</DialogTitle>
+          <DialogTitle>{appointment?.id && !appointment._prefillCustomerId ? "Edit Appointment" : "New Appointment"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 mt-2">
           <div>

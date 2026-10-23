@@ -155,7 +155,7 @@ export default function VehicleFormDialog({ open, onClose, vehicle, onSaved, cus
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{vehicle ? "Edit Vehicle" : "New Vehicle"}</DialogTitle>
+          <DialogTitle>{vehicle?.id ? "Edit Vehicle" : "New Vehicle"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 mt-2">
           <div>
