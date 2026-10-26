@@ -5,20 +5,21 @@ import { Loader2, ArrowLeft, ArrowRight, SkipForward, Check } from "lucide-react
 import { cardStyle, btnPrimary, btnSecondary, inputClass, ProgressBar } from "./onboardingStyles.jsx";
 import { validateFirstCustomer, saveFirstCustomer } from "./saveFirstCustomer";
 
+// Examples start with "e.g." so an empty box can't be mistaken for an entered value.
 const CUSTOMER_FIELDS = [
-  { key: "name", id: "onb-cust-name", label: "Customer Name *", placeholder: "John Smith" },
-  { key: "phone", id: "onb-cust-phone", label: "Phone *", placeholder: "(613) 555-0100", type: "tel" },
-  { key: "email", id: "onb-cust-email", label: "Email (optional)", placeholder: "john@email.com", type: "email" },
-  { key: "address", id: "onb-cust-address", label: "Address (optional)", placeholder: "123 Main St, Ottawa", autoComplete: "street-address" },
+  { key: "name", id: "onb-cust-name", label: "Customer Name *", placeholder: "e.g. John Smith" },
+  { key: "phone", id: "onb-cust-phone", label: "Phone *", placeholder: "e.g. (613) 555-0100", type: "tel" },
+  { key: "email", id: "onb-cust-email", label: "Email (optional)", placeholder: "e.g. john@email.com", type: "email" },
+  { key: "address", id: "onb-cust-address", label: "Address (optional)", placeholder: "e.g. 123 Main St, Ottawa", autoComplete: "street-address" },
 ];
 
 const VEHICLE_FIELDS = [
-  { key: "year", id: "onb-year", label: "Vehicle Year", placeholder: "2018", inputMode: "numeric" },
-  { key: "make", id: "onb-make", label: "Make", placeholder: "Toyota" },
-  { key: "model", id: "onb-model", label: "Model", placeholder: "Camry" },
-  { key: "color", id: "onb-color", label: "Color", placeholder: "Silver" },
-  { key: "plate", id: "onb-plate", label: "License Plate", placeholder: "ABCD 123" },
-  { key: "vin", id: "onb-vin", label: "VIN", placeholder: "1HGBH41JXMN109186" },
+  { key: "year", id: "onb-year", label: "Vehicle Year", placeholder: "e.g. 2018", inputMode: "numeric" },
+  { key: "make", id: "onb-make", label: "Make", placeholder: "e.g. Toyota" },
+  { key: "model", id: "onb-model", label: "Model", placeholder: "e.g. Camry" },
+  { key: "color", id: "onb-color", label: "Color", placeholder: "e.g. Silver" },
+  { key: "plate", id: "onb-plate", label: "License Plate", placeholder: "e.g. ABCD 123" },
+  { key: "vin", id: "onb-vin", label: "VIN", placeholder: "17 characters" },
 ];
 
 const twoCol = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 };
