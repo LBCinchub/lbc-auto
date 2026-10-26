@@ -23,6 +23,15 @@ export default function ItemNameAutocomplete({
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(-1);
   const wrapRef = useRef(null);
+  const inputRef = useRef(null);
+
+  // A new line gets the cursor without the browser re-centering the form (that jump moved
+  // other fields under the pointer); scroll only as far as needed to show the row.
+  useEffect(() => {
+    if (!autoFocus || !inputRef.current) return;
+    inputRef.current.focus({ preventScroll: true });
+    inputRef.current.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, []);
 
   const suggestions = useMemo(() => {
     const q = (value || "").trim().toLowerCase();
@@ -84,7 +93,7 @@ export default function ItemNameAutocomplete({
   return (
     <div className="relative" ref={wrapRef}>
       <Input
-        autoFocus={autoFocus}
+        ref={inputRef}
         value={value || ""}
         onChange={(e) => {
           onChange(e.target.value);
