@@ -20,6 +20,13 @@ import { vehicleIdentity, engineSummary } from "@/lib/vehicleDetails";
 // global autoCapitalize pattern. VIN/plate/email/phone stay as typed.
 const capWords = (v) => v.replace(/(^|\s)(\S)/g, (_, s, c) => s + c.toUpperCase());
 
+// Filled in by the VIN lookup and shown so they can be checked or corrected.
+const VIN_DETAIL_FIELDS = [
+  { key: "fuel_type", label: "Fuel Type", placeholder: "Gasoline" },
+  { key: "transmission", label: "Transmission", placeholder: "Automatic" },
+  { key: "drive_type", label: "Drive Type", placeholder: "FWD" },
+];
+
 /**
  * Shared customer + vehicle picker for the blank-new Invoice/Estimate editors.
  * - Searchable customer field (by name or phone), tenant-scoped via the passed
@@ -89,6 +96,7 @@ export default function CustomerVehiclePicker({
   const selectedVehicle = customerVehicles.find((v) => v.id === vehicleId);
   const customerPhone = selectedCustomer?.phone || "";
   const customerEmail = selectedCustomer?.email || "";
+  const customerAddress = selectedCustomer?.address || "";
   const vehicleVin = selectedVehicle?.vin || "";
   const vehiclePlate = selectedVehicle?.license_plate || "";
   const vehicleColor = selectedVehicle?.color || "";
@@ -253,6 +261,7 @@ export default function CustomerVehiclePicker({
                 <p className="truncate text-base font-bold text-white">{customerName}</p>
                 {customerPhone && <p className="truncate text-xs text-gray-400">{customerPhone}</p>}
                 {customerEmail && <p className="truncate text-xs text-gray-400">{customerEmail}</p>}
+                {customerAddress && <p className="break-words text-xs text-gray-400">{customerAddress}</p>}
               </div>
               <button
                 type="button"
@@ -446,10 +455,16 @@ export default function CustomerVehiclePicker({
               <Label className="text-gray-400">Trim (optional)</Label>
               <Input value={newVeh.trim} onChange={(e) => setNewVeh({ ...newVeh, trim: capWords(e.target.value) })} className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="EX" />
             </div>
-            <div className="sm:col-span-2">
+            <div>
               <Label className="text-gray-400">Engine (optional)</Label>
               <Input value={newVeh.engine_type} onChange={(e) => setNewVeh({ ...newVeh, engine_type: e.target.value })} className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="1.5L 4-Cyl" />
             </div>
+            {VIN_DETAIL_FIELDS.map(({ key, label, placeholder }) => (
+              <div key={key}>
+                <Label htmlFor={`new-veh-${key}`} className="text-gray-400">{label} (optional)</Label>
+                <Input id={`new-veh-${key}`} value={newVeh[key]} onChange={(e) => setNewVeh({ ...newVeh, [key]: e.target.value })} className="bg-gray-800 border-gray-700 text-white mt-1" placeholder={placeholder} />
+              </div>
+            ))}
             <div>
               <Label className="text-gray-400">VIN (optional)</Label>
               <Input data-no-capitalize maxLength={17} value={newVeh.vin} onChange={(e) => handleVinChange(e.target.value)} className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="17 characters" />
