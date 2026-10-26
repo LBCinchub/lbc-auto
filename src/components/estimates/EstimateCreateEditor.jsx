@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Save } from "lucide-react";
@@ -15,6 +15,12 @@ import { useToast } from "@/components/ui/use-toast";
 import { taxFlag } from "@/lib/financialPolicy";
 
 const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+
+// Typing in a line item redraws only the line items and totals. These sections don't change
+// while a line is typed, so they keep their last drawing instead of redrawing on every key.
+const MemoCustomerVehiclePicker = React.memo(CustomerVehiclePicker);
+const MemoEstimateDetailsFields = React.memo(EstimateDetailsFields);
+const MemoQuickNotesEditor = React.memo(QuickNotesEditor);
 
 // Convert prefill labor_items + parts_items into the unified line-item model
 // used by the shared invoice table (same mapping as OriginalEstimateEditor.toLines).
@@ -79,8 +85,18 @@ export default function EstimateCreateEditor({ prefill, customers = [], vehicles
 
   const totals = useMemo(() => calculateFinancials(draft, 0), [draft]);
 
-  const onCustomerChange = (id, name) => setDraft((d) => ({ ...d, customer_id: id, customer_name: name, vehicle_id: "", vehicle_info: "" }));
-  const onVehicleChange = (vid, vinfo) => setDraft((d) => ({ ...d, vehicle_id: vid, vehicle_info: vinfo }));
+  // Stable handlers that build on the newest draft, so the sections above can skip redraws.
+  const onCustomerChange = useCallback((id, name) => setDraft((d) => ({ ...d, customer_id: id, customer_name: name, vehicle_id: "", vehicle_info: "" })), []);
+  const onVehicleChange = useCallback((vid, vinfo) => setDraft((d) => ({ ...d, vehicle_id: vid, vehicle_info: vinfo })), []);
+  const onLinesChange = useCallback((line_items) => setDraft((d) => ({ ...d, line_items })), []);
+  const onNotesChange = useCallback((notes) => setDraft((d) => ({ ...d, notes })), []);
+  const details = useMemo(
+    () => ({ estimate_date: draft.estimate_date, valid_until: draft.valid_until, service_reason: draft.service_reason }),
+    [draft.estimate_date, draft.valid_until, draft.service_reason]
+  );
+  const onDetailsChange = useCallback((next) => setDraft((d) => ({
+    ...d, estimate_date: next.estimate_date, valid_until: next.valid_until, service_reason: next.service_reason,
+  })), []);
 
   const save = async (allowZero = false) => {
     if (saving) return;
@@ -151,7 +167,7 @@ export default function EstimateCreateEditor({ prefill, customers = [], vehicles
           <p className="text-xs font-semibold uppercase tracking-wider text-sky-400">Estimate</p>
           <h2 className="mt-1 text-xl font-bold text-white">New Estimate</h2>
         </div>
-        <CustomerVehiclePicker
+        <MemoCustomerVehiclePicker
           customers={customers}
           vehicles={vehicles}
           customerId={draft.customer_id}
@@ -166,15 +182,9 @@ export default function EstimateCreateEditor({ prefill, customers = [], vehicles
       {/* Body — same shared sub-components as EstimateDetail. Line items come first so the
           rows being filled in are in view without scrolling (scrolling shifted fields under the pointer). */}
       <div className="min-h-0 max-h-[60vh] overflow-y-auto px-5 py-5 md:px-6">
-        <InvoiceLineItemsTable
-          lines={draft.line_items}
-          onChange={(line_items) => setDraft({ ...draft, line_items })}
-        />
-        <EstimateDetailsFields draft={draft} onChange={setDraft} />
-        <QuickNotesEditor
-          value={draft.notes}
-          onChange={(v) => setDraft({ ...draft, notes: v })}
-        />
+        <InvoiceLineItemsTable lines={draft.line_items} onChange={onLinesChange} />
+        <MemoEstimateDetailsFields draft={details} onChange={onDetailsChange} />
+        <MemoQuickNotesEditor value={draft.notes} onChange={onNotesChange} />
         <InvoiceTotalsSection draft={draft} totals={totals} onChange={setDraft} />
       </div>
 
