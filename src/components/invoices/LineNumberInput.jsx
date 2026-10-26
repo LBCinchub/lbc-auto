@@ -12,10 +12,11 @@ const cleanAmount = (raw) => {
 // instead of mixing with it (e.g. "100" typed into "0" no longer becomes "1000").
 // The select runs right away, never on a timer, so it can't catch the first typed
 // digit ("120" becoming "20"); cancelling mouseup keeps a click from undoing it.
-export default function LineNumberInput({ value, onChange, className }) {
+export default function LineNumberInput({ value, onChange, className, ariaLabel }) {
   return (
     <Input
       type="text"
+      aria-label={ariaLabel}
       inputMode="decimal"
       data-no-capitalize
       value={value ?? ""}
