@@ -163,13 +163,14 @@ export default function EstimateCreateEditor({ prefill, customers = [], vehicles
         />
       </div>
 
-      {/* Body — identical shared sub-components as EstimateDetail */}
+      {/* Body — same shared sub-components as EstimateDetail. Line items come first so the
+          rows being filled in are in view without scrolling (scrolling shifted fields under the pointer). */}
       <div className="min-h-0 max-h-[60vh] overflow-y-auto px-5 py-5 md:px-6">
-        <EstimateDetailsFields draft={draft} onChange={setDraft} />
         <InvoiceLineItemsTable
           lines={draft.line_items}
           onChange={(line_items) => setDraft({ ...draft, line_items })}
         />
+        <EstimateDetailsFields draft={draft} onChange={setDraft} />
         <QuickNotesEditor
           value={draft.notes}
           onChange={(v) => setDraft({ ...draft, notes: v })}

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { useLineItemLibrary } from "@/hooks/useLineItemLibrary";
 
