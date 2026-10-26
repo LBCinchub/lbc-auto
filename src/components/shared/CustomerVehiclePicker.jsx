@@ -94,14 +94,21 @@ export default function CustomerVehiclePicker({
   const engineLine = engineSummary(selectedVehicle);
 
   // Load vehicles for the selected customer (also covers prefill on mount).
+  // A customer with exactly one vehicle gets it picked automatically.
   useEffect(() => {
-    if (customerId) {
-      withShopRecords("Vehicle", base44.entities.Vehicle.filter({ customer_id: customerId }), { customer_id: customerId })
-        .then(setCustomerVehicles)
-        .catch(() => {});
-    } else {
+    if (!customerId) {
       setCustomerVehicles([]);
+      return undefined;
     }
+    let active = true;
+    withShopRecords("Vehicle", base44.entities.Vehicle.filter({ customer_id: customerId }), { customer_id: customerId })
+      .then((list) => {
+        if (!active) return;
+        setCustomerVehicles(list);
+        if (!vehicleId && list.length === 1) onVehicleChange(list[0].id, buildVehicleInfo(list[0]));
+      })
+      .catch(() => {});
+    return () => { active = false; };
   }, [customerId]);
 
   // Keep the search field in sync when the customer is set/cleared externally.
@@ -230,6 +237,7 @@ export default function CustomerVehiclePicker({
               </div>
               <button
                 type="button"
+                aria-label="Change customer"
                 onClick={clearCustomer}
                 className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-gray-600 bg-transparent px-3 text-xs font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
               >
@@ -242,7 +250,7 @@ export default function CustomerVehiclePicker({
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Vehicle</p>
-                <p className="truncate text-base font-bold text-white">{vehicleHeadline || vehicleInfo || "—"}</p>
+                <p className={`truncate text-base font-bold ${vehicleHeadline || vehicleInfo ? "text-white" : "text-gray-500"}`}>{vehicleHeadline || vehicleInfo || "No vehicle selected"}</p>
                 {engineLine && <p className="truncate text-xs text-gray-400">{engineLine}</p>}
                 {(vehicleVin || vehiclePlate || vehicleColor) && (
                   <p className="truncate text-xs text-gray-400">
@@ -255,8 +263,11 @@ export default function CustomerVehiclePicker({
                 )}
               </div>
               <Select value={vehicleId || ""} onValueChange={handleVehicleChange} open={vehOpen} onOpenChange={setVehOpen}>
-                <SelectTrigger className="h-7 w-auto shrink-0 items-center gap-1.5 self-start rounded-full border border-gray-600 bg-transparent px-3 text-xs font-medium text-gray-300 shadow-none hover:bg-gray-700 hover:text-white">
-                  <RefreshCw className="w-3 h-3" /> Change
+                <SelectTrigger
+                  aria-label={vehicleId ? "Change vehicle" : "Select vehicle"}
+                  className={`h-7 w-auto shrink-0 items-center gap-1.5 self-start rounded-full border bg-transparent px-3 text-xs font-medium shadow-none hover:bg-gray-700 hover:text-white ${vehicleId ? "border-gray-600 text-gray-300" : "border-sky-500/60 text-sky-300"}`}
+                >
+                  {vehicleId ? <><RefreshCw className="w-3 h-3" /> Change</> : <><Car className="w-3 h-3" /> Select Vehicle</>}
                 </SelectTrigger>
                 <SelectContent className="bg-gray-800 border-gray-700 text-white">
                   {customerVehicles.length === 0 && <div className="px-3 py-2 text-xs text-gray-500">No vehicles on file</div>}
