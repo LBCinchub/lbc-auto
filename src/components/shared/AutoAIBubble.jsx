@@ -10,6 +10,7 @@ import StaffEstimateResult from "@/components/shared/StaffEstimateResult";
 import AiOverlayLayer from "@/components/shared/AiOverlayLayer";
 import { FocusScope } from "@radix-ui/react-focus-scope";
 import useFinancialShellOpen from "@/hooks/useFinancialShellOpen";
+import useDialogOpen from "@/hooks/useDialogOpen";
 
 // Detail pages with a sticky bottom financial action bar — lift the widget above it.
 const DETAIL_PATTERN = /\/(EstimateDetail|RepairOrderDetail|InvoiceDetail)/i;
@@ -67,6 +68,9 @@ function injectLEDStyle() {
     .lbc-ai-toggle:hover {
       background: linear-gradient(135deg, #2a1404 0%, #431c04 60%, #5a2606 100%);
     }
+    /* While a dialog is open the launcher is just the logo, so it never covers that dialog's buttons */
+    .lbc-ai-toggle--compact { padding: 6px; gap: 0; border-radius: 50%; }
+    .lbc-ai-toggle--compact::after { border-radius: 50%; animation: none; }
     .lbc-ai-icon-ring {
       width: 34px; height: 34px;
       border-radius: 50%;
@@ -158,6 +162,8 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
   const detailMode = DETAIL_PATTERN.test(location.pathname);
   // Also lift above the financial editor's bottom action bar while it is open.
   const shellOpen = useFinancialShellOpen();
+  const dialogOpen = useDialogOpen();
+  const returnFocusRef = useRef(null); // where the cursor was before the chat opened
   const bottomOffset = `calc(${detailMode || shellOpen ? 92 : 20}px + env(safe-area-inset-bottom, 0px))`;
 
   const [open, setOpen]       = useState(false);
@@ -280,11 +286,13 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
     <div style={{ position: "fixed", bottom: bottomOffset, right: 20, zIndex: 9998, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
 
       {/* ── Chat Panel (opens above the button) ── */}
-      {/* FocusScope pauses any open dialog's focus trap while chat is open,
-          and returns focus to the launcher when chat closes. */}
+      {/* FocusScope pauses any open dialog's focus trap while chat is open. Closing the chat puts
+          the cursor back where it was (e.g. a line item field) WITHOUT selecting that field's text,
+          so the next keys typed continue the field instead of replacing it. */}
       {open && (
         <FocusScope asChild loop={false} trapped={false}
-          onMountAutoFocus={(e) => { e.preventDefault(); inputRef.current?.focus({ preventScroll: true }); }}>
+          onMountAutoFocus={(e) => { e.preventDefault(); returnFocusRef.current = document.activeElement; inputRef.current?.focus({ preventScroll: true }); }}
+          onUnmountAutoFocus={(e) => { e.preventDefault(); returnFocusRef.current?.focus?.({ preventScroll: true }); }}>
         <div className="lbc-ai-panel" role="dialog" aria-label="LBC Auto AI Chat" aria-modal="false"
           style={{ width: 340, maxWidth: "calc(100vw - 40px)" }}
           onKeyDown={(e) => { if (e.key === "Escape") { e.preventDefault(); setOpen(false); } }}>
@@ -516,22 +524,29 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
         />
       )}
 
-      {/* ── LED Floating Toggle Button ── */}
-      <div className="lbc-ai-toggle" role="button" tabIndex={0} aria-expanded={open}
+      {/* ── LED Floating Toggle Button ── While a dialog is open (New Estimate, payment…) it shrinks
+          to the logo, so it never covers that dialog's buttons (e.g. Save Estimate). A mouse click on it
+          never takes the cursor out of the field being filled in: that made the dialog put the cursor
+          back with the field's whole text selected, so the next keys typed replaced it. */}
+      <div className={`lbc-ai-toggle${dialogOpen ? " lbc-ai-toggle--compact" : ""}`} role="button" tabIndex={0} aria-expanded={open}
         aria-label={open ? "Close LBC Auto AI" : "Open LBC Auto AI"}
+        title={dialogOpen ? "LBC Auto AI" : undefined}
+        onMouseDown={(e) => e.preventDefault()}
         onClick={() => setOpen(v => !v)}
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen(v => !v); } }}>
         <LbcAutoLogo size="xs" />
-        <div style={{ flex: 1 }}>
-          <div style={{ color: "#ffffff", fontSize: 13, fontWeight: 700, letterSpacing: 0.4 }}>
-            LBC Auto AI
+        {!dialogOpen && <>
+          <div style={{ flex: 1 }}>
+            <div style={{ color: "#ffffff", fontSize: 13, fontWeight: 700, letterSpacing: 0.4 }}>
+              LBC Auto AI
+            </div>
+            <div style={{ color: "#fdba74", fontSize: 10, marginTop: 1 }}>
+              {open ? "Click to close" : "Labor hours · Rust · Codes"}
+            </div>
           </div>
-          <div style={{ color: "#fdba74", fontSize: 10, marginTop: 1 }}>
-            {open ? "Click to close" : "Labor hours · Rust · Codes"}
-          </div>
-        </div>
-        {/* Live LED dot */}
-        <div style={{ width:8, height:8, borderRadius:"50%", background:"#00ff88", boxShadow:"0 0 6px #00ff88", flexShrink:0 }} />
+          {/* Live LED dot */}
+          <div style={{ width:8, height:8, borderRadius:"50%", background:"#00ff88", boxShadow:"0 0 6px #00ff88", flexShrink:0 }} />
+        </>}
       </div>
     </div>
     </AiOverlayLayer>

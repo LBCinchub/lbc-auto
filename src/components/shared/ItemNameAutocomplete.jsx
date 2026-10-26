@@ -18,6 +18,7 @@ export default function ItemNameAutocomplete({
   className,
   placeholder,
   autoFocus,
+  ariaLabel,
 }) {
   const { data: library = [] } = useLineItemLibrary();
   const [open, setOpen] = useState(false);
@@ -103,6 +104,7 @@ export default function ItemNameAutocomplete({
         }}
         onFocus={() => setOpen(true)}
         onKeyDown={onKeyDown}
+        aria-label={ariaLabel}
         placeholder={placeholder}
         className={className}
       />

@@ -12,6 +12,8 @@ const cleanAmount = (raw) => {
 // instead of mixing with it (e.g. "100" typed into "0" no longer becomes "1000").
 // The select runs right away, never on a timer, so it can't catch the first typed
 // digit ("120" becoming "20"); cancelling mouseup keeps a click from undoing it.
+// A click on a cell that already has the cursor selects the value again instead of
+// dropping the cursor after it, so "8" typed there replaces "120" (never "1208").
 export default function LineNumberInput({ value, onChange, className, ariaLabel }) {
   return (
     <Input
@@ -22,6 +24,11 @@ export default function LineNumberInput({ value, onChange, className, ariaLabel 
       value={value ?? ""}
       onChange={(e) => onChange(cleanAmount(e.target.value))}
       onFocus={(e) => e.target.select()}
+      onMouseDown={(e) => {
+        if (document.activeElement !== e.currentTarget) return;
+        e.preventDefault();
+        e.currentTarget.select();
+      }}
       onMouseUp={(e) => e.preventDefault()}
       className={className}
     />
