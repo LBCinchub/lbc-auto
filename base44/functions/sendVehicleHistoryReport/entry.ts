@@ -7,6 +7,48 @@ function fmtDate(d: string) {
   return dt.toLocaleDateString("en-CA");
 }
 
+type InlineImage = { cid: string; type: string; data: string };
+const MAX_EMBED_BYTES = 10 * 1024 * 1024; // keeps the email within what inboxes accept
+
+function toBase64(bytes: Uint8Array) {
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+const wrap76 = (b64: string) => b64.replace(/.{76}/g, "$&\r\n");
+
+async function fetchPrivatePhoto(base44: any, photo: any) {
+  const { signed_url } = await base44.integrations.Core.CreateFileSignedUrl({ file_uri: photo.photo_uri, expires_in: 300 });
+  const res = await fetch(signed_url, { signal: AbortSignal.timeout(20000) });
+  if (!res.ok) throw new Error(`Photo ${photo.id} download failed (${res.status})`);
+  const type = (res.headers.get("content-type") || "").split(";")[0].trim();
+  return { bytes: new Uint8Array(await res.arrayBuffer()), type: type.startsWith("image/") ? type : "image/jpeg" };
+}
+
+// Private photos have no shareable link, so they travel inside the email as inline (cid:) images.
+async function resolveEmailPhotos(base44: any, vehiclePhotos: any[]) {
+  const srcById: Record<string, string> = {};
+  const inline: InlineImage[] = [];
+  const privatePhotos = vehiclePhotos.filter((p: any) => p.photo_uri);
+  let total = 0;
+  for (let i = 0; i < privatePhotos.length && total < MAX_EMBED_BYTES; i += 6) {
+    const batch = privatePhotos.slice(i, i + 6);
+    const results = await Promise.allSettled(batch.map((p: any) => fetchPrivatePhoto(base44, p)));
+    results.forEach((r, j) => {
+      if (r.status === "rejected") { console.error(r.reason?.message || r.reason); return; }
+      if (total + r.value.bytes.length > MAX_EMBED_BYTES) return;
+      total += r.value.bytes.length;
+      const cid = `photo${inline.length + 1}@lbcauto`;
+      inline.push({ cid, type: r.value.type, data: toBase64(r.value.bytes) });
+      srcById[batch[j].id] = `cid:${cid}`;
+    });
+  }
+  const photos = vehiclePhotos
+    .map((p: any) => ({ ...p, src: p.photo_uri ? srcById[p.id] : p.photo_url }))
+    .filter((p: any) => p.src);
+  return { photos, inline };
+}
+
 function buildReportHTML(customer: any, vehicles: any[], invoices: any[], repairOrders: any[], vehiclePhotos: any[], shopInfo: any) {
   const shopName = shopInfo?.business_name || "LBC Auto";
   const shopLogo = shopInfo?.logo_url || "";
@@ -55,21 +97,22 @@ function buildReportHTML(customer: any, vehicles: any[], invoices: any[], repair
     return `<div style="font-size:12px;margin-bottom:3px;">• ${inv.invoice_number || inv.id.slice(0, 8)} — ${fmt(balance)} remaining${inv.service_reason ? ` (${String(inv.service_reason).slice(0, 40)})` : ""}</div>`;
   }).join("");
 
-  const photoRows = (vehiclePhotos || []).filter((p: any) => p.photo_url).length === 0
+  const photos = (vehiclePhotos || []).filter((p: any) => p.src);
+  const photoRows = photos.length === 0
     ? ""
     : `<div style="border-top:2px solid #0f172a;padding-top:12px;margin-bottom:16px;">
         <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Vehicle Photos & AI Diagnosis</div>
         <table width="100%"><tr>
-        ${(vehiclePhotos || []).filter((p: any) => p.photo_url).map((p: any, i: number) => {
+        ${photos.map((p: any, i: number) => {
           if (i % 2 === 1) return "";
-          const next = (vehiclePhotos || []).filter((p2: any) => p2.photo_url)[i + 1];
+          const next = photos[i + 1];
           return `<td style="vertical-align:top;width:50%;padding:6px;">
-            <img src="${p.photo_url}" alt="${p.label || ""}" style="max-width:200px;width:100%;height:auto;border-radius:4px;" />
+            <img src="${p.src}" alt="${p.label || ""}" style="max-width:200px;width:100%;height:auto;border-radius:4px;" />
             <div style="font-size:11px;font-weight:600;margin-top:4px;">${p.label || "Untitled"}</div>
             <div style="font-size:10px;color:#64748b;">${fmtDate(p.taken_date || p.created_date)}</div>
             ${p.ai_analysis ? `<div style="font-size:10px;color:#475569;margin-top:2px;font-style:italic;">AI: ${String(p.ai_analysis).slice(0, 120)}${String(p.ai_analysis).length > 120 ? "…" : ""}</div>` : ""}
           </td>${next ? `<td style="vertical-align:top;width:50%;padding:6px;">
-            <img src="${next.photo_url}" alt="${next.label || ""}" style="max-width:200px;width:100%;height:auto;border-radius:4px;" />
+            <img src="${next.src}" alt="${next.label || ""}" style="max-width:200px;width:100%;height:auto;border-radius:4px;" />
             <div style="font-size:11px;font-weight:600;margin-top:4px;">${next.label || "Untitled"}</div>
             <div style="font-size:10px;color:#64748b;">${fmtDate(next.taken_date || next.created_date)}</div>
             ${next.ai_analysis ? `<div style="font-size:10px;color:#475569;margin-top:2px;font-style:italic;">AI: ${String(next.ai_analysis).slice(0, 120)}${String(next.ai_analysis).length > 120 ? "…" : ""}</div>` : ""}
@@ -169,35 +212,55 @@ function buildReportHTML(customer: any, vehicles: any[], invoices: any[], repair
   return { subject, html };
 }
 
-function buildRawHtmlEmail(to: string, from: string, subject: string, html: string) {
-  const boundary = "----=_LBCAuto_" + Date.now();
-  const message = [
+function buildMimeMessage(to: string, from: string, subject: string, html: string, inline: InlineImage[]) {
+  const stamp = Date.now();
+  const alt = `----=_LBCAuto_alt_${stamp}`;
+  const rel = `----=_LBCAuto_rel_${stamp}`;
+  const htmlPart = [
+    `Content-Type: text/html; charset=UTF-8`,
+    `Content-Transfer-Encoding: base64`,
+    ``,
+    wrap76(toBase64(new TextEncoder().encode(html))),
+  ];
+  const body = inline.length === 0 ? htmlPart : [
+    `Content-Type: multipart/related; boundary="${rel}"`,
+    ``,
+    `--${rel}`,
+    ...htmlPart,
+    ...inline.flatMap((img, i) => {
+      const name = `photo-${i + 1}.${img.type.split("/")[1].replace("jpeg", "jpg")}`;
+      return [
+        `--${rel}`,
+        `Content-Type: ${img.type}; name="${name}"`,
+        `Content-Transfer-Encoding: base64`,
+        `Content-ID: <${img.cid}>`,
+        `Content-Disposition: inline; filename="${name}"`,
+        ``,
+        wrap76(img.data),
+      ];
+    }),
+    `--${rel}--`,
+  ];
+  return [
     `From: ${from}`,
     `To: ${to}`,
     `Subject: ${subject}`,
     `MIME-Version: 1.0`,
-    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    `Content-Type: multipart/alternative; boundary="${alt}"`,
     ``,
-    `--${boundary}`,
+    `--${alt}`,
     `Content-Type: text/plain; charset=UTF-8`,
     ``,
     `Please view this email in an HTML-compatible email client to see the full vehicle history report.`,
     ``,
-    `--${boundary}`,
-    `Content-Type: text/html; charset=UTF-8`,
-    `Content-Transfer-Encoding: quoted-printable`,
+    `--${alt}`,
+    ...body,
     ``,
-    html,
-    ``,
-    `--${boundary}--`,
+    `--${alt}--`,
   ].join("\r\n");
-  return btoa(unescape(encodeURIComponent(message)))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
 }
 
-Deno.serve(async (req) => {
+export default async function(req: Request): Promise<Response> {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
@@ -227,7 +290,8 @@ Deno.serve(async (req) => {
       logo_url: user.logo_url || "",
     };
 
-    const { subject, html } = buildReportHTML(customer, vehicles, invoices, repairOrders, vehiclePhotos, shopInfo);
+    const { photos, inline } = await resolveEmailPhotos(base44, vehiclePhotos || []);
+    const { subject, html } = buildReportHTML(customer, vehicles, invoices, repairOrders, photos, shopInfo);
 
     const { accessToken } = await base44.asServiceRole.connectors.getConnection("gmail");
     const profileRes = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/profile", {
@@ -236,12 +300,14 @@ Deno.serve(async (req) => {
     const profile = await profileRes.json();
     const fromEmail = profile.emailAddress;
 
-    const raw = buildRawHtmlEmail(to, `${shopInfo.business_name || "LBC Auto"} <${fromEmail}>`, subject, html);
+    const mime = buildMimeMessage(to, `${shopInfo.business_name || "LBC Auto"} <${fromEmail}>`, subject, html, inline);
 
-    const sendRes = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
+    // Upload endpoint: embedded photos can push the email past the 5 MB JSON send limit.
+    const sendRes = await fetch("https://gmail.googleapis.com/upload/gmail/v1/users/me/messages/send?uploadType=media", {
       method: "POST",
-      headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ raw }),
+      headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "message/rfc822" },
+      body: mime,
+      signal: AbortSignal.timeout(60000),
     });
 
     if (!sendRes.ok) {
@@ -253,4 +319,4 @@ Deno.serve(async (req) => {
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
-});
+}

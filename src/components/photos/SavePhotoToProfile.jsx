@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { base44 } from "@/api/base44Client";
 import { Search, Loader2, Car, CheckCircle2 } from "lucide-react";
 
-export default function SavePhotoToProfile({ open, onClose, photoUrl, photoBase64, aiAnalysis, source = "ai_chat" }) {
+export default function SavePhotoToProfile({ open, onClose, photoUri, previewSrc, photoBase64, aiAnalysis, source = "ai_chat" }) {
   const [user, setUser] = useState(null);
   const [customers, setCustomers] = useState([]);
   const [vehicles, setVehicles] = useState([]);
@@ -46,7 +46,7 @@ export default function SavePhotoToProfile({ open, onClose, photoUrl, photoBase6
         customer_name: selectedCustomer.full_name,
         vehicle_id: selectedVehicle,
         vehicle_info: vehicleInfo,
-        photo_url: photoUrl || null,
+        photo_uri: photoUri || null,
         photo_base64: photoBase64 || null,
         label: label || "Untitled photo",
         ai_analysis: aiAnalysis || "",
@@ -88,8 +88,8 @@ export default function SavePhotoToProfile({ open, onClose, photoUrl, photoBase6
         ) : (
           <div className="space-y-4">
             {/* Photo preview */}
-            {(photoUrl || photoBase64) && (
-              <img src={photoUrl || photoBase64} alt="preview" className="w-full max-h-32 object-cover rounded-lg border border-gray-700" />
+            {(previewSrc || photoBase64) && (
+              <img src={previewSrc || photoBase64} alt="preview" className="w-full max-h-32 object-cover rounded-lg border border-gray-700" />
             )}
 
             {/* Customer search */}

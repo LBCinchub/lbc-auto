@@ -319,14 +319,14 @@ ${monitors.length ? `<table>${monRows}</table>` : "<p class='muted'>Not availabl
       const file = e.target.files[0];
       if (!file) return;
       try {
-        const { file_url } = await base44.integrations.Core.UploadFile({ file });
+        const { file_uri } = await base44.integrations.Core.UploadPrivateFile({ file });
         if (vehicleId && customerId) {
           await base44.entities.VehiclePhoto.create({
             customer_id: customerId,
             customer_name: customerName,
             vehicle_id: vehicleId,
             vehicle_info: selectedVehicle ? `${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}` : "",
-            photo_url: file_url,
+            photo_uri: file_uri,
             shop_email: user?.email,
             source: "scanner",
             taken_date: new Date().toISOString().slice(0, 10),

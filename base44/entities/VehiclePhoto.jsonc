@@ -18,9 +18,13 @@
       "type": "string",
       "description": "Vehicle year make model for display"
     },
+    "photo_uri": {
+      "type": "string",
+      "description": "Private storage URI of the photo, shown through short-lived signed links"
+    },
     "photo_url": {
       "type": "string",
-      "description": "Uploaded public URL of the photo"
+      "description": "Legacy public URL (older photos only)"
     },
     "photo_base64": {
       "type": "string",

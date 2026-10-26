@@ -3,6 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Camera, Expand, Trash2, Link2, X, Calendar, Car } from "lucide-react";
+import VehiclePhotoImg, { hasPhoto } from "@/components/photos/VehiclePhotoImg";
 
 export default function VehiclePhotosTab({ photos, repairOrders, estimates, onRefetch }) {
   const [expanded, setExpanded] = useState(null);
@@ -37,13 +38,12 @@ export default function VehiclePhotosTab({ photos, repairOrders, estimates, onRe
     <>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
         {sorted.map(photo => {
-          const src = photo.photo_url || photo.photo_base64;
-          if (!src) return null;
+          if (!hasPhoto(photo)) return null;
           return (
             <div key={photo.id} className="rounded-lg border border-gray-800 bg-gray-900/50 overflow-hidden group">
               {/* Thumbnail */}
               <div className="relative cursor-pointer" onClick={() => setExpanded(photo)}>
-                <img src={src} alt={photo.label} className="w-full h-32 object-cover" />
+                <VehiclePhotoImg photo={photo} className="w-full h-32 object-cover" />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
                   <Expand className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
@@ -136,11 +136,7 @@ export default function VehiclePhotosTab({ photos, repairOrders, estimates, onRe
       {expanded && (
         <Dialog open={true} onOpenChange={() => setExpanded(null)}>
           <DialogContent className="bg-gray-900 border-gray-800 max-w-2xl">
-            <img
-              src={expanded.photo_url || expanded.photo_base64}
-              alt={expanded.label}
-              className="w-full max-h-[50vh] object-contain rounded-lg"
-            />
+            <VehiclePhotoImg photo={expanded} className="w-full max-h-[50vh] object-contain rounded-lg" />
             <div className="space-y-2 mt-2">
               <div className="text-sm font-semibold text-white">{expanded.label || "Untitled"}</div>
               <div className="text-xs text-gray-400">

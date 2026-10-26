@@ -165,7 +165,7 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
   const [input, setInput]     = useState("");
   const [loading, setLoading] = useState(false);
   const [pendingImage, setPendingImage] = useState(null); // { file, preview }
-  const [savePhoto, setSavePhoto] = useState(null); // { photoUrl, aiAnalysis }
+  const [savePhoto, setSavePhoto] = useState(null); // { photoUri, preview, aiAnalysis }
   const [user, setUser] = useState(null);
   const listRef  = useRef(null);
   const nearBottomRef = useRef(true);
@@ -227,11 +227,15 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
     setLoading(true);
 
     try {
+      // Photos are stored privately; the AI reads them through a short-lived link.
+      let imageUri = null;
       let imageUrl = null;
       if (pendingImage) {
         try {
-          const uploadRes = await base44.integrations.Core.UploadFile({ file: pendingImage.file });
-          imageUrl = uploadRes?.file_url || null;
+          const { file_uri } = await base44.integrations.Core.UploadPrivateFile({ file: pendingImage.file });
+          const { signed_url } = await base44.integrations.Core.CreateFileSignedUrl({ file_uri, expires_in: 600 });
+          imageUri = file_uri;
+          imageUrl = signed_url;
         } catch (uploadErr) {
           console.error("Image upload failed:", uploadErr);
         }
@@ -254,8 +258,9 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
       const replyRaw = result?.data?.reply || result?.reply || "No response generated.";
       const offerApt  = result?.data?.offer_appointment || result?.offer_appointment || false;
       const assistantMsg = { id: `a${++msgIdRef.current}`, animate: true, role: "assistant", content: replyRaw, offerApt, estimateCapability: result?.data?.estimate_capability || null };
-      if (imageUrl) {
-        assistantMsg.imageUrl = imageUrl;
+      if (imageUri) {
+        assistantMsg.imageUri = imageUri;
+        assistantMsg.imagePreview = preview;
         assistantMsg.saveable = true;
       }
       setMessages(prev => [...prev, assistantMsg]);
@@ -363,7 +368,7 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
                   {m.role === "assistant" && m.estimateCapability && <StaffEstimateResult capability={m.estimateCapability} />}
                   {m.saveable && (
                     <button
-                      onClick={() => setSavePhoto({ photoUrl: m.imageUrl, aiAnalysis: m.content })}
+                      onClick={() => setSavePhoto({ photoUri: m.imageUri, preview: m.imagePreview, aiAnalysis: m.content })}
                       style={{
                         marginTop: 6, display: "inline-flex", alignItems: "center", gap: 4,
                         fontSize: 10, padding: "3px 8px", borderRadius: 20, cursor: "pointer",
@@ -504,7 +509,8 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
         <SavePhotoToProfile
           open={true}
           onClose={() => setSavePhoto(null)}
-          photoUrl={savePhoto.photoUrl}
+          photoUri={savePhoto.photoUri}
+          previewSrc={savePhoto.preview}
           aiAnalysis={savePhoto.aiAnalysis}
           source="ai_chat"
         />

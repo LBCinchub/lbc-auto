@@ -1,4 +1,5 @@
 import React from "react";
+import VehiclePhotoImg, { hasPhoto } from "@/components/photos/VehiclePhotoImg";
 
 export default function VehicleHistoryReport({ customer, vehicles, invoices, repairOrders, vehiclePhotos, shopName, shopLogo }) {
   const fmt = (n) => `$${(parseFloat(n) || 0).toFixed(2)}`;
@@ -142,11 +143,10 @@ export default function VehicleHistoryReport({ customer, vehicles, invoices, rep
             <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Vehicle Photos & AI Diagnosis</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               {sortedPhotos.map((photo, i) => {
-                const src = photo.photo_url || photo.photo_base64;
-                if (!src) return null;
+                if (!hasPhoto(photo)) return null;
                 return (
                   <div key={i} style={{ breakInside: "avoid" }}>
-                    <img src={src} alt={photo.label} style={{ width: "100%", maxWidth: 200, height: "auto", borderRadius: 4 }} />
+                    <VehiclePhotoImg photo={photo} style={{ width: "100%", maxWidth: 200, height: "auto", borderRadius: 4 }} />
                     <div style={{ fontSize: 11, fontWeight: 600, marginTop: 4 }}>{photo.label || "Untitled"}</div>
                     <div style={{ fontSize: 10, color: "#64748b" }}>{fmtDate(photo.taken_date || photo.created_date)}</div>
                     {photo.ai_analysis && (
