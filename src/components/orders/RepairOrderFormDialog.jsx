@@ -499,26 +499,15 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                 </div>
               </div>
               <div>
-                <Label className="text-gray-400 flex items-center gap-1.5"><Car className="w-3.5 h-3.5 text-sky-400" /> Vehicle *</Label>
+                <Label htmlFor="ro-vehicle" className="text-gray-400 flex items-center gap-1.5"><Car className="w-3.5 h-3.5 text-sky-400" /> Vehicle *</Label>
                 <div className="mt-1">
-                  <Select value={form.vehicle_id} onValueChange={handleVehicleChange} disabled={loadingVehicles}>
-                    <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
-                      <SelectValue placeholder={loadingVehicles ? "Loading vehicles..." : "Select vehicle"} />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-800 border-gray-700">
-                      {loadingVehicles && <div className="px-3 py-2 text-xs text-gray-500">Loading vehicles...</div>}
-                      {!loadingVehicles && customerVehicles.map(v => (
-                        <SelectItem key={v.id} value={v.id}>{buildVehicleInfo(v)}</SelectItem>
-                      ))}
-                      {!loadingVehicles && form.customer_id && customerVehicles.length === 0 && (
-                        <button onClick={() => setNewVehicleForm({ vin: "", year: "", make: "", model: "", trim: "", license_plate: "", color: "", engine_type: "" })}
-                          className="w-full px-3 py-2 text-left text-sky-400 hover:bg-sky-500/20 flex items-center gap-2 text-sm">
-                          <Plus className="w-3.5 h-3.5" /> Add vehicle
-                        </button>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  {form.customer_id && customerVehicles.length > 0 && (
+                  {/* Native select: never traps focus or swallows the typing that follows a pick */}
+                  <select id="ro-vehicle" value={form.vehicle_id || ""} onChange={e => handleVehicleChange(e.target.value)} disabled={loadingVehicles}
+                    className="h-9 w-full rounded-md border border-gray-700 bg-gray-800 px-3 text-sm text-white disabled:opacity-60">
+                    <option value="" disabled>{loadingVehicles ? "Loading vehicles..." : "Select vehicle"}</option>
+                    {customerVehicles.map(v => <option key={v.id} value={v.id}>{buildVehicleInfo(v)}</option>)}
+                  </select>
+                  {form.customer_id && (
                     <button onClick={() => setNewVehicleForm({ vin: "", year: "", make: "", model: "", trim: "", license_plate: "", color: "", engine_type: "" })}
                       className="mt-2 w-full px-3 py-1 rounded text-xs bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/40 text-sky-400 flex items-center justify-center gap-2">
                       <Plus className="w-3 h-3" /> Add vehicle
@@ -640,44 +629,37 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
 
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
              <div>
-              <Label className="text-gray-400">Mechanic</Label>
-              <Select value={form.mechanic_id} onValueChange={handleMechanicChange}>
-                <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
-                  <SelectValue placeholder="Assign mechanic" />
-                </SelectTrigger>
-                <SelectContent className="bg-gray-800 border-gray-700">
-                  {mechanics.map(m => <SelectItem key={m.id} value={m.id}>{m.name} (${m.hourly_rate}/hr)</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="ro-mechanic" className="text-gray-400">Mechanic</Label>
+              <select id="ro-mechanic" value={form.mechanic_id || ""} onChange={e => handleMechanicChange(e.target.value)}
+                className="mt-1 h-9 w-full rounded-md border border-gray-700 bg-gray-800 px-3 text-sm text-white">
+                <option value="">Assign mechanic</option>
+                {mechanics.map(m => <option key={m.id} value={m.id}>{`${m.name} ($${m.hourly_rate}/hr)`}</option>)}
+              </select>
             </div>
             <div>
-              <Label className="text-gray-400">Status</Label>
-              <Select value={form.status} onValueChange={v => setForm({ ...form, status: v })}>
-                <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-gray-800 border-gray-700">
-                  {(() => {
-                    // POLISH 7: Enforce valid status transitions
-                    const VALID_NEXT = {
-                      waiting: ["waiting", "in_progress"],
-                      in_progress: ["in_progress", "waiting_for_parts", "completed"],
-                      waiting_for_parts: ["waiting_for_parts", "in_progress", "completed"],
-                      completed: ["completed", "delivered"],
-                      delivered: ["delivered", "invoiced"],
-                      invoiced: ["invoiced"],
-                    };
-                    const allowed = VALID_NEXT[form.status] || statuses.map(s => s.value);
-                    return statuses.filter(s => allowed.includes(s.value)).map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>);
-                  })()}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="ro-status" className="text-gray-400">Status</Label>
+              <select id="ro-status" value={form.status} onChange={e => { const v = e.target.value; setForm(f => ({ ...f, status: v })); }}
+                className="mt-1 h-9 w-full rounded-md border border-gray-700 bg-gray-800 px-3 text-sm text-white">
+                {(() => {
+                  // POLISH 7: Enforce valid status transitions
+                  const VALID_NEXT = {
+                    waiting: ["waiting", "in_progress"],
+                    in_progress: ["in_progress", "waiting_for_parts", "completed"],
+                    waiting_for_parts: ["waiting_for_parts", "in_progress", "completed"],
+                    completed: ["completed", "delivered"],
+                    delivered: ["delivered", "invoiced"],
+                    invoiced: ["invoiced"],
+                  };
+                  const allowed = VALID_NEXT[form.status] || statuses.map(s => s.value);
+                  return statuses.filter(s => allowed.includes(s.value)).map(s => <option key={s.value} value={s.value}>{s.label}</option>);
+                })()}
+              </select>
             </div>
           </div>
 
           <div>
-            <Label className="text-gray-400">Job Description *</Label>
-            <Textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
+            <Label htmlFor="ro-job-description" className="text-gray-400">Job Description *</Label>
+            <Textarea id="ro-job-description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
               className="bg-gray-800 border-gray-700 text-white mt-1" rows={3} />
           </div>
 
@@ -705,14 +687,14 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                   {(form.labor_items || [{ description: "", hours: form.labor_hours || "", total: (Number(form.labor_hours) || 0) * 120 }]).map((row, idx) => (
                     <tr key={idx} className="bg-gray-900">
                       <td className="px-2 py-1.5">
-                        <Input autoCapitalize="sentences" onChange={e => {
+                        <Input aria-label="Labor description" autoCapitalize="sentences" value={row.description || ""} onChange={e => {
                           const items = [...(form.labor_items || [])];
                           items[idx] = { ...items[idx], description: e.target.value };
                           setForm(f => ({ ...f, labor_items: items }));
                         }} className="bg-gray-800 border-0 text-white h-8 text-sm" placeholder="e.g. Engine Diagnosis" />
                       </td>
                       <td className="px-2 py-1.5">
-                        <Input type="number" onFocus={e => e.target.select()} value={row.hours} onChange={e => {
+                        <Input aria-label="Labor hours" type="number" onFocus={e => e.target.select()} value={row.hours} onChange={e => {
                           const items = [...(form.labor_items || [])];
                           items[idx] = { ...items[idx], hours: e.target.value, total: (parseFloat(e.target.value) || 0) * laborRate(items[idx]) };
                           const totalHours = items.reduce((s, r) => s + (parseFloat(r.hours) || 0), 0);
@@ -720,7 +702,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                         }} className="bg-gray-800 border-0 text-white h-8 text-sm text-right" placeholder="0" step="0.5" />
                       </td>
                       <td className="px-2 py-1.5">
-                        <Input type="number" onFocus={e => e.target.select()} value={row.rate ?? "120"} onChange={e => {
+                        <Input aria-label="Labor rate per hour" type="number" onFocus={e => e.target.select()} value={row.rate ?? "120"} onChange={e => {
                           const items = [...(form.labor_items || [])];
                           items[idx] = { ...items[idx], rate: e.target.value, total: (parseFloat(items[idx].hours) || 0) * (parseFloat(e.target.value) || 0) };
                           setForm(f => ({ ...f, labor_items: items }));
