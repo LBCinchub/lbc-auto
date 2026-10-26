@@ -17,6 +17,7 @@ export default function ItemNameAutocomplete({
   onPriceSelect,
   className,
   placeholder,
+  autoFocus,
 }) {
   const { data: library = [] } = useLineItemLibrary();
   const [open, setOpen] = useState(false);
@@ -83,6 +84,7 @@ export default function ItemNameAutocomplete({
   return (
     <div className="relative" ref={wrapRef}>
       <Input
+        autoFocus={autoFocus}
         value={value || ""}
         onChange={(e) => {
           onChange(e.target.value);
