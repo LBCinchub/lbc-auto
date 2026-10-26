@@ -1,6 +1,7 @@
 import React, { useEffect, useId, useRef, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { withShopRecords } from "@/lib/shopRecords";
+import { mergeById } from "@/lib/mergeById";
 import { useQueryClient } from "@tanstack/react-query";
 import { Search, Plus, Loader2, User, Car, RefreshCw, Phone, Mail, MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -38,6 +39,7 @@ export default function CustomerVehiclePicker({
   customerName,
   vehicleId,
   vehicleInfo,
+  vehicles = [], // optional: vehicles the page already loaded, for an instant list
   onCustomerChange,
   onVehicleChange,
 }) {
@@ -47,6 +49,7 @@ export default function CustomerVehiclePicker({
   const [custDropdown, setCustDropdown] = useState([]);
   const [showCustDropdown, setShowCustDropdown] = useState(false);
   const [customerVehicles, setCustomerVehicles] = useState([]);
+  const [vehiclesLoading, setVehiclesLoading] = useState(false);
   const [showNewCustomer, setShowNewCustomer] = useState(false);
   const [showNewVehicle, setShowNewVehicle] = useState(false);
   const [savingCust, setSavingCust] = useState(false);
@@ -93,21 +96,37 @@ export default function CustomerVehiclePicker({
   const vehicleHeadline = vehicleIdentity(selectedVehicle);
   const engineLine = engineSummary(selectedVehicle);
 
-  // Load vehicles for the selected customer (also covers prefill on mount).
+  // Latest selection, read by the async load below without re-running it.
+  const vehicleIdRef = useRef(vehicleId);
+  vehicleIdRef.current = vehicleId;
   // A customer with exactly one vehicle gets it picked automatically.
+  const pickOnlyVehicle = (list) => {
+    if (!vehicleIdRef.current && list.length === 1) onVehicleChange(list[0].id, buildVehicleInfo(list[0]));
+  };
+
+  // Show the selected customer's vehicles at once from what the page already loaded,
+  // then refresh from the server (also covers prefill on mount). The list is never
+  // blanked while the refresh runs, so it can't flash "No vehicles on file".
   useEffect(() => {
     if (!customerId) {
       setCustomerVehicles([]);
+      setVehiclesLoading(false);
       return undefined;
     }
     let active = true;
+    const known = vehicles.filter((v) => v.customer_id === customerId);
+    setCustomerVehicles(known);
+    pickOnlyVehicle(known);
+    setVehiclesLoading(true);
     withShopRecords("Vehicle", base44.entities.Vehicle.filter({ customer_id: customerId }), { customer_id: customerId })
       .then((list) => {
         if (!active) return;
-        setCustomerVehicles(list);
-        if (!vehicleId && list.length === 1) onVehicleChange(list[0].id, buildVehicleInfo(list[0]));
+        // Server list wins; keep any vehicle created here while it loaded.
+        setCustomerVehicles((prev) => mergeById(list, prev.filter((v) => !known.includes(v))));
+        pickOnlyVehicle(list);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => { if (active) setVehiclesLoading(false); });
     return () => { active = false; };
   }, [customerId]);
 
@@ -264,6 +283,7 @@ export default function CustomerVehiclePicker({
                 <VehicleSelectRow
                   id={vehicleSelectId}
                   vehicles={customerVehicles}
+                  loading={vehiclesLoading}
                   value={vehicleId}
                   onChange={handleVehicleChange}
                   onAddNew={() => setShowNewVehicle(true)}

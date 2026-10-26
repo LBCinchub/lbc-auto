@@ -40,7 +40,7 @@ const toLines = (prefill) => [
   })),
 ];
 
-export default function EstimateCreateEditor({ prefill, customers = [], onClose, onSaved }) {
+export default function EstimateCreateEditor({ prefill, customers = [], vehicles, onClose, onSaved }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -150,6 +150,7 @@ export default function EstimateCreateEditor({ prefill, customers = [], onClose,
         </div>
         <CustomerVehiclePicker
           customers={customers}
+          vehicles={vehicles}
           customerId={draft.customer_id}
           customerName={draft.customer_name}
           vehicleId={draft.vehicle_id}

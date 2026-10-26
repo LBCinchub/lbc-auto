@@ -7,16 +7,20 @@ import { buildVehicleInfo } from "@/utils/buildVehicleInfo";
  * A native select never traps focus, steals keystrokes, or swallows the next
  * click on the form, so typing and "+ Labor"/"+ Part" work right after a pick.
  */
-export default function VehicleSelectRow({ id, vehicles = [], value, onChange, onAddNew }) {
+export default function VehicleSelectRow({ id, vehicles = [], value, loading = false, onChange, onAddNew }) {
+  // "No vehicles on file" only after a finished load, never while the list is still arriving.
+  const waiting = loading && vehicles.length === 0;
+  const placeholder = waiting ? "Loading vehicles…" : vehicles.length ? "Select a vehicle…" : "No vehicles on file";
   return (
     <div className="mt-2 flex gap-2">
       <select
         id={id}
         value={value || ""}
+        disabled={waiting}
         onChange={(e) => onChange(e.target.value)}
-        className="h-8 min-w-0 flex-1 rounded-md border border-gray-700 bg-gray-950 px-2 text-sm text-white"
+        className="h-8 min-w-0 flex-1 rounded-md border border-gray-700 bg-gray-950 px-2 text-sm text-white disabled:opacity-60"
       >
-        <option value="" disabled>{vehicles.length ? "Select a vehicle…" : "No vehicles on file"}</option>
+        <option value="" disabled>{placeholder}</option>
         {vehicles.map((v) => (
           <option key={v.id} value={v.id}>
             {`${buildVehicleInfo(v)}${v.license_plate ? ` · ${v.license_plate}` : ""}`}

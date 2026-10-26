@@ -27,6 +27,7 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
         <EstimateCreateEditor
           prefill={estimate}
           customers={customers}
+          vehicles={vehicles}
           onClose={onClose}
           onSaved={onSaved}
         />
