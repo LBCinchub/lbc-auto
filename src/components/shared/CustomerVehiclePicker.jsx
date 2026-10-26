@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { withShopRecords } from "@/lib/shopRecords";
 import { useQueryClient } from "@tanstack/react-query";
@@ -6,7 +6,7 @@ import { Search, Plus, Loader2, User, Car, RefreshCw, Phone, Mail, MapPin } from
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
+import VehicleSelectRow from "@/components/shared/VehicleSelectRow";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { buildVehicleInfo } from "@/utils/buildVehicleInfo";
 import { toTitleCase } from "@/utils/capitalize";
@@ -81,7 +81,7 @@ export default function CustomerVehiclePicker({
   };
 
   const customerSelected = !!customerId;
-  const [vehOpen, setVehOpen] = useState(false);
+  const vehicleSelectId = useId();
   const selectedCustomer = customers.find((c) => c.id === customerId);
   const selectedVehicle = customerVehicles.find((v) => v.id === vehicleId);
   const customerPhone = selectedCustomer?.phone || "";
@@ -249,8 +249,8 @@ export default function CustomerVehiclePicker({
                 <Car className="h-4 w-4" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Vehicle</p>
-                <p className={`truncate text-base font-bold ${vehicleHeadline || vehicleInfo ? "text-white" : "text-gray-500"}`}>{vehicleHeadline || vehicleInfo || "No vehicle selected"}</p>
+                <label htmlFor={vehicleSelectId} className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Vehicle</label>
+                {(vehicleHeadline || vehicleInfo) && <p className="truncate text-base font-bold text-white">{vehicleHeadline || vehicleInfo}</p>}
                 {engineLine && <p className="truncate text-xs text-gray-400">{engineLine}</p>}
                 {(vehicleVin || vehiclePlate || vehicleColor) && (
                   <p className="truncate text-xs text-gray-400">
@@ -261,30 +261,14 @@ export default function CustomerVehiclePicker({
                     {vehicleColor && `Color: ${vehicleColor}`}
                   </p>
                 )}
+                <VehicleSelectRow
+                  id={vehicleSelectId}
+                  vehicles={customerVehicles}
+                  value={vehicleId}
+                  onChange={handleVehicleChange}
+                  onAddNew={() => setShowNewVehicle(true)}
+                />
               </div>
-              <Select value={vehicleId || ""} onValueChange={handleVehicleChange} open={vehOpen} onOpenChange={setVehOpen}>
-                <SelectTrigger
-                  aria-label={vehicleId ? "Change vehicle" : "Select vehicle"}
-                  className={`h-7 w-auto shrink-0 items-center gap-1.5 self-start rounded-full border bg-transparent px-3 text-xs font-medium shadow-none hover:bg-gray-700 hover:text-white ${vehicleId ? "border-gray-600 text-gray-300" : "border-sky-500/60 text-sky-300"}`}
-                >
-                  {vehicleId ? <><RefreshCw className="w-3 h-3" /> Change</> : <><Car className="w-3 h-3" /> Select Vehicle</>}
-                </SelectTrigger>
-                <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                  {customerVehicles.length === 0 && <div className="px-3 py-2 text-xs text-gray-500">No vehicles on file</div>}
-                  {customerVehicles.map((v) => (
-                    <SelectItem key={v.id} value={v.id}>
-                      {buildVehicleInfo(v)}{v.license_plate ? ` · ${v.license_plate}` : ""}
-                    </SelectItem>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => { setVehOpen(false); setShowNewVehicle(true); }}
-                    className="w-full px-3 py-2 text-left text-sky-400 hover:bg-sky-500/20 flex items-center gap-2 text-sm border-t border-gray-700"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Add New Vehicle
-                  </button>
-                </SelectContent>
-              </Select>
             </div>
           </div>
         </div>

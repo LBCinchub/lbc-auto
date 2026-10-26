@@ -9,6 +9,7 @@ export default function StepFirstCustomer({ onNext, onBack }) {
   const [custName, setCustName] = useState("");
   const [custPhone, setCustPhone] = useState("");
   const [custEmail, setCustEmail] = useState("");
+  const [custAddress, setCustAddress] = useState("");
   const [year, setYear] = useState("");
   const [make, setMake] = useState("");
   const [model, setModel] = useState("");
@@ -22,7 +23,7 @@ export default function StepFirstCustomer({ onNext, onBack }) {
     setSaving(true);
     try {
       const customer = await base44.entities.Customer.create({
-        full_name: custName, phone: custPhone, email: custEmail,
+        full_name: custName, phone: custPhone, email: custEmail, address: custAddress.trim(),
       });
       if (year && make && model) {
         await base44.entities.Vehicle.create({
@@ -60,9 +61,15 @@ export default function StepFirstCustomer({ onNext, onBack }) {
               <Input id="onb-cust-phone" type="tel" value={custPhone} onChange={(e) => setCustPhone(e.target.value)} placeholder="(613) 555-0100" className={inputClass} />
             </div>
           </div>
-          <div>
-            <Label htmlFor="onb-cust-email" className="text-gray-400 mb-1.5 block text-xs">Email (optional)</Label>
-            <Input id="onb-cust-email" type="email" value={custEmail} onChange={(e) => setCustEmail(e.target.value)} placeholder="john@email.com" className={inputClass} />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div>
+              <Label htmlFor="onb-cust-email" className="text-gray-400 mb-1.5 block text-xs">Email (optional)</Label>
+              <Input id="onb-cust-email" type="email" value={custEmail} onChange={(e) => setCustEmail(e.target.value)} placeholder="john@email.com" className={inputClass} />
+            </div>
+            <div>
+              <Label htmlFor="onb-cust-address" className="text-gray-400 mb-1.5 block text-xs">Address (optional)</Label>
+              <Input id="onb-cust-address" autoComplete="street-address" value={custAddress} onChange={(e) => setCustAddress(e.target.value)} placeholder="123 Main St, Ottawa" className={inputClass} />
+            </div>
           </div>
 
           <div style={{ height: 1, background: "rgba(255,255,255,0.06)", margin: "4px 0" }} />
