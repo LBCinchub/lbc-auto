@@ -30,7 +30,6 @@ export default function OnboardingFlow({ user, onComplete }) {
     <div style={{
       position: "fixed", inset: 0,
       background: "rgba(0,0,0,0.92)",
-      backdropFilter: "blur(8px)",
       zIndex: 99999,
       display: "flex", alignItems: "center", justifyContent: "center",
       padding: "16px",

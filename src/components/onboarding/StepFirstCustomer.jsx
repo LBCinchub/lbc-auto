@@ -52,45 +52,45 @@ export default function StepFirstCustomer({ onNext, onBack }) {
         <div style={{ display: "grid", gap: 12 }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
-              <Label className="text-gray-400 mb-1.5 block text-xs">Customer Name *</Label>
-              <Input value={custName} onChange={(e) => setCustName(e.target.value)} placeholder="John Smith" className={inputClass} />
+              <Label htmlFor="onb-cust-name" className="text-gray-400 mb-1.5 block text-xs">Customer Name *</Label>
+              <Input id="onb-cust-name" value={custName} onChange={(e) => setCustName(e.target.value)} placeholder="John Smith" className={inputClass} />
             </div>
             <div>
-              <Label className="text-gray-400 mb-1.5 block text-xs">Phone *</Label>
-              <Input value={custPhone} onChange={(e) => setCustPhone(e.target.value)} placeholder="(613) 555-0100" className={inputClass} />
+              <Label htmlFor="onb-cust-phone" className="text-gray-400 mb-1.5 block text-xs">Phone *</Label>
+              <Input id="onb-cust-phone" type="tel" value={custPhone} onChange={(e) => setCustPhone(e.target.value)} placeholder="(613) 555-0100" className={inputClass} />
             </div>
           </div>
           <div>
-            <Label className="text-gray-400 mb-1.5 block text-xs">Email (optional)</Label>
-            <Input value={custEmail} onChange={(e) => setCustEmail(e.target.value)} placeholder="john@email.com" className={inputClass} />
+            <Label htmlFor="onb-cust-email" className="text-gray-400 mb-1.5 block text-xs">Email (optional)</Label>
+            <Input id="onb-cust-email" type="email" value={custEmail} onChange={(e) => setCustEmail(e.target.value)} placeholder="john@email.com" className={inputClass} />
           </div>
 
           <div style={{ height: 1, background: "rgba(255,255,255,0.06)", margin: "4px 0" }} />
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
-              <Label className="text-gray-400 mb-1.5 block text-xs">Vehicle Year</Label>
-              <Input value={year} onChange={(e) => setYear(e.target.value)} placeholder="2018" className={inputClass} />
+              <Label htmlFor="onb-year" className="text-gray-400 mb-1.5 block text-xs">Vehicle Year</Label>
+              <Input id="onb-year" inputMode="numeric" value={year} onChange={(e) => setYear(e.target.value)} placeholder="2018" className={inputClass} />
             </div>
             <div>
-              <Label className="text-gray-400 mb-1.5 block text-xs">Make</Label>
-              <Input value={make} onChange={(e) => setMake(e.target.value)} placeholder="Toyota" className={inputClass} />
+              <Label htmlFor="onb-make" className="text-gray-400 mb-1.5 block text-xs">Make</Label>
+              <Input id="onb-make" value={make} onChange={(e) => setMake(e.target.value)} placeholder="Toyota" className={inputClass} />
             </div>
             <div>
-              <Label className="text-gray-400 mb-1.5 block text-xs">Model</Label>
-              <Input value={model} onChange={(e) => setModel(e.target.value)} placeholder="Camry" className={inputClass} />
+              <Label htmlFor="onb-model" className="text-gray-400 mb-1.5 block text-xs">Model</Label>
+              <Input id="onb-model" value={model} onChange={(e) => setModel(e.target.value)} placeholder="Camry" className={inputClass} />
             </div>
             <div>
-              <Label className="text-gray-400 mb-1.5 block text-xs">Color</Label>
-              <Input value={color} onChange={(e) => setColor(e.target.value)} placeholder="Silver" className={inputClass} />
+              <Label htmlFor="onb-color" className="text-gray-400 mb-1.5 block text-xs">Color</Label>
+              <Input id="onb-color" value={color} onChange={(e) => setColor(e.target.value)} placeholder="Silver" className={inputClass} />
             </div>
             <div>
-              <Label className="text-gray-400 mb-1.5 block text-xs">License Plate</Label>
-              <Input value={plate} onChange={(e) => setPlate(e.target.value)} placeholder="ABCD 123" className={inputClass} />
+              <Label htmlFor="onb-plate" className="text-gray-400 mb-1.5 block text-xs">License Plate</Label>
+              <Input id="onb-plate" value={plate} onChange={(e) => setPlate(e.target.value)} placeholder="ABCD 123" className={inputClass} />
             </div>
             <div>
-              <Label className="text-gray-400 mb-1.5 block text-xs">VIN</Label>
-              <Input value={vin} onChange={(e) => setVin(e.target.value)} placeholder="1HGBH41JXMN109186" className={inputClass} />
+              <Label htmlFor="onb-vin" className="text-gray-400 mb-1.5 block text-xs">VIN</Label>
+              <Input id="onb-vin" value={vin} onChange={(e) => setVin(e.target.value)} placeholder="1HGBH41JXMN109186" className={inputClass} />
             </div>
           </div>
         </div>

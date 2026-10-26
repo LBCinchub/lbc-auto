@@ -72,30 +72,42 @@ export default function StepShopProfile({ user, onNext, onBack }) {
         <ProgressBar step={2} />
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div>
+              <Label htmlFor="onb-shop-name" className="text-gray-400 mb-1.5 block text-xs">Shop Name *</Label>
+              <Input id="onb-shop-name" autoComplete="organization" value={shopName} onChange={(e) => setShopName(e.target.value)} placeholder="e.g. Hajwheels Auto" className={inputClass} />
+            </div>
+            <div>
+              <Label htmlFor="onb-phone" className="text-gray-400 mb-1.5 block text-xs">Phone</Label>
+              <Input id="onb-phone" type="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(613) 555-0100" className={inputClass} />
+            </div>
+          </div>
           <div>
-            <Label className="text-gray-400 mb-1.5 block text-xs">Shop Name *</Label>
-            <Input value={shopName} onChange={(e) => setShopName(e.target.value)} placeholder="e.g. Hajwheels Auto" className={inputClass} />
+            <Label htmlFor="onb-address" className="text-gray-400 mb-1.5 block text-xs">Address</Label>
+            <Input id="onb-address" autoComplete="street-address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="123 Main Street" className={inputClass} />
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
-              <Label className="text-gray-400 mb-1.5 block text-xs">Phone</Label>
-              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(613) 555-0100" className={inputClass} />
+              <Label htmlFor="onb-city" className="text-gray-400 mb-1.5 block text-xs">City</Label>
+              <Input id="onb-city" autoComplete="address-level2" value={city} onChange={(e) => setCity(e.target.value)} placeholder="Ottawa" className={inputClass} />
             </div>
             <div>
-              <Label className="text-gray-400 mb-1.5 block text-xs">City</Label>
-              <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Ottawa" className={inputClass} />
+              <Label htmlFor="onb-province" className="text-gray-400 mb-1.5 block text-xs">Province</Label>
+              <select id="onb-province" value={province} onChange={(e) => setProvince(e.target.value)}
+                className="w-full h-9 bg-gray-800/50 border border-gray-700 text-white rounded-md px-3 text-sm">
+                {PROVINCES.map((p) => <option key={p} value={p}>{p}</option>)}
+              </select>
             </div>
           </div>
-          <div>
-            <Label className="text-gray-400 mb-1.5 block text-xs">Address</Label>
-            <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="123 Main Street" className={inputClass} />
-          </div>
-          <div>
-            <Label className="text-gray-400 mb-1.5 block text-xs">Province</Label>
-            <select value={province} onChange={(e) => setProvince(e.target.value)}
-              className="w-full bg-gray-800/50 border border-gray-700 text-white rounded-md px-3 py-2 text-sm">
-              {PROVINCES.map((p) => <option key={p} value={p}>{p}</option>)}
-            </select>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div>
+              <Label htmlFor="onb-labor-rate" className="text-gray-400 mb-1.5 block text-xs">Labor Rate ($/hr)</Label>
+              <Input id="onb-labor-rate" inputMode="decimal" value={laborRate} onChange={(e) => setLaborRate(e.target.value)} placeholder="120" className={inputClass} />
+            </div>
+            <div>
+              <Label htmlFor="onb-tax-rate" className="text-gray-400 mb-1.5 block text-xs">Tax Rate (%)</Label>
+              <Input id="onb-tax-rate" inputMode="decimal" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} placeholder="13" className={inputClass} />
+            </div>
           </div>
           <div>
             <Label className="text-gray-400 mb-1.5 block text-xs">Shop Logo (optional)</Label>
@@ -109,16 +121,6 @@ export default function StepShopProfile({ user, onNext, onBack }) {
                 {uploadingLogo ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />} Upload Logo
               </button>
               <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/jpg" onChange={handleLogoUpload} style={{ display: "none" }} />
-            </div>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <div>
-              <Label className="text-gray-400 mb-1.5 block text-xs">Labor Rate ($/hr)</Label>
-              <Input value={laborRate} onChange={(e) => setLaborRate(e.target.value)} placeholder="120" className={inputClass} />
-            </div>
-            <div>
-              <Label className="text-gray-400 mb-1.5 block text-xs">Tax Rate (%)</Label>
-              <Input value={taxRate} onChange={(e) => setTaxRate(e.target.value)} placeholder="13" className={inputClass} />
             </div>
           </div>
         </div>

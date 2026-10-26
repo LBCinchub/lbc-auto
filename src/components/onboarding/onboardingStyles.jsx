@@ -41,7 +41,7 @@ export const cardStyle = {
   borderRadius: 16,
   maxWidth: 560,
   width: "100%",
-  maxHeight: "90vh",
+  maxHeight: "calc(100vh - 32px)",
   overflowY: "auto",
   boxShadow: "0 30px 80px rgba(0,0,0,0.6)",
 };
