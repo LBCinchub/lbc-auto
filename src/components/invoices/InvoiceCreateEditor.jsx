@@ -152,7 +152,7 @@ export default function InvoiceCreateEditor({ prefill, customers = [], onClose, 
       </div>
 
       {/* Body — identical shared sub-components as InvoiceDetail */}
-      <div className="max-h-[60vh] overflow-y-auto px-5 py-5 md:px-6">
+      <div className="min-h-0 max-h-[60vh] overflow-y-auto px-5 py-5 md:px-6">
         <InvoiceDetailsFields draft={draft} onChange={setDraft} />
         <InvoiceLineItemsTable
           lines={draft.line_items}

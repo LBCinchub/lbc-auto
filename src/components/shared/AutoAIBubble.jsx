@@ -30,9 +30,9 @@ function injectLEDStyle() {
   _ledStyleInjected = true;
   const style = document.createElement("style");
   style.textContent = `
-    @keyframes lbc-led-pulse {
-      0%,100% { box-shadow: 0 0 6px 1px #f97316, 0 0 14px 2px #c2410c; }
-      50%      { box-shadow: 0 0 14px 4px #fb923c, 0 0 28px 6px #ea580c; }
+    @keyframes lbc-led-glow {
+      0%,100% { opacity: 0; }
+      50%      { opacity: 1; }
     }
     @keyframes lbc-dot-bounce {
       0%,80%,100% { transform: scale(0.6); opacity:0.4; }
@@ -48,8 +48,21 @@ function injectLEDStyle() {
       user-select: none;
       background: linear-gradient(135deg, #1c0d02 0%, #2e1503 60%, #431c04 100%);
       border: 2px solid #f97316;
-      animation: lbc-led-pulse 2.2s ease-in-out infinite;
+      position: relative;
+      box-shadow: 0 0 6px 1px #f97316, 0 0 14px 2px #c2410c;
       transition: background 0.2s;
+    }
+    /* Pulse fades a glow layer (opacity only) so it never forces page repaints */
+    .lbc-ai-toggle::after {
+      content: "";
+      position: absolute;
+      inset: -2px;
+      border-radius: 16px;
+      box-shadow: 0 0 14px 4px #fb923c, 0 0 28px 6px #ea580c;
+      opacity: 0;
+      pointer-events: none;
+      will-change: opacity;
+      animation: lbc-led-glow 2.2s ease-in-out infinite;
     }
     .lbc-ai-toggle:hover {
       background: linear-gradient(135deg, #2a1404 0%, #431c04 60%, #5a2606 100%);
@@ -131,7 +144,7 @@ function injectLEDStyle() {
     @keyframes lbc-logo-pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(0.92); } }
     .lbc-ai-logo-pulse { animation: lbc-logo-pulse 1.1s ease-in-out infinite; }
     @media (prefers-reduced-motion: reduce) {
-      .lbc-ai-toggle, .lbc-dot, .lbc-ai-logo-pulse { animation: none !important; }
+      .lbc-ai-toggle::after, .lbc-dot, .lbc-ai-logo-pulse { animation: none !important; }
     }
     .lbc-dot { width:6px; height:6px; border-radius:50%; background:#f97316; display:inline-block; animation: lbc-dot-bounce 1.2s infinite ease-in-out; }
   `;
