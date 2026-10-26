@@ -27,7 +27,8 @@ export default function ItemNameAutocomplete({
 
   // A new line gets the cursor without the browser re-centering the form (that jump moved
   // other fields under the pointer); scroll only as far as needed to show the row.
-  useEffect(() => {
+  // Runs before paint, so no frame ever shows the row in its old position.
+  useLayoutEffect(() => {
     if (!autoFocus || !inputRef.current) return;
     inputRef.current.focus({ preventScroll: true });
     inputRef.current.scrollIntoView({ block: "nearest", inline: "nearest" });
