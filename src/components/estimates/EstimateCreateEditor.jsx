@@ -63,6 +63,7 @@ export default function EstimateCreateEditor({ prefill, customers = [], vehicles
     };
   });
   const [saving, setSaving] = useState(false);
+  const [zeroWarning, setZeroWarning] = useState(false);
 
   // Load the shop's default tax rate
   useEffect(() => {
@@ -81,10 +82,12 @@ export default function EstimateCreateEditor({ prefill, customers = [], vehicles
   const onCustomerChange = (id, name) => setDraft((d) => ({ ...d, customer_id: id, customer_name: name, vehicle_id: "", vehicle_info: "" }));
   const onVehicleChange = (vid, vinfo) => setDraft((d) => ({ ...d, vehicle_id: vid, vehicle_info: vinfo }));
 
-  const save = async () => {
+  const save = async (allowZero = false) => {
     if (saving) return;
     if (!draft.customer_id) { toast({ title: "Please select a customer", variant: "destructive" }); return; }
     if (!draft.vehicle_id) { toast({ title: "Please select a vehicle", variant: "destructive" }); return; }
+    // A $0.00 total usually means a price or quantity never went in, so warn instead of saving silently.
+    if (totals.total <= 0 && !allowZero) { setZeroWarning(true); return; }
     setSaving(true);
     try {
       const laborItems = draft.line_items
@@ -176,10 +179,15 @@ export default function EstimateCreateEditor({ prefill, customers = [], vehicles
 
       {/* Actions — mirrors EstimateEditorActions styling; only Cancel + Save for a new estimate */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-800 bg-gray-900 px-5 py-4 md:px-6">
-        <div />
+        {zeroWarning && totals.total <= 0 ? (
+          <p className="text-sm text-amber-400">
+            This estimate totals $0.00. Check each line's Qty and Rate, or{" "}
+            <button type="button" onClick={() => save(true)} className="font-semibold underline">save it anyway</button>.
+          </p>
+        ) : <div />}
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => onClose?.()}>Cancel</Button>
-          <Button onClick={save} disabled={saving} className="bg-sky-500 hover:bg-sky-600">
+          <Button onClick={() => save()} disabled={saving} className="bg-sky-500 hover:bg-sky-600">
             {saving ? <Loader2 className="animate-spin" /> : <Save />}{saving ? "Saving…" : "Save Estimate"}
           </Button>
         </div>
