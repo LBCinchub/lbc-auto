@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -36,23 +36,29 @@ export default function InvoiceLineItemsTable({ lines, onChange }) {
     latest.current = latest.current.map((line, i) => i === index ? { ...line, [field]: value } : line);
     onChange(latest.current);
   };
-  // A click in a cell's padding, just off the box, still puts the cursor in that cell's field.
+  // A click anywhere in a cell puts the cursor in that cell's field: in the padding just off the
+  // box (mousedown), and for clicks that don't move the cursor by themselves (click), so the
+  // next keys typed never land in the field that had the cursor before (e.g. "Oil Change1").
   const focusCellField = (e) => {
-    if (e.target !== e.currentTarget) return;
     const field = e.currentTarget.querySelector("input, textarea");
     if (!field) return;
-    e.preventDefault();
+    if (e.type === "mousedown") {
+      if (e.target !== e.currentTarget) return;
+      e.preventDefault();
+    } else if (document.activeElement === field) return;
     field.focus();
   };
-  // A newly added line puts the cursor in its Item field, so typing lands there.
+  // A newly added line puts the cursor in its Item field, so typing lands there. Only the render
+  // that adds the line does this; afterwards nothing can pull the cursor back to Item.
   const [focusIndex, setFocusIndex] = useState(-1);
+  useEffect(() => { if (focusIndex !== -1) setFocusIndex(-1); }, [focusIndex]);
   const add = type => {
     setFocusIndex(lines.length);
     onChange([...lines, { type, name: "", description: "", quantity: 1, unit_price: 0, taxable: true, source: "Manual" }]);
   };
   return <section className="py-5">
     <div className="mb-3 flex items-center justify-between"><h3 className="font-semibold text-white">Line Items</h3><div className="flex gap-2"><Button type="button" size="sm" variant="outline" onClick={() => add("labor")}><Plus /> Labor</Button><Button type="button" size="sm" variant="outline" onClick={() => add("part")}><Plus /> Part</Button></div></div>
-    <div className="overflow-x-auto rounded-lg border border-gray-800"><table className="w-full min-w-[980px] table-fixed text-sm">
+    <div className="overflow-x-auto rounded-lg border border-gray-800"><table className="w-full min-w-[780px] table-fixed text-sm">
       <colgroup>
         <col className="w-[80px]" />
         <col className="w-[24%]" />
@@ -65,10 +71,10 @@ export default function InvoiceLineItemsTable({ lines, onChange }) {
       <thead className="bg-gray-800/70 text-left text-xs uppercase tracking-wide text-gray-400"><tr><th className="px-3 py-3">Type</th><th className="px-3 py-3">Item</th><th className="px-3 py-3">Description</th><th className="px-3 py-3 text-right">Qty / Hours</th><th className="px-3 py-3 text-right">Rate / Price</th><th className="px-3 py-3 text-right">Amount</th><th /></tr></thead>
       <tbody className="divide-y divide-gray-800">{lines.map((line, index) => <tr key={`${line.source || "line"}-${index}`} className="bg-gray-900/40 align-top">
         <td className="px-3 py-2"><select aria-label="Line type" value={line.type} onChange={e => update(index, "type", e.target.value)} className="h-9 rounded-md border border-gray-700 bg-gray-950 px-2 text-white"><option value="labor">Labor</option><option value="part">Part</option></select></td>
-        <td className="px-3 py-2" onMouseDown={focusCellField}><ItemNameAutocomplete autoFocus={index === focusIndex} placeholder="Item name" value={line.name || ""} type={line.type} onChange={name => update(index, "name", name)} onPriceSelect={price => update(index, "unit_price", price)} className="border-gray-700 bg-gray-950 text-white" /></td>
-        <td className="px-3 py-2" onMouseDown={focusCellField}><DescriptionInput value={line.description} onChange={e => update(index, "description", e.target.value)} /></td>
-        <td className="px-3 py-2" onMouseDown={focusCellField}><LineNumberInput ariaLabel="Qty / Hours" value={line.quantity} onChange={v => update(index, "quantity", v)} className="border-gray-700 bg-gray-950 text-right text-white" /></td>
-        <td className="px-3 py-2" onMouseDown={focusCellField}><LineNumberInput ariaLabel="Rate / Price" value={line.unit_price} onChange={v => update(index, "unit_price", v)} className="border-gray-700 bg-gray-950 text-right text-white" /></td>
+        <td className="px-3 py-2" onMouseDown={focusCellField} onClick={focusCellField}><ItemNameAutocomplete autoFocus={index === focusIndex} placeholder="Item name" value={line.name || ""} type={line.type} onChange={name => update(index, "name", name)} onPriceSelect={price => update(index, "unit_price", price)} className="border-gray-700 bg-gray-950 text-white" /></td>
+        <td className="px-3 py-2" onMouseDown={focusCellField} onClick={focusCellField}><DescriptionInput value={line.description} onChange={e => update(index, "description", e.target.value)} /></td>
+        <td className="px-3 py-2" onMouseDown={focusCellField} onClick={focusCellField}><LineNumberInput ariaLabel="Qty / Hours" value={line.quantity} onChange={v => update(index, "quantity", v)} className="border-gray-700 bg-gray-950 text-right text-white" /></td>
+        <td className="px-3 py-2" onMouseDown={focusCellField} onClick={focusCellField}><LineNumberInput ariaLabel="Rate / Price" value={line.unit_price} onChange={v => update(index, "unit_price", v)} className="border-gray-700 bg-gray-950 text-right text-white" /></td>
         <td className="px-3 py-2 text-right font-medium text-white tabular-nums">${((Number(line.quantity) || 0) * (Number(line.unit_price) || 0)).toFixed(2)}</td>
         <td className="px-2 py-2 text-right"><button type="button" aria-label="Remove line" onClick={() => onChange(lines.filter((_, i) => i !== index))} className="text-gray-500 hover:text-rose-400"><Trash2 className="h-4 w-4" /></button></td>
       </tr>)}{lines.length === 0 && <tr><td colSpan="7" className="px-4 py-10 text-center text-gray-500">No line items added.</td></tr>}</tbody>
