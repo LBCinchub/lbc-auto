@@ -37,7 +37,7 @@ import Diagnostics from './pages/Diagnostics';
 import ChatInbox from './pages/ChatInbox';
 import Alignment from './pages/Alignment';
 import OnboardingFlow from './components/onboarding/OnboardingFlow';
-import CustomerPortalSecurityAnnouncement from './components/shared/CustomerPortalSecurityAnnouncement';
+import CustomerPortalSecurityAnnouncement, { markPortalSecurityAnnouncementSeen } from './components/shared/CustomerPortalSecurityAnnouncement';
 import WebBookingWidget from './pages/WebBookingWidget';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import LbcAutoLogo from '@/components/brand/LbcAutoLogo';
@@ -292,7 +292,13 @@ const AuthenticatedApp = () => {
     if (user.business_name) {
       localStorage.setItem('lbc_onboarding_complete', 'true');
     } else {
-      return <OnboardingFlow user={user} onComplete={() => window.location.reload()} />;
+      // A shop that just finished setup goes straight to its dashboard: the "what's new"
+      // and portal-security notices are for existing shops, not brand-new ones.
+      return <OnboardingFlow user={user} onComplete={() => {
+        localStorage.setItem(UPDATE_KEY, "true");
+        markPortalSecurityAnnouncementSeen();
+        window.location.reload();
+      }} />;
     }
   }
 

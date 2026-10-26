@@ -4,6 +4,9 @@ import { Button } from "@/components/ui/button";
 
 const KEY = "v20260731_customer_portal_security";
 
+// Brand-new shops have no existing portal customers, so this notice doesn't apply to them.
+export const markPortalSecurityAnnouncementSeen = () => localStorage.setItem(KEY, "seen");
+
 export default function CustomerPortalSecurityAnnouncement() {
   const [open, setOpen] = useState(false);
   useEffect(() => { if (!localStorage.getItem(KEY)) setOpen(true); }, []);
