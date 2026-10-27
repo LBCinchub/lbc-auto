@@ -24,6 +24,8 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
     let live = true;
     setSaved(undefined);
     setError("");
+    setAmount("");
+    setNote("");
     base44.functions.invoke("financialDocumentAction", { action: "load", source_type: descriptor.type, source_id: descriptor.id, ...(requestedId ? { invoice_id: requestedId } : {}) })
       .then((res) => { if (live) setSaved(res.data?.invoice || null); })
       .catch((e) => { if (live) { setSaved(null); setError(e?.response?.data?.error || e.message || "Could not load the saved invoice"); } });
@@ -51,11 +53,19 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
       }
       await base44.functions.invoke("financialDocumentAction", { action: "record_payment", source_type: descriptor.type, source_id: descriptor.id, invoice_id: invoiceId, idempotency_key: `${key}-payment`, intent: { payments: [{ amount: value, method, note }] } });
       keyRef.current = "";
-      await onSaved?.();
     } catch (e) {
       setError(e?.response?.data?.error || e.message || "Payment failed");
-    } finally {
       setSaving(false);
+      return;
+    }
+    // The payment is saved. A refresh/close failure after this point must not read as a failed payment.
+    setSaving(false);
+    setAmount("");
+    setNote("");
+    try {
+      await onSaved?.();
+    } catch (_) {
+      setError("Payment recorded. Refresh the page to see the updated balance.");
     }
   };
 

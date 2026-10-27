@@ -603,7 +603,10 @@ export default function Invoices() {
         open={!!paymentInvoice}
         onClose={() => setPaymentInvoice(null)}
         invoice={paymentInvoice}
-        onSaved={() => queryClient.invalidateQueries({ queryKey: ["invoices"] })}
+        onSaved={() => {
+          setPaymentInvoice(null);
+          queryClient.invalidateQueries({ queryKey: ["invoices"] });
+        }}
       />
     </div>
   );
