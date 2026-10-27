@@ -47,6 +47,12 @@ test("lease: expired lease from a crashed holder is reclaimable; live lease is n
   assert.equal(await acquireLease(s.entities, "Invoice", "i1", "other"), false, "live lease blocks");
 });
 
+test("lease: record with explicit null lease field is acquirable exactly once", async () => {
+  const s = makeStore({ Invoice: [{ id: "i1", financial_lease_until: null, financial_lease_owner: null }] });
+  const results = await Promise.all(["a", "b", "c"].map((o) => acquireLease(s.entities, "Invoice", "i1", o)));
+  assert.equal(results.filter(Boolean).length, 1, "exactly one racer wins");
+});
+
 // Mirrors financialDocumentAction's record_payment critical section.
 async function recordPayment(s, key, amount) {
   return withLease(s.entities, "Invoice", "i1", async () => {

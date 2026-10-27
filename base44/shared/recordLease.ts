@@ -10,7 +10,9 @@ export class LeaseBusyError extends Error {
 
 export async function acquireLease(entities: any, entity: string, id: string, owner: string, ttlMs = 60000, now = () => Date.now()) {
   const set = { $set: { financial_lease_until: new Date(now() + ttlMs).toISOString(), financial_lease_owner: owner } };
-  const fresh = await entities[entity].updateMany({ id, financial_lease_until: { $exists: false } }, set);
+  // A never-leased record may hold the field as explicit null (not just missing); `null`
+  // matches both, while `$exists: false` skips explicit nulls and left such records unlockable.
+  const fresh = await entities[entity].updateMany({ id, financial_lease_until: null }, set);
   if (fresh?.updated === 1) return true;
   const expired = await entities[entity].updateMany({ id, financial_lease_until: { $lt: new Date(now()).toISOString() } }, set);
   return expired?.updated === 1;

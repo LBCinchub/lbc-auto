@@ -7,6 +7,7 @@ const match = (rec, q) => Object.entries(q).every(([k, v]) => {
     if ("$exists" in v) return v.$exists ? rec[k] !== undefined : rec[k] === undefined;
     if ("$lt" in v) return rec[k] !== undefined && rec[k] < v.$lt;
   }
+  if (v === null) return rec[k] === null || rec[k] === undefined; // platform: null matches null or missing
   return rec[k] === v;
 });
 
