@@ -112,6 +112,7 @@ export default function Diagnostics() {
       const analysis = response.data?.analysis || {};
       setAnalysisByCode(prev => ({ ...prev, ...Object.fromEntries((analysis.findings || []).map(f => [f.code, f])) }));
       setAiSummary(analysis.summary || analysis.root_cause_analysis || "");
+      base44.analytics.track({ eventName: "ai_diagnostic_scan_completed", properties: { code_count: codes.length } });
     } catch (error) {
       toast({ title: "AI analysis failed", description: error?.message || "Try again.", variant: "destructive" });
     } finally {

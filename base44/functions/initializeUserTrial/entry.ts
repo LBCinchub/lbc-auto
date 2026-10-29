@@ -10,14 +10,16 @@ Deno.serve(async (req) => {
     }
 
     // Set trial start date if not already set
-    if (!user.trial_started_date) {
+    const trialStarted = !user.trial_started_date;
+    if (trialStarted) {
       await base44.auth.updateMe({
         trial_started_date: new Date().toISOString().split('T')[0],
         subscription_status: 'trial',
       });
     }
 
-    return Response.json({ success: true });
+    // trial_started is true only for the call that actually created the trial (the app records it once)
+    return Response.json({ success: true, trial_started: trialStarted });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }

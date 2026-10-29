@@ -208,7 +208,9 @@ const AuthenticatedApp = () => {
   useEffect(() => {
     const isPublicLanding = location.pathname === '/' || location.pathname === '/landing';
     if (user && !user.trial_started_date && !isPublicLanding) {
-      base44.functions.invoke('initializeUserTrial', {});
+      base44.functions.invoke('initializeUserTrial', {}).then((res) => {
+        if (res.data?.trial_started) base44.analytics.track({ eventName: 'trial_started' });
+      });
     }
   }, [user, location.pathname]);
 
