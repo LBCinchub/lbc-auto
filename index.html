@@ -15,9 +15,17 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image" content="/brand/social-1200x630-v1.png" />
     <title>LBC Auto</title>
+    <style>
+      #lbc-boot{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#030712}
+      #lbc-boot img{width:48px;height:48px;border-radius:11px;background:#000}
+      #lbc-boot span{width:32px;height:32px;box-sizing:border-box;border:4px solid rgba(34,211,238,.25);border-top-color:#22d3ee;border-radius:50%;animation:lbc-boot-spin 1s linear infinite}
+      #root:not(:empty)~#lbc-boot{display:none}
+      @keyframes lbc-boot-spin{to{transform:rotate(360deg)}}
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    <div id="lbc-boot" role="status" aria-label="Loading LBC Auto"><img src="/brand/lbc-auto-logo-v1.png" alt="" width="48" height="48" /><span></span></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

@@ -34,4 +34,4 @@
 .lp-status-chips button[data-status="Partial"][aria-pressed="true"]{border-color:rgba(234,179,8,.5);background:rgba(234,179,8,.18);color:#facc15}
 .lp-status-chips button[data-status="Paid"][aria-pressed="true"]{border-color:rgba(16,185,129,.5);background:rgba(16,185,129,.2);color:#34d399}
 .lp-status-chips button[data-status="Overdue"][aria-pressed="true"]{border-color:rgba(244,63,94,.5);background:rgba(244,63,94,.18);color:#fb7185}
-.lp-status-timeline.is-compact{padding:14px}.lp-status-timeline.is-compact .lp-status-detail{grid-template-columns:1fr}.lp-status-timeline.is-compact .lp-status-head span{display:none}@media(max-width:700px){.lp-status-detail{grid-template-columns:1fr}.lp-status-head{align-items:flex-start;flex-direction:column}}
+.lp-status-timeline.is-compact{padding:14px}.lp-status-timeline.is-compact .lp-status-chips{flex-wrap:wrap}.lp-status-timeline.is-compact .lp-status-detail{grid-template-columns:1fr}.lp-status-timeline.is-compact .lp-status-head span{display:none}@media(max-width:700px){.lp-status-detail{grid-template-columns:1fr}.lp-status-head{align-items:flex-start;flex-direction:column}}
