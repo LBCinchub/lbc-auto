@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { fuzzyMatch } from "@/utils/fuzzySearch";
 import { formatPhone } from "@/utils/formatPhone";
+import { fetchShopCustomers } from "@/lib/shopCustomers";
 import { buildVehicleInfo } from "@/utils/buildVehicleInfo";
 import PageHeader from "../components/shared/PageHeader";
 import SearchBar from "../components/shared/SearchBar";
@@ -77,20 +78,7 @@ export default function Customers() {
 
   const { data: customers = [], isLoading } = useQuery({
     queryKey: ["customers", user?.email],
-    queryFn: async () => {
-      if (!user) return [];
-      const [byCreated, byShopEmail] = await Promise.all([
-        base44.entities.Customer.filter({ created_by: user.email }, "-created_date", 10000),
-        base44.entities.Customer.filter({ shop_owner_email: user.email }, "-created_date", 10000),
-      ]);
-      const seen = new Set();
-      const merged = [...byCreated, ...byShopEmail].filter(c => {
-        if (seen.has(c.id)) return false;
-        seen.add(c.id);
-        return true;
-      });
-      return merged.sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
-    },
+    queryFn: () => fetchShopCustomers(user),
     enabled: !!user,
   });
 
