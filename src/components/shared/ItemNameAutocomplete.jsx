@@ -9,6 +9,9 @@ import { useLineItemLibrary } from "@/hooks/useLineItemLibrary";
  * fills the name AND calls onPriceSelect with the last-used unit price.
  *
  * Keyboard: ArrowUp/Down to navigate, Enter to select, Escape to close.
+ * Leaving the field closes the list, so it never sits over the next line's
+ * fields (a click there would pick a suggestion and overwrite this line's
+ * name and price).
  */
 export default function ItemNameAutocomplete({
   value,
@@ -103,6 +106,11 @@ export default function ItemNameAutocomplete({
           setHighlight(-1);
         }}
         onFocus={() => setOpen(true)}
+        onBlur={(e) => {
+          if (wrapRef.current?.contains(e.relatedTarget)) return;
+          setOpen(false);
+          setHighlight(-1);
+        }}
         onKeyDown={onKeyDown}
         aria-label={ariaLabel}
         placeholder={placeholder}

@@ -8,13 +8,16 @@ const cleanAmount = (raw) => {
   return dot === -1 ? digits : digits.slice(0, dot + 1) + digits.slice(dot + 1).replace(/\./g, "");
 };
 
-// Qty / rate cell. Selects its value on focus, so typing replaces the default 0 or 1
-// instead of mixing with it (e.g. "100" typed into "0" no longer becomes "1000").
-// The select runs right away, never on a timer, so it can't catch the first typed
-// digit ("120" becoming "20"); cancelling mouseup keeps a click from undoing it.
-// A click on a cell that already has the cursor selects the value again instead of
-// dropping the cursor after it, so "8" typed there replaces "120" (never "1208").
+// Qty / rate cell. Every click and every focus selects the whole value, so typing replaces the
+// default 0 or 1 (or the old amount) instead of mixing with it. Left to itself, the browser puts
+// the cursor where the click landed, and in this right-aligned box a click left of a short value
+// lands in front of it: "120" typed into "0" became "1200", and "2" typed into "1" became "21".
 export default function LineNumberInput({ value, onChange, className, ariaLabel }) {
+  const selectAll = (e) => {
+    e.preventDefault();
+    e.currentTarget.focus();
+    e.currentTarget.select();
+  };
   return (
     <Input
       type="text"
@@ -24,12 +27,7 @@ export default function LineNumberInput({ value, onChange, className, ariaLabel 
       value={value ?? ""}
       onChange={(e) => onChange(cleanAmount(e.target.value))}
       onFocus={(e) => e.target.select()}
-      onMouseDown={(e) => {
-        if (document.activeElement !== e.currentTarget) return;
-        e.preventDefault();
-        e.currentTarget.select();
-      }}
-      onMouseUp={(e) => e.preventDefault()}
+      onMouseDown={selectAll}
       className={className}
     />
   );

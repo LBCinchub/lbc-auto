@@ -3,6 +3,10 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import LineItemRow from "@/components/invoices/LineItemRow";
 
+// A freshly added line nobody has typed into yet: no item, description or price, default qty.
+const isUntouchedLine = (l) =>
+  !String(l.name || "").trim() && !String(l.description || "").trim() && !(Number(l.unit_price) > 0) && Number(l.quantity) === 1;
+
 export default function InvoiceLineItemsTable({ lines, onChange }) {
   // Every change builds on the newest lines (so two changes in one action, like a picked item's
   // name AND price, both stick), and the row handlers below never change, so a keystroke
@@ -18,9 +22,21 @@ export default function InvoiceLineItemsTable({ lines, onChange }) {
   // that adds the line does this; afterwards nothing can pull the cursor back to Item.
   const [focusIndex, setFocusIndex] = useState(-1);
   useEffect(() => { if (focusIndex !== -1) setFocusIndex(-1); }, [focusIndex]);
+  const bodyRef = useRef(null);
   const add = (type) => {
-    setFocusIndex(latest.current.length);
-    commit([...latest.current, { type, name: "", description: "", quantity: 1, unit_price: 0, taxable: true, source: "Manual" }]);
+    const list = latest.current;
+    const last = list[list.length - 1];
+    // Clicking "+ Labor"/"+ Part" again while the line it added is still untouched (e.g. a second
+    // click before the screen caught up) puts the cursor back in that line instead of stacking
+    // another empty line and moving the cursor away from where typing was about to go.
+    if (last && last.type === type && isUntouchedLine(last)) {
+      const field = bodyRef.current?.querySelector(`[aria-label="Line ${list.length} Item name"]`);
+      field?.focus({ preventScroll: true });
+      field?.scrollIntoView({ block: "nearest", inline: "nearest" });
+      return;
+    }
+    setFocusIndex(list.length);
+    commit([...list, { type, name: "", description: "", quantity: 1, unit_price: 0, taxable: true, source: "Manual" }]);
   };
   return <section className="py-5">
     <div className="mb-3 flex items-center justify-between"><h3 className="font-semibold text-white">Line Items</h3><div className="flex gap-2"><Button type="button" size="sm" variant="outline" onClick={() => add("labor")}><Plus /> Labor</Button><Button type="button" size="sm" variant="outline" onClick={() => add("part")}><Plus /> Part</Button></div></div>
@@ -35,7 +51,7 @@ export default function InvoiceLineItemsTable({ lines, onChange }) {
         <col className="w-12" />
       </colgroup>
       <thead className="bg-gray-800/70 text-left text-xs uppercase tracking-wide text-gray-400"><tr><th className="px-3 py-3">Type</th><th className="px-3 py-3">Item</th><th className="px-3 py-3">Description</th><th className="px-3 py-3 text-right">Qty / Hours</th><th className="px-3 py-3 text-right">Rate / Price</th><th className="px-3 py-3 text-right">Amount</th><th /></tr></thead>
-      <tbody className="divide-y divide-gray-800">{lines.map((line, index) => <LineItemRow key={`${line.source || "line"}-${index}`} line={line} index={index} autoFocus={index === focusIndex} onField={onField} onRemove={onRemove} />)}{lines.length === 0 && <tr><td colSpan="7" className="px-4 py-10 text-center text-gray-500">No line items added.</td></tr>}</tbody>
+      <tbody ref={bodyRef} className="divide-y divide-gray-800">{lines.map((line, index) => <LineItemRow key={`${line.source || "line"}-${index}`} line={line} index={index} autoFocus={index === focusIndex} onField={onField} onRemove={onRemove} />)}{lines.length === 0 && <tr><td colSpan="7" className="px-4 py-10 text-center text-gray-500">No line items added.</td></tr>}</tbody>
     </table></div>
   </section>;
 }
