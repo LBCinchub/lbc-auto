@@ -6,6 +6,7 @@ import { Mail } from "lucide-react";
 import { buildVehicleInfo } from "@/utils/buildVehicleInfo";
 import { formatPhone } from "@/utils/formatPhone";
 import { engineSummary } from "@/lib/vehicleDetails";
+import ShopIdentityBlock from "@/components/financial-workflow/ShopIdentityBlock";
 
 export default function EstimateEditorHeader({ estimate, customer, vehicle, linkedInvoice, linkedRO }) {
   const navigate = useNavigate();
@@ -34,10 +35,10 @@ export default function EstimateEditorHeader({ estimate, customer, vehicle, link
               <p className="text-sm text-gray-400">{formatPhone(customer.phone)}</p>
             )}
             {customer?.email && (
-              <p className="flex items-center gap-1 text-sm text-gray-400"><Mail className="h-3 w-3" />{customer.email}</p>
+              <p className="flex items-center gap-1 text-sm text-gray-400"><Mail className="h-3 w-3 shrink-0" /><span className="min-w-0 break-all">{customer.email}</span></p>
             )}
             {customer?.address && (
-              <p className="text-xs text-gray-500">{customer.address}</p>
+              <p className="break-words text-xs text-gray-500">{customer.address}</p>
             )}
             {vehicleLine && (
               <button
@@ -63,11 +64,9 @@ export default function EstimateEditorHeader({ estimate, customer, vehicle, link
           </div>
         </div>
 
-        {/* RIGHT — LBC logo + number + status badge */}
+        {/* RIGHT — shop details + number + status badge */}
         <div className="flex shrink-0 flex-col items-end gap-2">
-          <span className="inline-flex items-center rounded-md bg-sky-500/15 px-2 py-0.5 text-xs font-extrabold tracking-wider text-sky-400 ring-1 ring-inset ring-sky-500/30">
-            LBC
-          </span>
+          <ShopIdentityBlock />
           <div className="flex items-center gap-2">
             <h2 className="text-xl font-bold text-white">{estimate?.estimate_number || "New Estimate"}</h2>
             {estimate && <StatusBadge status={estimate.status} />}
