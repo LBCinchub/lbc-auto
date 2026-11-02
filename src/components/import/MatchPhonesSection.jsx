@@ -11,9 +11,11 @@ export default function MatchPhonesSection() {
     if (!file) return;
     setMatchStatus('uploading');
     setMatchResult(null);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    // The list holds customer contact details, so it is stored privately and read through a short-lived link.
+    const { file_uri } = await base44.integrations.Core.UploadPrivateFile({ file });
+    const { signed_url } = await base44.integrations.Core.CreateFileSignedUrl({ file_uri });
     setMatchStatus('matching');
-    const res = await base44.functions.invoke('matchAndFillPhones', { file_url });
+    const res = await base44.functions.invoke('matchAndFillPhones', { file_url: signed_url });
     setMatchResult(res.data);
     setMatchStatus('done');
   };
