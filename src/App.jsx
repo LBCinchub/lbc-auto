@@ -40,6 +40,7 @@ import OnboardingFlow from './components/onboarding/OnboardingFlow';
 import CustomerPortalSecurityAnnouncement, { markPortalSecurityAnnouncementSeen } from './components/shared/CustomerPortalSecurityAnnouncement';
 import WebBookingWidget from './pages/WebBookingWidget';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
 import LbcAutoLogo from '@/components/brand/LbcAutoLogo';
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -221,7 +222,7 @@ const AuthenticatedApp = () => {
   }
 
   // PUBLIC ROUTES — bypass all auth, render immediately, no login required
-  const PUBLIC_PATHS = ['/CustomerPortal', '/lbc-customer', '/CustomerDashboard', '/TechPortal', '/lbc-team', '/TechDashboard', '/TechJobView', '/OfficeAssistant', '/landing', '/WebBookingWidget', '/privacy-policy'];
+  const PUBLIC_PATHS = ['/CustomerPortal', '/lbc-customer', '/CustomerDashboard', '/TechPortal', '/lbc-team', '/TechDashboard', '/TechJobView', '/OfficeAssistant', '/landing', '/WebBookingWidget', '/privacy-policy', '/terms'];
   if (PUBLIC_PATHS.some(p => location.pathname.startsWith(p))) {
     return (
       <Routes>
@@ -235,6 +236,7 @@ const AuthenticatedApp = () => {
         <Route path="/OfficeAssistant" element={<OfficeAssistant />} />
         <Route path="/WebBookingWidget" element={<WebBookingWidget />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<TermsOfService />} />
         <Route path="/landing" element={<Landing />} />
       </Routes>
     );

@@ -1,6 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import LegalDocument from "@/components/legal/LegalDocument";
 
 // 16 numbered sections — (number, title, paragraphs[])
 const SECTIONS = [
@@ -147,69 +146,5 @@ const SECTIONS = [
 ];
 
 export default function PrivacyPolicy() {
-  return (
-    <div className="lp-pp-page">
-      <div className="lp-pp-wrap">
-        <header className="lp-pp-head">
-          <h1 className="lp-pp-title">Privacy Policy</h1>
-          <p className="lp-pp-company">LBC Network Inc.</p>
-          <div className="lp-pp-meta">
-            <span>Effective Date: August 12, 2026</span>
-            <span aria-hidden="true">·</span>
-            <span>Last Updated: August 12, 2026</span>
-          </div>
-        </header>
-
-        <article className="lp-pp-body">
-          {SECTIONS.map(([num, title, blocks]) => (
-            <section key={num} className="lp-pp-sec">
-              <div className="lp-pp-sec-head">
-                <span className="lp-pp-num">{num}.</span>
-                <h2 className="lp-pp-sec-title">{title}</h2>
-              </div>
-              <div className="lp-pp-sec-body">
-                {blocks.map((b, i) => b.list ? (
-                  <ul key={i} className="lp-pp-list">
-                    {b.list.map((li, j) => (
-                      <li key={j}>{renderLine(li)}</li>
-                    ))}
-                  </ul>
-                ) : b.card ? (
-                  <div key={i} className="lp-pp-cards">
-                    {b.card.map((c, k) => (
-                      <div key={k} className="lp-pp-card">
-                        <div className="lp-pp-card-label">{c.label}</div>
-                        {Array.isArray(c.value) ? c.value.map((v, m) => (
-                          <div key={m} className="lp-pp-card-val">{renderLine(v)}</div>
-                        )) : (
-                          <div className="lp-pp-card-val">
-                            {c.href ? <a href={c.href} className="lp-pp-link">{c.value}</a> : c.value}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p key={i} className="lp-pp-p">{renderLine(b)}</p>
-                ))}
-              </div>
-            </section>
-          ))}
-        </article>
-
-        <div className="lp-pp-back">
-          <Link to="/" className="lp-pp-back-btn">
-            <ArrowLeft size={16} /> Back to Home
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Render a paragraph/li string, highlighting leading "Label:" segment.
-function renderLine(text) {
-  const m = text.match(/^([A-Z][A-Za-z .,&()/'-]+?):\s+(.*)$/s);
-  if (m) return (<><strong className="lp-pp-lead">{m[1]}:</strong> {m[2]}</>);
-  return text;
+  return <LegalDocument title="Privacy Policy" company="LBC Network Inc." effective="August 12, 2026" updated="August 12, 2026" sections={SECTIONS} />;
 }
