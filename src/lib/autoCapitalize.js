@@ -66,9 +66,12 @@ function onInput(e) {
   const start = el.selectionStart;
   const end = el.selectionEnd;
   try {
+    // Rewrite the value inside the same keystroke (this runs before React sees the event) and
+    // leave React's tracker on the old value, so React reads the new text exactly once.
+    // Firing a second input event here made fast or automated typing land twice or not at all.
     (el.tagName === "TEXTAREA" ? taSetter : inputSetter).call(el, next);
+    el._valueTracker?.setValue(original);
     el.setSelectionRange(start, end);
-    el.dispatchEvent(new Event("input", { bubbles: true }));
   } catch {
     // never let formatting break the input
   } finally {
