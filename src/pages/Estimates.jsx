@@ -135,6 +135,8 @@ export default function Estimates() {
       queryClient.invalidateQueries({ queryKey: ["estimates"] });
       queryClient.invalidateQueries({ queryKey: ["repairOrders"] });
       if (order?.id) navigate(`/RepairOrderDetail/${order.id}`);
+    } catch (err) {
+      window.alert(`Could not convert to a repair order: ${err?.response?.data?.error || err?.message}`);
     } finally {
       setConvertingId(null);
     }

@@ -197,8 +197,10 @@ export default function OriginalEstimateEditor({ estimateId, onClose }) {
       queryClient.invalidateQueries({ queryKey: ["estimates"] });
       syncLineItemLibrary(draft.line_items);
       toast({ title: "Estimate saved ✓" });
+      return true;
     } catch (e) {
       toast({ title: "Save failed", description: e?.message, variant: "destructive" });
+      return false;
     } finally {
       setSaving(false);
     }
@@ -214,9 +216,19 @@ export default function OriginalEstimateEditor({ estimateId, onClose }) {
   };
 
   const convertToRO = async () => {
-    if (!window.confirm("Convert this estimate to a repair order?")) return;
-    const response = await base44.functions.invoke("convertEstimateToRepairOrder", { estimate_id: estimate.id });
-    const order = response.data?.repair_order;
+    const approved = estimate.status === "approved" || estimate.auth_status === "approved" || estimate.customer_decision === "approved";
+    if (!window.confirm(approved ? "Convert this estimate to a repair order?" : "This estimate isn't approved yet. Mark it approved and convert it to a repair order?")) return;
+    // Save the on-screen edits first so the repair order is built from what the shop sees.
+    if (!(await save())) return;
+    let order;
+    try {
+      if (!approved) await base44.entities.Estimate.update(estimate.id, { status: "approved" });
+      const response = await base44.functions.invoke("convertEstimateToRepairOrder", { estimate_id: estimate.id });
+      order = response.data?.repair_order;
+    } catch (e) {
+      toast({ title: "Convert failed", description: e?.response?.data?.error || e?.message, variant: "destructive" });
+      return;
+    }
     queryClient.invalidateQueries({ queryKey: ["estimate", estimateId] });
     queryClient.invalidateQueries({ queryKey: ["estimates"] });
     queryClient.invalidateQueries({ queryKey: ["repairOrders"] });
