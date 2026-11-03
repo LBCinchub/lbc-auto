@@ -13,7 +13,9 @@ export default function ProductTour({ active, setActive }) {
   // leaving them wherever the shorter page happens to land.
   useLayoutEffect(() => {
     if (firstRun.current) { firstRun.current = false; return; }
-    if (panelRef.current && panelRef.current.getBoundingClientRect().top < 0) tourRef.current?.scrollIntoView({ block: "start" });
+    // Below the sticky header (72px), so the tabs and progress bar stay visible on every step.
+    const tour = tourRef.current;
+    if (tour && tour.getBoundingClientRect().top < 72) window.scrollTo({ top: window.scrollY + tour.getBoundingClientRect().top - 84 });
   }, [step]);
   const select = next => { const value=Math.max(0,Math.min(6,next)); setStep(value); if(value===6) localStorage.setItem(KEY,"complete"); };
   const exit = () => { setActive(false); document.getElementById("hero")?.scrollIntoView({behavior:"smooth"}); };

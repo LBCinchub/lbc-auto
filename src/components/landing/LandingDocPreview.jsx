@@ -139,7 +139,7 @@ export default function LandingDocPreview({ variant = "estimate" }) {
               <Phone /> 613-314-1994
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 7, ...muted }}>
-              <Mail style={{ width: 12, height: 12 }} /> Jordan.Mitchell@Email.Com
+              <Mail style={{ width: 12, height: 12 }} /> jordan.mitchell@example.com
             </div>
           </div>
           <div style={card}>
