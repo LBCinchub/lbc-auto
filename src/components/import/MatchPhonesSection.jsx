@@ -6,6 +6,7 @@ import { CheckCircle, Loader2, Phone } from "lucide-react";
 export default function MatchPhonesSection() {
   const [matchStatus, setMatchStatus] = useState('idle');
   const [matchResult, setMatchResult] = useState(null);
+  const [pasted, setPasted] = useState('');
 
   const handleMatchFile = async (file) => {
     if (!file) return;
@@ -35,6 +36,21 @@ export default function MatchPhonesSection() {
           <span className="text-muted-foreground text-sm mt-1">Supports .txt or .csv tab-separated files</span>
           <input type="file" accept=".txt,.csv,.tsv" className="hidden" onChange={(e) => handleMatchFile(e.target.files[0])} />
         </label>
+      )}
+
+      {matchStatus === 'idle' && (
+        <div className="mt-4 space-y-2">
+          <label htmlFor="phone-list-paste" className="block text-sm font-medium text-gray-300">Or paste your phone list</label>
+          <textarea
+            id="phone-list-paste" data-no-capitalize spellCheck={false} rows={5} value={pasted}
+            onChange={(e) => setPasted(e.target.value)} placeholder={"Customer\tEmail\tMobile\nJane Smith\tjane@example.com\t613-555-0101"}
+            className="w-full rounded-lg border border-gray-700 bg-gray-900 p-3 font-mono text-sm text-white placeholder:text-gray-600 focus:border-sky-500 focus:outline-none"
+          />
+          <p className="text-xs text-gray-500">One customer per line: name, email and mobile separated by tabs (as copied from a spreadsheet).</p>
+          <Button type="button" disabled={!pasted.trim()} onClick={() => handleMatchFile(new File([pasted], "phone-list.txt", { type: "text/plain" }))} className="bg-sky-500 text-white hover:bg-sky-600">
+            Match phones
+          </Button>
+        </div>
       )}
 
       {(matchStatus === 'uploading' || matchStatus === 'matching') && (
