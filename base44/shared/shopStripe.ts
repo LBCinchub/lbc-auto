@@ -8,10 +8,13 @@ const r2 = (v) => Math.round((Number(v) || 0) * 100) / 100;
 const toB64 = (bytes) => btoa(String.fromCharCode(...bytes));
 const fromB64 = (text) => Uint8Array.from(atob(text), (c) => c.charCodeAt(0));
 
+const masterSecret = () => Deno.env.get('SHOP_KEYS_ENCRYPTION_SECRET') || '';
+// Shops can only connect once the app owner's master secret is set and long enough.
+export const cardPaymentsReady = () => masterSecret().length >= 16;
+
 async function cipherKey() {
-  const secret = Deno.env.get('SHOP_KEYS_ENCRYPTION_SECRET') || '';
-  if (secret.length < 16) throw new Error('Card payments are not set up for this app yet.');
-  const raw = await crypto.subtle.digest('SHA-256', enc.encode(secret));
+  if (!cardPaymentsReady()) throw new Error('Card payments are not set up for this app yet.');
+  const raw = await crypto.subtle.digest('SHA-256', enc.encode(masterSecret()));
   return crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt', 'decrypt']);
 }
 

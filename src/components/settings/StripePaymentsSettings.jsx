@@ -48,6 +48,7 @@ export default function StripePaymentsSettings() {
       </p>
       {!status ? <Loader2 className="w-5 h-5 animate-spin text-gray-500" aria-label="Loading" />
         : status.connected ? <StripeConnectedCard status={status} busy={busy} light={light} onDisconnect={() => run({ action: "disconnect" })} />
+        : status.available === false ? <p className={`${light ? "text-amber-700" : "text-amber-400"} text-sm`}>Card payments aren't available yet. Please check back soon.</p>
         : <StripeConnectForm busy={busy} light={light} onConnect={(secret_key) => run({ action: "connect", secret_key })} />}
       {error && <p role="alert" className="mt-3 text-sm text-rose-400">{error}</p>}
     </div>
