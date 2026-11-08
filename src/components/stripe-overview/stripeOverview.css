@@ -1,0 +1,359 @@
+/* Stripe overview: the "Dashboard Home 2" pixel-tile panel in LBC Auto's own palette.
+   .dh2-section is the size container; the layout lives on the inner .dh2-wrap / .dh2-grid
+   (a container cannot query itself). Each KPI card is its own container so its Handjet
+   number (font loaded in index.css) scales with the card. */
+.dh2-section {
+  --dh2-panel: #0a101d;                       /* gray-900/50 over the page, like the other Analytics panels */
+  --dh2-card: #151d2a;                        /* gray-800/50 over the panel */
+  --dh2-border: rgba(31, 41, 55, 0.5);
+  --dh2-text: #ffffff;
+  --dh2-soft: #e5e7eb;
+  --dh2-muted: #9ca3af;
+  --dh2-day: #8a94a6;
+  --dh2-green: #34d399;                       /* emerald-400: the app's revenue / positive colour */
+  --dh2-green-ink: #34d399;                   /* small green text */
+  --dh2-green-soft: rgba(52, 211, 153, 0.2);
+  --dh2-glow: rgba(110, 231, 183, 0.28);
+  --dh2-head: #d1fae5;                        /* the pixel line's pale snake head */
+  --dh2-dim: #1a3033;                         /* empty squares and pixel-grid cells */
+  --dh2-amber: #ffeb66;                       /* needs attention: a refund, a falling day */
+  --dh2-amber-soft: rgba(255, 235, 102, 0.2);
+
+  container: dh2 / inline-size;
+  display: block;
+  width: 100%;
+  border: 1px solid var(--dh2-border);
+  border-radius: 12px;
+  background: var(--dh2-panel);
+  color: var(--dh2-text);
+  font-size: 12px;
+  line-height: 16.5px;
+  -webkit-font-smoothing: antialiased;
+  box-sizing: border-box;
+}
+.light .dh2-section {
+  --dh2-panel: #ffffff;
+  --dh2-card: #f1f5f9;
+  --dh2-border: #e2e8f0;
+  --dh2-text: #0f172a;
+  --dh2-soft: #1e293b;
+  --dh2-muted: #475569;
+  --dh2-day: #526072;
+  --dh2-green: #059669;
+  --dh2-green-ink: #047857;
+  --dh2-green-soft: rgba(5, 150, 105, 0.2);
+  --dh2-glow: rgba(16, 185, 129, 0.25);
+  --dh2-head: #6ee7b7;
+  --dh2-dim: #d3e4de;
+  --dh2-amber: #b45309;
+  --dh2-amber-soft: rgba(180, 83, 9, 0.2);
+}
+.dh2-section *, .dh2-section *::before, .dh2-section *::after { box-sizing: border-box; }
+
+.dh2-wrap { display: flex; flex-direction: column; gap: 24px; padding: clamp(16px, 3.2cqi, 40px); }
+.dh2-caps { text-transform: uppercase; letter-spacing: 0.04em; }
+
+/* ---------- header ---------- */
+.dh2-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 24px; }
+.dh2-title { margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; color: var(--dh2-text); }
+.dh2-live { display: inline-flex; align-items: center; gap: 8px; text-transform: uppercase; letter-spacing: 0.04em; }
+.dh2-live::before,
+.dh2-total::before {
+  content: "";
+  width: 6px; height: 6px;
+  border-radius: 3px;
+  background: var(--dh2-green);
+  box-shadow: 0 0 8px var(--dh2-glow);
+}
+.dh2-note { margin: 0; color: var(--dh2-muted); }
+
+/* ---------- grid ----------
+   Narrow: Revenue full width, Payments + Pending payouts side by side, then the chart,
+   then Recent, then Revenue (30D). >= 700px: three tiles in a row. >= 960px: chart two
+   thirds, right column stacks Recent over Revenue (30D). */
+.dh2-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-areas:
+    "rev    rev"
+    "ord    aov"
+    "chart  chart"
+    "side   side";
+  gap: 8px;
+}
+.dh2-side { grid-area: side; display: grid; gap: 8px; min-width: 0; }
+@container dh2 (width >= 700px) {
+  .dh2-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-areas:
+      "rev   ord   aov"
+      "chart chart chart"
+      "side  side  side";
+  }
+  .dh2-side { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container dh2 (width >= 960px) {
+  .dh2-grid {
+    grid-template-areas:
+      "rev   ord   aov"
+      "chart chart side";
+  }
+  .dh2-side { grid-template-columns: none; grid-template-rows: auto 1fr; }
+}
+
+.dh2-card { min-width: 0; border-radius: 12px; background: var(--dh2-card); padding: 16px; }
+@container dh2 (width > 768px) { .dh2-card { padding: 24px; } }
+.dh2-label { margin: 0; color: var(--dh2-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.dh2-row-sb { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; }
+.dh2-pair { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+
+/* ---------- KPI tiles ----------
+   The top-right note stacks under its label (and the number moves left) in ALL three tiles
+   at once: stacked below 450px and again at 700-910px, beside the label everywhere else. */
+.dh2-kpi {
+  container: dh2-kpi / inline-size;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 24px;
+  min-height: 175px;
+}
+.dh2-kpi--rev { grid-area: rev; }
+.dh2-kpi--ord { grid-area: ord; }
+.dh2-kpi--aov { grid-area: aov; }
+.dh2-kpi .dh2-row-sb { flex-direction: column; align-items: flex-start; gap: 4px; }
+.dh2-kpi .dh2-value { align-self: flex-start; }
+@container dh2 (450px <= width < 700px) {
+  .dh2-kpi .dh2-row-sb { flex-direction: row; align-items: center; gap: 4px 12px; }
+  .dh2-kpi .dh2-value { align-self: flex-end; }
+}
+@container dh2 (width >= 910px) {
+  .dh2-kpi .dh2-row-sb { flex-direction: row; align-items: center; gap: 4px 12px; }
+  .dh2-kpi .dh2-value { align-self: flex-end; }
+}
+.dh2-value {
+  font-family: "Handjet", ui-monospace, monospace;
+  font-weight: 300;
+  font-size: clamp(44px, 30cqi, 110px);
+  line-height: 0.52;
+  letter-spacing: -4px;
+  color: var(--dh2-green);
+  white-space: nowrap;
+  /* the glyphs are taller than the line box: pad it out (and pull it back) so the hover mask covers whole digits */
+  padding: 0.3em 0 0.3em;
+  margin: -0.3em 0 -0.2em;
+}
+
+/* ---------- 7-day tile chart ---------- */
+.dh2-chart { grid-area: chart; display: flex; flex-direction: column; gap: 47px; }
+.dh2-total { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--dh2-text); white-space: nowrap; }
+.dh2-bars {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 44px));
+  justify-content: space-between;
+  column-gap: 6px;
+  margin-top: auto;
+}
+.dh2-col {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  border-radius: 10px;
+  transition: opacity 0.25s ease;
+  --dh2-pc: var(--dh2-green-ink);             /* pointer: green = sales rose vs the day before */
+  --dh2-pc-soft: var(--dh2-green-soft);
+}
+.dh2-col--down { --dh2-pc: var(--dh2-amber); --dh2-pc-soft: var(--dh2-amber-soft); }   /* yellow = sales fell */
+.dh2-col:focus-visible { outline: none; }
+.dh2-bars:has(.dh2-col:hover) .dh2-col:not(:hover) { opacity: 0.45; }
+
+.dh2-stack { width: 100%; display: flex; flex-direction: column-reverse; gap: 8px; }   /* first square = bottom */
+.dh2-tile {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  background: var(--dh2-dim);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+.dh2-tile--on {
+  background: var(--dh2-green);
+  box-shadow:
+    inset 0 0 0 1px var(--dh2-green),
+    inset 0 1px 0 1px rgba(255, 255, 255, 0.16),
+    0 0 16px var(--dh2-glow);
+  animation: dh2-light 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: calc(var(--c) * 110ms + var(--r) * 45ms);
+  transition: filter 0.25s ease, box-shadow 0.2s ease;
+}
+.dh2-col:hover .dh2-tile--on,
+.dh2-col:focus-visible .dh2-tile--on { filter: brightness(1.15); }
+@keyframes dh2-light {
+  from { filter: brightness(0.35) saturate(0.6); }
+  to   { filter: brightness(1); }
+}
+.dh2-day { width: 100%; text-align: center; color: var(--dh2-day); transition: color 0.2s ease; }
+
+/* day pointer: a 20% halo behind the top lit square + an outlined tag 14px above it. HOVER ONLY. */
+.dh2-col:hover .dh2-tile--on:has(> .dh2-pin),
+.dh2-col:focus-visible .dh2-tile--on:has(> .dh2-pin) {
+  box-shadow:
+    inset 0 0 0 1px var(--dh2-green),
+    inset 0 1px 0 1px rgba(255, 255, 255, 0.16),
+    0 0 0 4.5px var(--dh2-pc-soft),
+    0 0 16px var(--dh2-glow);
+}
+.dh2-pin {
+  position: absolute;
+  inset: -4px -4.5px;
+  border-radius: 9px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.dh2-pin-tag {
+  position: absolute;
+  bottom: calc(100% + 14px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 5px 9px;
+  border: 1px solid var(--dh2-pc);
+  border-radius: 6px;
+  background: var(--dh2-card);
+  color: var(--dh2-pc);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.dh2-col:nth-child(-n+2) .dh2-pin-tag { left: 0; transform: none; }
+.dh2-col:nth-child(n+6) .dh2-pin-tag { left: auto; right: 0; transform: none; }
+@container dh2 (width >= 600px) {
+  .dh2-col:nth-child(2) .dh2-pin-tag,
+  .dh2-col:nth-child(6) .dh2-pin-tag { left: 50%; right: auto; transform: translateX(-50%); }
+}
+.dh2-bars .dh2-col:hover .dh2-pin,
+.dh2-bars .dh2-col:focus-visible .dh2-pin { opacity: 1; }
+.dh2-bars .dh2-col:hover .dh2-day,
+.dh2-bars .dh2-col:focus-visible .dh2-day { color: var(--dh2-pc); }
+
+/* ---------- recent payments ---------- */
+.dh2-recent { display: flex; flex-direction: column; gap: 24px; }
+.dh2-recent .dh2-row-sb > :first-child { color: var(--dh2-text); }
+.dh2-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 16px; }
+.dh2-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  color: inherit;
+  text-decoration: none;
+  border-radius: 8px;
+}
+.dh2-item:hover .dh2-name { text-decoration: underline; text-underline-offset: 3px; }
+.dh2-item:focus-visible { outline: 2px solid var(--dh2-green); outline-offset: 4px; }
+.dh2-item-l { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.dh2-glyph {
+  flex: none;
+  width: 32px; height: 32px;
+  border-radius: 6px;
+  background: var(--dh2-green);
+  box-shadow:
+    inset 0 0 0 1px var(--dh2-green),
+    inset 0 1px 0 1px rgba(255, 255, 255, 0.16),
+    0 0 16px var(--dh2-glow);
+}
+.dh2-glyph--warn {
+  background: var(--dh2-amber);
+  box-shadow:
+    inset 0 0 0 1px var(--dh2-amber),
+    inset 0 1px 0 1px rgba(255, 255, 255, 0.16),
+    0 0 16px var(--dh2-glow);
+}
+.dh2-what { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.dh2-name {
+  margin: 0;
+  font-size: 14px;
+  line-height: 16.5px;
+  color: var(--dh2-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dh2-meta {
+  margin: 0;
+  color: var(--dh2-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dh2-amt { font-size: 14px; line-height: 21px; color: var(--dh2-soft); white-space: nowrap; }
+.dh2-amt--warn { color: var(--dh2-amber); }
+.dh2-empty { margin: 0; color: var(--dh2-muted); }
+
+/* ---------- 30-day pixel line ----------
+   A 47 x 17 grid of muted cells with the line drawn as bright cells, one per column, bridged
+   where it steps. Each bright cell carries its own inline delay (column x 40ms) so the line
+   draws left -> right like a snake, holds, then fades out; repeats every 5s. */
+.dh2-trend { display: flex; flex-direction: column; justify-content: space-between; gap: 16px; }
+.dh2-plot { position: relative; height: 120.5px; }
+.dh2-pix { display: block; width: 100%; height: 100%; }
+.dh2-pix-line { fill: var(--dh2-green); }
+.dh2-pix-line rect { animation: dh2-draw 5s linear infinite backwards; }
+@keyframes dh2-draw {
+  0%        { opacity: 0; fill: var(--dh2-head); }
+  2%        { opacity: 1; fill: var(--dh2-head); }
+  8%        { opacity: 1; fill: var(--dh2-green); }
+  50%       { opacity: 1; fill: var(--dh2-green); }
+  66%, 100% { opacity: 0; fill: var(--dh2-green); }
+}
+
+/* ---------- entrance: CRT switch-on ----------
+   Only when .dh2-enter is added on a visible page; otherwise everything simply shows. */
+.dh2-enter .dh2-head { animation: dh2-fade 0.5s ease-out both; }
+.dh2-enter .dh2-card { animation: dh2-crt 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) calc(var(--n) * 80ms + 80ms) both; }
+@keyframes dh2-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dh2-crt {
+  0%   { clip-path: inset(50% 0 50% 0 round 12px); }
+  60%  { clip-path: inset(0 round 12px); }
+  100% { clip-path: inset(-40px round 12px); }
+}
+.dh2-enter .dh2-tile--on { animation-delay: calc(var(--c) * 110ms + var(--r) * 45ms + 0.8s); }
+
+/* ---------- hover shimmer on the big KPI numbers ----------
+   A mask of 0.06em cells (~28% dimmed) jumps to a new offset every ~110ms while the card is hovered. */
+.dh2-kpi:hover .dh2-value {
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' shape-rendering='crispEdges'><rect x='0' y='0' width='1' height='1' fill-opacity='1'/><rect x='1' y='0' width='1' height='1' fill-opacity='1'/><rect x='2' y='0' width='1' height='1' fill-opacity='1'/><rect x='3' y='0' width='1' height='1' fill-opacity='0.68'/><rect x='4' y='0' width='1' height='1' fill-opacity='1'/><rect x='5' y='0' width='1' height='1' fill-opacity='0.69'/><rect x='6' y='0' width='1' height='1' fill-opacity='1'/><rect x='7' y='0' width='1' height='1' fill-opacity='1'/><rect x='0' y='1' width='1' height='1' fill-opacity='1'/><rect x='1' y='1' width='1' height='1' fill-opacity='1'/><rect x='2' y='1' width='1' height='1' fill-opacity='1'/><rect x='3' y='1' width='1' height='1' fill-opacity='1'/><rect x='4' y='1' width='1' height='1' fill-opacity='0.71'/><rect x='5' y='1' width='1' height='1' fill-opacity='1'/><rect x='6' y='1' width='1' height='1' fill-opacity='1'/><rect x='7' y='1' width='1' height='1' fill-opacity='1'/><rect x='0' y='2' width='1' height='1' fill-opacity='0.78'/><rect x='1' y='2' width='1' height='1' fill-opacity='0.75'/><rect x='2' y='2' width='1' height='1' fill-opacity='0.7'/><rect x='3' y='2' width='1' height='1' fill-opacity='1'/><rect x='4' y='2' width='1' height='1' fill-opacity='1'/><rect x='5' y='2' width='1' height='1' fill-opacity='0.75'/><rect x='6' y='2' width='1' height='1' fill-opacity='1'/><rect x='7' y='2' width='1' height='1' fill-opacity='1'/><rect x='0' y='3' width='1' height='1' fill-opacity='1'/><rect x='1' y='3' width='1' height='1' fill-opacity='1'/><rect x='2' y='3' width='1' height='1' fill-opacity='0.71'/><rect x='3' y='3' width='1' height='1' fill-opacity='0.83'/><rect x='4' y='3' width='1' height='1' fill-opacity='1'/><rect x='5' y='3' width='1' height='1' fill-opacity='1'/><rect x='6' y='3' width='1' height='1' fill-opacity='1'/><rect x='7' y='3' width='1' height='1' fill-opacity='1'/><rect x='0' y='4' width='1' height='1' fill-opacity='1'/><rect x='1' y='4' width='1' height='1' fill-opacity='0.7'/><rect x='2' y='4' width='1' height='1' fill-opacity='1'/><rect x='3' y='4' width='1' height='1' fill-opacity='1'/><rect x='4' y='4' width='1' height='1' fill-opacity='1'/><rect x='5' y='4' width='1' height='1' fill-opacity='0.71'/><rect x='6' y='4' width='1' height='1' fill-opacity='1'/><rect x='7' y='4' width='1' height='1' fill-opacity='1'/><rect x='0' y='5' width='1' height='1' fill-opacity='1'/><rect x='1' y='5' width='1' height='1' fill-opacity='1'/><rect x='2' y='5' width='1' height='1' fill-opacity='1'/><rect x='3' y='5' width='1' height='1' fill-opacity='1'/><rect x='4' y='5' width='1' height='1' fill-opacity='0.75'/><rect x='5' y='5' width='1' height='1' fill-opacity='1'/><rect x='6' y='5' width='1' height='1' fill-opacity='1'/><rect x='7' y='5' width='1' height='1' fill-opacity='1'/><rect x='0' y='6' width='1' height='1' fill-opacity='1'/><rect x='1' y='6' width='1' height='1' fill-opacity='1'/><rect x='2' y='6' width='1' height='1' fill-opacity='1'/><rect x='3' y='6' width='1' height='1' fill-opacity='0.69'/><rect x='4' y='6' width='1' height='1' fill-opacity='1'/><rect x='5' y='6' width='1' height='1' fill-opacity='1'/><rect x='6' y='6' width='1' height='1' fill-opacity='1'/><rect x='7' y='6' width='1' height='1' fill-opacity='1'/><rect x='0' y='7' width='1' height='1' fill-opacity='0.85'/><rect x='1' y='7' width='1' height='1' fill-opacity='1'/><rect x='2' y='7' width='1' height='1' fill-opacity='1'/><rect x='3' y='7' width='1' height='1' fill-opacity='0.72'/><rect x='4' y='7' width='1' height='1' fill-opacity='1'/><rect x='5' y='7' width='1' height='1' fill-opacity='1'/><rect x='6' y='7' width='1' height='1' fill-opacity='1'/><rect x='7' y='7' width='1' height='1' fill-opacity='1'/></svg>");
+  mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' shape-rendering='crispEdges'><rect x='0' y='0' width='1' height='1' fill-opacity='1'/><rect x='1' y='0' width='1' height='1' fill-opacity='1'/><rect x='2' y='0' width='1' height='1' fill-opacity='1'/><rect x='3' y='0' width='1' height='1' fill-opacity='0.68'/><rect x='4' y='0' width='1' height='1' fill-opacity='1'/><rect x='5' y='0' width='1' height='1' fill-opacity='0.69'/><rect x='6' y='0' width='1' height='1' fill-opacity='1'/><rect x='7' y='0' width='1' height='1' fill-opacity='1'/><rect x='0' y='1' width='1' height='1' fill-opacity='1'/><rect x='1' y='1' width='1' height='1' fill-opacity='1'/><rect x='2' y='1' width='1' height='1' fill-opacity='1'/><rect x='3' y='1' width='1' height='1' fill-opacity='1'/><rect x='4' y='1' width='1' height='1' fill-opacity='0.71'/><rect x='5' y='1' width='1' height='1' fill-opacity='1'/><rect x='6' y='1' width='1' height='1' fill-opacity='1'/><rect x='7' y='1' width='1' height='1' fill-opacity='1'/><rect x='0' y='2' width='1' height='1' fill-opacity='0.78'/><rect x='1' y='2' width='1' height='1' fill-opacity='0.75'/><rect x='2' y='2' width='1' height='1' fill-opacity='0.7'/><rect x='3' y='2' width='1' height='1' fill-opacity='1'/><rect x='4' y='2' width='1' height='1' fill-opacity='1'/><rect x='5' y='2' width='1' height='1' fill-opacity='0.75'/><rect x='6' y='2' width='1' height='1' fill-opacity='1'/><rect x='7' y='2' width='1' height='1' fill-opacity='1'/><rect x='0' y='3' width='1' height='1' fill-opacity='1'/><rect x='1' y='3' width='1' height='1' fill-opacity='1'/><rect x='2' y='3' width='1' height='1' fill-opacity='0.71'/><rect x='3' y='3' width='1' height='1' fill-opacity='0.83'/><rect x='4' y='3' width='1' height='1' fill-opacity='1'/><rect x='5' y='3' width='1' height='1' fill-opacity='1'/><rect x='6' y='3' width='1' height='1' fill-opacity='1'/><rect x='7' y='3' width='1' height='1' fill-opacity='1'/><rect x='0' y='4' width='1' height='1' fill-opacity='1'/><rect x='1' y='4' width='1' height='1' fill-opacity='0.7'/><rect x='2' y='4' width='1' height='1' fill-opacity='1'/><rect x='3' y='4' width='1' height='1' fill-opacity='1'/><rect x='4' y='4' width='1' height='1' fill-opacity='1'/><rect x='5' y='4' width='1' height='1' fill-opacity='0.71'/><rect x='6' y='4' width='1' height='1' fill-opacity='1'/><rect x='7' y='4' width='1' height='1' fill-opacity='1'/><rect x='0' y='5' width='1' height='1' fill-opacity='1'/><rect x='1' y='5' width='1' height='1' fill-opacity='1'/><rect x='2' y='5' width='1' height='1' fill-opacity='1'/><rect x='3' y='5' width='1' height='1' fill-opacity='1'/><rect x='4' y='5' width='1' height='1' fill-opacity='0.75'/><rect x='5' y='5' width='1' height='1' fill-opacity='1'/><rect x='6' y='5' width='1' height='1' fill-opacity='1'/><rect x='7' y='5' width='1' height='1' fill-opacity='1'/><rect x='0' y='6' width='1' height='1' fill-opacity='1'/><rect x='1' y='6' width='1' height='1' fill-opacity='1'/><rect x='2' y='6' width='1' height='1' fill-opacity='1'/><rect x='3' y='6' width='1' height='1' fill-opacity='0.69'/><rect x='4' y='6' width='1' height='1' fill-opacity='1'/><rect x='5' y='6' width='1' height='1' fill-opacity='1'/><rect x='6' y='6' width='1' height='1' fill-opacity='1'/><rect x='7' y='6' width='1' height='1' fill-opacity='1'/><rect x='0' y='7' width='1' height='1' fill-opacity='0.85'/><rect x='1' y='7' width='1' height='1' fill-opacity='1'/><rect x='2' y='7' width='1' height='1' fill-opacity='1'/><rect x='3' y='7' width='1' height='1' fill-opacity='0.72'/><rect x='4' y='7' width='1' height='1' fill-opacity='1'/><rect x='5' y='7' width='1' height='1' fill-opacity='1'/><rect x='6' y='7' width='1' height='1' fill-opacity='1'/><rect x='7' y='7' width='1' height='1' fill-opacity='1'/></svg>");
+  -webkit-mask-size: 0.48em 0.48em;
+  mask-size: 0.48em 0.48em;
+  animation: dh2-flicker 0.9s steps(1) infinite;
+}
+@keyframes dh2-flicker {
+  0.0%  { -webkit-mask-position: calc(0 * 0.06em) calc(0 * 0.06em); mask-position: calc(0 * 0.06em) calc(0 * 0.06em); }
+  12.5% { -webkit-mask-position: calc(3 * 0.06em) calc(5 * 0.06em); mask-position: calc(3 * 0.06em) calc(5 * 0.06em); }
+  25.0% { -webkit-mask-position: calc(6 * 0.06em) calc(2 * 0.06em); mask-position: calc(6 * 0.06em) calc(2 * 0.06em); }
+  37.5% { -webkit-mask-position: calc(1 * 0.06em) calc(7 * 0.06em); mask-position: calc(1 * 0.06em) calc(7 * 0.06em); }
+  50.0% { -webkit-mask-position: calc(5 * 0.06em) calc(4 * 0.06em); mask-position: calc(5 * 0.06em) calc(4 * 0.06em); }
+  62.5% { -webkit-mask-position: calc(2 * 0.06em) calc(1 * 0.06em); mask-position: calc(2 * 0.06em) calc(1 * 0.06em); }
+  75.0% { -webkit-mask-position: calc(7 * 0.06em) calc(6 * 0.06em); mask-position: calc(7 * 0.06em) calc(6 * 0.06em); }
+  87.5% { -webkit-mask-position: calc(4 * 0.06em) calc(3 * 0.06em); mask-position: calc(4 * 0.06em) calc(3 * 0.06em); }
+}
+
+/* Reduced motion: everything shows in its final state, no snake loop, no number flicker. */
+@media (prefers-reduced-motion: reduce) {
+  .dh2-section *, .dh2-section *::before, .dh2-section *::after { animation: none !important; transition: none !important; }
+  .dh2-kpi:hover .dh2-value { -webkit-mask-image: none; mask-image: none; }
+}

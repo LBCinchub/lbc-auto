@@ -15,6 +15,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { jsPDF } from "jspdf";
 import StatCard from "../components/dashboard/StatCard";
+import StripeOverview from "@/components/stripe-overview/StripeOverview";
+import PaymentMethodInvoicesModal from "@/components/analytics/PaymentMethodInvoicesModal";
 
 const COLORS = ["#0ea5e9", "#8b5cf6", "#10b981", "#f59e0b", "#ef4444", "#ec4899"];
 
@@ -619,16 +621,22 @@ export default function Analytics() {
 
       {/* Tab Navigation */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="bg-gray-800/50 border border-gray-700">
+        <TabsList className="bg-gray-800/50 border border-gray-700 flex-wrap h-auto">
           <TabsTrigger value="insights" className="text-sm data-[state=active]:bg-sky-500/20 data-[state=active]:text-sky-400">Insights</TabsTrigger>
           <TabsTrigger value="overview" className="text-sm data-[state=active]:bg-sky-500/20 data-[state=active]:text-sky-400">Overview</TabsTrigger>
           <TabsTrigger value="profitloss" className="text-sm data-[state=active]:bg-sky-500/20 data-[state=active]:text-sky-400">Profit & Loss</TabsTrigger>
+          <TabsTrigger value="stripe" className="text-sm data-[state=active]:bg-sky-500/20 data-[state=active]:text-sky-400 flex items-center gap-2">
+            <CreditCard className="w-4 h-4" />
+            Stripe
+          </TabsTrigger>
           <TabsTrigger value="reports" className="text-sm data-[state=active]:bg-sky-500/20 data-[state=active]:text-sky-400 flex items-center gap-2">
             <FileText className="w-4 h-4" />
             PDF Reports
           </TabsTrigger>
         </TabsList>
       </Tabs>
+
+      {activeTab === "stripe" && <StripeOverview />}
 
       {activeTab === "insights" && (() => {
         // --- 1. Monthly Revenue (last 6 months, paid invoices only) ---
@@ -1381,103 +1389,13 @@ export default function Analytics() {
       )}
 
       {/* Payment Method Invoices Modal — uses amount_paid per invoice, grouped by method */}
-      <Dialog open={!!paymentMethodModal} onOpenChange={() => setPaymentMethodModal(null)}>
-        <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="capitalize">
-              {paymentMethodModal === "all" ? "All Methods" : paymentMethodModal === "etransfer" ? "E-Transfer" : paymentMethodModal} — {selectedDay === today ? "Today" : selectedDay}
-            </DialogTitle>
-          </DialogHeader>
-          {(() => {
-            // Flatten individual payment_history entries for the selected day
-            const dayPayments = [];
-            invoices.forEach(inv => {
-              if (inv.status !== "paid" && inv.status !== "partial") return;
-              const history = inv.payment_history || [];
-              if (history.length > 0) {
-                history.forEach(p => {
-                  const day = (p.date || "").split("T")[0];
-                  if (day !== selectedDay) return;
-                  const amount = parseFloat(p.amount) || 0;
-                  if (amount <= 0) return;
-                  const m = (p.method || "").toLowerCase();
-                  const methodKey = m === "e-transfer" || m === "etransfer" || m === "e_transfer" ? "etransfer" : m === "card" ? "card" : "cash";
-                  dayPayments.push({ invoice: inv, amount, method: methodKey });
-                });
-              } else if (inv.amount_paid > 0 && inv.paid_date) {
-                const day = inv.paid_date.split("T")[0];
-                if (day !== selectedDay) return;
-                const amount = parseFloat(inv.amount_paid) || 0;
-                if (amount <= 0) return;
-                const m = inv.payment_method?.toLowerCase() || "";
-                const methodKey = m === "e-transfer" || m === "etransfer" || m === "e_transfer" ? "etransfer" : (m === "card" || inv.card_last4) ? "card" : "cash";
-                dayPayments.push({ invoice: inv, amount, method: methodKey });
-              }
-            });
-
-            // Filter by selected method (or show all grouped)
-            const filtered = paymentMethodModal === "all"
-              ? dayPayments
-              : dayPayments.filter(p => p.method === paymentMethodModal);
-
-            if (filtered.length === 0) {
-              return <p className="text-gray-400 text-sm py-4 text-center">No payments found for this date / method.</p>;
-            }
-
-            // Group by method for "all" view; single group otherwise
-            const groups = paymentMethodModal === "all"
-              ? [
-                  { key: "cash",      label: "Cash 💵",       payments: filtered.filter(p => p.method === "cash") },
-                  { key: "card",      label: "Card 💳",       payments: filtered.filter(p => p.method === "card") },
-                  { key: "etransfer", label: "E-Transfer 📧", payments: filtered.filter(p => p.method === "etransfer") },
-                ].filter(g => g.payments.length > 0)
-              : [{ key: paymentMethodModal, label: paymentMethodModal === "etransfer" ? "E-Transfer 📧" : paymentMethodModal === "card" ? "Card 💳" : "Cash 💵", payments: filtered }];
-
-            const grandTotal = filtered.reduce((s, p) => s + p.amount, 0);
-
-            return (
-              <div className="space-y-4 mt-2">
-                {groups.map(group => (
-                  <div key={group.key}>
-                    <div className="text-xs font-bold text-gray-300 uppercase tracking-wider px-1 mb-1">{group.label}</div>
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-gray-700">
-                          <th className="text-left text-xs text-gray-500 px-3 py-1.5">Invoice #</th>
-                          <th className="text-left text-xs text-gray-500 px-3 py-1.5">Customer</th>
-                          <th className="text-left text-xs text-gray-500 px-3 py-1.5">Vehicle</th>
-                          <th className="text-right text-xs text-gray-500 px-3 py-1.5">Amount</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {group.payments.map((p, i) => (
-                          <tr key={i} className="border-b border-gray-800/40 hover:bg-gray-800/30 cursor-pointer"
-                            onClick={() => { setPaymentMethodModal(null); window.location.href = `/InvoiceDetail/${p.invoice.id}`; }}>
-                            <td className="px-3 py-2 text-sky-400 font-mono font-semibold">{p.invoice.invoice_number || p.invoice.id.slice(0, 8)}</td>
-                            <td className="px-3 py-2 text-gray-200">{p.invoice.customer_name}</td>
-                            <td className="px-3 py-2 text-gray-400 text-xs">{p.invoice.vehicle_info || "—"}</td>
-                            <td className="px-3 py-2 text-right text-emerald-400 font-semibold">${p.amount.toFixed(2)}</td>
-                          </tr>
-                        ))}
-                        <tr className="bg-gray-800/40">
-                          <td colSpan={3} className="px-3 py-1.5 text-gray-400 text-xs font-semibold">Subtotal</td>
-                          <td className="px-3 py-1.5 text-right text-emerald-300 font-semibold text-xs">
-                            ${group.payments.reduce((s, p) => s + p.amount, 0).toFixed(2)}
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                ))}
-                <div className="flex justify-between items-center border-t-2 border-gray-600 pt-3 px-1">
-                  <span className="text-gray-300 font-bold text-sm">Grand Total</span>
-                  <span className="text-emerald-400 font-bold text-lg">${grandTotal.toFixed(2)}</span>
-                </div>
-              </div>
-            );
-          })()}
-        </DialogContent>
-      </Dialog>
+      <PaymentMethodInvoicesModal
+        method={paymentMethodModal}
+        onClose={() => setPaymentMethodModal(null)}
+        selectedDay={selectedDay}
+        today={today}
+        invoices={invoices}
+      />
 
       {/* Expense Dialog */}
       <Dialog open={expenseDialogOpen} onOpenChange={setExpenseDialogOpen}>
