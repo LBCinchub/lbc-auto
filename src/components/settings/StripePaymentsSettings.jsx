@@ -42,8 +42,10 @@ export default function StripePaymentsSettings() {
     }
   };
 
-  const connect = async (secret_key) => {
-    const ok = await run({ action: "connect", secret_key });
+  const savePublishable = (publishable_key) => run({ action: "set_publishable_key", publishable_key });
+
+  const connect = async (secret_key, publishable_key) => {
+    const ok = await run({ action: "connect", secret_key, publishable_key });
     if (ok) {
       setConnectOpen(false);
       toast({ title: "Stripe connected", description: "You can now send card payment links from any repair order, estimate or invoice." });
@@ -64,7 +66,7 @@ export default function StripePaymentsSettings() {
         Connect your own Stripe account to send customers a card payment link from any repair order, estimate or invoice. The money goes straight to your Stripe, and the payment is recorded automatically.
       </p>
       {!status ? <Loader2 className="w-5 h-5 animate-spin text-gray-500" aria-label="Loading" />
-        : status.connected ? <StripeConnectedCard status={status} busy={busy} light={light} onDisconnect={() => run({ action: "disconnect" })} />
+        : status.connected ? <StripeConnectedCard status={status} busy={busy} light={light} onDisconnect={() => run({ action: "disconnect" })} onSavePublishable={savePublishable} />
         : <StripeConnectStart available={status.available !== false} isAdmin={user?.role === "admin"} light={light} onStart={startConnect} />}
       {error && !connectOpen && <p role="alert" className="mt-3 text-sm text-rose-400">{error}</p>}
       <StripeConnectDialog open={connectOpen} onOpenChange={setConnectOpen} busy={busy} error={error} light={light} onConnect={connect} />

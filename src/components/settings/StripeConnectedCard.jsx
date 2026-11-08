@@ -1,8 +1,9 @@
 import React from "react";
 import { AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import StripePublishableKeyForm from "./StripePublishableKeyForm";
 
-export default function StripeConnectedCard({ status, busy, light, onDisconnect }) {
+export default function StripeConnectedCard({ status, busy, light, onDisconnect, onSavePublishable }) {
   const live = status.mode === "live";
   const warn = light ? "text-amber-700" : "text-amber-400";
   const disconnect = () => {
@@ -22,11 +23,18 @@ export default function StripeConnectedCard({ status, busy, light, onDisconnect 
         Key ending in ••••{status.key_last4}{status.currency ? ` · Payments in ${status.currency}` : ""}
       </p>
       {!live && <p className={`${warn} text-sm`}>Test mode: no real money moves. Pay with card 4242 4242 4242 4242 to try it.</p>}
-      {!status.charges_enabled && (
+      {status.key_problem ? (
+        <p className={`${warn} flex items-start gap-1.5 text-sm`}>
+          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" /> Stripe rejected the saved key ({status.key_problem}). Disconnect and connect again.
+        </p>
+      ) : !status.charges_enabled ? (
         <p className={`${warn} flex items-start gap-1.5 text-sm`}>
           <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" /> Stripe says this account can't take payments yet. Finish setting up your account in Stripe.
         </p>
+      ) : (
+        <p className={`${light ? "text-emerald-700" : "text-emerald-400"} text-sm`}>Ready to take card payments{status.in_app_ready ? " here in LBC Auto and by payment link." : " by payment link."}</p>
       )}
+      {!status.in_app_ready && <StripePublishableKeyForm mode={status.mode} busy={busy} light={light} onSave={onSavePublishable} />}
       <Button type="button" variant="outline" size="sm" onClick={disconnect} disabled={busy} className={`gap-2 border-rose-500/40 ${light ? "text-rose-600" : "text-rose-400 hover:text-rose-300"}`}>
         {busy && <Loader2 className="w-4 h-4 animate-spin" />} Disconnect Stripe
       </Button>

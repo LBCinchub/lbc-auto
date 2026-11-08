@@ -28,6 +28,15 @@
       "type": "string",
       "description": "Short link the shop sends to the customer"
     },
+    "ui_mode": {
+      "type": "string",
+      "enum": [
+        "hosted",
+        "embedded"
+      ],
+      "default": "hosted",
+      "description": "hosted = shareable link to Stripe's page; embedded = Stripe card form shown inside the app"
+    },
     "checkout_session_id": {
       "type": "string",
       "description": "Stripe Checkout Session ID"

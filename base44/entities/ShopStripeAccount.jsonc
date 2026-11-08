@@ -19,6 +19,10 @@
       "type": "string",
       "description": "Last 4 characters of the key, for display"
     },
+    "publishable_key": {
+      "type": "string",
+      "description": "The shop's Stripe publishable key (public by design). Loads Stripe's card form inside the app."
+    },
     "mode": {
       "type": "string",
       "enum": [

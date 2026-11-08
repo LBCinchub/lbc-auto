@@ -16,7 +16,8 @@ export default async function(req) {
     const account = await shopAccount(db, link.shop_owner_email);
     if (link.status === 'open' && account) link = await syncLink(db, await openSecret(account.encrypted_secret_key), link);
     const paid = link.status === 'paid' || link.status === 'needs_review';
-    const state = paid ? 'paid' : link.status === 'open' && account ? 'pay' : 'closed';
+    // In-app checkouts are only paid inside the shop's own screen, never through this public page.
+    const state = paid ? 'paid' : link.status === 'open' && account && link.ui_mode !== 'embedded' ? 'pay' : 'closed';
     return Response.json({
       state,
       url: state === 'pay' ? link.checkout_url : '',
