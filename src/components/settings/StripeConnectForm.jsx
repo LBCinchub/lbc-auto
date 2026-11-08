@@ -5,13 +5,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 // Paste-a-key form. The key is checked with Stripe and encrypted on the server; it never comes back.
-export default function StripeConnectForm({ busy, light, disabled = false, onConnect }) {
+export default function StripeConnectForm({ busy, light, onConnect }) {
   const [key, setKey] = useState("");
-  const hint = light ? "text-gray-600" : "text-gray-500";
+  const trimmed = key.trim();
+  const publishable = trimmed.startsWith("pk_");
 
   const submit = async (e) => {
     e.preventDefault();
-    if (await onConnect(key.trim())) setKey("");
+    if (publishable) return;
+    if (await onConnect(trimmed)) setKey("");
   };
 
   return (
@@ -25,19 +27,21 @@ export default function StripeConnectForm({ busy, light, disabled = false, onCon
           spellCheck={false}
           data-no-capitalize
           aria-label="Stripe secret key"
-          disabled={disabled}
           value={key}
           onChange={(e) => setKey(e.target.value)}
           placeholder="e.g. sk_live_..."
-          className={light ? "bg-gray-50 border-gray-300 text-gray-900" : "bg-gray-800 border-gray-700 text-white"}
+          className="bg-gray-800 border-gray-700 text-white"
         />
-        <p className={`${hint} text-sm mt-2`}>In your Stripe dashboard, open Developers → API keys and copy the Secret key. Start with a test key (sk_test_) to try it safely.</p>
+        {publishable && (
+          <p role="alert" className={`${light ? "text-amber-700" : "text-amber-400"} text-sm mt-2`}>
+            That's your Publishable key. Copy the Secret key instead (it starts with sk_).
+          </p>
+        )}
       </div>
-      <Button type="submit" disabled={disabled || busy || !key.trim()} className="bg-sky-500 hover:bg-sky-600 gap-2">
+      <Button type="submit" disabled={busy || !trimmed || publishable} className="w-full bg-sky-500 hover:bg-sky-600 gap-2">
         {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
         {busy ? "Checking with Stripe…" : "Connect Stripe"}
       </Button>
-      <p className={`${hint} text-xs`}>Your key is encrypted and only used by the server to create payment links. It is never shown again.</p>
     </form>
   );
 }

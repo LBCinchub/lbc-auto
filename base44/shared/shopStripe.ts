@@ -9,26 +9,33 @@ const toB64 = (bytes) => btoa(String.fromCharCode(...bytes));
 const fromB64 = (text) => Uint8Array.from(atob(text), (c) => c.charCodeAt(0));
 
 const masterSecret = () => Deno.env.get('SHOP_KEYS_ENCRYPTION_SECRET') || '';
-// Shops can only connect once the app owner's master secret is set and long enough.
-export const cardPaymentsReady = () => masterSecret().length >= 16;
+// Shops can connect once the app owner's master secret is set. PBKDF2 stretching (600k rounds)
+// makes every guess slow, so a 12+ character secret is enough.
+export const cardPaymentsReady = () => masterSecret().length >= 12;
 
-async function cipherKey() {
+let derivedKey: Promise<CryptoKey> | null = null;
+function cipherKey() {
   if (!cardPaymentsReady()) throw new Error('Card payments are not set up for this app yet.');
-  const raw = await crypto.subtle.digest('SHA-256', enc.encode(masterSecret()));
-  return crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt', 'decrypt']);
+  derivedKey ??= crypto.subtle.importKey('raw', enc.encode(masterSecret()), 'PBKDF2', false, ['deriveKey'])
+    .then((base) => crypto.subtle.deriveKey(
+      { name: 'PBKDF2', hash: 'SHA-256', salt: enc.encode('lbc-auto/shop-stripe-keys/v2'), iterations: 600000 },
+      base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt'],
+    ))
+    .catch((e) => { derivedKey = null; throw e; });
+  return derivedKey;
 }
 
 export async function sealSecret(plain) {
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const sealed = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await cipherKey(), enc.encode(plain)));
-  return `v1.${toB64(iv)}.${toB64(sealed)}`;
+  return `v2.${toB64(iv)}.${toB64(sealed)}`;
 }
 
 export async function openSecret(stored) {
   const key = await cipherKey();
   const [version, iv, sealed] = String(stored || '').split('.');
   try {
-    if (version !== 'v1') throw new Error('Unknown key format');
+    if (version !== 'v2') throw new Error('Unknown key format');
     const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: fromB64(iv) }, key, fromB64(sealed));
     return new TextDecoder().decode(plain);
   } catch {

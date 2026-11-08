@@ -2,10 +2,11 @@ import React, { useEffect, useState } from "react";
 import { CreditCard, Loader2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useTheme } from "@/lib/ThemeContext";
-import StripeConnectForm from "./StripeConnectForm";
-import StripeConnectedCard from "./StripeConnectedCard";
-import StripeSetupNotice from "./StripeSetupNotice";
 import { useAuth } from "@/lib/AuthContext";
+import { useToast } from "@/components/ui/use-toast";
+import StripeConnectStart from "./StripeConnectStart";
+import StripeConnectDialog from "./StripeConnectDialog";
+import StripeConnectedCard from "./StripeConnectedCard";
 
 const errorOf = (e) => e?.response?.data?.error || e?.message || "Something went wrong. Please try again.";
 
@@ -13,10 +14,12 @@ const errorOf = (e) => e?.response?.data?.error || e?.message || "Something went
 export default function StripePaymentsSettings() {
   const { theme } = useTheme();
   const { user } = useAuth();
+  const { toast } = useToast();
   const light = theme === "light";
   const [status, setStatus] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [connectOpen, setConnectOpen] = useState(false);
 
   useEffect(() => {
     base44.functions.invoke("shopStripe", { action: "status" })
@@ -39,6 +42,17 @@ export default function StripePaymentsSettings() {
     }
   };
 
+  const connect = async (secret_key) => {
+    const ok = await run({ action: "connect", secret_key });
+    if (ok) {
+      setConnectOpen(false);
+      toast({ title: "Stripe connected", description: "You can now send card payment links from any repair order, estimate or invoice." });
+    }
+    return ok;
+  };
+
+  const startConnect = () => { setError(""); setConnectOpen(true); };
+
   return (
     <div className={`${light ? "bg-white border-gray-200" : "bg-gray-900 border-gray-800"} border rounded-lg p-6`}>
       <div className="flex flex-wrap items-center gap-2 mb-1">
@@ -51,11 +65,9 @@ export default function StripePaymentsSettings() {
       </p>
       {!status ? <Loader2 className="w-5 h-5 animate-spin text-gray-500" aria-label="Loading" />
         : status.connected ? <StripeConnectedCard status={status} busy={busy} light={light} onDisconnect={() => run({ action: "disconnect" })} />
-        : <>
-          {status.available === false && <StripeSetupNotice light={light} isAdmin={user?.role === "admin"} />}
-          <StripeConnectForm busy={busy} light={light} disabled={status.available === false} onConnect={(secret_key) => run({ action: "connect", secret_key })} />
-        </>}
-      {error && <p role="alert" className="mt-3 text-sm text-rose-400">{error}</p>}
+        : <StripeConnectStart available={status.available !== false} isAdmin={user?.role === "admin"} light={light} onStart={startConnect} />}
+      {error && !connectOpen && <p role="alert" className="mt-3 text-sm text-rose-400">{error}</p>}
+      <StripeConnectDialog open={connectOpen} onOpenChange={setConnectOpen} busy={busy} error={error} light={light} onConnect={connect} />
     </div>
   );
 }
