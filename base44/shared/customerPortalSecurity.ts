@@ -1,5 +1,5 @@
-import { secrets } from "base44:runtime";
 import { listAllRecords } from "./entityPagination.ts";
+import { sendTwilioSms } from "./twilioSms.ts";
 import { classifyRelatedOwnership } from "./legacyPortalMigration.ts";
 import { normalizePortalTenant } from "./portalIdentity.ts";
 
@@ -233,13 +233,8 @@ export async function issueSession(sr, req, customerId, tenantEmail) {
 }
 
 export async function sendActivationSms(phone, code, shopName) {
-  const sid = secrets.get("TWILIO_ACCOUNT_SID");
-  const authToken = secrets.get("TWILIO_AUTH_TOKEN");
-  const serviceSid = secrets.get("TWILIO_MESSAGING_SERVICE_SID");
-  if (!sid || !authToken || !serviceSid) return false;
-  const form = new URLSearchParams({ To: `+1${normalizePhone(phone)}`, MessagingServiceSid: serviceSid, Body: `${shopName || "Your auto shop"} portal activation code: ${code}. It expires in 10 minutes.` });
-  const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, { method: "POST", headers: { Authorization: `Basic ${btoa(`${sid}:${authToken}`)}`, "Content-Type": "application/x-www-form-urlencoded" }, body: form });
-  return response.ok;
+  const result = await sendTwilioSms(`+1${normalizePhone(phone)}`, `${shopName || "Your auto shop"} portal activation code: ${code}. It expires in 10 minutes.`);
+  return result.ok;
 }
 
 export function projectSafeRecord(record, keys) {
