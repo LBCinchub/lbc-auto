@@ -5,7 +5,7 @@ import { useTheme } from "@/lib/ThemeContext";
 import { useAuth } from "@/lib/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
 import StripeConnectStart from "./StripeConnectStart";
-import StripeConnectDialog from "./StripeConnectDialog";
+import StripeConnectPanel from "./StripeConnectPanel";
 import StripeConnectedCard from "./StripeConnectedCard";
 
 const errorOf = (e) => e?.response?.data?.error || e?.message || "Something went wrong. Please try again.";
@@ -54,18 +54,18 @@ export default function StripePaymentsSettings() {
     return ok;
   };
 
-  // Re-checks with the server first, so a click always ends in the connect window or a clear message.
+  // Opens the setup steps immediately on click, then confirms with the server in the background
+  // and shows any setup problem inside the steps.
   const startConnect = async () => {
     setError("");
+    setConnectOpen(true);
     setStarting(true);
     try {
       const res = await base44.functions.invoke("shopStripe", { action: "status" });
-      setStatus(res.data);
-      if (res.data?.connected) return;
-      if (res.data?.available === false) { setError("Stripe can't be connected yet. See the note above."); return; }
-      setConnectOpen(true);
+      if (res.data?.connected) { setStatus(res.data); setConnectOpen(false); return; }
+      if (res.data?.available === false) setError("Stripe can't be connected yet: the app's encryption key isn't set up. See the note above.");
     } catch (e) {
-      setError(`Couldn't start the Stripe connection: ${errorOf(e)}`);
+      setError(`Couldn't reach the Stripe setup: ${errorOf(e)}`);
     } finally {
       setStarting(false);
     }
@@ -83,9 +83,9 @@ export default function StripePaymentsSettings() {
       </p>
       {!status ? <Loader2 className="w-5 h-5 animate-spin text-gray-500" aria-label="Loading" />
         : status.connected ? <StripeConnectedCard status={status} busy={busy} light={light} onDisconnect={() => run({ action: "disconnect" })} onSavePublishable={savePublishable} />
-        : <StripeConnectStart available={status.available !== false} isAdmin={user?.role === "admin"} light={light} starting={starting} onStart={startConnect} />}
+        : !connectOpen && <StripeConnectStart available={status.available !== false} isAdmin={user?.role === "admin"} light={light} starting={starting} onStart={startConnect} />}
       {error && !connectOpen && <p role="alert" className="mt-3 text-sm text-rose-400">{error}</p>}
-      <StripeConnectDialog open={connectOpen} onOpenChange={setConnectOpen} busy={busy} error={error} light={light} onConnect={connect} />
+      {connectOpen && !status?.connected && <StripeConnectPanel busy={busy || starting} error={error} light={light} onConnect={connect} onClose={() => { setConnectOpen(false); setError(""); }} />}
     </div>
   );
 }
