@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.57';
 import { LeaseBusyError } from '../../shared/recordLease.ts';
-import { sealSecret, openSecret, stripeApi, shopAccount, accountView, linkView, ownsRecord, invoiceBalance, syncLink, cardPaymentsReady } from '../../shared/shopStripe.ts';
+import { sealSecret, openSecret, stripeApi, shopAccount, accountView, linkView, ownsRecord, invoiceBalance, syncLink, cardPaymentsAvailable } from '../../shared/shopStripe.ts';
 
 const LINK_ACTIONS = ['link_status', 'create_link', 'cancel_link'];
 const json = (data, status = 200) => Response.json(data, { status });
@@ -23,7 +23,7 @@ export default async function(req) {
     const tenant = String(user.email || '').toLowerCase();
     const account = await shopAccount(db, tenant);
 
-    if (action === 'status') return json({ ...accountView(account), available: cardPaymentsReady() });
+    if (action === 'status') return json({ ...accountView(account), available: await cardPaymentsAvailable() });
 
     if (action === 'connect') {
       const key = String(body.secret_key || '').trim();

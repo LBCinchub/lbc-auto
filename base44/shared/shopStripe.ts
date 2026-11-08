@@ -9,8 +9,8 @@ const toB64 = (bytes) => btoa(String.fromCharCode(...bytes));
 const fromB64 = (text) => Uint8Array.from(atob(text), (c) => c.charCodeAt(0));
 
 const masterSecret = () => Deno.env.get('SHOP_KEYS_ENCRYPTION_SECRET') || '';
-// Shops can connect once the app owner's master secret is set. PBKDF2 stretching (600k rounds)
-// makes every guess slow, so a 12+ character secret is enough.
+// Shops can connect once the app owner's master secret is set. PBKDF2 stretching (100k rounds,
+// the most this runtime supports) makes every guess slow, so a 12+ character secret is enough.
 export const cardPaymentsReady = () => masterSecret().length >= 12;
 
 let derivedKey: Promise<CryptoKey> | null = null;
@@ -18,11 +18,18 @@ function cipherKey() {
   if (!cardPaymentsReady()) throw new Error('Card payments are not set up for this app yet.');
   derivedKey ??= crypto.subtle.importKey('raw', enc.encode(masterSecret()), 'PBKDF2', false, ['deriveKey'])
     .then((base) => crypto.subtle.deriveKey(
-      { name: 'PBKDF2', hash: 'SHA-256', salt: enc.encode('lbc-auto/shop-stripe-keys/v2'), iterations: 600000 },
+      { name: 'PBKDF2', hash: 'SHA-256', salt: enc.encode('lbc-auto/shop-stripe-keys/v2'), iterations: 100000 },
       base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt'],
     ))
     .catch((e) => { derivedKey = null; throw e; });
   return derivedKey;
+}
+
+// "Available" only once the encryption key really derives here, so shops never hit a dead end.
+export async function cardPaymentsAvailable() {
+  if (!cardPaymentsReady()) return false;
+  await cipherKey();
+  return true;
 }
 
 export async function sealSecret(plain) {
