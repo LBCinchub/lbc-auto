@@ -20,6 +20,7 @@ export default function StripePaymentsSettings() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [connectOpen, setConnectOpen] = useState(false);
+  const [starting, setStarting] = useState(false);
 
   useEffect(() => {
     base44.functions.invoke("shopStripe", { action: "status" })
@@ -53,7 +54,22 @@ export default function StripePaymentsSettings() {
     return ok;
   };
 
-  const startConnect = () => { setError(""); setConnectOpen(true); };
+  // Re-checks with the server first, so a click always ends in the connect window or a clear message.
+  const startConnect = async () => {
+    setError("");
+    setStarting(true);
+    try {
+      const res = await base44.functions.invoke("shopStripe", { action: "status" });
+      setStatus(res.data);
+      if (res.data?.connected) return;
+      if (res.data?.available === false) { setError("Stripe can't be connected yet. See the note above."); return; }
+      setConnectOpen(true);
+    } catch (e) {
+      setError(`Couldn't start the Stripe connection: ${errorOf(e)}`);
+    } finally {
+      setStarting(false);
+    }
+  };
 
   return (
     <div className={`${light ? "bg-white border-gray-200" : "bg-gray-900 border-gray-800"} border rounded-lg p-6`}>
@@ -67,7 +83,7 @@ export default function StripePaymentsSettings() {
       </p>
       {!status ? <Loader2 className="w-5 h-5 animate-spin text-gray-500" aria-label="Loading" />
         : status.connected ? <StripeConnectedCard status={status} busy={busy} light={light} onDisconnect={() => run({ action: "disconnect" })} onSavePublishable={savePublishable} />
-        : <StripeConnectStart available={status.available !== false} isAdmin={user?.role === "admin"} light={light} onStart={startConnect} />}
+        : <StripeConnectStart available={status.available !== false} isAdmin={user?.role === "admin"} light={light} starting={starting} onStart={startConnect} />}
       {error && !connectOpen && <p role="alert" className="mt-3 text-sm text-rose-400">{error}</p>}
       <StripeConnectDialog open={connectOpen} onOpenChange={setConnectOpen} busy={busy} error={error} light={light} onConnect={connect} />
     </div>
