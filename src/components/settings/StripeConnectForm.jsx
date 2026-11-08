@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 // Paste-a-key form. The key is checked with Stripe and encrypted on the server; it never comes back.
-export default function StripeConnectForm({ busy, light, onConnect }) {
+export default function StripeConnectForm({ busy, light, disabled = false, onConnect }) {
   const [key, setKey] = useState("");
   const hint = light ? "text-gray-600" : "text-gray-500";
 
@@ -25,6 +25,7 @@ export default function StripeConnectForm({ busy, light, onConnect }) {
           spellCheck={false}
           data-no-capitalize
           aria-label="Stripe secret key"
+          disabled={disabled}
           value={key}
           onChange={(e) => setKey(e.target.value)}
           placeholder="e.g. sk_live_..."
@@ -32,7 +33,7 @@ export default function StripeConnectForm({ busy, light, onConnect }) {
         />
         <p className={`${hint} text-sm mt-2`}>In your Stripe dashboard, open Developers → API keys and copy the Secret key. Start with a test key (sk_test_) to try it safely.</p>
       </div>
-      <Button type="submit" disabled={busy || !key.trim()} className="bg-sky-500 hover:bg-sky-600 gap-2">
+      <Button type="submit" disabled={disabled || busy || !key.trim()} className="bg-sky-500 hover:bg-sky-600 gap-2">
         {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
         {busy ? "Checking with Stripe…" : "Connect Stripe"}
       </Button>
