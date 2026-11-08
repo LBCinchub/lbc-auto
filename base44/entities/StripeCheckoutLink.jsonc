@@ -1,0 +1,111 @@
+{
+  "name": "StripeCheckoutLink",
+  "type": "object",
+  "properties": {
+    "shop_owner_email": {
+      "type": "string",
+      "format": "email",
+      "description": "Tenant key: the shop that created the link"
+    },
+    "shop_user_id": {
+      "type": "string"
+    },
+    "shop_name": {
+      "type": "string",
+      "description": "Shop name shown to the paying customer"
+    },
+    "invoice_id": {
+      "type": "string"
+    },
+    "invoice_number": {
+      "type": "string"
+    },
+    "public_token": {
+      "type": "string",
+      "description": "Long random code in the customer's payment link"
+    },
+    "pay_url": {
+      "type": "string",
+      "description": "Short link the shop sends to the customer"
+    },
+    "checkout_session_id": {
+      "type": "string",
+      "description": "Stripe Checkout Session ID"
+    },
+    "checkout_url": {
+      "type": "string",
+      "description": "Stripe-hosted checkout page"
+    },
+    "amount": {
+      "type": "number",
+      "description": "Amount requested, in dollars"
+    },
+    "currency": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "paid",
+        "needs_review",
+        "expired",
+        "cancelled"
+      ],
+      "enumColors": [
+        "blue",
+        "green",
+        "yellow",
+        "gray",
+        "gray"
+      ],
+      "default": "open"
+    },
+    "note": {
+      "type": "string",
+      "description": "Explanation when a payment needs manual review"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "paid_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "paid_amount": {
+      "type": "number",
+      "description": "Amount Stripe confirmed as paid, in dollars"
+    }
+  },
+  "required": [
+    "shop_owner_email",
+    "invoice_id",
+    "public_token",
+    "checkout_session_id",
+    "amount",
+    "status"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

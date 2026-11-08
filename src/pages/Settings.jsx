@@ -8,6 +8,7 @@ import { MessageSquare, Mail, Bell, Upload, Sparkles, X, Loader2 } from "lucide-
 import { useTheme } from "@/lib/ThemeContext";
 import LegacyPortalMigrationPanel from "@/components/settings/LegacyPortalMigrationPanel";
 import QuickNotesManager from "@/components/settings/QuickNotesManager";
+import StripePaymentsSettings from "@/components/settings/StripePaymentsSettings";
 
 const NOTIF_SETTINGS = [
   {
@@ -369,6 +370,8 @@ export default function Settings() {
             SMS uses Twilio. Email uses the built-in email service. Customer contact info must be saved on their profile.
           </p>
         </div>
+
+        <StripePaymentsSettings />
 
         {/* Email + Google Review */}
         <div className="space-y-3 pt-2 border-t border-gray-800">

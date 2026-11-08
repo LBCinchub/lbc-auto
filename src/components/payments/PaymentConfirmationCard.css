@@ -1,0 +1,169 @@
+/* Payment confirmation card — adapted from the "Confirmation Message" design,
+   using the customer portal palette (portal tokens in index.css). */
+@property --pc-fill {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 0%;
+}
+
+.pc-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  width: 100%;
+  padding: 48px 20px;
+  box-sizing: border-box;
+  background: hsl(var(--portal-bg));
+  color: hsl(var(--portal-text));
+}
+
+/* ── Icon ── */
+.pc-icon-wrap {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
+  margin-bottom: -31px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 5px hsl(var(--portal-bg));
+  animation: pc-icon-pop 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+}
+.pc-success { background: hsl(var(--portal-success)); }
+.pc-warning { background: hsl(var(--portal-warning)); }
+.pc-icon { width: 24px; height: 24px; flex-shrink: 0; color: hsl(var(--portal-bg)); }
+.pc-check {
+  fill: none;
+  stroke: hsl(var(--portal-bg));
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 22;
+  stroke-dashoffset: 22;
+  animation: pc-draw-check 0.4s cubic-bezier(0.65, 0, 0.35, 1) 0.5s forwards;
+}
+
+/* ── Card ── */
+.pc-card {
+  width: min(576px, calc(100vw - 40px));
+  padding: 46px clamp(24px, 10vw, 94px);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: hsl(var(--portal-surface));
+  border: 1px solid hsl(var(--portal-border));
+  border-radius: 12px;
+  animation: pc-card-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ── Typography ── */
+.pc-heading {
+  margin: 17px 0;
+  font-size: clamp(28px, 6.6vw, 44px);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  text-align: center;
+  color: hsl(var(--portal-text));
+}
+.pc-detail {
+  margin: 0 0 34px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: clamp(13px, 3.3vw, 17px);
+  line-height: 1.5;
+  text-align: center;
+  text-wrap: balance;
+  color: hsl(var(--portal-muted));
+}
+.pc-sep { margin: 0 8px; opacity: 0.6; }
+
+/* ── Actions ── */
+.pc-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+  width: min(312px, 100%);
+}
+.pc-primary {
+  --pc-fill: 0%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  appearance: none;
+  border: 0;
+  height: 53px;
+  padding: 0 28px;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 17px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: hsl(var(--portal-success));
+  background: radial-gradient(
+    circle at var(--pc-fx, 30%) 50%,
+    hsl(var(--portal-success)) 0 var(--pc-fill),
+    hsl(var(--portal-bg)) calc(var(--pc-fill) + 0.5px)
+  );
+  border-radius: 8px;
+  cursor: pointer;
+  transition: --pc-fill 700ms cubic-bezier(0.4, 0, 0.2, 1), color 350ms ease;
+}
+.pc-primary:hover,
+.pc-primary.pc-done { --pc-fill: 160%; color: hsl(var(--portal-bg)); }
+.pc-primary.pc-done { pointer-events: none; }
+.pc-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+  transition: opacity 200ms ease;
+}
+.pc-primary:hover .pc-dot { opacity: 0; }
+.pc-primary.pc-done .pc-dot { opacity: 0; width: 0; }
+
+.pc-continue {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 53px;
+  padding: 0 28px;
+  box-sizing: border-box;
+  font-size: 17px;
+  font-weight: 600;
+  color: hsl(var(--portal-text));
+  text-decoration: none;
+  border: 1px solid hsl(var(--portal-border));
+  border-radius: 8px;
+  transition: border-color 150ms ease;
+}
+.pc-continue:hover { border-color: hsl(var(--portal-muted)); }
+.pc-primary:focus-visible,
+.pc-continue:focus-visible { outline: 2px solid hsl(var(--portal-accent)); outline-offset: 3px; }
+
+/* ── Loading state ── */
+.pc-spinner { color: hsl(var(--portal-accent)); }
+.pc-wait { margin-top: 14px; font-size: 15px; color: hsl(var(--portal-muted)); }
+
+@keyframes pc-icon-pop {
+  from { opacity: 0; transform: scale(0.72); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes pc-draw-check { to { stroke-dashoffset: 0; } }
+@keyframes pc-card-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pc-icon-wrap, .pc-card { animation: none; }
+  .pc-check { animation: none; stroke-dashoffset: 0; }
+}

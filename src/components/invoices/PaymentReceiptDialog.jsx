@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { base44 } from "@/api/base44Client";
+import StripePaymentLink from "./StripePaymentLink";
 
 export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, entityName = "Invoice", source }) {
   const [amount, setAmount] = useState("");
@@ -13,6 +14,7 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
   const [error, setError] = useState("");
   // Authoritative saved invoice loaded from the server (null = none saved yet).
   const [saved, setSaved] = useState(undefined);
+  const [customerPhone, setCustomerPhone] = useState("");
   // Reused across retries of the same payment so a replay after an uncertain failure is deduplicated.
   const keyRef = useRef("");
 
@@ -27,7 +29,7 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
     setAmount("");
     setNote("");
     base44.functions.invoke("financialDocumentAction", { action: "load", source_type: descriptor.type, source_id: descriptor.id, ...(requestedId ? { invoice_id: requestedId } : {}) })
-      .then((res) => { if (live) setSaved(res.data?.invoice || null); })
+      .then((res) => { if (live) { setSaved(res.data?.invoice || null); setCustomerPhone(res.data?.customer?.phone || ""); } })
       .catch((e) => { if (live) { setSaved(null); setError(e?.response?.data?.error || e.message || "Could not load the saved invoice"); } });
     return () => { live = false; };
   }, [open, descriptor?.type, descriptor?.id, requestedId]);
@@ -35,6 +37,15 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
   if (!invoice) return null;
 
   const view = paymentDialogState({ saved, fallback: invoice, loadError: !!error && saved === null });
+
+  // Manual payments and card links both need a saved invoice; create it once (same idempotency key).
+  const ensureInvoiceId = async () => {
+    if (saved?.id) return saved.id;
+    if (!keyRef.current) keyRef.current = crypto.randomUUID();
+    const created = await base44.functions.invoke("financialDocumentAction", { action: "create", source_type: descriptor.type, source_id: descriptor.id, idempotency_key: keyRef.current, intent: {} });
+    setSaved(created.data.invoice);
+    return created.data.invoice.id;
+  };
 
   const save = async () => {
     const value = parseFloat(amount);
@@ -45,12 +56,7 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
     try {
       if (!keyRef.current) keyRef.current = crypto.randomUUID();
       const key = keyRef.current;
-      let invoiceId = saved?.id || "";
-      if (!invoiceId) {
-        const created = await base44.functions.invoke("financialDocumentAction", { action: "create", source_type: descriptor.type, source_id: descriptor.id, idempotency_key: key, intent: {} });
-        invoiceId = created.data.invoice.id;
-        setSaved(created.data.invoice);
-      }
+      const invoiceId = await ensureInvoiceId();
       await base44.functions.invoke("financialDocumentAction", { action: "record_payment", source_type: descriptor.type, source_id: descriptor.id, invoice_id: invoiceId, idempotency_key: `${key}-payment`, intent: { payments: [{ amount: value, method, note }] } });
       keyRef.current = "";
     } catch (e) {
@@ -80,6 +86,7 @@ export default function PaymentReceiptDialog({ open, onClose, invoice, onSaved, 
           <div className="mt-2 flex justify-between text-gray-400"><span>Balance due</span><b className={view.paidInFull ? "text-emerald-400" : "text-amber-400"}>{view.loading ? "Loading…" : `$${view.balance.toFixed(2)}`}</b></div>
           {view.paidInFull && <p className="mt-2 text-xs text-emerald-400">This invoice is paid in full. No further payment can be recorded.</p>}
         </div>
+        <StripePaymentLink invoiceId={saved === undefined ? undefined : saved?.id || ""} ensureInvoiceId={ensureInvoiceId} canPay={view.canPay} customerPhone={customerPhone} onPaid={onSaved} />
         <div className="space-y-3">
           <div>
             <label className="text-sm text-gray-400 block mb-1">Amount</label>

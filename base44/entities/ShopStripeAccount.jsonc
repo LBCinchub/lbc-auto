@@ -1,0 +1,83 @@
+{
+  "name": "ShopStripeAccount",
+  "type": "object",
+  "properties": {
+    "shop_owner_email": {
+      "type": "string",
+      "format": "email",
+      "description": "Tenant key: the shop owner's login email, lowercase"
+    },
+    "shop_user_id": {
+      "type": "string",
+      "description": "Shop owner's user ID"
+    },
+    "encrypted_secret_key": {
+      "type": "string",
+      "description": "The shop's Stripe secret key, encrypted on the server. Never sent to the browser."
+    },
+    "key_last4": {
+      "type": "string",
+      "description": "Last 4 characters of the key, for display"
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "live",
+        "test"
+      ],
+      "enumColors": [
+        "green",
+        "yellow"
+      ],
+      "description": "Live or test Stripe key"
+    },
+    "stripe_account_id": {
+      "type": "string",
+      "description": "Stripe account ID (acct_...)"
+    },
+    "stripe_account_name": {
+      "type": "string",
+      "description": "Business name on the Stripe account"
+    },
+    "currency": {
+      "type": "string",
+      "description": "Stripe account default currency, e.g. cad"
+    },
+    "charges_enabled": {
+      "type": "boolean",
+      "description": "Whether Stripe lets this account accept payments"
+    },
+    "connected_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "shop_owner_email",
+    "shop_user_id",
+    "encrypted_secret_key",
+    "mode"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
