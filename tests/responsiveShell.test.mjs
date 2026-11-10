@@ -35,6 +35,31 @@ test("financial editors: body can shrink, action bar never does; AI widget lifts
   assert.match(src("src/components/shared/AutoAIBubble.jsx"), /detailMode \|\| shellOpen \|\| dialogOpen \? 92 : 20/);
 });
 
+test("new estimate: one vertical scroller between fixed header and action bar, no 60vh cage", () => {
+  const s = src("src/components/estimates/EstimateCreateEditor.jsx");
+  assert.doesNotMatch(s, /max-h-\[60vh\]/);
+  assert.match(s, /data-estimate-header className="flex-none/);
+  assert.match(s, /data-estimate-scroll className="min-h-0 flex-1 overflow-y-auto/);
+  assert.match(s, /data-estimate-actions className="sticky bottom-0 z-10 flex flex-none/);
+  assert.equal((s.match(/overflow-y-auto/g) || []).length, 1);
+  assert.match(src("src/components/estimates/EstimateFormDialog.jsx"), /overflow-hidden flex flex-col \[@media\(max-height:560px\)\]:overflow-y-auto/);
+});
+
+test("item suggestions float in the open dialog layer, stay keyboard-driven, and keep name+price together", () => {
+  const s = src("src/components/shared/ItemNameAutocomplete.jsx");
+  assert.match(s, /createPortal\(/);
+  assert.match(s, /role="combobox"/);
+  assert.match(s, /aria-activedescendant/);
+  assert.match(s, /e\.preventDefault\(\);\s*choose\(item\)/);
+  assert.match(s, /listRef\.current\?\.contains\(e\.target\)/);
+  const h = src("src/hooks/useAnchoredPosition.js");
+  assert.match(h, /closest\('\[role="dialog"\]'\) \|\| document\.body/);
+  assert.match(h, /const up = below < natural && above > below/);
+  assert.match(h, /visualViewport/);
+  assert.match(src("src/pages/RepairOrderDetail.jsx"), /setNewPart\(p => \(\{\.\.\.p, unit_price/);
+  assert.match(src("src/components/ghost-mode/GhostEditorDialog.jsx"), /setLocal\(\(prev\) => prev\.map/);
+});
+
 test("wide tables scroll inside their own box instead of being clipped", () => {
   assert.doesNotMatch(src("src/pages/TimeTracking.jsx"), /border-gray-800 overflow-hidden">\s*<table/);
   assert.doesNotMatch(src("src/components/orders/RepairOrderFormDialog.jsx"), /overflow-hidden">\s*<table/);

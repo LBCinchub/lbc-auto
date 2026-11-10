@@ -827,7 +827,7 @@ export default function RepairOrderDetail() {
           <div className="space-y-4">
             <div>
               <Label className="text-gray-400">Description</Label>
-              <ItemNameAutocomplete value={newLabor.description} type="labor" onChange={name => setNewLabor({...newLabor, description: name})} onPriceSelect={price => setNewLabor({...newLabor, rate: String(price)})}
+              <ItemNameAutocomplete value={newLabor.description} type="labor" onChange={name => setNewLabor(l => ({...l, description: name}))} onPriceSelect={price => setNewLabor(l => ({...l, rate: String(price)}))}
                 className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="e.g. Oil change, Brake replacement" />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -907,7 +907,7 @@ export default function RepairOrderDetail() {
           <div className="space-y-4">
             <div>
               <Label className="text-gray-400">Part Name</Label>
-              <ItemNameAutocomplete value={newPart.name} type="part" onChange={name => setNewPart({...newPart, name: name})} onPriceSelect={price => setNewPart({...newPart, unit_price: String(price)})}
+              <ItemNameAutocomplete value={newPart.name} type="part" onChange={name => setNewPart(p => ({...p, name: name}))} onPriceSelect={price => setNewPart(p => ({...p, unit_price: String(price)}))}
                 className="bg-gray-800 border-gray-700 text-white mt-1" placeholder="e.g. Oil Filter" />
             </div>
             <div className="grid grid-cols-2 gap-4">

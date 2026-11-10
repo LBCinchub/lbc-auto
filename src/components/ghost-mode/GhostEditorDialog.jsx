@@ -21,7 +21,7 @@ export default function GhostEditorDialog({ open, onClose, items, taxRate, taxAp
     }
   }, [open, items, notes]);
 
-  const update = (i, field, val) => setLocal(local.map((it, idx) => (idx === i ? { ...it, [field]: val } : it)));
+  const update = (i, field, val) => setLocal((prev) => prev.map((it, idx) => (idx === i ? { ...it, [field]: val } : it)));
   const add = (type) => setLocal([...local, { type, name: "", description: "", quantity: 1, unit_price: 0, taxable: true }]);
   const remove = (i) => setLocal(local.filter((_, idx) => idx !== i));
   const totals = calcGhostTotals(local, taxRate, taxAppliesTo);
