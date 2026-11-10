@@ -2,13 +2,14 @@ import { useLayoutEffect, useRef } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { DOC_TYPES } from "@/lib/customerDocuments";
 
-// URL-backed state for the staff customer profile: active tab plus the document
-// opened inside the profile (?doc=invoice&docId=...). Survives refresh, back/forward.
-export default function useProfileWorkspace(customerId, onClosed) {
+// URL-backed state for a staff customer profile: active tab plus the document opened
+// above the profile (?doc=invoice&docId=...). Survives refresh, back/forward.
+// mapTab lets a profile with different tab names choose where "back to list" lands.
+export default function useProfileWorkspace(customerId, onClosed, { defaultTab = "estimates", mapTab = (t) => t } = {}) {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const tab = searchParams.get("tab") || "estimates";
+  const tab = searchParams.get("tab") || defaultTab;
   const rawType = searchParams.get("doc");
   const docId = searchParams.get("docId");
   const doc = DOC_TYPES.includes(rawType) && docId ? { type: rawType, id: docId } : null;
@@ -26,15 +27,17 @@ export default function useProfileWorkspace(customerId, onClosed) {
   // Back to the profile: real history step when we opened it, otherwise drop the doc params.
   const closeDoc = (toTab) => {
     if (location.state?.profileDoc && !toTab) return navigate(-1);
-    update((n) => { n.delete("doc"); n.delete("docId"); if (toTab) n.set("tab", toTab); }, { replace: true });
+    update((n) => { n.delete("doc"); n.delete("docId"); if (toTab) n.set("tab", mapTab(toTab)); }, { replace: true });
   };
 
+  // The profile stays mounted under the layer; after a refresh with a document open,
+  // closing it restores the saved scroll position. Always refetch summaries on close.
   const docKey = doc ? `${doc.type}:${doc.id}` : "";
   const prevKey = useRef(docKey);
   useLayoutEffect(() => {
-    if (docKey && docKey !== prevKey.current) window.scrollTo(0, 0);
     if (!docKey && prevKey.current) {
-      window.scrollTo(0, Number(sessionStorage.getItem(scrollKey)) || 0);
+      const saved = sessionStorage.getItem(scrollKey);
+      if (saved !== null) window.scrollTo(0, Number(saved) || 0);
       onClosed?.();
     }
     prevKey.current = docKey;

@@ -17,6 +17,7 @@ import InvoiceFormDialog from "../components/invoices/InvoiceFormDialog";
 import PaymentReceiptDialog from "../components/invoices/PaymentReceiptDialog";
 import DateFilter, { applyDateFilter } from "../components/shared/DateFilter";
 import TextPdfButton from "@/components/document-delivery/TextPdfButton";
+import { approveEstimate, convertEstimateToRepairOrder, deleteDocument, emailEstimate, estimateCashoutSource } from "@/lib/documentActions";
 
 const STATUS_STYLES = {
   draft:     "bg-gray-700/50 text-gray-300",
@@ -107,10 +108,7 @@ export default function Estimates() {
   );
 
   const handleDelete = async (id) => {
-    if (window.confirm("Delete this estimate?")) {
-      await base44.entities.Estimate.delete(id);
-      queryClient.invalidateQueries({ queryKey: ["estimates"] });
-    }
+    if (await deleteDocument("Estimate", id)) queryClient.invalidateQueries({ queryKey: ["estimates"] });
   };
 
   const handleApprove = async (e, estimate) => {
@@ -118,10 +116,7 @@ export default function Estimates() {
     if (estimate.status === "approved") return;
     setApprovingId(estimate.id);
     try {
-      await base44.entities.Estimate.update(estimate.id, { status: "approved" });
-      queryClient.invalidateQueries({ queryKey: ["estimates"] });
-    } catch (err) {
-      console.error("Error approving estimate:", err);
+      if (await approveEstimate(estimate)) queryClient.invalidateQueries({ queryKey: ["estimates"] });
     } finally {
       setApprovingId(null);
     }
@@ -131,13 +126,12 @@ export default function Estimates() {
     e.stopPropagation();
     setConvertingId(estimate.id);
     try {
-      const response = await base44.functions.invoke("convertEstimateToRepairOrder", { estimate_id: estimate.id });
-      const order = response.data?.repair_order;
-      queryClient.invalidateQueries({ queryKey: ["estimates"] });
-      queryClient.invalidateQueries({ queryKey: ["repairOrders"] });
-      if (order?.id) navigate(`/RepairOrderDetail/${order.id}`);
-    } catch (err) {
-      window.alert(`Could not convert to a repair order: ${err?.response?.data?.error || err?.message}`);
+      const order = await convertEstimateToRepairOrder(estimate);
+      if (order?.id) {
+        queryClient.invalidateQueries({ queryKey: ["estimates"] });
+        queryClient.invalidateQueries({ queryKey: ["repairOrders"] });
+        navigate(`/RepairOrderDetail/${order.id}`);
+      }
     } finally {
       setConvertingId(null);
     }
@@ -173,11 +167,7 @@ export default function Estimates() {
   const sendEstimateEmail = async (e, est) => {
     e.stopPropagation();
     const cachedEmail = customers.find(c => c.id === est.customer_id)?.email || null;
-    const sent = await sendEmail(est.id, "estimate", cachedEmail, est.customer_id, est.customer_name, est);
-    if (sent) {
-      await base44.entities.Estimate.update(est.id, { status: "sent", auth_status: "pending" });
-      queryClient.invalidateQueries({ queryKey: ["estimates"] });
-    }
+    if (await emailEstimate(sendEmail, est, cachedEmail)) queryClient.invalidateQueries({ queryKey: ["estimates"] });
   };
 
   const openNew = () => { setEditing(null); setDialogOpen(true); };
@@ -365,30 +355,7 @@ export default function Estimates() {
                     </button>
                     {/* 💵 Quick Cash Out */}
                     <button
-                      onClick={e => { e.stopPropagation(); setCashoutEstimate({
-                        id: est.id,
-                        customer_id: est.customer_id || "",
-                        customer_name: est.customer_name,
-                        vehicle_info: est.vehicle_info,
-                        total: est.grand_total || 0,
-                        labor_total: est.labor_total || 0,
-                        parts_total: est.parts_total || 0,
-                        labor_items: est.labor_items || [],
-                        parts_items: est.parts_items || [],
-                        tax_rate: est.tax_rate || 0,
-                        tax_applies_to: est.tax_applies_to || "both",
-                        tax_amount: est.tax_amount || 0,
-                        discount: est.discount || 0,
-                        discount_type: est.discount_type || "$",
-                        service_reason: est.service_reason || "",
-                        notes: est.notes || "",
-                        amount_paid: est.amount_paid || 0,
-                        balance_due: (est.grand_total || 0) - (est.amount_paid || 0),
-                        payment_history: est.payment_history || [],
-                        linked_invoice_id: est.linked_invoice_id || null,
-                        linked_invoice_number: est.linked_invoice_number || null,
-                        _source: "estimate",
-                      }); }}
+                      onClick={e => { e.stopPropagation(); setCashoutEstimate(estimateCashoutSource(est)); }}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500/30 transition-colors"
                       title="Quick Cash Out — create invoice + record payment">
                       💵 Cash Out

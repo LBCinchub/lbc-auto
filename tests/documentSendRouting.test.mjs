@@ -58,7 +58,10 @@ test("legacy signature link is explicit, confirmed, and separate from the PDF ac
   const inv = src("src/pages/Invoices.jsx");
   assert.ok(inv.includes("Request Signature (Link)"));
   assert.ok(!inv.includes("Send Auth SMS"));
-  const fn = inv.slice(inv.indexOf("const sendAuthSMS"), inv.indexOf("const { data: invoices"));
+  // The handler is shared by the Invoices list and the customer profile.
+  assert.ok(inv.includes("requestInvoiceSignature("));
+  const lib = src("src/lib/documentActions.js");
+  const fn = lib.slice(lib.indexOf("export async function requestInvoiceSignature"), lib.indexOf("const ENTITY_LABELS"));
   assert.ok(fn.indexOf("window.confirm") > -1 && fn.indexOf("window.confirm") < fn.indexOf("sendInvoiceAuthSMS"));
   assert.ok(!FLOW.map(src).join("").includes("sendAuthSMS"));
 });

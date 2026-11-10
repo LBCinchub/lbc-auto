@@ -7,8 +7,7 @@ import { useEmailSend } from "@/hooks/useEmailSend";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { jsPDF } from "jspdf";
-import { TAX_RATE } from "@/lib/constants";
+import { deleteDocument, downloadInvoicePdf, requestInvoiceSignature } from "@/lib/documentActions";
 import { fuzzyMatch } from "@/utils/fuzzySearch";
 import { formatPhone } from "@/utils/formatPhone";
 import PageHeader from "../components/shared/PageHeader";
@@ -54,18 +53,9 @@ export default function Invoices() {
 
   const sendAuthSMS = async (inv) => {
     const customer = customers.find(c => c.id === inv.customer_id);
-    const phone = customer?.phone;
-    if (!phone) { alert("No phone number found for this customer. Please add a phone number to the customer profile first."); return; }
-    if (!window.confirm(`Request Signature (Link)\n\nThis texts ${phone} a signing LINK, not the invoice PDF. To send the PDF itself, use "Text Invoice PDF".\n\nSend the signature link?`)) return;
     setSendingAuth(inv.id);
     try {
-      const appUrl = window.location.origin;
-      await base44.functions.invoke('sendInvoiceAuthSMS', { invoice_id: inv.id, phone, app_url: appUrl });
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      alert(`Signature link sent to ${phone}`);
-    } catch (err) {
-      const detail = err?.response?.data?.details?.message || err?.response?.data?.error || err.message;
-      alert(`Failed to send SMS: ${detail}`);
+      if (await requestInvoiceSignature(inv, customer?.phone)) queryClient.invalidateQueries({ queryKey: ["invoices"] });
     } finally {
       setSendingAuth(null);
     }
@@ -149,10 +139,7 @@ export default function Invoices() {
   useEffect(() => { setPage(1); }, [search, searchField, statusFilter, dateRange]);
 
   const handleDelete = async (id) => {
-    if (window.confirm("Delete this invoice?")) {
-      await base44.entities.Invoice.delete(id);
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
-    }
+    if (await deleteDocument("Invoice", id)) queryClient.invalidateQueries({ queryKey: ["invoices"] });
   };
 
   const { sending: sendingEmail, sendEmail } = useEmailSend();
@@ -191,99 +178,7 @@ export default function Invoices() {
     URL.revokeObjectURL(url);
   };
 
-  const downloadPDF = (inv) => {
-    const doc = new jsPDF();
-    
-    // Header
-    doc.setFontSize(24);
-    doc.setTextColor(14, 165, 233);
-    doc.text("LBC AUTO", 20, 20);
-    
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text("Professional Auto Repair Services", 20, 27);
-    
-    // Invoice Title
-    doc.setFontSize(18);
-    doc.setTextColor(0);
-    doc.text("INVOICE", 150, 20);
-    
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text(`#${inv.invoice_number}`, 150, 27);
-    doc.text(`Date: ${new Date(inv.created_date).toLocaleDateString()}`, 150, 33);
-    
-    // Customer Info
-    doc.setFontSize(11);
-    doc.setTextColor(0);
-    doc.text("BILL TO:", 20, 50);
-    doc.setFontSize(10);
-    doc.text(inv.customer_name, 20, 57);
-    doc.text(inv.vehicle_info, 20, 63);
-    
-    // Line Items Table
-    let y = 85;
-    doc.setFillColor(14, 165, 233);
-    doc.rect(20, y, 170, 8, 'F');
-    doc.setTextColor(255);
-    doc.setFontSize(10);
-    doc.text("Description", 25, y + 5.5);
-    doc.text("Qty", 120, y + 5.5);
-    doc.text("Price", 145, y + 5.5);
-    doc.text("Total", 170, y + 5.5);
-    
-    y += 12;
-    doc.setTextColor(0);
-    
-    if (inv.line_items && inv.line_items.length > 0) {
-      inv.line_items.forEach(item => {
-        doc.text(item.description || '', 25, y);
-        doc.text(String(item.quantity || 1), 120, y);
-        doc.text(`$${(item.unit_price || 0).toFixed(2)}`, 145, y);
-        doc.text(`$${(item.total || 0).toFixed(2)}`, 170, y);
-        y += 8;
-      });
-    }
-    
-    // Totals
-    y += 10;
-    doc.text("Subtotal (Parts):", 120, y);
-    doc.text(`$${(inv.parts_total || 0).toFixed(2)}`, 170, y);
-    
-    y += 7;
-    doc.text("Subtotal (Labor):", 120, y);
-    doc.text(`$${(inv.labor_total || 0).toFixed(2)}`, 170, y);
-    
-    y += 7;
-    doc.text(`Tax (${TAX_RATE}%):`, 120, y);
-    doc.text(`$${(inv.tax_amount || 0).toFixed(2)}`, 170, y);
-    
-    y += 10;
-    doc.setFontSize(12);
-    doc.setFont(undefined, 'bold');
-    doc.text("TOTAL:", 120, y);
-    doc.text(`$${(inv.total || 0).toFixed(2)}`, 170, y);
-    
-    // Payment Status
-    y += 15;
-    doc.setFontSize(10);
-    doc.setFont(undefined, 'normal');
-    const statusColor = inv.status === 'paid' ? [34, 197, 94] : [251, 191, 36];
-    doc.setTextColor(...statusColor);
-    doc.text(`Status: ${inv.status.toUpperCase()}`, 20, y);
-    
-    if (inv.paid_date) {
-      doc.setTextColor(100);
-      doc.text(`Paid on: ${new Date(inv.paid_date).toLocaleDateString()}`, 20, y + 7);
-    }
-    
-    // Footer
-    doc.setTextColor(150);
-    doc.setFontSize(9);
-    doc.text("Thank you for your business!", 105, 280, { align: 'center' });
-    
-    doc.save(`Invoice-${inv.invoice_number}.pdf`);
-  };
+  const downloadPDF = (inv) => downloadInvoicePdf(inv);
 
 
   // URL persistence — keeps filters in sync so Back/Forward restores layout

@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { useNavigate, useLocation} from 'react-router-dom';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { fuzzyMatch } from "@/utils/fuzzySearch";
 import { formatPhone } from "@/utils/formatPhone";
 import PageHeader from "../components/shared/PageHeader";
@@ -19,6 +18,8 @@ import InvoiceFormDialog from "../components/invoices/InvoiceFormDialog";
 import PaymentReceiptDialog from "../components/invoices/PaymentReceiptDialog";
 import DateFilter, { applyDateFilter } from "../components/shared/DateFilter";
 import { invoiceFieldsFromRepairOrder, resolveVehicleId } from "@/utils/recordLinking";
+import RepairOrderHistoryDialog from "@/components/document-actions/RepairOrderHistoryDialog";
+import { deleteDocument, generateInvoiceFromRepairOrder, repairOrderCashoutSource } from "@/lib/documentActions";
 
 const statusFilters = [
   { value: "all", label: "All" },
@@ -120,10 +121,7 @@ export default function RepairOrders() {
   useEffect(() => { setPage(1); }, [search, searchField, statusFilter, dateRange]);
 
   const handleDelete = async (id) => {
-    if (window.confirm("Delete this repair order?")) {
-      await base44.entities.RepairOrder.delete(id);
-      queryClient.invalidateQueries({ queryKey: ["repairOrders"] });
-    }
+    if (await deleteDocument("RepairOrder", id)) queryClient.invalidateQueries({ queryKey: ["repairOrders"] });
   };
 
   const refresh = (savedStatus) => {
@@ -146,13 +144,12 @@ export default function RepairOrders() {
   const handleGenerateInvoice = async (order) => {
     setGeneratingInvoice(order.id);
     try {
-      const response = await base44.functions.invoke("financialDocumentAction", { action: "create", source_type: "repair_order", source_id: order.id, idempotency_key: `repair-order-invoice:${order.id}` });
-      const invoice = response.data?.invoice;
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["repairOrders"] });
-      if (invoice?.id) navigate(`/InvoiceDetail/${invoice.id}`);
-    } catch (err) {
-      alert("Could not generate invoice: " + (err?.response?.data?.error || err?.message || err));
+      const invoice = await generateInvoiceFromRepairOrder(order);
+      if (invoice?.id) {
+        queryClient.invalidateQueries({ queryKey: ["invoices"] });
+        queryClient.invalidateQueries({ queryKey: ["repairOrders"] });
+        navigate(`/InvoiceDetail/${invoice.id}`);
+      }
     } finally {
       setGeneratingInvoice(null);
     }
@@ -342,22 +339,7 @@ export default function RepairOrders() {
                       </Button>
                     )}
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-emerald-400" title="Cashout"
-                      onClick={() => setPaymentOrder({
-                        id: order.id,
-                        customer_id: order.customer_id || "",
-                        customer_name: order.customer_name,
-                        vehicle_id: order.vehicle_id || "",
-                        vehicle_info: order.vehicle_info,
-                        total: order.total_cost || 0,
-                        labor_cost: order.labor_cost || 0,
-                        parts_cost: order.parts_cost || 0,
-                        tax_amount: order.tax_amount || 0,
-                        amount_paid: order.amount_paid || 0,
-                        balance_due: (order.total_cost || 0) - (order.amount_paid || 0),
-                        payment_history: order.payment_history || [],
-                        linked_invoice_id: order.linked_invoice_id || null,
-                        linked_invoice_number: order.linked_invoice_number || null,
-                      })}>
+                      onClick={() => setPaymentOrder(repairOrderCashoutSource(order))}>
                       <CreditCard className="w-3.5 h-3.5" />
                     </Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-emerald-400" title="Generate Invoice (1-click)"
@@ -421,39 +403,7 @@ export default function RepairOrders() {
         onSaved={() => queryClient.invalidateQueries({ queryKey: ["invoices"] })}
       />
 
-      {historyOrder && (
-        <Dialog open={!!historyOrder} onOpenChange={() => setHistoryOrder(null)}>
-          <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Repair Order History - {historyOrder.order_number}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {historyOrder.history?.map((entry, idx) => (
-                <div key={idx} className="border-l-2 border-sky-500/50 pl-4 py-2">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-semibold text-sky-400">{entry.action}</span>
-                    <span className="text-xs text-gray-500">
-                      {new Date(entry.timestamp).toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="text-xs text-gray-400 mb-1">By: {entry.user}</div>
-                  {entry.changes && Object.keys(entry.changes).length > 0 && (
-                    <div className="text-sm text-gray-300 space-y-1">
-                      {Object.entries(entry.changes).map(([key, val]) => (
-                        <div key={key}>
-                          <span className="text-gray-500">{key}:</span>{' '}
-                          <span className="text-rose-400">{val.from || 'none'}</span> →{' '}
-                          <span className="text-emerald-400">{val.to}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+      <RepairOrderHistoryDialog order={historyOrder} onClose={() => setHistoryOrder(null)} />
 
       <PaymentReceiptDialog
         open={!!paymentOrder}

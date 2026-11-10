@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import CustomerDocumentCard from "@/components/customers/CustomerDocumentCard";
+import ProfileDocumentLayer from "@/components/customers/ProfileDocumentLayer";
+import useProfileWorkspace from "@/hooks/useProfileWorkspace";
 import {
   ArrowLeft, Phone, Mail, MapPin, Car, Wrench, FileText,
   Clock, Bell, BellOff, Send, CheckCircle2, TrendingUp,
@@ -69,6 +71,13 @@ export default function CustomerProfile() {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") || "overview";
   const setActiveTab = (tab) => setSearchParams((p) => { const n = new URLSearchParams(p); n.set("tab", tab); return n; }, { replace: true });
+  // Documents open above this profile; their list destinations land on the History tab.
+  const reloadDocs = () => Promise.all([
+    base44.entities.RepairOrder.filter({ customer_id: id }, "-created_date", 50),
+    base44.entities.Invoice.filter({ customer_id: id }, "-created_date", 50),
+    base44.entities.Estimate.filter({ customer_id: id }, "-created_date", 50),
+  ]).then(([o, inv, est]) => { setOrders(o); setInvoices(inv); setEstimates(est); });
+  const { doc: openProfileDoc, openDoc, closeDoc } = useProfileWorkspace(id, () => reloadDocs(), { defaultTab: "overview", mapTab: () => "history" });
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [savingReminder, setSavingReminder] = useState(false);
@@ -215,6 +224,9 @@ export default function CustomerProfile() {
 
   return (
     <div style={{ minHeight:"100vh", background:"#0a0f1a", fontFamily:"inherit", paddingBottom:40 }}>
+      {openProfileDoc && (
+        <ProfileDocumentLayer key={`${openProfileDoc.type}:${openProfileDoc.id}`} doc={openProfileDoc} customerId={id} customerName={customer.full_name} openDoc={openDoc} closeDoc={closeDoc} />
+      )}
 
       {/* Header */}
       <div style={{
@@ -394,7 +406,7 @@ export default function CustomerProfile() {
             {lastOrder && (
               <div style={S.card}>
                 <p style={{ ...S.label, marginBottom:10 }}>Last Repair Order</p>
-                <CustomerDocumentCard type="repair_order" doc={lastOrder} />
+                <CustomerDocumentCard type="repair_order" doc={lastOrder} customer={customer} onOpen={openDoc} onChanged={reloadDocs} />
               </div>
             )}
           </>
@@ -508,7 +520,7 @@ export default function CustomerProfile() {
                 ].filter((g) => g.docs.length > 0).map((g) => (
                   <section key={g.type} className="space-y-2">
                     <p style={{ ...S.label, margin:0 }}>{g.title} ({g.docs.length})</p>
-                    {g.docs.map((doc) => <CustomerDocumentCard key={doc.id} type={g.type} doc={doc} />)}
+                    {g.docs.map((doc) => <CustomerDocumentCard key={doc.id} type={g.type} doc={doc} customer={customer} onOpen={openDoc} onChanged={reloadDocs} />)}
                   </section>
                 ))}
               </div>

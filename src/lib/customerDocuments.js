@@ -47,6 +47,13 @@ export function matchListPath(to, customerId) {
 
 export const DOC_TYPES = Object.keys(DETAIL_PATHS);
 
+// The staff customer profile with this document open above it, on the matching tab.
+export function profileDocumentPath(customerId, type, id) {
+  if (!customerId || !DOC_TYPES.includes(type) || !id) return null;
+  const q = new URLSearchParams({ id: customerId, tab: PROFILE_TABS[type], doc: type, docId: id });
+  return `/CustomerDetails?${q.toString()}`;
+}
+
 // Opens the canonical document view and remembers the customer profile to return to.
 export function openDocument(navigate, type, id) {
   const path = documentPath(type, id);

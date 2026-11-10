@@ -4,7 +4,8 @@ import OriginalEstimateEditor from "@/components/estimates/OriginalEstimateEdito
 import RepairOrderDetail from "@/pages/RepairOrderDetail";
 import { ProfileDocumentProvider } from "@/components/customers/ProfileDocumentContext";
 
-const FRAME = "overflow-hidden rounded-xl border border-gray-800 bg-gray-900";
+// No overflow clipping here: the editor's sticky action bar sticks to the layer's single scroller.
+const FRAME = "rounded-xl border border-gray-800 bg-gray-900";
 
 // The exact editors used by the Invoices, Estimates and Repair Orders pages,
 // opened inside the customer profile so every action stays in this context.

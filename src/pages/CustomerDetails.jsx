@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import useProfileWorkspace from "@/hooks/useProfileWorkspace";
-import ProfileDocumentView from "@/components/customers/ProfileDocumentView";
+import ProfileDocumentLayer from "@/components/customers/ProfileDocumentLayer";
+import CustomerDocumentCard from "@/components/customers/CustomerDocumentCard";
 import { base44 } from "@/api/base44Client";
 import { propagateCustomerUpdate } from "@/utils/syncCustomerActivity";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -288,8 +289,8 @@ export default function CustomerDetails() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={openProfileDoc ? () => closeDoc() : goBack} className="min-h-[44px] text-gray-400 hover:text-white gap-2">
-          <ArrowLeft className="w-4 h-4" /> {openProfileDoc ? `Back To ${customer?.full_name || "Customer"}` : "Back"}
+        <Button variant="ghost" size="sm" onClick={goBack} className="min-h-[44px] text-gray-400 hover:text-white gap-2">
+          <ArrowLeft className="w-4 h-4" /> Back
         </Button>
       </div>
 
@@ -302,10 +303,11 @@ export default function CustomerDetails() {
         </div>
       ) : !customer ? (
         <div className="text-gray-400 text-center py-20">Customer not found.</div>
-      ) : openProfileDoc ? (
-        <ProfileDocumentView doc={openProfileDoc} customerId={customerId} customerName={customer.full_name} openDoc={openDoc} closeDoc={closeDoc} />
       ) : (
         <>
+          {openProfileDoc && (
+            <ProfileDocumentLayer key={`${openProfileDoc.type}:${openProfileDoc.id}`} doc={openProfileDoc} customerId={customerId} customerName={customer.full_name} openDoc={openDoc} closeDoc={closeDoc} />
+          )}
           {/* ── HEADER CARD ── */}
           <div className="rounded-xl border border-gray-800 bg-gray-900/60 p-6">
             <div className="flex items-start justify-between gap-4">
@@ -420,37 +422,9 @@ export default function CustomerDetails() {
                 <div className="text-gray-500 text-sm py-8 text-center">No estimates found for this customer.</div>
               ) : (
                 <div className="space-y-2">
-                  {estimates.map(est => {
-                    const items = summarizeLineItems([
-                      ...(est.parts_items || []).map(p => p.name),
-                      ...(est.labor_items || []).map(l => l.description),
-                    ]);
-                    return (
-                    <div key={est.id} onClick={() => openDoc("estimate", est.id)}
-                      className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 flex items-center justify-between gap-3 cursor-pointer hover:border-sky-500/30 hover:bg-gray-800/50 transition-all">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-white">{est.estimate_number || est.id.slice(0,8)}</span>
-                          {est.ghost_status === "active" && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-300 border border-amber-500/30"><Ghost className="w-2.5 h-2.5" /> Remaining Work</span>
-                          )}
-                        </div>
-                        <div className="text-xs text-gray-400 mt-0.5">{fmtDate(est.created_date)} · {est.vehicle_info || "—"}</div>
-                        {items && (
-                          <div className="text-xs text-gray-500 mt-1 truncate">
-                            <span className="text-gray-400">{items}</span>
-                            {est.tax_amount > 0 && <span className="ml-2 text-gray-600">· incl. tax</span>}
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3 flex-shrink-0">
-                        <span className="font-bold text-white">{fmt(est.grand_total)}</span>
-                        <Badge className={statusColors[est.status] || "bg-gray-700 text-gray-300"}>{statusLabel(est.status)}</Badge>
-                        <ChevronRight className="w-4 h-4 text-gray-600" />
-                      </div>
-                    </div>
-                    );
-                  })}
+                  {estimates.map(est => (
+                    <CustomerDocumentCard key={est.id} type="estimate" doc={est} customer={customer} onOpen={openDoc} onChanged={reload} />
+                  ))}
                 </div>
               )}
             </TabsContent>
@@ -461,36 +435,9 @@ export default function CustomerDetails() {
                 <div className="text-gray-500 text-sm py-8 text-center">No repair orders found for this customer.</div>
               ) : (
                 <div className="space-y-2">
-                  {repairOrders.map(ro => {
-                    const items = summarizeLineItems([
-                      ...(ro.parts_used || []).map(p => p.name),
-                      ...(ro.labor_items || []).map(l => l.description),
-                      ...(ro.parts_ordered || []).map(p => p.name),
-                    ]);
-                    return (
-                    <div key={ro.id} onClick={() => openDoc("repair_order", ro.id)}
-                      className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 flex items-center justify-between gap-3 cursor-pointer hover:border-sky-500/30 hover:bg-gray-800/50 transition-all">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-white">{ro.order_number || ro.id.slice(0,8)}</span>
-                          {ro.ghost_status === "active" && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-300 border border-amber-500/30"><Ghost className="w-2.5 h-2.5" /> Remaining Work</span>
-                          )}
-                        </div>
-                        <div className="text-xs text-gray-400 mt-0.5">{fmtDate(ro.created_date)} · {ro.description?.slice(0, 50) || "—"}</div>
-                        <div className="text-xs text-gray-500 mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
-                          {items && <span className="text-gray-400 truncate max-w-[220px]">{items}</span>}
-                          {ro.mechanic_name && <span className="inline-flex items-center gap-1 text-sky-400/80"><User className="w-3 h-3" />{ro.mechanic_name}</span>}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 flex-shrink-0">
-                        <span className="font-bold text-white">{fmt(ro.total_cost)}</span>
-                        <Badge className={statusColors[ro.status] || "bg-gray-700 text-gray-300"}>{statusLabel(ro.status)}</Badge>
-                        <ChevronRight className="w-4 h-4 text-gray-600" />
-                      </div>
-                    </div>
-                    );
-                  })}
+                  {repairOrders.map(ro => (
+                    <CustomerDocumentCard key={ro.id} type="repair_order" doc={ro} customer={customer} onOpen={openDoc} onChanged={reload} />
+                  ))}
                 </div>
               )}
             </TabsContent>
@@ -501,45 +448,11 @@ export default function CustomerDetails() {
                 <div className="text-gray-500 text-sm py-8 text-center">No invoices found for this customer.</div>
               ) : (
                 <div className="space-y-2">
-                  {invoices.map(inv => {
-                    const items = summarizeLineItems([
-                      ...(inv.line_items || []).map(i => i.name),
-                      ...(inv.parts_used || []).map(p => p.name),
-                    ]);
-                    const partialPaid = inv.status === "partial" && (inv.amount_paid || 0) > 0;
-                    return (
-                    <div key={inv.id} onClick={() => openDoc("invoice", inv.id)}
-                      className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 flex items-center justify-between gap-3 cursor-pointer hover:border-sky-500/30 hover:bg-gray-800/50 transition-all">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-white">{inv.invoice_number || inv.id.slice(0,8)}</span>
-                          {inv.ghost_status === "active" && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-300 border border-amber-500/30"><Ghost className="w-2.5 h-2.5" /> Remaining Work</span>
-                          )}
-                          {inv.status === "overdue" && <AlertTriangle className="w-3.5 h-3.5 text-orange-400" />}
-                          {(inv.status === "unpaid" || inv.status === "partial") && inv.status !== "overdue" && (
-                            <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
-                          )}
-                        </div>
-                        <div className="text-xs text-gray-400 mt-0.5">{fmtDate(inv.created_date)} · {inv.vehicle_info || "—"}</div>
-                        <div className="text-xs text-gray-500 mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
-                          {items && <span className="text-gray-400 truncate max-w-[220px]">{items}</span>}
-                          {inv.tax_amount > 0 && <span className="text-gray-600">· incl. tax</span>}
-                          {partialPaid && <span className="text-emerald-400 font-medium">Paid {fmt(inv.amount_paid)} of {fmt(inv.total)}</span>}
-                        </div>
-                        <InvoiceLinkGuard invoice={inv} vehicles={vehicles} repairOrders={repairOrders} onRelink={reload} />
-                      </div>
-                      <div className="flex items-center gap-3 flex-shrink-0">
-                        <span className="font-bold text-white">{fmt(inv.total)}</span>
-                        {(inv.status === "partial" || inv.status === "unpaid") && inv.balance_due > 0 && (
-                          <span className="text-sm font-bold text-yellow-400">{fmt(inv.balance_due)}</span>
-                        )}
-                        <Badge className={statusColors[inv.status] || "bg-gray-700 text-gray-300"}>{statusLabel(inv.status)}</Badge>
-                        <ChevronRight className="w-4 h-4 text-gray-600" />
-                      </div>
-                    </div>
-                    );
-                  })}
+                  {invoices.map(inv => (
+                    <CustomerDocumentCard key={inv.id} type="invoice" doc={inv} customer={customer} onOpen={openDoc} onChanged={reload}>
+                      <InvoiceLinkGuard invoice={inv} vehicles={vehicles} repairOrders={repairOrders} onRelink={reload} />
+                    </CustomerDocumentCard>
+                  ))}
                 </div>
               )}
             </TabsContent>

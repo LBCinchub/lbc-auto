@@ -61,7 +61,8 @@ test("document links map into the profile; other paths pass through", () => {
 
 test("staff customer profile opens the canonical editors in place and keeps tab state stable", () => {
   const details = readFileSync("src/pages/CustomerDetails.jsx", "utf8");
-  for (const t of ['"estimate"', '"repair_order"', '"invoice"']) assert.ok(details.includes(`openDoc(${t}`));
+  for (const t of ['"estimate"', '"repair_order"', '"invoice"']) assert.ok(details.includes(`type=${t} doc=`));
+  assert.ok(details.includes("onOpen={openDoc}"));
   assert.ok(!details.includes("window.location.href"));
   assert.ok(details.includes('activationMode="manual"'), "tabs must not switch on programmatic focus");
   assert.ok(details.includes("loading && !customer ?"), "reloads must not unmount the tabs");

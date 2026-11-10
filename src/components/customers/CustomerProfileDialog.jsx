@@ -10,6 +10,7 @@ import {
   Phone, Mail, MapPin, Car, Wrench, FileText, Lightbulb, Clock, Plus, Pencil, ChevronRight, Calendar, MessageSquare
 } from "lucide-react";
 import { formatPhone } from "@/utils/formatPhone";
+import { profileDocumentPath } from "@/lib/customerDocuments";
 import { Button } from "@/components/ui/button";
 import StatusBadge from "../shared/StatusBadge";
 import VehicleFormDialog from "@/components/vehicles/VehicleFormDialog";
@@ -260,11 +261,7 @@ export default function CustomerProfileDialog({ customer, open, onClose, custome
                          key={item.id}
                          onClick={() => {
                            onClose();
-                           if (item.type === 'invoice') {
-                             navigate(`/InvoiceDetail/${item.id}`);
-                           } else {
-                             navigate(`/EstimateDetail/${item.id}`);
-                           }
+                           navigate(profileDocumentPath(customer.id, item.type, item.id));
                          }}
                          className="w-full bg-gray-800/60 rounded-lg p-3 flex items-start justify-between gap-3 hover:bg-gray-700/60 transition-colors text-left group"
                        >
@@ -349,7 +346,7 @@ export default function CustomerProfileDialog({ customer, open, onClose, custome
               <div className="space-y-2">
                 {customerOrders.map(o => (
                   <button key={o.id}
-                    onClick={() => { onClose(); navigate(`/RepairOrderDetail/${o.id}`); }}
+                    onClick={() => { onClose(); navigate(profileDocumentPath(customer.id, "repair_order", o.id)); }}
                     className="w-full bg-gray-800/60 rounded-lg p-3 flex items-start justify-between gap-3 hover:bg-gray-700/60 transition-colors text-left">
                     <div className="flex items-start gap-3 min-w-0">
                       <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -391,7 +388,7 @@ export default function CustomerProfileDialog({ customer, open, onClose, custome
               <div className="space-y-2">
                 {customerEstimates.map(est => (
                   <button key={est.id}
-                    onClick={() => { onClose(); navigate(`/EstimateDetail/${est.id}`); }}
+                    onClick={() => { onClose(); navigate(profileDocumentPath(customer.id, "estimate", est.id)); }}
                     className="w-full bg-gray-800/60 rounded-lg p-3 flex items-start justify-between gap-3 hover:bg-gray-700/60 transition-colors text-left">
                     <div className="flex items-start gap-3 min-w-0">
                       <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -433,7 +430,7 @@ export default function CustomerProfileDialog({ customer, open, onClose, custome
               <div className="space-y-2">
                 {customerInvoices.map(inv => (
                   <button key={inv.id}
-                    onClick={() => { onClose(); navigate(`/InvoiceDetail/${inv.id}`); }}
+                    onClick={() => { onClose(); navigate(profileDocumentPath(customer.id, "invoice", inv.id)); }}
                     className="w-full bg-gray-800/60 rounded-lg p-3 flex items-start justify-between gap-3 hover:bg-gray-700/60 transition-colors text-left">
                     <div className="flex items-start gap-3 min-w-0">
                       <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0 mt-0.5">
