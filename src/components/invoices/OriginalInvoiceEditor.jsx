@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useDocumentNavigate } from "@/components/customers/ProfileDocumentContext";
 import { base44 } from "@/api/base44Client";
 import useFinancialWorkflow from "@/components/financial-workflow/useFinancialWorkflow";
 import InvoiceEditorHeader from "./InvoiceEditorHeader";
@@ -19,7 +19,7 @@ const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
 export default function OriginalInvoiceEditor({ source, onClose, onSaved, closeAfterSave = false }) {
   const flow = useFinancialWorkflow({ open: true, source, onSaved });
-  const navigate = useNavigate();
+  const navigate = useDocumentNavigate();
   const [printing, setPrinting] = useState(false), [payment, setPayment] = useState(false);
   const cancel = () => { if (!flow.dirty || window.confirm("Discard unsaved invoice changes?")) onClose(); };
   const save = async () => { const saved = await flow.act(flow.data?.invoice ? "update" : "create"); if (saved && closeAfterSave) onClose(); };

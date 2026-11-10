@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
+import useProfileWorkspace from "@/hooks/useProfileWorkspace";
+import ProfileDocumentView from "@/components/customers/ProfileDocumentView";
 import { base44 } from "@/api/base44Client";
 import { propagateCustomerUpdate } from "@/utils/syncCustomerActivity";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -21,11 +23,9 @@ import VehicleFormDialog from "../components/vehicles/VehicleFormDialog";
 import VehiclePhotosTab from "@/components/photos/VehiclePhotosTab";
 import VehicleHistoryReport from "@/components/reports/VehicleHistoryReport";
 import { useQueryClient } from "@tanstack/react-query";
-import AutoAIBubble from "@/components/shared/AutoAIBubble";
 import InvoiceLinkGuard from "@/components/customers/InvoiceLinkGuard";
 import PortalAccessPanel from "@/components/customers/PortalAccessPanel";
 import InvoiceFormDialog from "@/components/invoices/InvoiceFormDialog";
-import { openDocument } from "@/lib/customerDocuments";
 import { useSmartBack } from "@/components/shared/useSmartBack";
 
 const AVATAR_COLORS = ["bg-sky-500","bg-violet-500","bg-emerald-500","bg-amber-500","bg-rose-500","bg-indigo-500"];
@@ -72,8 +72,7 @@ const summarizeLineItems = (names) => {
   return `${clean.slice(0, 2).join(", ")} +${clean.length - 2} more`;
 };
 
-function VehicleTimeline({ vehicle, repairOrders, defaultOpen = false }) {
-  const navigate = useNavigate();
+function VehicleTimeline({ vehicle, repairOrders, defaultOpen = false, onOpenRepairOrder }) {
   const [open, setOpen] = React.useState(defaultOpen);
   const vehicleOrders = repairOrders
     .filter(ro => ro.vehicle_id === vehicle.id)
@@ -120,7 +119,7 @@ function VehicleTimeline({ vehicle, repairOrders, defaultOpen = false }) {
           ) : (
             <div className="p-4 space-y-2">
               {vehicleOrders.map(ro => (
-                <div key={ro.id} onClick={() => openDocument(navigate, "repair_order", ro.id)}
+                <div key={ro.id} onClick={() => onOpenRepairOrder(ro.id)}
                   className="rounded-lg border border-gray-800 bg-gray-800/30 p-3 cursor-pointer hover:border-sky-500/40 hover:bg-gray-800/60 transition-all">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
@@ -143,12 +142,11 @@ function VehicleTimeline({ vehicle, repairOrders, defaultOpen = false }) {
 }
 
 export default function CustomerDetails() {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const customerId = searchParams.get("id");
-  const docTab = searchParams.get("tab") || "estimates";
-  const setDocTab = (tab) => setSearchParams((p) => { const n = new URLSearchParams(p); n.set("tab", tab); return n; }, { replace: true });
+  // Reload after a document opened in this profile closes, so totals/status reflect saved changes.
+  const { tab: docTab, setTab: setDocTab, doc: openProfileDoc, openDoc, closeDoc } = useProfileWorkspace(customerId, () => reload());
   const goBack = useSmartBack("/Customers");
 
   const [customer, setCustomer] = useState(null);
@@ -290,18 +288,22 @@ export default function CustomerDetails() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={goBack} className="text-gray-400 hover:text-white gap-2">
-          <ArrowLeft className="w-4 h-4" /> Back
+        <Button variant="ghost" size="sm" onClick={openProfileDoc ? () => closeDoc() : goBack} className="min-h-[44px] text-gray-400 hover:text-white gap-2">
+          <ArrowLeft className="w-4 h-4" /> {openProfileDoc ? `Back To ${customer?.full_name || "Customer"}` : "Back"}
         </Button>
       </div>
 
-      {loading ? (
+      {/* Skeleton only on first load: a refresh after a save must not unmount the
+          tabs/content (that remount is what reset the active tab before). */}
+      {loading && !customer ? (
         <div className="space-y-4">
           <SkeletonBlock className="h-32 w-full" />
           <SkeletonBlock className="h-64 w-full" />
         </div>
       ) : !customer ? (
         <div className="text-gray-400 text-center py-20">Customer not found.</div>
+      ) : openProfileDoc ? (
+        <ProfileDocumentView doc={openProfileDoc} customerId={customerId} customerName={customer.full_name} openDoc={openDoc} closeDoc={closeDoc} />
       ) : (
         <>
           {/* ── HEADER CARD ── */}
@@ -397,7 +399,9 @@ export default function CustomerDetails() {
           <PortalAccessPanel customerId={customer.id} />
 
           {/* ── TABS: Estimates / Repair Orders / Invoices ── */}
-          <Tabs value={docTab} onValueChange={setDocTab}>
+          {/* Manual activation: only an explicit click/Enter/Space changes the tab, so a
+              programmatic focus return (dialog/chat closing) can never switch it. */}
+          <Tabs value={docTab} onValueChange={setDocTab} activationMode="manual">
             <TabsList className="bg-gray-900 border border-gray-800 flex-wrap h-auto gap-1 p-1">
               <TabsTrigger value="estimates" className="gap-1.5 data-[state=active]:bg-gray-800">
                 <ClipboardList className="w-3.5 h-3.5" /> Estimates ({estimates.length})
@@ -422,7 +426,7 @@ export default function CustomerDetails() {
                       ...(est.labor_items || []).map(l => l.description),
                     ]);
                     return (
-                    <div key={est.id} onClick={() => openDocument(navigate, "estimate", est.id)}
+                    <div key={est.id} onClick={() => openDoc("estimate", est.id)}
                       className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 flex items-center justify-between gap-3 cursor-pointer hover:border-sky-500/30 hover:bg-gray-800/50 transition-all">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -464,7 +468,7 @@ export default function CustomerDetails() {
                       ...(ro.parts_ordered || []).map(p => p.name),
                     ]);
                     return (
-                    <div key={ro.id} onClick={() => openDocument(navigate, "repair_order", ro.id)}
+                    <div key={ro.id} onClick={() => openDoc("repair_order", ro.id)}
                       className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 flex items-center justify-between gap-3 cursor-pointer hover:border-sky-500/30 hover:bg-gray-800/50 transition-all">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -504,7 +508,7 @@ export default function CustomerDetails() {
                     ]);
                     const partialPaid = inv.status === "partial" && (inv.amount_paid || 0) > 0;
                     return (
-                    <div key={inv.id} onClick={() => openDocument(navigate, "invoice", inv.id)}
+                    <div key={inv.id} onClick={() => openDoc("invoice", inv.id)}
                       className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 flex items-center justify-between gap-3 cursor-pointer hover:border-sky-500/30 hover:bg-gray-800/50 transition-all">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -623,7 +627,7 @@ export default function CustomerDetails() {
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </div>
-                    <VehicleTimeline vehicle={v} repairOrders={repairOrders} defaultOpen={vehicles.length === 1} />
+                    <VehicleTimeline vehicle={v} repairOrders={repairOrders} defaultOpen={vehicles.length === 1} onOpenRepairOrder={(id) => openDoc("repair_order", id)} />
                   </div>
                 ))}
               </div>
@@ -771,7 +775,6 @@ export default function CustomerDetails() {
           onSaved={() => { reload(); queryClient.invalidateQueries({ queryKey: ["invoices"] }); }}
         />
       )}
-      <AutoAIBubble />
     </div>
   );
 }

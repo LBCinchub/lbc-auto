@@ -157,7 +157,7 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
   injectLEDStyle();
   const location = useLocation();
   // On financial detail pages, lift the widget above the sticky action bar.
-  const detailMode = DETAIL_PATTERN.test(location.pathname);
+  const detailMode = DETAIL_PATTERN.test(location.pathname) || new URLSearchParams(location.search).has("doc");
   // Also lift above the financial editor's bottom action bar while it is open.
   const shellOpen = useFinancialShellOpen();
   const dialogOpen = useDialogOpen();

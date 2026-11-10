@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { useDocumentNavigate } from "@/components/customers/ProfileDocumentContext";
 import StatusBadge from "@/components/shared/StatusBadge";
 import BackButton from "@/components/shared/BackButton";
 import { Mail } from "lucide-react";
@@ -9,7 +9,7 @@ import { engineSummary } from "@/lib/vehicleDetails";
 import ShopIdentityBlock from "@/components/financial-workflow/ShopIdentityBlock";
 
 export default function InvoiceEditorHeader({ data }) {
-  const navigate = useNavigate();
+  const navigate = useDocumentNavigate();
   const invoice = data?.invoice;
   const customer = data?.customer;
   const vehicle = data?.vehicle;

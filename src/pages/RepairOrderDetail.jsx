@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import { useDocumentNavigate } from "@/components/customers/ProfileDocumentContext";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, FileText, Plus, Trash2, MoreVertical, Clock, History, Wrench, PenLine, Pencil, CheckCircle2, XCircle, Printer, ShoppingCart, Loader2, Mail } from "lucide-react";
@@ -26,9 +27,10 @@ import GhostSection from "@/components/ghost-mode/GhostSection";
 import { calcGhostTotals, r2 } from "@/utils/ghostTax";
 import { useToast } from "@/components/ui/use-toast";
 
-export default function RepairOrderDetail() {
-  const { orderId } = useParams();
-  const navigate = useNavigate();
+export default function RepairOrderDetail({ orderId: embeddedOrderId } = {}) {
+  const { orderId: routeOrderId } = useParams();
+  const orderId = embeddedOrderId || routeOrderId;
+  const navigate = useDocumentNavigate();
   const queryClient = useQueryClient();
   const goBack = useSmartBack("/RepairOrders");
   const [showEstimateDialog, setShowEstimateDialog] = useState(false);
