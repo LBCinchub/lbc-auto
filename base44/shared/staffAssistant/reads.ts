@@ -70,7 +70,7 @@ export const READS: any[] = [
     run: async (ctx: any, a: any) => {
       const rg = range(ctx, a);
       const res = await ownedPage(ctx.svc, 'Appointment', ctx.scope, { date: { $gte: rg.from, $lte: rg.to }, ...(a.status ? { status: a.status } : {}) }, { sort: 'date', limit: 25, skip: a.skip });
-      return page(res, P.pAppointment, { range: rg, note: 'Website bookings created by the booking service are listed on the Dashboard, not here.' });
+      return page(res, P.pAppointment, { range: rg });
     } },
   { name: 'estimates.list', module: 'Estimates', label: 'Estimates', description: 'List estimates, optionally by status.',
     args: { status: { type: 'enum', values: ['draft', 'sent', 'approved', 'declined', 'expired', 'invoiced', 'cancelled'] }, skip: skipArg },
