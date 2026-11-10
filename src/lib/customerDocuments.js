@@ -24,6 +24,29 @@ export function documentPath(type, id) {
   return base && id ? base + encodeURIComponent(id) : null;
 }
 
+const PATH_TYPES = { InvoiceDetail: "invoice", EstimateDetail: "estimate", RepairOrderDetail: "repair_order" };
+
+// "/InvoiceDetail/abc" -> { type: "invoice", id: "abc" }; anything else -> null.
+export function matchDocumentPath(to) {
+  const m = typeof to === "string" && to.match(/^\/(InvoiceDetail|EstimateDetail|RepairOrderDetail)\/([^/?#]+)$/);
+  return m ? { type: PATH_TYPES[m[1]], id: decodeURIComponent(m[2]) } : null;
+}
+
+// Profile tab keys, matching the staff customer profile's tabs.
+export const PROFILE_TABS = { estimate: "estimates", repair_order: "repairorders", invoice: "invoices" };
+const LIST_TABS = { "/Estimates": "estimates", "/RepairOrders": "repairorders", "/Invoices": "invoices" };
+
+// Module lists and this same customer's profile map back to the profile; other customers don't.
+export function matchListPath(to, customerId) {
+  if (typeof to !== "string") return null;
+  const [path, query = ""] = to.split("?");
+  if (LIST_TABS[path] && !query) return { tab: LIST_TABS[path] };
+  if (path === "/CustomerDetails" && customerId && new URLSearchParams(query).get("id") === customerId) return { tab: null };
+  return null;
+}
+
+export const DOC_TYPES = Object.keys(DETAIL_PATHS);
+
 // Opens the canonical document view and remembers the customer profile to return to.
 export function openDocument(navigate, type, id) {
   const path = documentPath(type, id);
