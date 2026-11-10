@@ -23,4 +23,6 @@ export const roLines = (o: any) => [
   ...lines(o.parts_used, (p) => ({ type: 'part', name: p.name, quantity: p.quantity, unit_price: p.unit_price, total: r2(p.total) })),
 ];
 export const invoiceLines = (i: any) => lines(i.line_items, (l) => ({ type: l.type, name: l.name || l.description, quantity: l.quantity, unit_price: l.unit_price, total: r2(l.total) }));
+// Ordered parts without supplier cost.
+export const partsOrdered = (o: any) => lines(o.parts_ordered, (p) => pick(p, ['name', 'part_number', 'supplier', 'quantity', 'status', 'order_date']));
 export const paymentHistory = (i: any) => (i.payment_history || []).slice(0, 20).map((p: any) => ({ date: p.date, amount: r2(p.amount), method: p.method }));

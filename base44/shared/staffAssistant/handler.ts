@@ -1,10 +1,12 @@
 // Staff assistant turn: plan (no data) -> validate -> run tenant-scoped reads or prepare a write
 // preview -> compose. Writes execute only through a confirmed server-bound action.
-import { ToolError, resolveStaffScope, todayIn } from './scope.ts';
+import { ToolError, resolveStaffScope, todayIn, shopIdentity } from './scope.ts';
 import { NeedsInput, pageHint } from './resolve.ts';
 import { CAPABILITIES, UNSUPPORTED } from './registry.ts';
 import { planTools } from './planner.ts';
 import { createPending, claim, finish, cancel } from './confirm.ts';
+import { roleAllows, enforceStaffDisclosure } from './policy.ts';
+import { coverageReply } from './coverage.ts';
 
 const RATE_PER_MIN = 20;
 const safePath = (p: any) => (typeof p === 'string' && /^\/[A-Za-z0-9/_-]{0,80}$/.test(p) ? p : '');
@@ -25,7 +27,8 @@ ${JSON.stringify(results)}
 RULES:
 - Use only numbers, names and dates present above. Never add totals or counts that are not given.
 - If a tool status is not "ok", say plainly what could not be found or loaded. Never present a failed or missing lookup as zero.
-- If has_more or partial is true, say there are more results than shown.
+- If has_more or partial is true, say there are more results than shown. A null total means it could not be computed: say so.
+- Each tool result has a module and as_of time; when giving figures, say which module they come from (e.g. "From Invoices").
 - Nothing was created or changed in this turn; never say otherwise.
 - Dates are shop dates${scope.timezoneVerified ? '' : ' (shop timezone not set, UTC used: mention this if dates matter)'}. Do not show record ids.
 - Be brief: short sentences or a short list. No emojis for money.
@@ -34,9 +37,11 @@ ${messages.map((m) => `${m.role === 'user' ? 'Staff' : 'Assistant'}: ${m.content
 }
 
 async function runRead(ctx: any, call: any) {
-  const base = { name: call.cap.name, label: call.cap.label, module: call.cap.module };
+  const base = { name: call.cap.name, label: call.cap.label, module: call.cap.module, as_of: ctx.now.toISOString() };
+  if (!roleAllows(ctx.scope.role, call.cap)) return { ...base, status: 'forbidden_role', message: `${call.cap.label} is not available for your role.` };
   if (call.errors.length) return { ...base, status: 'invalid', message: call.errors.join('; ') };
-  try { return { ...base, ...(await call.cap.run(ctx, call.args)) }; }
+  // Disclosure policy runs on the server result BEFORE the model or the browser sees it.
+  try { return { ...base, ...enforceStaffDisclosure(ctx.scope.role, await call.cap.run(ctx, call.args)) }; }
   catch (e: any) {
     if (e instanceof ToolError) return { ...base, status: e.code === 'not_found' ? 'not_found' : 'failed', message: e.message };
     console.error('staff read failed', call.cap.name, e?.message);
@@ -66,6 +71,7 @@ async function decide(ctx: any, store: any, d: any) {
   const cap = CAPABILITIES[rec.capability];
   try {
     if (!cap || cap.kind === 'read') throw new ToolError('invalid', 'This action is no longer available.', 400);
+    if (!roleAllows(ctx.scope.role, cap)) throw new ToolError('forbidden', 'Your role can no longer make this change.', 403);
     const out = await cap.execute(ctx, rec);
     const result = { receipt: out.receipt, copy_text: out.copy_text || '', refresh: out.refresh || [] };
     await finish(store, rec.id, { status: 'executed', result_summary: out.summary, result, params: {} });
@@ -77,9 +83,15 @@ async function decide(ctx: any, store: any, d: any) {
   }
 }
 
-// Returns null when no shop tools are needed (caller answers with general advice).
-export async function handleStaffTurn({ userDb, svc, llm, user, body, now = Date.now() }: any) {
-  const scope = resolveStaffScope(user, now);
+// Returns null when no shop tools are needed (caller answers with general advice). Every other
+// response names the verified active shop so the UI can show it and drop stale context on a change.
+export async function handleStaffTurn(args: any) {
+  const scope = resolveStaffScope(args.user, args.now ?? Date.now(), { shop_key: args.body?.shop_key });
+  const out = await staffTurn({ ...args, scope });
+  return out && { ...out, shop: shopIdentity(scope) };
+}
+
+async function staffTurn({ userDb, svc, llm, body, scope, now = Date.now() }: any) {
   const store = svc.StaffAssistantAction;
   const ctx: any = { userDb, svc, scope, now: new Date(now), today: todayIn(scope.timezone, new Date(now)), page: pageHint(body.page), userText: '' };
   if (body.staff_action) return decide(ctx, store, body.staff_action);
@@ -87,16 +99,19 @@ export async function handleStaffTurn({ userDb, svc, llm, user, body, now = Date
   const messages = sanitize(body.messages);
   if (!messages.length) return null;
   ctx.userText = messages.filter((m: any) => m.role === 'user').slice(-6).map((m: any) => m.content).join('\n');
-  const plan = await planTools(llm, { messages, today: ctx.today, pagePath: safePath(body.page) });
+  const plan = await planTools(llm, { messages, today: ctx.today, pagePath: safePath(body.page), role: scope.role });
   const audit = (tools: string[]) => store.create({ shop_owner_email: scope.tenant, actor_user_id: scope.userId, capability: tools.join(',') || 'none', kind: 'turn', status: 'logged', tools_used: tools, request_id: String(body.request_id || '').slice(0, 64) });
   if (plan.unsupported) { await audit([]); return { reply: UNSUPPORTED[plan.unsupported], staff: { tool_results: [{ label: 'Not Available From Chat', status: 'unsupported' }] } }; }
   if (!plan.calls.length) {
     if (!plan.dropped.length) return null;
     await audit([]);
-    return { reply: "I can't do that from chat yet. I can look up customers, vehicles, appointments, estimates, repair orders, invoices, parts and reports, and create or update customers, vehicles, appointments and draft estimates.", staff: { tool_results: [{ label: 'Not Available From Chat', status: 'unsupported' }] } };
+    return { reply: coverageReply(), staff: { tool_results: [{ label: 'Not Available From Chat', status: 'unsupported' }] } };
   }
   await audit(plan.calls.map((c: any) => c.cap.name));
-  if (plan.calls[0].cap.kind !== 'read') return prepareWrite(ctx, store, plan.calls[0], body.request_id);
+  if (plan.calls[0].cap.kind !== 'read') {
+    if (!roleAllows(scope.role, plan.calls[0].cap)) return { reply: `${plan.calls[0].cap.label} is not available for your role.`, staff: { tool_results: [{ label: plan.calls[0].cap.label, status: 'forbidden_role' }] } };
+    return prepareWrite(ctx, store, plan.calls[0], body.request_id);
+  }
   const results = await Promise.all(plan.calls.map((c: any) => runRead(ctx, c)));
   const reply = await llm({ prompt: composePrompt(messages, results, scope) });
   const links = results.flatMap((r: any) => (r.items || []).flatMap((x: any) => [itemLink(x), itemLink(x?.customer), itemLink(x?.vehicle)])).filter(Boolean).slice(0, 5);

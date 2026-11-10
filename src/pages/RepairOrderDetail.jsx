@@ -3,7 +3,8 @@ import { useParams } from "react-router-dom";
 import { useDocumentNavigate } from "@/components/customers/ProfileDocumentContext";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, FileText, Plus, Trash2, MoreVertical, Clock, History, Wrench, PenLine, Pencil, CheckCircle2, XCircle, Printer, ShoppingCart, Loader2, Mail } from "lucide-react";
+import { ArrowLeft, FileText, Plus, Trash2, MoreVertical, Clock, History, Wrench, PenLine, Pencil, CheckCircle2, XCircle, Printer, ShoppingCart, Loader2, Mail, MessageSquareText } from "lucide-react";
+import PickupTextDialog from "@/components/pickup-text/PickupTextDialog";
 import { formatPhone } from "@/utils/formatPhone";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -43,6 +44,7 @@ export default function RepairOrderDetail({ orderId: embeddedOrderId } = {}) {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [showOrderedPartDialog, setShowOrderedPartDialog] = useState(false);
   const [showHistoryManager, setShowHistoryManager] = useState(false);
+  const [showPickupText, setShowPickupText] = useState(false);
   const [newOrderedPart, setNewOrderedPart] = useState({ name: "", part_number: "", supplier: "", quantity: "", unit_price: "", notes: "" });
   const [generatingInvoice, setGeneratingInvoice] = useState(false);
   const [statusError, setStatusError] = useState("");
@@ -315,6 +317,11 @@ export default function RepairOrderDetail({ orderId: embeddedOrderId } = {}) {
           <Button onClick={handlePrintWorkerCopy} variant="outline" className="border-gray-700 text-gray-300 hover:text-white gap-2">
             <Printer className="w-4 h-4" /> Print Worker Copy
           </Button>
+          {order && (
+            <Button onClick={() => setShowPickupText(true)} variant="outline" className="border-gray-700 text-emerald-300 hover:text-white gap-2">
+              <MessageSquareText className="w-4 h-4" /> Text Ready For Pickup
+            </Button>
+          )}
           {order && order.ghost_status !== "converted" && (() => {
             const gActive = order.ghost_status === "active";
             const baseLines = roToLines(order);
@@ -780,6 +787,8 @@ export default function RepairOrderDetail({ orderId: embeddedOrderId } = {}) {
           queryClient.invalidateQueries({ queryKey: ["invoices"] });
         }}
       />
+
+      {showPickupText && <PickupTextDialog orderId={orderId} onClose={() => setShowPickupText(false)} />}
 
       {/* Payment History Manager — edits payments on the linked invoice */}
       {showHistoryManager && linkedInvoicesList[0] && (

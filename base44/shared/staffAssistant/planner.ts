@@ -11,10 +11,10 @@ const SCHEMA = {
   },
 };
 
-export function planPrompt(messages: any[], today: string, pagePath: string) {
+export function planPrompt(messages: any[], today: string, pagePath: string, role = 'owner') {
   return `You route requests inside LBC Auto, an auto repair shop app, to tools. Today (shop time) is ${today}. Staff is on page: ${pagePath || 'unknown'}.
 TOOLS:
-${catalogText()}
+${catalogText(role)}
 
 RULES:
 - Use tools only when the request needs this shop's records or asks to create/change one. General car advice (labor times, codes, how-to) needs NO tools: return calls [].
@@ -43,7 +43,7 @@ export function validatePlan(raw: any) {
   return { calls: write ? [write] : calls.slice(0, 3), dropped, unsupported };
 }
 
-export async function planTools(llm: any, { messages, today, pagePath }: any) {
-  const raw = await llm({ prompt: planPrompt(messages, today, pagePath), response_json_schema: SCHEMA });
+export async function planTools(llm: any, { messages, today, pagePath, role }: any) {
+  const raw = await llm({ prompt: planPrompt(messages, today, pagePath, role), response_json_schema: SCHEMA });
   return validatePlan(raw);
 }

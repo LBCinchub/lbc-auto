@@ -18,7 +18,8 @@
       "type": "string",
       "enum": [
         "estimate",
-        "invoice"
+        "invoice",
+        "repair_order"
       ]
     },
     "document_id": {
@@ -41,7 +42,15 @@
         "sms"
       ],
       "default": "mms",
-      "description": "mms = PDF attachment; sms = readable text details (Send As Text)"
+      "description": "mms = PDF attachment; sms = readable text details (Send As Text) or a pickup notice"
+    },
+    "purpose": {
+      "type": "string",
+      "enum": [
+        "document",
+        "pickup_ready"
+      ],
+      "description": "pickup_ready = on-demand Text Ready For Pickup for a repair order"
     },
     "status": {
       "type": "string",
@@ -117,7 +126,7 @@
     },
     "body_sha256": {
       "type": "string",
-      "description": "Text sends: SHA-256 of the exact previewed text (text itself not stored)"
+      "description": "Text sends: SHA-256 of the exact sent text (text itself not stored)"
     },
     "file_uri": {
       "type": "string",

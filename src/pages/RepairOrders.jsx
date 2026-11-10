@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Wrench, Pencil, Trash2, DollarSign, Clock, History, FileText, Phone, Send, Loader2, CreditCard } from "lucide-react";
+import { Wrench, Pencil, Trash2, DollarSign, Clock, History, FileText, Phone, Send, Loader2, CreditCard, MessageSquareText } from "lucide-react";
+import PickupTextDialog from "@/components/pickup-text/PickupTextDialog";
 import { useEmailSend } from "@/hooks/useEmailSend";
 import { Button } from "@/components/ui/button";
 import { useNavigate, useLocation} from 'react-router-dom';
@@ -48,6 +49,7 @@ export default function RepairOrders() {
   const [editingOrder, setEditingOrder] = useState(null);
   const [paymentOrder, setPaymentOrder] = useState(null);
   const [historyOrder, setHistoryOrder] = useState(null);
+  const [pickupOrder, setPickupOrder] = useState(null);
   const [invoiceOrder, setInvoiceOrder] = useState(null);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [dateRange, setDateRange] = useState(null);
@@ -332,6 +334,10 @@ export default function RepairOrders() {
                       onClick={e => sendRepairOrderEmail(e, order)}>
                       {sendingEmail === order.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                     </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-emerald-400" title="Text Ready For Pickup" aria-label="Text Ready For Pickup"
+                      onClick={() => setPickupOrder(order)}>
+                      <MessageSquareText className="w-3.5 h-3.5" />
+                    </Button>
                     {order.history?.length > 0 && (
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-sky-400" title="History"
                         onClick={() => setHistoryOrder(order)}>
@@ -404,6 +410,7 @@ export default function RepairOrders() {
       />
 
       <RepairOrderHistoryDialog order={historyOrder} onClose={() => setHistoryOrder(null)} />
+      {pickupOrder && <PickupTextDialog orderId={pickupOrder.id} onClose={() => setPickupOrder(null)} />}
 
       <PaymentReceiptDialog
         open={!!paymentOrder}

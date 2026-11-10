@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { CreditCard, ExternalLink, FileText, History, Send, Trash2 } from "lucide-react";
+import { CreditCard, ExternalLink, FileText, History, MessageSquareText, Send, Trash2 } from "lucide-react";
+import PickupTextDialog from "@/components/pickup-text/PickupTextDialog";
 import { useEmailSend } from "@/hooks/useEmailSend";
 import PaymentReceiptDialog from "@/components/invoices/PaymentReceiptDialog";
 import DocumentActionBar from "./DocumentActionBar";
@@ -27,6 +28,7 @@ export default function RepairOrderProfileActions({ doc: order, customer, onOpen
       ? { id: "inv", label: "View Invoice", icon: FileText, group: "money", primary: true, onClick: () => onOpen("invoice", s.linkedInvoiceId) }
       : { id: "inv", label: "Generate Invoice", icon: FileText, group: "money", primary: true, onClick: generate },
     { id: "email", label: "Email Repair Order", icon: Send, group: "send", onClick: () => runBusy("email", () => sendEmail(order.id, "repair_order", customer?.email || null, order.customer_id, order.customer_name, order)) },
+    { id: "pickup", label: "Text Ready For Pickup", icon: MessageSquareText, group: "send", onClick: () => setDialog("pickup") },
     s.hasHistory && { id: "history", label: "View History", icon: History, group: "view", onClick: () => setDialog("history") },
     { id: "delete", label: "Delete Repair Order", icon: Trash2, group: "danger", onClick: () => runBusy("delete", async () => { if (await deleteDocument("RepairOrder", order.id)) onChanged(); }) },
   ];
@@ -38,6 +40,7 @@ export default function RepairOrderProfileActions({ doc: order, customer, onOpen
         <PaymentReceiptDialog open onClose={close} invoice={repairOrderCashoutSource(order)} entityName="RepairOrder" onSaved={() => { close(); onChanged(); }} />
       )}
       {dialog === "history" && <RepairOrderHistoryDialog order={order} onClose={close} />}
+      {dialog === "pickup" && <PickupTextDialog orderId={order.id} onClose={close} onSent={onChanged} />}
     </>
   );
 }

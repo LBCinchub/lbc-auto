@@ -172,6 +172,8 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
   const [savePhoto, setSavePhoto] = useState(null); // { photoUri, preview, aiAnalysis }
   const [user, setUser] = useState(null);
   const [decisions, setDecisions] = useState({}); // message id -> "busy" | "done"
+  const [shop, setShop] = useState(null); // verified active shop, as reported by the server
+  const shopKeyRef = useRef(null);
   const queryClient = useQueryClient();
   const listRef  = useRef(null);
   const nearBottomRef = useRef(true);
@@ -254,6 +256,7 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
         description: description || "",
         page: location.pathname,
         request_id: crypto.randomUUID(),
+        shop_key: shopKeyRef.current || undefined,
       };
       if (imageUrl) {
         payload.image_url = imageUrl;
@@ -271,7 +274,13 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
         assistantMsg.imagePreview = preview;
         assistantMsg.saveable = true;
       }
-      setMessages(prev => [...prev, assistantMsg]);
+      // A different verified shop means earlier replies belong to another shop: drop them.
+      const nextShop = result?.data?.shop || null;
+      const mismatch = result?.data?.staff?.error_code === "shop_mismatch";
+      const switched = mismatch || !!(nextShop?.key && shopKeyRef.current && nextShop.key !== shopKeyRef.current);
+      if (mismatch) { shopKeyRef.current = null; setShop(null); }
+      if (nextShop?.key) { shopKeyRef.current = nextShop.key; setShop(nextShop); }
+      setMessages(prev => (switched ? [userMsg, assistantMsg] : [...prev, assistantMsg]));
     } catch (e) {
       console.error("AutoAI error:", e);
       setMessages(prev => [...prev, { id: `a${++msgIdRef.current}`, role: "assistant", content: "⚠️ AI unavailable right now. Try again in a moment." }]);
@@ -285,7 +294,7 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
     setDecisions(d => ({ ...d, [msg.id]: "busy" }));
     const { action_id, token } = msg.staff.confirmation;
     try {
-      const result = await base44.functions.invoke("lbcAutoAI", { mode: "owner", staff_action: { action_id, token, decision } });
+      const result = await base44.functions.invoke("lbcAutoAI", { mode: "owner", shop_key: shopKeyRef.current || undefined, staff_action: { action_id, token, decision } });
       const staff = result?.data?.staff || null;
       setMessages(prev => [...prev, { id: `a${++msgIdRef.current}`, role: "assistant", content: result?.data?.reply || "Done.", staff }]);
       if (staff?.refresh?.length) queryClient.invalidateQueries();
@@ -321,7 +330,9 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
             <LbcAutoLogo size="xs" />
             <div style={{ flex:1 }}>
               <div style={{ color:"#fff", fontSize:12, fontWeight:700 }}>LBC Auto AI</div>
-              <div style={{ color:"#fed7aa", fontSize:10 }}>Shop records & automotive help</div>
+              <div style={{ color:"#fed7aa", fontSize:10 }} title={shop ? "Shop records come only from this verified shop" : undefined}>
+                {shop ? `Verified Shop: ${shop.name}` : "Shop records & automotive help"}
+              </div>
             </div>
             <span style={{
               background:"#00ff8822", border:"1px solid #00ff88",

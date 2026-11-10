@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { resolvePublicShop, publicReply, PUBLIC_BLOCKED_REPLY } from '../../shared/publicAssistant.ts';
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -16,7 +17,6 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const {
-      shop_email,
       session_id,
       customer_message,
       customer_name = "",
@@ -25,14 +25,24 @@ Deno.serve(async (req) => {
       conversation_history = [],
     } = body;
 
-    if (!shop_email || !session_id || !customer_message) {
+    if (!session_id || !customer_message) {
       return Response.json(
-        { error: "Missing required fields: shop_email, session_id, customer_message" },
+        { error: "Missing required fields: session_id, customer_message" },
         { status: 400, headers: CORS }
       );
     }
 
-    const allMessages = [...conversation_history, { role: "user", content: customer_message }];
+    // The shop is resolved ONLY from a verified booking alias or website key. A browser-supplied
+    // shop email is never trusted (and is rejected when it disagrees with the verified shop).
+    const verified: any = await resolvePublicShop(sr.entities, body);
+    if (verified.blocked) {
+      return Response.json({ reply: PUBLIC_BLOCKED_REPLY, error: verified.blocked }, { status: 403, headers: CORS });
+    }
+    const shop_email = verified.tenant;
+
+    const history = (Array.isArray(conversation_history) ? conversation_history : [])
+      .filter((m: any) => (m?.role === "user" || m?.role === "assistant") && typeof m.content === "string");
+    const allMessages = [...history, { role: "user", content: String(customer_message).slice(0, 1000) }];
     const recent = allMessages.filter((m: any) => m.role !== "system").slice(-8);
 
     // ── 1. Extract booking info FIRST so we can populate ChatMessage fields ──
@@ -99,15 +109,12 @@ Deno.serve(async (req) => {
       console.error("Booking extraction failed:", e);
     }
 
-    // ── 2. Call lbcAutoAI with mode="customer" + shop_email ────────────
-    const aiResult = await sr.functions.invoke("lbcAutoAI", {
-      mode: "customer",
-      shop_email,
-      messages: allMessages,
+    // ── 2. Public reply for the verified shop (public facts only) ──────
+    const aiResult = await publicReply({
+      entities: sr.entities, llm: (p: any) => sr.integrations.Core.InvokeLLM(p), body, messages: allMessages,
     });
 
-    const reply = aiResult?.data?.reply || aiResult?.reply ||
-      "I'm sorry, I didn't catch that. Could you repeat?";
+    const reply = aiResult?.reply || "I'm sorry, I didn't catch that. Could you repeat?";
 
     // ── 3. Save customer message to ChatMessage ───────────────────────
     await sr.entities.ChatMessage.create({

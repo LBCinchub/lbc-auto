@@ -24,11 +24,11 @@ export default function AppointmentConfirmModal({ appointment, onClose }) {
             <p className="text-xs text-gray-400 leading-relaxed italic">{msg}</p>
           </div>
           {phoneDigits ? (
-            <a href={waUrl} target="_blank" rel="noopener noreferrer" className="block">
-              <Button className="w-full bg-green-600 hover:bg-green-700 gap-2">
+            <Button asChild className="w-full bg-green-600 hover:bg-green-700 gap-2">
+              <a href={waUrl} target="_blank" rel="noopener noreferrer">
                 <MessageCircle className="w-4 h-4" /> Send WhatsApp
-              </Button>
-            </a>
+              </a>
+            </Button>
           ) : (
             <p className="text-center text-xs text-amber-400">No phone number on file — cannot send WhatsApp.</p>
           )}

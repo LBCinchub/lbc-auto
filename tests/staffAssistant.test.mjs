@@ -123,7 +123,7 @@ test('money movement and deletes are refused honestly', async () => {
 test('source guards: staff tools only in owner mode; browser sends no tenant claims', () => {
   const fn = readFileSync('base44/functions/lbcAutoAI/entry.ts', 'utf8');
   assert.match(fn, /if \(mode === 'owner' && !image_base64 && !image_url\)[\s\S]*handleStaffTurn/);
-  assert.ok(fn.indexOf('handleStaffTurn({') < fn.indexOf('CUSTOMER MODE'));
+  assert.ok(fn.indexOf('handleStaffTurn({') < fn.indexOf('PUBLIC MODE'));
   assert.ok(!/shop_context\)/.test(fn));
   const ui = readFileSync('src/components/shared/AutoAIBubble.jsx', 'utf8');
   assert.ok(!/shop_email|shop_context|InvokeLLM/.test(ui));

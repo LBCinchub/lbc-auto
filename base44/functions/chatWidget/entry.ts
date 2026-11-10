@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { resolvePublicShop, publicShopFacts } from '../../shared/publicAssistant.ts';
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -11,18 +12,18 @@ Deno.serve(async (req) => {
 
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
 
-  // ── GET ?shop=email → return shop name JSON ──────────────────────
-  const shopParam = url.searchParams.get("shop");
-  if (req.method === "GET" && shopParam) {
+  // ── GET ?alias=… or ?key=… → verified shop's public name/phone only ──
+  // Legacy ?shop=<email> is no longer looked up (emails are not shop credentials).
+  const aliasParam = url.searchParams.get("alias");
+  const keyParam = url.searchParams.get("key");
+  if (req.method === "GET" && (aliasParam || keyParam || url.searchParams.get("shop"))) {
     try {
-      const base44 = createClientFromRequest(req);
-      const sr = base44.asServiceRole;
-      const shopUsers = await sr.entities.User.filter({ email: shopParam }, null, 1);
-      const shop = shopUsers[0] || {};
-      return Response.json(
-        { shop_name: shop.business_name || "", shop_phone: shop.phone || "" },
-        { headers: CORS }
-      );
+      if (!aliasParam && !keyParam) return Response.json({ shop_name: "", shop_phone: "" }, { headers: CORS });
+      const sr = createClientFromRequest(req).asServiceRole;
+      const shop: any = await resolvePublicShop(sr.entities, { public_alias: aliasParam || "", shop_api_key: keyParam || "" });
+      if (shop.blocked) return Response.json({ shop_name: "", shop_phone: "" }, { headers: CORS });
+      const facts: any = await publicShopFacts(sr.entities, shop);
+      return Response.json({ shop_name: facts.name || "", shop_phone: facts.phone || "" }, { headers: CORS });
     } catch (e) {
       return Response.json({ shop_name: "", shop_phone: "" }, { headers: CORS });
     }
@@ -51,7 +52,8 @@ const WIDGET_JS = [
 '  var scripts = document.querySelectorAll("script[data-lbc-chat]");',
 '  var scriptTag = scripts[scripts.length - 1];',
 '  if (!scriptTag) return;',
-'  var shopEmail = scriptTag.getAttribute("data-shop") || "";',
+'  var shopAlias = scriptTag.getAttribute("data-alias") || "";',
+'  var shopKey = scriptTag.getAttribute("data-key") || "";',
 '  var shopName = scriptTag.getAttribute("data-shop-name") || "LBC Auto";',
 '  var scriptSrc = scriptTag.getAttribute("src") || "";',
 '  var origin = "https://lbchub.tech";',
@@ -70,8 +72,8 @@ const WIDGET_JS = [
 '  var loading = false;',
 '',
 '  // Fetch shop name from account',
-'  if (shopEmail) {',
-'    fetch(apiBase + "chatWidget?shop=" + encodeURIComponent(shopEmail))',
+'  if (shopAlias || shopKey) {',
+'    fetch(apiBase + "chatWidget?" + (shopAlias ? "alias=" + encodeURIComponent(shopAlias) : "key=" + encodeURIComponent(shopKey)))',
 '      .then(function(r){ return r.json(); })',
 '      .then(function(d){ if (d.shop_name) { shopName = d.shop_name; updateHeader(); } })',
 '      .catch(function(){});',
@@ -198,7 +200,8 @@ const WIDGET_JS = [
 '      method: "POST",',
 '      headers: { "Content-Type": "application/json" },',
 '      body: JSON.stringify({',
-'        shop_email: shopEmail,',
+'        public_alias: shopAlias,',
+'        shop_api_key: shopKey,',
 '        session_id: sessionId,',
 '        customer_message: text,',
 '        conversation_history: history.filter(function(m){ return m.role === "user" || m.role === "assistant"; }),',

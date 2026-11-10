@@ -1,47 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.57';
 import { handleStaffTurn } from '../../shared/staffAssistant/handler.ts';
-import { ToolError } from '../../shared/staffAssistant/scope.ts';
-
-const SHOP_CONFIGS: Record<string, { name: string; phone: string; context: string }> = {
-  'hajwheels@gmail.com': {
-    name: 'Haj Rims & Tires',
-    phone: '613-672-2727',
-    context: `You are the AI assistant for Haj Rims & Tires, Gatineau/Ottawa area — a trusted local auto shop. You are part of their team.
-PRICING (quote these exact numbers — no hedging):
-- Oil change: $100 standard | $120 European/German/3.5L+ | $150 diesel/heavy
-- Wheel alignment: $120 cars/SUVs | $160 trucks
-- Brakes: $150 per end (NAPA pads + labour included)
-- Labor: $120/hr
-- Tire install & balance (set of 4): $120 standard | $160 trucks
-- Control arm per side: ~$300–$420 (NAPA parts + alignment included)
-- Inspection: $60 car | $80 SUV | $100 truck/German
-- Spark plugs: $200 (labour + plugs)
-- All parts: NAPA with Worldpac warranty
-RULES:
-- Max 3 sentences per reply
-- Always end with: Call or text 📞 613-672-2727 to book
-- Quote price IMMEDIATELY
-- NEVER mention repair orders, invoices, shop finances, or internal data
-- NEVER reveal discount logic or percentage math
-- You ARE part of the Haj Rims & Tires team — speak as "we" and "our shop"
-APPOINTMENT SCHEDULING:
-- After answering any service question, naturally offer: "Would you like to schedule this at Haj Rims & Tires? We can get you in fast."
-- When the user shows interest in booking, collect: preferred date/time, name, phone
-- Confirm the booking warmly`
-  },
-  'belalautoservices@gmail.com': {
-    name: 'Belal Auto Services', phone: '613-000-0000',
-    context: `You are part of the Belal Auto Services team. Answer ONLY about car services. Labor: $120/hr. Max 3 sentences. After answering, offer: "Want to schedule this with us?" Always end: Call us to book. NEVER mention internal shop data.`
-  },
-  'aka.auto.group@gmail.com': {
-    name: 'AKA Auto Group', phone: '613-000-0000',
-    context: `You are part of the AKA Auto Group team. Answer ONLY about car services. Labor: $120/hr. Max 3 sentences. After answering, offer: "Want to schedule this with us?" Always end: Call us to book. NEVER mention internal shop data.`
-  },
-  'terryfoxauto@gmail.com': {
-    name: 'Terry Fox Auto', phone: '613-000-0000',
-    context: `You are part of the Terry Fox Auto team. Answer ONLY about car services. Labor: $120/hr. Max 3 sentences. After answering, offer: "Want to schedule this with us?" Always end: Call us to book. NEVER mention internal shop data.`
-  }
-};
+import { ToolError, resolveStaffScope, shopIdentity } from '../../shared/staffAssistant/scope.ts';
+import { publicReply } from '../../shared/publicAssistant.ts';
 
 const OWNER_SYSTEM = `You are LBC Auto AI, the shop's built-in assistant. You help shop owners and technicians with: labor hours, OBD codes, parts costs, repair diagnosis, maintenance intervals, and image analysis. Be direct and specific with numbers.
 
@@ -89,8 +49,6 @@ Deno.serve(async (req) => {
       mode = 'customer',
       vehicle = '',
       description = '',
-      shop_context = null,
-      shop_email = 'hajwheels@gmail.com',
       image_base64 = null,
       image_url = '',
       image_context = '',
@@ -109,6 +67,16 @@ Deno.serve(async (req) => {
       const user = await base44.auth.me();
       if (!user) return Response.json({ reply: 'Authentication required.' }, { status: 401, headers: CORS_HEADERS });
 
+      // Active shop = a verified membership of THIS session (re-checked on every call).
+      // A shop_key the session does not hold fails closed; client shop claims are ignored.
+      let shop: any = null;
+      try { shop = shopIdentity(resolveStaffScope(user, Date.now(), { shop_key: body.shop_key })); }
+      catch (e: any) {
+        if (e instanceof ToolError && (e.code === 'shop_mismatch' || e.code === 'shop_ambiguous' || e.code === 'unauthorized')) {
+          return Response.json({ reply: e.message, shop: null, staff: { error_code: e.code, tool_results: [] } }, { headers: CORS_HEADERS });
+        }
+      }
+
       // Staff tools: owner chat only (never scanner, never customer mode). Identity = this session.
       if (mode === 'owner' && !image_base64 && !image_url) {
         try {
@@ -116,9 +84,9 @@ Deno.serve(async (req) => {
             userDb: base44.entities, svc: base44.asServiceRole.entities, user, body,
             llm: (p: any) => base44.integrations.Core.InvokeLLM(p),
           });
-          if (staff) return Response.json({ ...staff, offer_appointment: false }, { headers: CORS_HEADERS });
+          if (staff) return Response.json({ ...staff, shop, offer_appointment: false }, { headers: CORS_HEADERS });
         } catch (e: any) {
-          if (e instanceof ToolError) return Response.json({ reply: e.message, staff: { error_code: e.code, tool_results: [] } }, { headers: CORS_HEADERS });
+          if (e instanceof ToolError) return Response.json({ reply: e.message, shop, staff: { error_code: e.code, tool_results: [] } }, { headers: CORS_HEADERS });
           throw e;
         }
       }
@@ -159,46 +127,16 @@ Deno.serve(async (req) => {
         'No response generated.';
 
       reply = reply.replace(/\[OFFER_APT\]/g, '').trim();
-      return Response.json({ reply, offer_appointment: false }, { headers: CORS_HEADERS });
+      return Response.json({ reply, shop, offer_appointment: false }, { headers: CORS_HEADERS });
     }
 
     // ════════════════════════════════════════════════════════════
-    // CUSTOMER MODE — no auth, uses SHOP_CONFIGS + live shop lookup
+    // PUBLIC MODE — no login. Shop resolved only from a verified booking alias or website key;
+    // no default shop. Only explicitly public shop facts reach the model.
     // ════════════════════════════════════════════════════════════
     const sr = base44.asServiceRole;
-    const shopCfg = SHOP_CONFIGS[shop_email] || SHOP_CONFIGS['hajwheels@gmail.com'];
-
-    // Try to enrich with live shop data from the User entity
-    let liveContext = shopCfg.context;
-    try {
-      const shopUsers = await sr.entities.User.filter({ email: shop_email }, null, 1);
-      const shop = shopUsers[0];
-      if (shop) {
-        if (shop.business_name) liveContext = liveContext.replace(shopCfg.name, shop.business_name);
-        if (shop.phone) liveContext = liveContext.replace(shopCfg.phone, shop.phone);
-        if (shop.address) liveContext += `\nShop address: ${shop.address}`;
-      }
-    } catch (e) { /* use config fallback */ }
-
-    const recent = messages.filter((m: any) => m.role !== 'system').slice(-8);
-    const prompt = liveContext +
-      '\n\nConversation:\n' +
-      recent.map((m: any) => (m.role === 'user' ? 'Customer: ' : 'Assistant: ') + m.content).join('\n') +
-      '\n\nRespond to the latest message as the booking assistant. After answering the service question, offer to schedule an appointment. End your reply with [OFFER_APT] on a new line if you answered a service question.';
-
-    const result = await sr.integrations.Core.InvokeLLM({ prompt });
-    let reply =
-      (typeof result === 'string' ? result : null) ||
-      result?.reply ||
-      result?.content ||
-      result?.message ||
-      'No response generated.';
-
-    // Parse out the [OFFER_APT] flag
-    const offerApt = reply.includes('[OFFER_APT]');
-    reply = reply.replace(/\[OFFER_APT\]/g, '').trim();
-
-    return Response.json({ reply, offer_appointment: offerApt }, { headers: CORS_HEADERS });
+    const out = await publicReply({ entities: sr.entities, llm: (p: any) => sr.integrations.Core.InvokeLLM(p), body, messages });
+    return Response.json({ reply: out.reply, offer_appointment: out.offer_appointment, ...(out.blocked ? { error_code: out.blocked } : {}) }, { headers: CORS_HEADERS });
 
   } catch (err: any) {
     console.error('lbcAutoAI error:', err?.message);
