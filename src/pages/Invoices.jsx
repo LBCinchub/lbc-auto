@@ -20,6 +20,7 @@ import InvoicePrintView from "../components/invoices/InvoicePrintView";
 import PaymentReceiptDialog from "../components/invoices/PaymentReceiptDialog";
 import PaymentHistoryManager from "../components/invoices/PaymentHistoryManager";
 import DateFilter, { applyDateFilter } from "../components/shared/DateFilter";
+import TextPdfButton from "@/components/document-delivery/TextPdfButton";
 
 const PAGE_SIZE = 20;
 
@@ -489,6 +490,7 @@ export default function Invoices() {
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-sky-400" title="Send Invoice to Customer" onClick={e => sendInvoiceEmail(e, inv)} disabled={sendingEmail === inv.id}>
                       {sendingEmail === inv.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     </Button>
+                    <TextPdfButton documentType="invoice" documentId={inv.id} />
                     {(inv.status === "unpaid" || inv.status === "partial") && (
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-emerald-500 hover:text-emerald-400"
                         onClick={() => setPaymentInvoice(inv)} title="Record Payment">

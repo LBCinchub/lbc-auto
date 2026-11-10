@@ -1,0 +1,151 @@
+{
+  "name": "DocumentDelivery",
+  "type": "object",
+  "properties": {
+    "shop_owner_email": {
+      "type": "string",
+      "format": "email",
+      "description": "Tenant key: the shop that sent the document"
+    },
+    "shop_user_id": {
+      "type": "string"
+    },
+    "sent_by_email": {
+      "type": "string",
+      "format": "email"
+    },
+    "document_type": {
+      "type": "string",
+      "enum": [
+        "estimate",
+        "invoice"
+      ]
+    },
+    "document_id": {
+      "type": "string"
+    },
+    "document_number": {
+      "type": "string"
+    },
+    "customer_id": {
+      "type": "string"
+    },
+    "to_masked": {
+      "type": "string",
+      "description": "Masked customer phone, e.g. \u2022\u2022\u2022-\u2022\u2022\u2022-1234"
+    },
+    "channel": {
+      "type": "string",
+      "enum": [
+        "mms"
+      ],
+      "default": "mms"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "preparing",
+        "queued",
+        "sending",
+        "sent",
+        "delivered",
+        "undelivered",
+        "failed",
+        "canceled",
+        "duplicate"
+      ],
+      "enumColors": [
+        "gray",
+        "blue",
+        "blue",
+        "yellow",
+        "green",
+        "red",
+        "red",
+        "gray",
+        "gray"
+      ],
+      "default": "preparing"
+    },
+    "provider_status": {
+      "type": "string",
+      "description": "Raw Twilio status last reported"
+    },
+    "message_sid": {
+      "type": "string"
+    },
+    "error_code": {
+      "type": "string"
+    },
+    "error_message": {
+      "type": "string",
+      "description": "Staff-safe explanation"
+    },
+    "idempotency_key": {
+      "type": "string",
+      "description": "One per Send click; repeats never resend"
+    },
+    "file_uri": {
+      "type": "string",
+      "description": "Private storage URI of the generated PDF"
+    },
+    "file_name": {
+      "type": "string"
+    },
+    "file_bytes": {
+      "type": "number"
+    },
+    "content_sha256": {
+      "type": "string"
+    },
+    "media_token_hash": {
+      "type": "string",
+      "description": "SHA-256 of the single-use media token (token itself never stored)"
+    },
+    "media_expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "callback_url": {
+      "type": "string",
+      "description": "Status callback URL given to Twilio, used to verify its signature"
+    },
+    "requested_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "status_updated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "shop_owner_email",
+    "document_type",
+    "document_id",
+    "status",
+    "idempotency_key"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

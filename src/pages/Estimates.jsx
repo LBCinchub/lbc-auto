@@ -16,6 +16,7 @@ import EstimateFormDialog from "../components/estimates/EstimateFormDialog";
 import InvoiceFormDialog from "../components/invoices/InvoiceFormDialog";
 import PaymentReceiptDialog from "../components/invoices/PaymentReceiptDialog";
 import DateFilter, { applyDateFilter } from "../components/shared/DateFilter";
+import TextPdfButton from "@/components/document-delivery/TextPdfButton";
 
 const STATUS_STYLES = {
   draft:     "bg-gray-700/50 text-gray-300",
@@ -396,6 +397,7 @@ export default function Estimates() {
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-500 hover:text-sky-400" title="Email" onClick={e => sendEstimateEmail(e, est)} disabled={sendingEmail === est.id}>
                       {sendingEmail === est.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
                     </Button>
+                    <TextPdfButton documentType="estimate" documentId={est.id} className="h-7 w-7" iconClassName="w-3 h-3" />
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-500 hover:text-white" onClick={e => { e.stopPropagation(); openEdit(est); }}>
                       <Pencil className="w-3 h-3" />
                     </Button>
