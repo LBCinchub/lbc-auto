@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { TEXT_FINAL } from "./deliveryUi";
+import { TEXT_FINAL, proLockOf } from "./deliveryUi";
 
 const errOf = (e) => e?.response?.data?.error || e?.message || "Something went wrong";
 
@@ -10,13 +10,14 @@ export default function useDocumentText(documentType, documentId) {
   const [group, setGroup] = useState(null);
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
+  const [locked, setLocked] = useState(null);   // Pro-only: set when the server refuses
   const keyRef = useRef(crypto.randomUUID());   // one per window: repeats never resend
   const call = (payload) => base44.functions.invoke("sendDocumentText", { document_type: documentType, document_id: documentId, ...payload });
 
   useEffect(() => {
     call({ action: "prepare" })
       .then((r) => { setInfo({ ...r.data, this_window_key: keyRef.current }); setGroup(r.data.latest); })
-      .catch((e) => setError(errOf(e)));
+      .catch((e) => { setLocked(proLockOf(e)); setError(errOf(e)); });
   }, [documentType, documentId]);
 
   const moving = group?.parts?.some((p) => !TEXT_FINAL.includes(p.status));
@@ -39,6 +40,7 @@ export default function useDocumentText(documentType, documentId) {
       const r = await call({ action: "send", idempotency_key: keyRef.current, preview_sha256: info?.preview_sha256, resume });
       setGroup(r.data.group);
     } catch (e) {
+      setLocked(proLockOf(e));
       setError(errOf(e));
       if (e?.response?.data?.group) setGroup(e.response.data.group);
     } finally {
@@ -46,5 +48,5 @@ export default function useDocumentText(documentType, documentId) {
     }
   }, [documentType, documentId, info?.preview_sha256]);
 
-  return { info, group, error, sending, send: () => run(false), resume: () => run(true) };
+  return { info, group, error, sending, locked, send: () => run(false), resume: () => run(true) };
 }

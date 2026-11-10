@@ -1,11 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { secrets } from 'base44:runtime';
 
-const PRICE_IDS = {
-  basic: "price_1U5bgEBCRALtpjBvSFWy6LYh",
-  pro: "price_1U5bgFBCRALtpjBvvO8pB7oO",
-  setup_fee: "price_1U5bgFBCRALtpjBv6x2G1hLE"
-};
+import { PLAN_PRICE_IDS as PRICE_IDS } from '../../shared/proEntitlement.ts';
 
 export default async function(req) {
   try {

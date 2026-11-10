@@ -7,6 +7,7 @@
 // - "Delivered" is shown only when Twilio reports delivered (signed callback or a status read).
 import { ownsRecord } from "./shopStripe.ts";
 import { toE164, isNanpMobileFormat, maskPhone } from "./phone.ts";
+import { proGrantDenial } from "./proEntitlement.ts";
 
 export const ENTITY = { estimate: "Estimate", invoice: "Invoice" };
 export const MEDIA_TTL_MS = 60 * 60 * 1000;          // Twilio fetches at send time; 1h covers its retries
@@ -131,6 +132,8 @@ export async function setStatus(db, d, patch, now) {
 //         twilio: { senderCheck(), send({to, body, mediaUrl, statusCallback}) }, mediaBase, callbackUrl }
 export async function sendDocument(deps, input) {
   const { db, tenant, user, now = Date.now, twilio } = deps;
+  const denied = proGrantDenial(deps.entitlement, user);
+  if (denied) return denied;
   const type = String(input.document_type || "");
   const key = String(input.idempotency_key || "");
   if (!/^[\w-]{8,80}$/.test(key)) return { status: 400, error: "Missing send reference. Close and reopen the send window." };

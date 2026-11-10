@@ -61,7 +61,7 @@ function deps(s, { user = userA, twilio = fakeTwilio(), now = () => Date.parse("
   const files = [];
   return {
     files, twilio,
-    d: { db: s.db, tenant: user.email, user, now, twilio, buildModel: buildDocumentModel, render: (m) => renderDocumentPdf(jsPDF, m), storeFile: async (bytes, name) => { files.push({ bytes, name }); return `private://f${files.length}`; }, mediaBase: "https://app.test/functions/documentMedia", callbackUrl: "https://app.test/functions/twilioMessageStatus" },
+    d: { db: s.db, tenant: user.email, user, now, twilio, entitlement: { ok: true, user_id: user.id }, buildModel: buildDocumentModel, render: (m) => renderDocumentPdf(jsPDF, m), storeFile: async (bytes, name) => { files.push({ bytes, name }); return `private://f${files.length}`; }, mediaBase: "https://app.test/functions/documentMedia", callbackUrl: "https://app.test/functions/twilioMessageStatus" },
   };
 }
 const pdfString = (bytes) => Buffer.from(bytes).toString("latin1");

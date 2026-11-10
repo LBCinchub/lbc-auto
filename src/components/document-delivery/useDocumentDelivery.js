@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { base44 } from "@/api/base44Client";
+import { proLockOf } from "./deliveryUi";
 
 const FINAL = ["delivered", "undelivered", "failed", "canceled"];
 const errOf = (e) => e?.response?.data?.error || e?.message || "Something went wrong";
@@ -10,11 +11,12 @@ export default function useDocumentDelivery(documentType, documentId) {
   const [delivery, setDelivery] = useState(null);
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
+  const [locked, setLocked] = useState(null);   // Pro-only: set when the server refuses (never from a browser flag)
   const keyRef = useRef(crypto.randomUUID());   // one per open window: repeats never resend
   const call = (payload) => base44.functions.invoke("sendDocumentPdf", { document_type: documentType, document_id: documentId, ...payload });
 
   useEffect(() => {
-    call({ action: "prepare" }).then((r) => { setInfo(r.data); setDelivery(r.data.latest); }).catch((e) => setError(errOf(e)));
+    call({ action: "prepare" }).then((r) => { setInfo(r.data); setDelivery(r.data.latest); }).catch((e) => { setLocked(proLockOf(e)); setError(errOf(e)); });
   }, [documentType, documentId]);
 
   // Follow Twilio's status for up to ~3 minutes while the message is moving.
@@ -37,6 +39,7 @@ export default function useDocumentDelivery(documentType, documentId) {
       const r = await call({ action: "send", idempotency_key: keyRef.current });
       setDelivery(r.data.delivery);
     } catch (e) {
+      setLocked(proLockOf(e));
       setError(errOf(e));
       if (e?.response?.data?.delivery) setDelivery(e.response.data.delivery);
     } finally {
@@ -44,5 +47,5 @@ export default function useDocumentDelivery(documentType, documentId) {
     }
   }, [documentType, documentId]);
 
-  return { info, delivery, error, sending, send };
+  return { info, delivery, error, sending, send, locked };
 }

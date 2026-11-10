@@ -4,13 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import DeliveryStatusLine from "./DeliveryStatusLine";
 import TextDetailsPanel from "./TextDetailsPanel";
+import ProUpgradeNotice from "./ProUpgradeNotice";
+import ProBadge from "./ProBadge";
 import useDocumentDelivery from "./useDocumentDelivery";
 import { pdfState } from "./deliveryUi";
 
 // Explicit staff action: text the saved document to its own customer, as a PDF attachment or
 // ("Send As Text") as readable details. Neither option includes a link; nothing sends without a click.
 export default function TextPdfDialog({ documentType, documentId, onClose }) {
-  const { info, delivery, error, sending, send } = useDocumentDelivery(documentType, documentId);
+  const { info, delivery, error, sending, send, locked } = useDocumentDelivery(documentType, documentId);
   const [mode, setMode] = useState("pdf");
   const [textBusy, setTextBusy] = useState(false);
   const label = documentType === "invoice" ? "Invoice" : "Estimate";
@@ -23,12 +25,19 @@ export default function TextPdfDialog({ documentType, documentId, onClose }) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {mode === "pdf" ? <><Smartphone className="h-5 w-5 text-sky-400" /> Text {label} PDF</> : <><MessageSquareText className="h-5 w-5 text-emerald-400" /> Send {label} As Text</>}
+            <ProBadge />
           </DialogTitle>
           <DialogDescription className="text-gray-400">
             {mode === "pdf" ? `Sends the saved ${label.toLowerCase()} as a PDF attachment. No links are included.` : `Sends the saved ${label.toLowerCase()}'s details as a readable text message. No PDF, no links, no login.`}
           </DialogDescription>
         </DialogHeader>
-        {mode === "text" ? (
+        {locked ? (
+          <>
+            {delivery && <DeliveryStatusLine delivery={delivery} />}
+            <ProUpgradeNotice lock={locked} onClose={onClose} />
+            <div className="flex justify-end pt-2"><Button variant="outline" className="border-gray-700 bg-transparent" onClick={onClose}>Close</Button></div>
+          </>
+        ) : mode === "text" ? (
           <TextDetailsPanel documentType={documentType} documentId={documentId} onBack={() => setMode("pdf")} onClose={onClose} onBusy={setTextBusy} />
         ) : (
           <>

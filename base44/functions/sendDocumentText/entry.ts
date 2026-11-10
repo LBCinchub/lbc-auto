@@ -1,6 +1,8 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.57';
 import { prepareText, sendDocumentText, textStatus } from '../../shared/documentTextDelivery.ts';
 import { checkSmsSender, sendTwilioTextMessage, fetchTwilioMessage } from '../../shared/twilioSms.ts';
+import { checkProEntitlement } from '../../shared/proEntitlement.ts';
+import { secrets } from 'base44:runtime';
 
 const json = (data, status = 200) => Response.json(data, { status });
 const appOrigin = (req) => {
@@ -25,14 +27,17 @@ export default async function(req) {
       const r = await textStatus({ db, tenant, twilio }, body.group_key);
       return json(r.error ? { error: r.error } : { group: r.group, note: r.note || '' }, r.status);
     }
+    // Pro only: checked fresh against billing on every prepare and every send (not on status reads).
+    const entitlement = await checkProEntitlement({ user, stripeKey: secrets.get('STRIPE_SECRET_KEY') || '', appId: secrets.get('BASE44_APP_ID') || '' });
+    if (!entitlement.ok) return json({ error: entitlement.error, code: entitlement.code }, entitlement.status);
     // Currency code only when the shop's own connected Stripe account states it; otherwise just "$" like the printed document.
     const [stripe] = (await db.ShopStripeAccount.filter({ shop_owner_email: tenant }, '-created_date', 1)) || [];
     const currency = String(stripe?.currency || '').toUpperCase();
-    const deps = { db, tenant, user, twilio, currency, callbackUrl: `${appOrigin(req)}/functions/twilioMessageStatus` };
+    const deps = { db, tenant, user, twilio, currency, entitlement, callbackUrl: `${appOrigin(req)}/functions/twilioMessageStatus` };
 
     if (action === 'prepare') {
       const r = await prepareText(deps, body);
-      if (r.error) return json({ error: r.error }, r.status);
+      if (r.error) return json({ error: r.error, code: r.code || '' }, r.status);
       const sender = await checkSmsSender();
       const { status, ...view } = r;
       return json({ ...view, sender_ready: sender.ok, sender_problem: sender.ok ? '' : sender.reason });

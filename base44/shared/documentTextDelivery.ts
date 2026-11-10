@@ -8,6 +8,7 @@
 import { resolveDocument, sha256Hex, setStatus, statusFromTwilio, errorText, isFinal, applyProviderStatus } from "./documentDelivery.ts";
 import { buildDocumentText } from "./documentText.ts";
 import { maskPhone } from "./phone.ts";
+import { proGrantDenial } from "./proEntitlement.ts";
 
 export const TEXT_ACTIVE = ["preparing", "queued", "sending", "unknown"];
 export const TEXT_WINDOW_MS = 10 * 60 * 1000;
@@ -49,6 +50,8 @@ export async function latestTextGroup(db, tenant, documentId) {
 // Read-only preview: the exact parts that "send" would deliver now, plus a hash binding the send to it.
 export async function prepareText(deps, input) {
   const { db, tenant, user } = deps;
+  const denied = proGrantDenial(deps.entitlement, user);
+  if (denied) return denied;
   const type = String(input.document_type || "");
   const found = await resolveDocument(db, type, String(input.document_id || ""), tenant, user.id, "Texts");
   if (found.error) return found;
@@ -61,6 +64,8 @@ export async function prepareText(deps, input) {
 // deps: { db, tenant, user, now, currency, callbackUrl, twilio: { smsCheck(), sendSms({to, body, statusCallback}) } }
 export async function sendDocumentText(deps, input) {
   const { db, tenant, user, now = Date.now, twilio } = deps;
+  const denied = proGrantDenial(deps.entitlement, user);
+  if (denied) return denied;
   const type = String(input.document_type || "");
   const key = String(input.idempotency_key || "");
   const resume = input.resume === true;

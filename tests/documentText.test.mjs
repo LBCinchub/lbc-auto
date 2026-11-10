@@ -60,7 +60,7 @@ function fakeTwilio({ check = { ok: true }, replies = [] } = {}) {
     fetchMessage: async () => ({ ok: true, data: { status: "delivered" } }),
   };
 }
-const deps = (s, { user = userA, twilio = fakeTwilio(), currency = "" } = {}) => ({ twilio, d: { db: s.db, tenant: user.email, user, twilio, currency, now: () => Date.parse("2026-11-10T12:00:00Z"), callbackUrl: "https://app.test/functions/twilioMessageStatus" } });
+const deps = (s, { user = userA, twilio = fakeTwilio(), currency = "" } = {}) => ({ twilio, d: { db: s.db, tenant: user.email, user, twilio, currency, entitlement: { ok: true, user_id: user.id }, now: () => Date.parse("2026-11-10T12:00:00Z"), callbackUrl: "https://app.test/functions/twilioMessageStatus" } });
 const preview = async (d, type, id) => prepareText(d, { document_type: type, document_id: id });
 const SECRETS = ["SECRET-SUPPLIER", "TECH-ONLY", "INTERNAL-NOTE", "AUTH-TOKEN", "GHOST", "EST-INTERNAL-NOTE", "PRIVATE-ADDR", "2HGFC2F59KH000000", "shop-a@example.test", "jane@example.test", "lbc auto", "http", "www."];
 

@@ -2,6 +2,13 @@
 export const PDF_ACTIVE = ["preparing", "queued", "sending"];
 export const TEXT_FINAL = ["delivered", "undelivered", "failed", "canceled", "unknown", "not_sent"];
 
+// Server denial codes for the Pro-only document texting feature (see base44/shared/proEntitlement.ts).
+export const PRO_CODES = ["pro_required", "pro_unverified"];
+export function proLockOf(err) {
+  const data = err?.response?.data;
+  return data && PRO_CODES.includes(data.code) ? { code: data.code, message: data.error || "" } : null;
+}
+
 // PDF controls. "Send As Text" is independent: a failed, queued or unavailable PDF never hides or disables it.
 export function pdfState(info, delivery, sending) {
   const inFlight = PDF_ACTIVE.includes(delivery?.status);

@@ -5,6 +5,8 @@ import { buildDocumentModel } from '../../shared/documentPdfModel.ts';
 import { renderDocumentPdf } from '../../shared/documentPdfRender.ts';
 import { checkMmsSender, sendTwilioMms, fetchTwilioMessage } from '../../shared/twilioSms.ts';
 import { maskPhone } from '../../shared/phone.ts';
+import { checkProEntitlement } from '../../shared/proEntitlement.ts';
+import { secrets } from 'base44:runtime';
 
 const json = (data, status = 200) => Response.json(data, { status });
 const appOrigin = (req) => {
@@ -39,6 +41,14 @@ export default async function(req) {
     const tenant = String(user.email || '').toLowerCase();
     const type = String(body.document_type || '');
 
+    // Pro only: checked fresh against billing before any preview, PDF build, upload or Twilio call.
+    // Status reads stay open so already-authorized sends keep showing their real outcome.
+    let entitlement = null;
+    if (action === 'prepare' || action === 'send') {
+      entitlement = await checkProEntitlement({ user, stripeKey: secrets.get('STRIPE_SECRET_KEY') || '', appId: secrets.get('BASE44_APP_ID') || '' });
+      if (!entitlement.ok) return json({ error: entitlement.error, code: entitlement.code }, entitlement.status);
+    }
+
     if (action === 'prepare') {
       const found = await resolveDocument(db, type, String(body.document_id || ''), tenant, user.id);
       if (found.error) return json({ error: found.error }, found.status);
@@ -61,7 +71,7 @@ export default async function(req) {
     const origin = appOrigin(req);
     const logo = await loadLogo(user.business_logo || user.logo_url);
     const r = await sendDocument({
-      db, tenant, user, twilio,
+      db, tenant, user, twilio, entitlement,
       buildModel: buildDocumentModel,
       render: (model) => renderDocumentPdf(jsPDF, model, { logo }),
       storeFile: async (bytes, name) => {
@@ -71,7 +81,7 @@ export default async function(req) {
       mediaBase: `${origin}/functions/documentMedia`,
       callbackUrl: `${origin}/functions/twilioMessageStatus`,
     }, body);
-    return json(r.error ? { error: r.error, delivery: r.delivery || null } : { delivery: r.delivery, repeated: !!r.repeated }, r.status);
+    return json(r.error ? { error: r.error, code: r.code || '', delivery: r.delivery || null } : { delivery: r.delivery, repeated: !!r.repeated }, r.status);
   } catch (error) {
     return json({ error: error.message }, 500);
   }

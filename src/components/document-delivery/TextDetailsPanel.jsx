@@ -4,14 +4,23 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import TextMessagePreview from "./TextMessagePreview";
 import TextPartsStatus from "./TextPartsStatus";
+import ProUpgradeNotice from "./ProUpgradeNotice";
 import useDocumentText from "./useDocumentText";
 import { textSendState } from "./deliveryUi";
 
 // "Send As Text": readable details of the saved document, previewed exactly, sent only on click.
 export default function TextDetailsPanel({ documentType, documentId, onBack, onClose, onBusy }) {
-  const { info, group, error, sending, send, resume } = useDocumentText(documentType, documentId);
+  const { info, group, error, sending, send, resume, locked } = useDocumentText(documentType, documentId);
   const st = textSendState(info, group, sending);
   React.useEffect(() => onBusy(sending), [sending]);
+  // Pro lapsed or unconfirmed (also between preview and send): no send control, upgrade path only.
+  if (locked) return (
+    <div className="space-y-3 text-sm">
+      {group && <TextPartsStatus group={group} title={st.sentHere ? "This send" : "Last text send"} />}
+      <ProUpgradeNotice lock={locked} onClose={onClose} />
+      <div className="flex justify-end pt-2"><Button variant="outline" className="border-gray-700 bg-transparent" onClick={onClose}>Close</Button></div>
+    </div>
+  );
   return (
     <div className="space-y-3 text-sm">
       {!info && !error && <p className="flex items-center gap-2 py-6 text-gray-400"><Loader2 className="h-4 w-4 animate-spin" /> Building the text from the saved {documentType}…</p>}
