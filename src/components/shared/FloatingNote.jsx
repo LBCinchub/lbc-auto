@@ -59,9 +59,9 @@ export default function FloatingNote() {
   };
 
   return (
-    <div className="fixed top-6 right-6 z-50 flex flex-col items-end gap-2">
+    <div className="fixed top-2 right-3 lg:top-6 lg:right-6 z-50 flex flex-col items-end gap-2">
       {open && (
-        <div className="bg-gradient-to-b from-yellow-50 to-yellow-100 border border-yellow-300 rounded-xl shadow-2xl w-80 flex flex-col overflow-hidden max-h-[80vh]">
+        <div className="bg-gradient-to-b from-yellow-50 to-yellow-100 border border-yellow-300 rounded-xl shadow-2xl w-80 max-w-[calc(100vw-1.5rem)] flex flex-col overflow-hidden max-h-[80vh]">
           {/* Input Section */}
           <div className="px-4 py-3 bg-yellow-200/60 border-b border-yellow-300 flex-shrink-0">
             <div className="flex items-center gap-2 text-yellow-800 font-semibold text-sm mb-2">
@@ -129,6 +129,8 @@ export default function FloatingNote() {
 
       <button
         onClick={() => setOpen(o => !o)}
+        aria-label={open ? "Collapse Notes" : "Open Notes"}
+        aria-expanded={open}
         className="w-12 h-12 rounded-full bg-yellow-400 hover:bg-yellow-300 flex items-center justify-center transition-all relative"
         style={{ boxShadow: "0 0 14px #facc15, 0 0 28px #facc1580" }}
       >

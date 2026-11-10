@@ -173,7 +173,7 @@ export default function TimeTracking() {
         {todayEntries.length === 0 ? (
           <p className="text-gray-500 text-sm">No entries yet today.</p>
         ) : (
-          <div className="rounded-xl border border-gray-800 overflow-hidden">
+          <div className="rounded-xl border border-gray-800 overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-900 text-gray-400 text-xs uppercase">
                 <tr>
@@ -211,7 +211,7 @@ export default function TimeTracking() {
         {recentEntries.length === 0 ? (
           <p className="text-gray-500 text-sm">No history yet.</p>
         ) : (
-          <div className="rounded-xl border border-gray-800 overflow-hidden">
+          <div className="rounded-xl border border-gray-800 overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-900 text-gray-400 text-xs uppercase">
                 <tr>

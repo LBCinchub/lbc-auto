@@ -158,7 +158,7 @@ export default function WebBookingWidget() {
 
             <div className="pt-2 border-t border-slate-100">
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Vehicle</p>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <Field label="Make *">
                   <input value={form.vehicle_make} onChange={(e) => setField("vehicle_make", e.target.value)} className="widget-input" placeholder="Honda" />
                 </Field>

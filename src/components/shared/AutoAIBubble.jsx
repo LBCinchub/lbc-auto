@@ -164,7 +164,7 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
   const shellOpen = useFinancialShellOpen();
   const dialogOpen = useDialogOpen();
   const returnFocusRef = useRef(null); // where the cursor was before the chat opened
-  const bottomOffset = `calc(${detailMode || shellOpen ? 92 : 20}px + env(safe-area-inset-bottom, 0px))`;
+  const bottomOffset = `calc(${detailMode || shellOpen || dialogOpen ? 92 : 20}px + env(safe-area-inset-bottom, 0px))`;
 
   const [open, setOpen]       = useState(false);
   const [messages, setMessages] = useState([]);

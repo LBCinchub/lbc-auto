@@ -335,7 +335,7 @@ export default function Customers() {
                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${statusText[activity]} border ${statusBorder[activity]}`} title={statusLabel[activity]} />
                         </div>
                         {customer.address && (
-                          <p className="text-xs text-gray-500 truncate max-w-[160px]">{customer.address}</p>
+                          <p className="text-xs text-gray-500 truncate max-w-[160px]" title={customer.address}>{customer.address}</p>
                         )}
                       </div>
                     </div>
@@ -428,7 +428,7 @@ export default function Customers() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
               <span className="text-sm text-gray-500">
                 Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
               </span>

@@ -473,7 +473,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-2xl flex flex-col p-0" style={{ maxHeight: "90vh", height: "90vh" }} onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+      <DialogContent className="lbc-fit-90 bg-gray-900 border-gray-800 text-white max-w-2xl flex flex-col p-0" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
         {/* Fixed header */}
         <div className="flex-shrink-0 px-6 pt-6 pb-4 border-b border-gray-800">
           <div className="flex items-start justify-between gap-3">
@@ -672,7 +672,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                 <Plus className="w-4 h-4 mr-1" /> Add Labor
               </Button>
             </div>
-            <div className="rounded-lg border border-gray-800 overflow-hidden">
+            <div className="rounded-lg border border-gray-800 overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-800/60 text-gray-500 text-xs">
                   <tr>
@@ -766,7 +766,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
                 </div>
               </div>
             )}
-            <div className="rounded-lg border border-gray-800 overflow-hidden" style={{ maxHeight: "220px", overflowY: "auto" }}>
+            <div className="rounded-lg border border-gray-800 overflow-auto" style={{ maxHeight: "220px" }}>
               <table className="w-full text-sm">
                 <thead className="bg-gray-800/60 text-gray-500 text-xs sticky top-0">
                   <tr>
@@ -834,7 +834,7 @@ export default function RepairOrderFormDialog({ open, onClose, order, onSaved, o
               className="bg-gray-800 border-gray-700 text-white mt-1" rows={2} />
           </div>
 
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <div>
               <Label className="text-gray-400 text-sm">Discount Type</Label>
               <Select value={form.discount_type} onValueChange={v => setForm({...form, discount_type: v, discount_value: 0})}>

@@ -59,8 +59,27 @@ const navItems = [
 ];
 
 export default function Sidebar({ currentPage }) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsedPref, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  // The phone/tablet drawer always shows full labels; collapsing is a desktop-only preference.
+  const collapsed = collapsedPref && !mobileOpen;
+
+  // Drawer: lock page scroll (restored exactly on close), close on Escape or when resized to desktop.
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e) => { if (e.key === "Escape") setMobileOpen(false); };
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const onMq = (e) => { if (e.matches) setMobileOpen(false); };
+    window.addEventListener("keydown", onKey);
+    mq.addEventListener("change", onMq);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+      mq.removeEventListener("change", onMq);
+    };
+  }, [mobileOpen]);
   const [unreadCount, setUnreadCount] = useState(0);
   const { user, checkAppState } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -89,7 +108,10 @@ export default function Sidebar({ currentPage }) {
       {/* Mobile hamburger */}
       <button
         onClick={() => setMobileOpen(true)}
-        className={cn("lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg shadow-lg", isLight ? "bg-white text-gray-800 border border-gray-200" : "bg-gray-900 text-white")}
+        aria-label="Open Navigation Menu"
+        aria-expanded={mobileOpen}
+        aria-controls="lbc-sidebar"
+        className={cn("lg:hidden fixed top-3 left-3 z-50 w-11 h-11 flex items-center justify-center rounded-lg shadow-lg", isLight ? "bg-white text-gray-800 border border-gray-200" : "bg-gray-900 text-white")}
       >
         <Menu className="w-5 h-5" />
       </button>
@@ -101,9 +123,11 @@ export default function Sidebar({ currentPage }) {
 
       {/* Sidebar */}
       <aside
+        id="lbc-sidebar"
+        aria-label="Main Navigation"
         className={cn(
-          "fixed top-0 left-0 z-50 flex flex-col transition-all duration-300",
-          "h-screen overflow-hidden",
+          "fixed top-0 left-0 z-50 flex flex-col transition-all duration-300 motion-reduce:transition-none",
+          "lbc-dvh-screen overflow-hidden max-w-[85vw]",
           isLight ? "bg-white border-r border-gray-200" : "bg-gray-950 border-r border-gray-800/50",
           collapsed ? "w-[72px]" : "w-64",
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
@@ -120,7 +144,7 @@ export default function Sidebar({ currentPage }) {
               </div>
             )}
           </div>
-          <button onClick={() => setMobileOpen(false)} className="lg:hidden ml-auto text-gray-400 hover:text-white">
+          <button onClick={() => setMobileOpen(false)} aria-label="Close Navigation Menu" className="lg:hidden ml-auto -mr-2 w-11 h-11 flex items-center justify-center rounded-lg text-gray-400 hover:text-white">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -255,7 +279,7 @@ export default function Sidebar({ currentPage }) {
           {!collapsed && (
             <button
               onClick={() => setCollapsed(!collapsed)}
-              className={cn("w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg transition-colors text-xs border border-transparent", isLight ? "text-gray-400 hover:text-gray-700 hover:bg-gray-100" : "text-gray-500 hover:text-gray-300 hover:bg-gray-800/50")}
+              className={cn("hidden lg:flex w-full items-center justify-center gap-2 px-3 py-1.5 rounded-lg transition-colors text-xs border border-transparent", isLight ? "text-gray-400 hover:text-gray-700 hover:bg-gray-100" : "text-gray-500 hover:text-gray-300 hover:bg-gray-800/50")}
             >
               <ChevronLeft className="w-4 h-4" />
               <span>Collapse</span>
@@ -265,6 +289,7 @@ export default function Sidebar({ currentPage }) {
           {collapsed && (
             <button
               onClick={() => setCollapsed(false)}
+              aria-label="Expand Navigation"
               className={cn("w-full flex items-center justify-center py-2 rounded-lg transition-colors border border-transparent", isLight ? "text-gray-400 hover:bg-gray-100" : "text-gray-500 hover:bg-gray-800/50")}
             >
               <ChevronRight className="w-4 h-4" />

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import TextPdfButton from "@/components/document-delivery/TextPdfButton";
 
 export default function InvoiceEditorActions({ invoice, saving, sending, dirty, extraActions, onCancel, onSave, onPrint, onSend, onPayment }) {
-  return <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-800 bg-gray-900 px-5 py-4 md:px-6">
+  return <div className="flex flex-shrink-0 flex-wrap items-center justify-between gap-3 border-t border-gray-800 bg-gray-900 px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:px-6">
     <div className="flex gap-2">
       {extraActions}
       {invoice && <Button variant="outline" onClick={onPrint}><Printer /> Print</Button>}

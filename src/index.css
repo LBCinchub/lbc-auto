@@ -289,6 +289,33 @@
   background: rgba(100, 116, 139, 0.5);
 }
 
+/* ── Responsive shell (screen only — print/PDF layouts are untouched) ── */
+@layer components {
+  /* Default dialog sizing: never taller than the visible viewport; body scrolls inside.
+     A dialog's own max-h / overflow classes still win (utilities layer). */
+  .lbc-dialog-fit {
+    max-height: calc(100vh - 1rem);
+    max-height: calc(100dvh - 1rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+/* Full-height drawer that respects mobile browser toolbars (vh fallback first). */
+.lbc-dvh-screen { height: 100vh; height: 100dvh; }
+/* Financial editor dialogs: keep their desktop size, shrink to the visible viewport on phones. */
+.lbc-fit-90 { height: 90vh; max-height: 90vh; height: min(90vh, calc(100dvh - 1rem)); max-height: min(90vh, calc(100dvh - 1rem)); }
+.lbc-max-92 { max-height: 92vh; max-height: min(92vh, calc(100dvh - 1rem)); }
+.lbc-max-94 { max-height: 94vh; max-height: min(94vh, calc(100dvh - 1rem)); }
+
+@media screen and (max-width: 767px) {
+  /* iOS zooms when a focused field is under 16px. The :not() chain outranks .text-sm/.text-xs. */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  select:not([multiple]),
+  textarea:not([data-lbc-small]) {
+    font-size: 16px !important;
+  }
+}
+
 /* ── Hide UI chrome when printing ── */
 @media print {
   .no-print { display: none !important; }

@@ -106,7 +106,7 @@ export default function MissingPhones() {
       </div>
 
       {/* Table */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-x-auto">
         {loading ? (
           <div className="p-12 text-center text-gray-500">Loading customers...</div>
         ) : filtered.length === 0 ? (

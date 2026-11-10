@@ -344,7 +344,7 @@ export default function OriginalEstimateEditor({ estimateId, onClose }) {
         linkedInvoice={linkedInvoice}
         linkedRO={linkedRO}
       />
-      <div className="max-h-[72vh] overflow-y-auto px-5 py-5 md:px-6">
+      <div className="min-h-0 max-h-[72vh] overflow-y-auto px-5 py-5 md:px-6">
         <EstimateDetailsFields draft={draft} onChange={setDraft} />
         <InvoiceLineItemsTable
           lines={draft.line_items}

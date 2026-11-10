@@ -148,7 +148,7 @@ export default function CustomerProfileDialog({ customer, open, onClose, custome
 
           {/* Tabs Navigation */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-5 bg-gray-800/50 border border-gray-700">
+            <TabsList className="flex w-full justify-start overflow-x-auto sm:grid sm:grid-cols-5 bg-gray-800/50 border border-gray-700">
               <TabsTrigger value="history" className="data-[state=active]:bg-sky-500/20 data-[state=active]:text-sky-400 text-xs sm:text-sm">
                 <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1" /> History
               </TabsTrigger>
@@ -201,7 +201,7 @@ export default function CustomerProfileDialog({ customer, open, onClose, custome
           {activeTab === "history" && (
            <div className="space-y-4">
              <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-               <div className="grid grid-cols-3 gap-4 mb-4">
+               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
                  <div>
                    <p className="text-gray-500 text-xs uppercase tracking-wide">Total Spending</p>
                    <p className="text-emerald-400 font-bold text-xl mt-1">${totalSpent.toFixed(2)}</p>
@@ -559,7 +559,7 @@ export default function CustomerProfileDialog({ customer, open, onClose, custome
             {/* Quick Actions */}
           <div className="border-t border-gray-800 pt-4">
             <p className="text-gray-500 text-xs uppercase tracking-wide mb-3">Quick Actions</p>
-            <div className="grid grid-cols-5 gap-2">
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
               <Button className="bg-sky-600 hover:bg-sky-700 text-white flex flex-col h-auto py-3 gap-1"
                 onClick={() => { onClose(); navigate(`/Estimates?customerId=${customer.id}&customerName=${encodeURIComponent(customer.full_name)}`); }}>
                 <FileText className="w-4 h-4" />

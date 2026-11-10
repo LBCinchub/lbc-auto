@@ -28,7 +28,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, customers = 
   return (
     <Dialog open onOpenChange={(next) => !next && close()}>
       <DialogContent
-        className="flex max-h-[94vh] max-w-5xl flex-col gap-0 overflow-hidden border-gray-800 bg-gray-900 p-0 text-white"
+        className="lbc-max-94 flex max-w-5xl flex-col gap-0 overflow-hidden border-gray-800 bg-gray-900 p-0 text-white"
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >

@@ -81,10 +81,10 @@ export default function Parts() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <PageHeader title="Parts Inventory" subtitle={`${parts.length} parts in stock`}
           onAdd={() => { setEditingPart(null); setDialogOpen(true); }} addLabel="Add Part" />
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             className="gap-2 border-gray-700 text-gray-300 hover:bg-gray-800"

@@ -488,7 +488,7 @@ export default function RepairOrderDetail() {
           </div>
         )}
 
-        <div className="grid grid-cols-3 gap-4 mt-8 pt-6 border-t border-gray-800">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8 pt-6 border-t border-gray-800">
           <div>
             <p className="text-gray-500 text-xs uppercase mb-1">Labor Hours</p>
             <p className="text-white text-lg font-semibold">{order.labor_hours || 0}</p>
