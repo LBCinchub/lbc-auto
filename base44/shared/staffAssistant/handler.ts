@@ -119,6 +119,12 @@ async function staffTurn({ userDb, svc, llm, body, scope, now = Date.now() }: an
     if (!roleAllows(scope.role, plan.calls[0].cap)) return { reply: `${plan.calls[0].cap.label} is not available for your role.`, staff: { tool_results: [{ label: plan.calls[0].cap.label, status: 'forbidden_role' }] } };
     return prepareWrite(ctx, store, plan.calls[0], body.request_id);
   }
+  // A lookup missing what to search for is a question for the staff member, not a failed load.
+  const missing = plan.calls.filter((c: any) => c.errors.length && roleAllows(scope.role, c.cap));
+  if (missing.length === plan.calls.length) {
+    const c = missing[0];
+    return { reply: c.cap.ask || `To use ${c.cap.label} I still need: ${c.errors.join('; ')}.`, staff: { tool_results: [{ label: c.cap.label, module: c.cap.module, status: 'needs_input' }], read_only: true } };
+  }
   const results = await Promise.all(plan.calls.map((c: any) => runRead(ctx, c)));
   // A slow, failed or empty summary still returns what was checked, with a read-only Retry.
   const reply = replyText(await Promise.resolve(llm({ prompt: composePrompt(messages, results, scope) })).catch((e: any) => { console.error('staff compose failed', e?.code || e?.name); return ''; }));

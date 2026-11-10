@@ -117,6 +117,7 @@ export const READS: any[] = [
   { name: 'parts.low_stock', module: 'Parts', label: 'Low Stock Parts', description: 'Parts at or below their minimum stock.', args: {},
     run: async (ctx: any) => { const s = await ownedScan(ctx.svc, 'Part', ctx.scope, {}, { pages: 3 }); const low = s.rows.filter((p) => p.quantity != null && p.min_stock != null && p.quantity <= p.min_stock); return { status: low.length ? 'ok' : 'no_results', items: low.slice(0, 25).map(P.pPart), partial: s.partial, has_more: low.length > 25 }; } },
   { name: 'price_library.search', module: 'Price Library', label: 'Shop Price Library', roles: FINANCE, description: 'Last prices this shop used for a part or labor item (memory, not a quote).',
+    ask: 'Which part or labor item should I look up in your Price Library?',
     args: { query: { type: 'string', max: 60, required: true }, type: { type: 'enum', values: ['part', 'labor'] } },
     run: async (ctx: any, a: any) => {
       const rows = await ctx.svc.LineItemLibrary.filter({ shop_owner_email: ctx.scope.tenant, ...textQuery(['item_name'], a.query), ...(a.type ? { type: a.type } : {}) }, '-times_used', 11);
