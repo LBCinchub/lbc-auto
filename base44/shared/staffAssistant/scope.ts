@@ -3,6 +3,7 @@
 // with any shop stamp required to match the session email. Platform "admin" grants NO cross-shop reach.
 import { ownership } from '../staffEstimateCore.ts';
 import { canonicalTaxTarget } from '../financialPolicy.ts';
+import { isServiceCreated } from '../shopProvenance.ts';
 
 export class ToolError extends Error {
   code: string; status: number;
@@ -40,7 +41,30 @@ export function resolveStaffScope(user: any, now = Date.now()) {
   });
 }
 
-export const owned = (rec: any, scope: any) => ownership(rec, { userId: scope.userId, tenant: scope.tenant }) === 'owned';
+// Owned = created by the session user (stamp, if any, must match), OR created by a platform service
+// identity and stamped for this tenant (same provenance rule as shopScopedRecords). Conflicts fail closed.
+// Reads run through the service role (ctx.svc) because creator-only RLS hides service-created rows;
+// the tenant constraint is in every query and owned() re-checks every row.
+export function owned(rec: any, scope: any) {
+  if (!rec) return false;
+  const stamps = [rec.shop_owner_email, rec.shop_email].map(lc).filter(Boolean);
+  if (new Set(stamps).size > 1) return false;
+  if (isServiceCreated(rec)) return stamps[0] === scope.tenant;
+  return ownership(rec, { userId: scope.userId, tenant: scope.tenant }) === 'owned';
+}
+// Writes: own records through the user's client; service-created ones through the service role ONLY
+// after owned() verified them.
+export const writerFor = (ctx: any, rec: any) => (isServiceCreated(rec) ? ctx.svc : ctx.userDb);
+
+const STAMP: Record<string, string> = { Customer: 'shop_owner_email', Vehicle: 'shop_owner_email', Appointment: 'shop_email', Mechanic: 'shop_owner_email', TimeEntry: 'shop_owner_email', PaymentRecord: 'shop_owner_email' };
+// AND(query, owner) using only $or: (A|B) & (X|Y) = AX|AY|BX|BY.
+export function ownerQuery(entity: string, scope: any, query: any = {}) {
+  const owners: any[] = [{ created_by_id: scope.userId }];
+  if (STAMP[entity]) owners.push({ [STAMP[entity]]: scope.tenant });
+  const { $or, ...rest } = query || {};
+  const ors = Array.isArray($or) && $or.length ? $or.flatMap((a: any) => owners.map((o) => ({ ...a, ...o }))) : owners;
+  return ors.length === 1 ? { ...rest, ...ors[0] } : { ...rest, $or: ors };
+}
 // Entities whose RLS create rule forces shop_owner_email/shop_email = session email (stamp is tenant-bound).
 export const stampedOwned = (rec: any, scope: any, field = 'shop_owner_email') => !!rec && lc(rec[field]) === scope.tenant;
 
@@ -55,7 +79,7 @@ export async function getOwned(svc: any, entity: string, id: any, scope: any, la
 export async function ownedPage(svc: any, entity: string, scope: any, query: any = {}, { sort = '-created_date', limit = 10, skip = 0 } = {}) {
   const lim = Math.min(Math.max(Number(limit) || 10, 1), 25);
   const sk = Math.max(Number(skip) || 0, 0);
-  const rows = await svc[entity].filter({ ...query, created_by_id: scope.userId }, sort, lim + 1, sk);
+  const rows = await svc[entity].filter(ownerQuery(entity, scope, query), sort, lim + 1, sk);
   return { rows: rows.slice(0, lim).filter((r: any) => owned(r, scope)), has_more: rows.length > lim, next_skip: sk + lim };
 }
 
@@ -63,7 +87,7 @@ export async function ownedPage(svc: any, entity: string, scope: any, query: any
 export async function ownedScan(svc: any, entity: string, scope: any, query: any = {}, { pages = 5, size = 200, sort = '-created_date' } = {}) {
   const out: any[] = [];
   for (let p = 0; p < pages; p++) {
-    const rows = await svc[entity].filter({ ...query, created_by_id: scope.userId }, sort, size, p * size);
+    const rows = await svc[entity].filter(ownerQuery(entity, scope, query), sort, size, p * size);
     out.push(...rows.filter((r: any) => owned(r, scope)));
     if (rows.length < size) return { rows: out, partial: false };
   }
