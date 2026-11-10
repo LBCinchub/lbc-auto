@@ -42,14 +42,14 @@ export default function ProfileDocumentLayer({ doc, customerId, customerName, op
     <div className="fixed inset-0 z-50 flex" role="dialog" aria-modal="true" aria-label={`${label} For ${customerName || "Customer"}`} onKeyDown={onKeyDown}>
       {/* Backdrop never dismisses: closing is always explicit so edits are not lost. */}
       <div className="absolute inset-0 bg-black/70" aria-hidden="true" />
-      <div ref={panel} tabIndex={-1} className="lbc-dvh-screen relative ml-auto flex w-full flex-col bg-gray-950 shadow-2xl outline-none lg:w-[calc(100%-4rem)] lg:max-w-[1280px] lg:border-l lg:border-gray-800">
+      <div ref={panel} tabIndex={-1} className="lbc-dvh-screen relative mx-auto flex w-full min-w-0 flex-col bg-gray-950 shadow-2xl outline-none lg:w-[calc(100%-2rem)] lg:max-w-[1280px] lg:border-x lg:border-gray-800" data-lbc-profile-layer="">
         <div className="flex shrink-0 items-center gap-3 border-b border-gray-800 px-3 py-2 md:px-6" style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}>
           <Button variant="ghost" size="sm" onClick={() => closeDoc()} className="min-h-[44px] gap-2 text-gray-300 hover:text-white">
             <ArrowLeft className="h-4 w-4" /> Back To {customerName || "Customer"}
           </Button>
           <span className="ml-auto text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</span>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 md:p-6">
+        <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain p-3 md:p-6">
           <ProfileDocumentView doc={doc} customerId={customerId} openDoc={openDoc} closeDoc={closeDoc} />
         </div>
       </div>

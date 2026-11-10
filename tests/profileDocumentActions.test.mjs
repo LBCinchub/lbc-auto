@@ -101,7 +101,7 @@ test("layer: portals above the profile, full screen on phones, no backdrop dismi
   assert.ok(layer.includes('e.key === "Tab"') && layer.includes("window.confirm("), "Tab is trapped; Escape asks before closing");
   assert.ok(layer.includes("nestedLayerOpen()"), "nested dialogs/menus keep their own Escape/Tab");
   assert.ok(layer.includes('document.body.style.overflow = "hidden"') && layer.includes("overflow-y-auto"), "one scroller");
-  assert.ok(!src("src/components/customers/ProfileDocumentView.jsx").includes("overflow-hidden"), "no clipping that breaks sticky bars");
+  assert.ok(src("src/components/customers/ProfileDocumentView.jsx").includes("flex max-h-full min-h-0 min-w-0 flex-col overflow-hidden"), "editor frame fits the layer so its action bar stays visible");
 });
 
 test("tabs and context survive refresh/back/close", () => {

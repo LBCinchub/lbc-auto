@@ -306,6 +306,13 @@
 .lbc-fit-90 { height: 90vh; max-height: 90vh; height: min(90vh, calc(100dvh - 1rem)); max-height: min(90vh, calc(100dvh - 1rem)); }
 .lbc-max-92 { max-height: 92vh; max-height: min(92vh, calc(100dvh - 1rem)); }
 .lbc-max-94 { max-height: 94vh; max-height: min(94vh, calc(100dvh - 1rem)); }
+/* Invoice/estimate editor frames: flex children may shrink so only the editor body scrolls
+   and the header + Save/Cancel bar stay visible. Wide line-item tables scroll inside themselves. */
+.lbc-editor-frame > * { min-width: 0; }
+/* Desktop detail pages: frame fits the visible viewport below the layout's top/bottom padding. */
+@media screen and (min-width: 1024px) {
+  .lbc-page-editor { max-height: calc(100vh - 4rem); max-height: calc(100dvh - 4rem); }
+}
 
 @media screen and (max-width: 767px) {
   /* iOS zooms when a focused field is under 16px. The :not() chain outranks .text-sm/.text-xs. */
