@@ -45,7 +45,7 @@ export default async function(req) {
     // Status reads stay open so already-authorized sends keep showing their real outcome.
     let entitlement = null;
     if (action === 'prepare' || action === 'send') {
-      entitlement = await checkProEntitlement({ user, stripeKey: secrets.get('STRIPE_SECRET_KEY') || '', appId: secrets.get('BASE44_APP_ID') || '' });
+      entitlement = await checkProEntitlement({ user, stripeKey: secrets.get('STRIPE_SECRET_KEY') || '', appId: secrets.get('BASE44_APP_ID') || '', grantDb: db });
       if (!entitlement.ok) return json({ error: entitlement.error, code: entitlement.code }, entitlement.status);
     }
 

@@ -23,6 +23,7 @@ export const COVERAGE: any[] = [
   { module: 'Recommendations', entities: ['CarRecommendation'], capabilities: ['recommendations.list'] },
   { module: 'Notes', entities: ['Note'], capabilities: ['notes.list'] },
   { module: 'Card Payments & Stripe', entities: ['ShopStripeAccount', 'StripeCheckoutLink'], unavailable: 'Payments, refunds and Stripe keys stay on the invoice and settings screens; money is never moved from chat.' },
+  { module: 'Plan Access', entities: ['ProAccessGrant'], unavailable: 'Plan access is managed by LBC Auto and is not available from chat.' },
   { module: 'Document Texting', entities: ['DocumentDelivery'], unavailable: 'Texts and emails are sent from the Send buttons on each document.' },
   { module: 'Alignment Lab', entities: ['AlignmentMachine', 'AlignmentMeasurement', 'AlignmentSession', 'AlignmentReport', 'CalibrationRecord', 'MachineProfile', 'RecoveryCase'], unavailable: 'Alignment Lab data is used in the Alignment screen only.' },
   { module: 'Customer Portal Security', entities: ['CustomerPasscode', 'CustomerPortalSession', 'PortalActivationCode', 'CustomerSecurityEvent', 'PortalOwnershipQuarantine', 'PortalOwnershipResolution'], unavailable: 'Login codes, sessions and security events are never exposed to chat.' },

@@ -28,7 +28,7 @@ export default async function(req) {
       return json(r.error ? { error: r.error } : { group: r.group, note: r.note || '' }, r.status);
     }
     // Pro only: checked fresh against billing on every prepare and every send (not on status reads).
-    const entitlement = await checkProEntitlement({ user, stripeKey: secrets.get('STRIPE_SECRET_KEY') || '', appId: secrets.get('BASE44_APP_ID') || '' });
+    const entitlement = await checkProEntitlement({ user, stripeKey: secrets.get('STRIPE_SECRET_KEY') || '', appId: secrets.get('BASE44_APP_ID') || '', grantDb: db });
     if (!entitlement.ok) return json({ error: entitlement.error, code: entitlement.code }, entitlement.status);
     // Currency code only when the shop's own connected Stripe account states it; otherwise just "$" like the printed document.
     const [stripe] = (await db.ShopStripeAccount.filter({ shop_owner_email: tenant }, '-created_date', 1)) || [];

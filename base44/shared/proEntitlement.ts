@@ -18,9 +18,15 @@ const REQUIRED_MSG = "Texting estimates and invoices is a Pro plan feature. Upgr
 const UNVERIFIED_MSG = "Your Pro plan couldn't be confirmed right now, so texting is unavailable. Nothing was sent.";
 
 // deps: { user (from verified auth), stripeKey, appId, fetchFn, now }
-export async function checkProEntitlement({ user, stripeKey, appId = "", fetchFn = fetch, now = Date.now }) {
+// grantDb: service-role entities; an active admin-only ProAccessGrant for this user ID also grants Pro.
+export async function checkProEntitlement({ user, stripeKey, appId = "", fetchFn = fetch, now = Date.now, grantDb = null }) {
   const userId = String(user?.id || "");
   if (!/^[A-Za-z0-9_-]{1,64}$/.test(userId)) return deny(PRO_REQUIRED, REQUIRED_MSG);
+  if (grantDb?.ProAccessGrant) {
+    const grants = (await grantDb.ProAccessGrant.filter({ user_id: userId, active: true }).catch(() => [])) || [];
+    const grant = grants.find((g) => g?.user_id === userId && g.active === true && (!g.expires_at || Date.parse(g.expires_at) > now()));
+    if (grant) return { ok: true, user_id: userId, subscription_id: `grant:${grant.id}` };
+  }
   if (!stripeKey) return deny(PRO_UNVERIFIED, UNVERIFIED_MSG);
   const query = encodeURIComponent(`metadata['user_id']:'${userId}'`);
   const res = await fetchFn(`https://api.stripe.com/v1/subscriptions/search?query=${query}&limit=20`, {

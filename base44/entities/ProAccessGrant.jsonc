@@ -1,0 +1,58 @@
+{
+  "name": "ProAccessGrant",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "Shop owner's user ID that receives Pro access"
+    },
+    "user_email": {
+      "type": "string",
+      "format": "email",
+      "description": "Shop owner's login email, for display"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Turn off to revoke the grant"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Optional end of the grant; empty = no end date"
+    },
+    "granted_by": {
+      "type": "string",
+      "description": "Who granted the access"
+    },
+    "reason": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "user_id",
+    "active"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

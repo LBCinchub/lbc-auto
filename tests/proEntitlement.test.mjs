@@ -175,3 +175,12 @@ test("UI: server Pro denial locks the window and hides send controls", () => {
   assert.match(src("src/components/document-delivery/ProUpgradeNotice.jsx"), /to="\/Billing"[\s\S]*Upgrade To Pro/);
   assert.match(src("src/components/document-delivery/TextPdfButton.jsx"), /<ProBadge \/>/);
 });
+
+test("admin Pro access grant: only an active, unexpired grant for this exact user counts", async () => {
+  const grantDb = (rows) => ({ ProAccessGrant: { filter: async (q) => rows.filter((g) => g.user_id === q.user_id && g.active === q.active) } });
+  assert.equal((await check(userA, stripe(ok([])), { grantDb: grantDb([{ id: "g1", user_id: "uA", active: true }]) })).ok, true);
+  assert.equal((await check(userA, stripe(ok([])), { grantDb: grantDb([{ id: "g1", user_id: "uB", active: true }]) })).ok, false);
+  assert.equal((await check(userA, stripe(ok([])), { grantDb: grantDb([{ id: "g1", user_id: "uA", active: false }]) })).ok, false);
+  assert.equal((await check(userA, stripe(ok([])), { grantDb: grantDb([{ id: "g1", user_id: "uA", active: true, expires_at: new Date(NOW - 1000).toISOString() }]) })).ok, false);
+  assert.equal((await check(userA, stripe(ok([])), { stripeKey: "", grantDb: grantDb([{ id: "g1", user_id: "uA", active: true }]) })).ok, true);
+});
