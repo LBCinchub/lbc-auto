@@ -19,7 +19,8 @@ export default function EstimateFormDialog({ open, onClose, estimate, customers,
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent
-        className="lbc-max-92 bg-gray-900 border-gray-800 text-white max-w-4xl p-0 overflow-hidden flex flex-col"
+        data-estimate-dialog
+        className="lbc-max-92 bg-gray-900 border-gray-800 text-white max-w-4xl p-0 gap-0 overflow-hidden flex flex-col [@media(max-height:560px)]:overflow-y-auto"
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >

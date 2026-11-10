@@ -162,7 +162,7 @@ export default function EstimateCreateEditor({ prefill, customers = [], vehicles
   return (
     <>
       {/* Header — "New Estimate" + prominent Customer & Vehicle card */}
-      <div className="border-b border-gray-800 px-5 py-4 md:px-6">
+      <div data-estimate-header className="flex-none border-b border-gray-800 px-5 py-4 md:px-6">
         <div className="pr-8">
           <p className="text-xs font-semibold uppercase tracking-wider text-sky-400">Estimate</p>
           <h2 className="mt-1 text-xl font-bold text-white">New Estimate</h2>
@@ -181,7 +181,9 @@ export default function EstimateCreateEditor({ prefill, customers = [], vehicles
 
       {/* Body — same shared sub-components as EstimateDetail. Line items come first so the
           rows being filled in are in view without scrolling (scrolling shifted fields under the pointer). */}
-      <div className="min-h-0 max-h-[60vh] overflow-y-auto px-5 py-5 md:px-6">
+      {/* The ONE vertical scroller for the editing content: it fills whatever height the dialog has left.
+          On very short screens (or high zoom) the whole dialog scrolls instead, so there is still only one. */}
+      <div data-estimate-scroll className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 md:px-6 [@media(max-height:560px)]:flex-none [@media(max-height:560px)]:overflow-visible">
         <InvoiceLineItemsTable lines={draft.line_items} onChange={onLinesChange} />
         <MemoEstimateDetailsFields draft={details} onChange={onDetailsChange} />
         <MemoQuickNotesEditor value={draft.notes} onChange={onNotesChange} />
@@ -189,7 +191,7 @@ export default function EstimateCreateEditor({ prefill, customers = [], vehicles
       </div>
 
       {/* Actions — mirrors EstimateEditorActions styling; only Cancel + Save for a new estimate */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-800 bg-gray-900 px-5 py-4 md:px-6">
+      <div data-estimate-actions className="sticky bottom-0 z-10 flex flex-none flex-wrap items-center justify-between gap-3 border-t border-gray-800 bg-gray-900 px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:px-6">
         {zeroWarning && totals.total <= 0 ? (
           <p className="text-sm text-amber-400">
             This estimate totals $0.00. Check each line's Qty and Rate, or{" "}
