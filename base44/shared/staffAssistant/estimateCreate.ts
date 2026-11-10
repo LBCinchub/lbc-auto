@@ -76,12 +76,12 @@ export const ESTIMATE_CREATE = {
     if (vehicle.customer_id !== customer.id) throw new ToolError('forbidden', 'That vehicle no longer belongs to this customer.', 403);
     const number = await estimateNumberFor(ctx.scope.tenant, action.id);
     let saved: any = null;
-    await withLease(ctx.sr, 'Customer', customer.id, async () => {
+    await withLease(ctx.svc, 'Customer', customer.id, async () => {
       const prior = (await ctx.svc.Estimate.filter({ estimate_number: number, created_by_id: ctx.scope.userId }, '-created_date', 1)).find((e: any) => owned(e, ctx.scope));
       if (prior) { saved = prior; return; }
       const labor = p.lines.filter((l: any) => l.type === 'labor').map((l: any) => ({ description: l.name, details: '', hours: l.quantity, rate: l.unit_price, total: r2(l.quantity * l.unit_price) }));
       const parts = p.lines.filter((l: any) => l.type === 'part').map((l: any) => ({ name: l.name, details: '', part_number: '', quantity: l.quantity, unit_price: l.unit_price, total: r2(l.quantity * l.unit_price) }));
-      const created = await ctx.svc.Estimate.create({
+      const created = await ctx.userDb.Estimate.create({
         estimate_number: number, customer_id: customer.id, customer_name: customer.full_name || '', vehicle_id: vehicle.id, vehicle_info: vLabel(vehicle),
         labor_items: labor, parts_items: parts, labor_total: p.totals.labor, parts_total: p.totals.parts, tax_amount: p.totals.tax, tax_rate: p.tax_rate, tax_applies_to: p.tax_applies_to,
         discount: 0, discount_type: '$', grand_total: p.totals.total, estimate_date: ctx.today, service_reason: p.job, notes: '', status: 'draft', auth_status: 'none', amount_paid: 0,

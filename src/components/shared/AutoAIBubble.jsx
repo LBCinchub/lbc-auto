@@ -11,18 +11,16 @@ import AiOverlayLayer from "@/components/shared/AiOverlayLayer";
 import { FocusScope } from "@radix-ui/react-focus-scope";
 import useFinancialShellOpen from "@/hooks/useFinancialShellOpen";
 import useDialogOpen from "@/hooks/useDialogOpen";
+import { useQueryClient } from "@tanstack/react-query";
+import StaffToolResults from "@/components/staff-ai/StaffToolResults";
+import CopyTextButton from "@/components/staff-ai/CopyTextButton";
+import { staffSuggestions } from "@/components/staff-ai/staffSuggestions";
 
 // Detail pages with a sticky bottom financial action bar — lift the widget above it.
 const DETAIL_PATTERN = /\/(EstimateDetail|RepairOrderDetail|InvoiceDetail)/i;
 
 
-const QUICK_PROMPTS = [
-  { label: "🔧 Brake job hours", q: "How many hours for a full brake job (pads + rotors, all 4 wheels)?" },
-  { label: "🦀 Rust factor", q: "How do I adjust labor hours for a heavily rusted Canadian car?" },
-  { label: "⚠️ P0420 code", q: "What does P0420 mean and how many hours to fix?" },
-  { label: "🔩 Head gasket", q: "How many hours for a head gasket replacement?" },
-  { label: "🪛 Seized bolts", q: "Tips for dealing with seized exhaust bolts on a rusty car?" },
-];
+
 
 // ── LED pulse animation injected once ────────────────────────────────────────
 let _ledStyleInjected = false;
@@ -173,6 +171,8 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
   const [pendingImage, setPendingImage] = useState(null); // { file, preview }
   const [savePhoto, setSavePhoto] = useState(null); // { photoUri, preview, aiAnalysis }
   const [user, setUser] = useState(null);
+  const [decisions, setDecisions] = useState({}); // message id -> "busy" | "done"
+  const queryClient = useQueryClient();
   const listRef  = useRef(null);
   const nearBottomRef = useRef(true);
   const msgIdRef = useRef(0);
@@ -252,6 +252,8 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
         messages: history.map(m => ({ role: m.role, content: m.content })),
         vehicle: vehicle || "",
         description: description || "",
+        page: location.pathname,
+        request_id: crypto.randomUUID(),
       };
       if (imageUrl) {
         payload.image_url = imageUrl;
@@ -263,7 +265,7 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
 
       const replyRaw = result?.data?.reply || result?.reply || "No response generated.";
       const offerApt  = result?.data?.offer_appointment || result?.offer_appointment || false;
-      const assistantMsg = { id: `a${++msgIdRef.current}`, animate: true, role: "assistant", content: replyRaw, offerApt, estimateCapability: result?.data?.estimate_capability || null };
+      const assistantMsg = { id: `a${++msgIdRef.current}`, animate: true, role: "assistant", content: replyRaw, offerApt, estimateCapability: result?.data?.estimate_capability || null, staff: result?.data?.staff || null };
       if (imageUri) {
         assistantMsg.imageUri = imageUri;
         assistantMsg.imagePreview = preview;
@@ -275,6 +277,23 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
       setMessages(prev => [...prev, { id: `a${++msgIdRef.current}`, role: "assistant", content: "⚠️ AI unavailable right now. Try again in a moment." }]);
     }
     setLoading(false);
+  };
+
+  // Confirm / Cancel a previewed change. The server holds the details; we send only id + token.
+  const decide = async (msg, decision) => {
+    if (decisions[msg.id]) return;
+    setDecisions(d => ({ ...d, [msg.id]: "busy" }));
+    const { action_id, token } = msg.staff.confirmation;
+    try {
+      const result = await base44.functions.invoke("lbcAutoAI", { mode: "owner", staff_action: { action_id, token, decision } });
+      const staff = result?.data?.staff || null;
+      setMessages(prev => [...prev, { id: `a${++msgIdRef.current}`, role: "assistant", content: result?.data?.reply || "Done.", staff }]);
+      if (staff?.refresh?.length) queryClient.invalidateQueries();
+    } catch (e) {
+      console.error("AutoAI action error:", e);
+      setMessages(prev => [...prev, { id: `a${++msgIdRef.current}`, role: "assistant", content: "⚠️ Could not reach the shop records. Nothing was confirmed; check the record before trying again." }]);
+    }
+    setDecisions(d => ({ ...d, [msg.id]: "done" }));
   };
 
   const handleKey = (e) => {
@@ -302,7 +321,7 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
             <LbcAutoLogo size="xs" />
             <div style={{ flex:1 }}>
               <div style={{ color:"#fff", fontSize:12, fontWeight:700 }}>LBC Auto AI</div>
-              <div style={{ color:"#fed7aa", fontSize:10 }}>Automotive knowledge assistant</div>
+              <div style={{ color:"#fed7aa", fontSize:10 }}>Shop records & automotive help</div>
             </div>
             <span style={{
               background:"#00ff8822", border:"1px solid #00ff88",
@@ -329,11 +348,11 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
               <div style={{ textAlign:"center", padding:"16px 0" }}>
                 <Wrench style={{ width:28, height:28, color:"#c2410c", margin:"0 auto 8px" }} />
                 <div style={{ color:"#d6d3d1", fontSize:11 }}>
-                  {vehicle ? `Vehicle loaded: ${vehicle}` : "Ask about labor hours, rust, error codes…"}
+                  {vehicle ? `Vehicle loaded: ${vehicle}` : "Ask about your shop's customers, jobs and invoices, or labor hours and codes…"}
                 </div>
                 {/* Quick prompts */}
                 <div style={{ display:"flex", flexWrap:"wrap", gap:6, justifyContent:"center", marginTop:12 }}>
-                  {QUICK_PROMPTS.map(p => (
+                  {staffSuggestions(location.pathname).map(p => (
                     <button key={p.label} onClick={() => sendMessage(p.q)}
                       style={{
                         fontSize:10, padding:"4px 10px", borderRadius:20, cursor:"pointer",
@@ -374,6 +393,10 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
                     />
                   ) : m.content}
                   {m.role === "assistant" && m.estimateCapability && <StaffEstimateResult capability={m.estimateCapability} />}
+                  {m.role === "assistant" && m.staff && (
+                    <StaffToolResults staff={m.staff} decisionState={decisions[m.id]} onDecision={(d) => decide(m, d)} onAsk={(q) => sendMessage(q)} />
+                  )}
+                  {m.role === "assistant" && m.content && !m.staff?.confirmation && <CopyTextButton text={m.content} />}
                   {m.saveable && (
                     <button
                       onClick={() => setSavePhoto({ photoUri: m.imageUri, preview: m.imagePreview, aiAnalysis: m.content })}

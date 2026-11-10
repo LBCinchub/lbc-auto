@@ -1,4 +1,6 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.57';
+import { handleStaffTurn } from '../../shared/staffAssistant/handler.ts';
+import { ToolError } from '../../shared/staffAssistant/scope.ts';
 
 const SHOP_CONFIGS: Record<string, { name: string; phone: string; context: string }> = {
   'hajwheels@gmail.com': {
@@ -52,7 +54,7 @@ Rust multipliers: Clean 1.0x | Light 1.2x | Moderate 1.4x | Heavy 1.8x | Severe 
 Image analysis rules:
 - Describe exactly what you see first
 - Identify the automotive issue (wear, damage, leak, rust, DTC code on screen)
-- Give specific repair recommendation with labor hours and cost in CAD at $120/hr
+- Give specific repair recommendation with labor hours, and cost at the shop labor rate from Shop Settings (if no rate is set, give hours only and say the rate is not set)
 - If you see DTC codes: read every code and diagnose each one
 - Tires: assess tread wear, depth, recommend action
 - Brakes: pad thickness, rotor condition
@@ -94,7 +96,7 @@ Deno.serve(async (req) => {
       image_context = '',
     } = body;
 
-    if (!messages.length && !image_base64 && !image_url) {
+    if (!messages.length && !image_base64 && !image_url && !body.staff_action) {
       return Response.json({ reply: 'How can I help you today?' }, { headers: CORS_HEADERS });
     }
 
@@ -107,57 +109,36 @@ Deno.serve(async (req) => {
       const user = await base44.auth.me();
       if (!user) return Response.json({ reply: 'Authentication required.' }, { status: 401, headers: CORS_HEADERS });
 
-      let sys = OWNER_SYSTEM;
+      // Staff tools: owner chat only (never scanner, never customer mode). Identity = this session.
+      if (mode === 'owner' && !image_base64 && !image_url) {
+        try {
+          const staff = await handleStaffTurn({
+            userDb: base44.entities, svc: base44.asServiceRole.entities, user, body,
+            llm: (p: any) => base44.integrations.Core.InvokeLLM(p),
+          });
+          if (staff) return Response.json({ ...staff, offer_appointment: false }, { headers: CORS_HEADERS });
+        } catch (e: any) {
+          if (e instanceof ToolError) return Response.json({ reply: e.message, staff: { error_code: e.code, tool_results: [] } }, { headers: CORS_HEADERS });
+          throw e;
+        }
+      }
 
-      // Shop settings from user profile
+      let sys = OWNER_SYSTEM + '\n\nThis reply is general advice: it does not use or change this shop\'s records. Never state shop counts, balances or customer details. If asked for shop records, say to ask directly (e.g. "show unpaid invoices").';
+
+      // Shop settings from the verified session user only
       const shopInfo: string[] = [];
       if (user.business_name) shopInfo.push('Shop: ' + user.business_name);
-      if (user.email) shopInfo.push('Email: ' + user.email);
-      if (user.phone) shopInfo.push('Phone: ' + user.phone);
-      if (user.address) shopInfo.push('Address: ' + user.address);
       if (user.labor_rate != null) shopInfo.push('Labor rate: $' + user.labor_rate + '/hr');
       if (user.tax_rate != null) shopInfo.push('Tax rate: ' + user.tax_rate + '%');
       if (shopInfo.length) sys += '\n\nShop Settings:\n- ' + shopInfo.join('\n- ');
-
-      // Live shop data (user-scoped via RLS)
-      const today = new Date().toISOString().slice(0, 10);
-      const [repairOrders, invoices, parts, appointments] = await Promise.all([
-        base44.entities.RepairOrder.filter({}).catch(() => []),
-        base44.entities.Invoice.filter({}).catch(() => []),
-        base44.entities.Part.filter({}).catch(() => []),
-        base44.entities.Appointment.filter({ date: today }).catch(() => []),
-      ]);
-
-      const openROs = repairOrders.filter((r: any) => r.status !== 'completed' && r.status !== 'delivered');
-      const unpaidInvoices = invoices.filter((i: any) => i.status === 'unpaid' || i.status === 'partial' || i.status === 'overdue');
-      const totalOwed = unpaidInvoices.reduce((s: number, i: any) => s + (i.balance_due || (i.total || 0) - (i.amount_paid || 0)), 0);
-      const lowStock = parts.filter((p: any) => p.quantity != null && p.min_stock != null && p.quantity <= p.min_stock);
-
-      const dataLines: string[] = [];
-      dataLines.push('Open repair orders: ' + openROs.length);
-      if (openROs.length) {
-        dataLines.push('- ' + openROs.slice(0, 5).map((r: any) =>
-          `${r.order_number || 'RO'}: ${r.vehicle_info || 'Unknown vehicle'} — ${r.status}`
-        ).join('\n- '));
-      }
-      dataLines.push('Unpaid invoices: ' + unpaidInvoices.length + ' ($' + totalOwed.toFixed(2) + ' owed)');
-      if (lowStock.length) {
-        dataLines.push('Low stock parts (' + lowStock.length + '): ' + lowStock.slice(0, 5).map((p: any) =>
-          `${p.name} (${p.quantity} left, min ${p.min_stock})`
-        ).join(', '));
-      }
-      dataLines.push("Today's appointments: " + appointments.length);
-
-      sys += '\n\nLive Shop Data:\n- ' + dataLines.join('\n- ');
-      if (vehicle) sys += '\nVehicle: ' + vehicle;
-      if (description) sys += '\nJob: ' + description;
-      if (shop_context) sys += '\n\nAdditional context:\n' + JSON.stringify(shop_context);
+      if (vehicle) sys += '\nVehicle: ' + String(vehicle).slice(0, 120);
+      if (description) sys += '\nJob: ' + String(description).slice(0, 300);
 
       // Build conversation prompt
       const recent = messages.filter((m: any) => m.role !== 'system').slice(-6);
       let prompt = sys + '\n\nConversation:\n' +
         recent.map((m: any) => (m.role === 'user' ? 'User: ' : 'Assistant: ') + m.content).join('\n') +
-        '\n\nRespond to the latest message as LBC Auto AI. Be concise. Reference live shop data when relevant.';
+        '\n\nRespond to the latest message as LBC Auto AI. Be concise.';
 
       const llmParams: any = { prompt };
       const imageFile = image_url || image_base64;
