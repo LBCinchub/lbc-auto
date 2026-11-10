@@ -37,9 +37,11 @@
     "channel": {
       "type": "string",
       "enum": [
-        "mms"
+        "mms",
+        "sms"
       ],
-      "default": "mms"
+      "default": "mms",
+      "description": "mms = PDF attachment; sms = readable text details (Send As Text)"
     },
     "status": {
       "type": "string",
@@ -52,7 +54,9 @@
         "undelivered",
         "failed",
         "canceled",
-        "duplicate"
+        "duplicate",
+        "unknown",
+        "not_sent"
       ],
       "enumColors": [
         "gray",
@@ -63,6 +67,8 @@
         "red",
         "red",
         "gray",
+        "gray",
+        "yellow",
         "gray"
       ],
       "default": "preparing"
@@ -83,7 +89,35 @@
     },
     "idempotency_key": {
       "type": "string",
-      "description": "One per Send click; repeats never resend"
+      "description": "One per Send click (per part and attempt for texts); repeats never resend"
+    },
+    "group_key": {
+      "type": "string",
+      "description": "Text sends: one per send window, shared by all numbered parts"
+    },
+    "part_index": {
+      "type": "number",
+      "description": "Text sends: part number (1-based)"
+    },
+    "part_count": {
+      "type": "number",
+      "description": "Text sends: total numbered parts"
+    },
+    "attempt": {
+      "type": "number",
+      "description": "Text sends: attempt number for this part (resends only after a definite failure)"
+    },
+    "segments": {
+      "type": "number",
+      "description": "Text sends: estimated SMS segments for this part"
+    },
+    "encoding": {
+      "type": "string",
+      "description": "Text sends: GSM-7 or UCS-2"
+    },
+    "body_sha256": {
+      "type": "string",
+      "description": "Text sends: SHA-256 of the exact previewed text (text itself not stored)"
     },
     "file_uri": {
       "type": "string",

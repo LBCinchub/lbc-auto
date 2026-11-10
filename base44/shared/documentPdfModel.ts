@@ -89,7 +89,8 @@ function totals(doc, { grandTotal, amountPaid, balanceDue }) {
 
 const contact = (doc, customer) => ({ name: s(doc.customer_name) || s(customer?.full_name), phone: s(customer?.phone), email: s(customer?.email), address: s(customer?.address) });
 
-export function invoiceModel(inv, customer, vehicle, shop) {
+// Every saved line (parts first, then labor), exactly as the printed document lists them.
+export function invoiceLines(inv) {
   const items = inv.line_items || [];
   const unifiedParts = items.filter((li) => li.type === "part" || li.type === "parts");
   const parts = (unifiedParts.length ? unifiedParts : inv.parts_used || []).map((p) => line({
@@ -105,13 +106,23 @@ export function invoiceModel(inv, customer, vehicle, shop) {
     return line({ name: l.name || l.description, description: l.name ? (l.description || auto) : auto, type: "labor", unitPrice: rate, qty: hours || 1, savedTotal: l.total });
   });
   if (!laborRows.length && num(inv.labor_total) > 0) labor.push(line({ name: "Labor cost", description: "", type: "labor", unitPrice: inv.labor_total, qty: 1, savedTotal: inv.labor_total }));
+  return [...parts, ...labor];
+}
+
+export function estimateLines(est) {
+  const parts = (est.parts_items || []).map((p) => line({ name: p.name, description: p.details || (p.part_number ? `Part #: ${p.part_number}` : ""), type: "part", unitPrice: p.unit_price, qty: p.quantity ?? 1, savedTotal: p.total }));
+  const labor = (est.labor_items || []).map((l) => line({ name: l.description, description: l.details || (l.hours ? `${l.hours}h @ $${l.rate || 0}/h` : ""), type: "labor", unitPrice: l.rate, qty: l.hours, savedTotal: l.total }));
+  return [...parts, ...labor];
+}
+
+export function invoiceModel(inv, customer, vehicle, shop) {
   const total = num(inv.total);
   const paid = num(inv.amount_paid);
   return {
     type: "Invoice", number: s(inv.invoice_number), date: formatDocDate(inv.invoice_date || inv.created_date),
     shop: shopIdentity(shop), customer: contact(inv, customer), vehicle: vehicleBlock(vehicle, inv.vehicle_info),
     serviceReason: s(inv.service_reason), notes: s(inv.customer_note),
-    lines: dropDuplicates([...parts, ...labor], inv.service_reason, inv.customer_note),
+    lines: dropDuplicates(invoiceLines(inv), inv.service_reason, inv.customer_note),
     payments: (inv.payment_history || []).map((p) => ({ date: formatDocDate(p.date), receipt: s(p.receipt_number || inv.receipt_number), method: s(p.method || inv.payment_method), amount: r2(p.amount) })),
     totals: totals(inv, { grandTotal: total, amountPaid: paid, balanceDue: inv.balance_due ?? Math.max(0, total - paid) }),
     ghost: ghostBlock(inv),
@@ -119,15 +130,13 @@ export function invoiceModel(inv, customer, vehicle, shop) {
 }
 
 export function estimateModel(est, customer, vehicle, shop) {
-  const parts = (est.parts_items || []).map((p) => line({ name: p.name, description: p.details || (p.part_number ? `Part #: ${p.part_number}` : ""), type: "part", unitPrice: p.unit_price, qty: p.quantity ?? 1, savedTotal: p.total }));
-  const labor = (est.labor_items || []).map((l) => line({ name: l.description, description: l.details || (l.hours ? `${l.hours}h @ $${l.rate || 0}/h` : ""), type: "labor", unitPrice: l.rate, qty: l.hours, savedTotal: l.total }));
   const total = num(est.grand_total);
   const paid = num(est.amount_paid);
   return {
     type: "Estimate", number: s(est.estimate_number), date: formatDocDate(est.estimate_date || est.created_date),
     shop: shopIdentity(shop), customer: contact(est, customer), vehicle: vehicleBlock(vehicle, est.vehicle_info),
     serviceReason: s(est.service_reason), notes: s(est.notes),
-    lines: dropDuplicates([...parts, ...labor], est.service_reason, est.notes),
+    lines: dropDuplicates(estimateLines(est), est.service_reason, est.notes),
     payments: [],
     totals: totals(est, { grandTotal: total, amountPaid: paid, balanceDue: total - paid }),
     ghost: ghostBlock(est),

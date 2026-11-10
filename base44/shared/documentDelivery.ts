@@ -13,7 +13,8 @@ export const MEDIA_TTL_MS = 60 * 60 * 1000;          // Twilio fetches at send t
 export const MAX_PDF_BYTES = 4_500_000;              // Twilio MMS limit is 5 MB combined
 export const IN_FLIGHT_WINDOW_MS = 10 * 60 * 1000;
 const IN_FLIGHT = ["preparing", "queued", "sending"];
-const RANK = { preparing: 0, queued: 1, sending: 2, sent: 3, delivered: 4, undelivered: 4, failed: 4, canceled: 4, duplicate: 4 };
+// unknown = Twilio's answer never arrived (may or may not be sent); not_sent = stopped before sending.
+const RANK = { preparing: 0, queued: 1, sending: 2, sent: 3, delivered: 4, undelivered: 4, failed: 4, canceled: 4, duplicate: 4, unknown: 4, not_sent: 4 };
 export const isFinal = (status) => RANK[status] === 4;
 const MEDIA_DONE = ["sent", "delivered", "undelivered", "failed", "canceled", "duplicate"];
 
@@ -94,7 +95,7 @@ export function deliveryView(d) {
 }
 
 // The document, its own customer and (optional) that customer's vehicle, all inside this shop.
-export async function resolveDocument(db, type, id, tenant, userId) {
+export async function resolveDocument(db, type, id, tenant, userId, what = "PDF texts") {
   const entity = ENTITY[type];
   if (!entity || !id || typeof id !== "string") return { status: 400, error: "Choose a saved estimate or invoice." };
   const doc = await getOrNull(db[entity], id);
@@ -106,19 +107,20 @@ export async function resolveDocument(db, type, id, tenant, userId) {
   const phone = toE164(customer.phone);
   const digits = String(customer.phone || "").replace(/\D/g, "");
   if (digits.length < 10) return { status: 400, error: "This customer has no phone number on file. Add one to their profile first." };
-  if (!isNanpMobileFormat(phone)) return { status: 400, error: "PDF texts can only go to US or Canadian phone numbers. This customer's number is outside that." };
+  if (!isNanpMobileFormat(phone)) return { status: 400, error: `${what} can only go to US or Canadian phone numbers. This customer's number is outside that.` };
   return { doc, customer, vehicle, phone, number: String(doc[type === "invoice" ? "invoice_number" : "estimate_number"] || "") };
 }
 
+// PDF (MMS) sends only: "Send As Text" records (channel sms) never block or shadow a PDF send.
 const recentFor = async (db, tenant, documentId) =>
-  (await db.DocumentDelivery.filter({ shop_owner_email: tenant, document_id: documentId }, "-created_date", 25)) || [];
+  ((await db.DocumentDelivery.filter({ shop_owner_email: tenant, document_id: documentId }, "-created_date", 50)) || []).filter((r) => r.channel !== "sms");
 
 export async function latestDelivery(db, tenant, documentId) {
   const rows = await recentFor(db, tenant, documentId);
   return rows.filter((r) => r.status !== "duplicate").sort((a, b) => String(b.requested_at).localeCompare(String(a.requested_at)))[0] || null;
 }
 
-async function setStatus(db, d, patch, now) {
+export async function setStatus(db, d, patch, now) {
   const status = patch.status ? nextStatus(d.status, patch.status) : d.status;
   const update = { ...patch, status, status_updated_at: new Date(now()).toISOString() };
   if (MEDIA_DONE.includes(status)) update.media_expires_at = new Date(now()).toISOString(); // revoke media

@@ -5,24 +5,30 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const src = (p) => readFileSync(new URL(`../${p}`, import.meta.url), "utf8");
-const FLOW = ["src/components/document-delivery/TextPdfButton.jsx", "src/components/document-delivery/TextPdfDialog.jsx", "src/components/document-delivery/useDocumentDelivery.js"];
+const DIR = "src/components/document-delivery/";
+const FLOW = ["TextPdfButton.jsx", "TextPdfDialog.jsx", "useDocumentDelivery.js", "TextDetailsPanel.jsx", "useDocumentText.js", "TextMessagePreview.jsx", "TextPartsStatus.jsx", "deliveryUi.js"].map((f) => DIR + f);
 
-test("PDF flow only calls sendDocumentPdf with saved type/id and never a link/legacy sender", () => {
+test("text window only calls sendDocumentPdf / sendDocumentText with saved type/id, never a link/legacy sender", () => {
   const all = FLOW.map(src).join("\n");
   const invokes = [...all.matchAll(/functions\.invoke\(\s*"([^"]+)"/g)].map((m) => m[1]);
-  assert.deepEqual([...new Set(invokes)], ["sendDocumentPdf"]);
+  assert.deepEqual([...new Set(invokes)].sort(), ["sendDocumentPdf", "sendDocumentText"]);
   assert.match(src(FLOW[2]), /document_type: documentType, document_id: documentId/);
-  for (const bad of ["sendInvoiceAuthSMS", "sendSMS", "InvoiceSign", "CustomerPortal", "lbc-customer", "PayInvoice", "window.location", "phone:", "to:"]) {
-    assert.ok(!all.includes(bad), `PDF flow must not reference ${bad}`);
+  assert.match(src(FLOW[4]), /document_type: documentType, document_id: documentId/);
+  for (const bad of ["sendInvoiceAuthSMS", "sendSMS\"", "InvoiceSign", "CustomerPortal", "lbc-customer", "PayInvoice", "window.location", "phone:", "to:", "body:"]) {
+    assert.ok(!all.includes(bad), `text window must not reference ${bad}`);
   }
-  // Nothing is sent on open: the only "send" action is behind the explicit button.
-  assert.match(src(FLOW[2]), /action: "prepare"/);
-  assert.match(src(FLOW[1]), /onClick=\{send\}/);
+  // Nothing is sent on open: sends are behind explicit buttons only, never an automatic fallback.
+  assert.match(src(FLOW[2]), /action: "prepare"/); assert.match(src(FLOW[4]), /action: "prepare"/);
+  assert.match(src(FLOW[1]), /onClick=\{send\}/); assert.match(src(FLOW[3]), /onClick=\{send\}/);
+  assert.ok(!/useEffect\([^)]*send\(/.test(src(FLOW[3])) && !src(FLOW[4]).includes("useEffect(() => { run("), "no auto send");
 });
 
-test("labels: Text Invoice PDF / Text Estimate PDF", () => {
+test("labels: Text Invoice / Text Estimate; dialog has Send PDF and a visible Send As Text", () => {
   const b = src(FLOW[0]);
-  assert.ok(b.includes('"Text Invoice PDF"') && b.includes('"Text Estimate PDF"'));
+  assert.ok(b.includes('"Text Invoice"') && b.includes('"Text Estimate"'));
+  const dlg = src(FLOW[1]);
+  assert.ok(dlg.includes('"Send PDF"') && dlg.includes("Send As Text"));
+  assert.match(dlg, /disabled=\{!st\.canOpenText\}/);
 });
 
 for (const [file, type] of [

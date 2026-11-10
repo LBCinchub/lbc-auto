@@ -56,6 +56,31 @@ export async function sendTwilioMms({ to, body, mediaUrl, statusCallback }) {
   return twilioApi("POST", "Messages.json", params);
 }
 
+// Plain SMS readiness: account + sending number configured. MMS capability is NOT required.
+// Read-only; only an explicit "this number can't send SMS" from Twilio blocks it.
+export async function checkSmsSender() {
+  const { sid, authToken, from } = config();
+  if (!sid || !authToken || !from) return { ok: false, reason: "Text messaging isn't set up (Twilio account or sending number missing)." };
+  const r = await twilioApi("GET", `IncomingPhoneNumbers.json?PhoneNumber=${encodeURIComponent(from)}`).catch(() => null);
+  const number = r?.ok ? (r.data?.incoming_phone_numbers || [])[0] : null;
+  if (number && number.capabilities?.sms === false) return { ok: false, reason: "The shop's Twilio number can't send SMS texts." };
+  return { ok: true };
+}
+
+// One body-only SMS. A timeout/network error or Twilio 5xx means the outcome is UNKNOWN
+// (Twilio may have accepted it), so callers must not retry it automatically.
+export async function sendTwilioTextMessage({ to, body, statusCallback }) {
+  const { from } = config();
+  const params = { To: to, From: from, Body: body };
+  if (statusCallback) params.StatusCallback = statusCallback;
+  try {
+    const r = await twilioApi("POST", "Messages.json", params);
+    return r.status >= 500 ? { ...r, ok: false, unknown: true } : r;
+  } catch (e) {
+    return { ok: false, unknown: true, status: 0, data: { message: String(e?.message || e) } };
+  }
+}
+
 export async function fetchTwilioMessage(messageSid) {
   if (!/^(SM|MM)[0-9a-f]{32}$/i.test(String(messageSid || ""))) return { ok: false, status: 400, data: {} };
   return twilioApi("GET", `Messages/${messageSid}.json`);

@@ -3,8 +3,9 @@ import { jsPDF } from 'npm:jspdf@4.2.0';
 import { buildDocumentModel } from '../../shared/documentPdfModel.ts';
 import { renderDocumentPdf } from '../../shared/documentPdfRender.ts';
 import { pdfFileName, messageBody, containsUrl } from '../../shared/documentDelivery.ts';
+import { buildDocumentText, hasLink } from '../../shared/documentText.ts';
 
-// Admin-only runtime check of the PDF renderer with SYNTHETIC fixtures. Never reads shop records and
+// Admin-only runtime check of the PDF renderer and text formatter with SYNTHETIC fixtures. Never reads shop records and
 // never sends a message. action "inspect" stores the fixture PDF privately and returns a 5-minute link.
 export default async function(req) {
   try {
@@ -33,6 +34,14 @@ export default async function(req) {
       shows_total: raw.includes('($282.50) Tj'), shows_balance: raw.includes('($182.50) Tj'), file_name: pdfFileName('invoice', inv.invoice_number),
       body: messageBody(shop.business_name, 'invoice', inv.invoice_number), body_has_url: containsUrl(messageBody(shop.business_name, 'invoice', inv.invoice_number)),
     };
+    // "Send As Text" formatter on the same synthetic invoice (built only; never sent).
+    const text = buildDocumentText('invoice', inv, customer, vehicle, { ...shop, business_email: 'service@fixture.test' }, { currency: 'CAD' });
+    result.text = text.error ? { error: text.error } : {
+      parts: text.parts.map((p) => ({ body: p.body, encoding: p.encoding, chars: p.chars, segments: p.segments })),
+      has_link: text.parts.some((p) => hasLink(p.body)),
+      hides_vin: !text.parts.some((p) => p.body.includes(vehicle.vin)),
+    };
+    result.text_without_shop_name = buildDocumentText('invoice', inv, customer, vehicle, {}, {}).code || 'built';
     if (body.action === 'inspect') {
       const { file_uri } = await base44.asServiceRole.integrations.Core.UploadPrivateFile({ file: new File([bytes], result.file_name, { type: 'application/pdf' }) });
       const { signed_url } = await base44.asServiceRole.integrations.Core.CreateFileSignedUrl({ file_uri, expires_in: 300 });
