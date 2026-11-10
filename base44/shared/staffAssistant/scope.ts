@@ -27,13 +27,25 @@ export function validTimezone(tz: any) {
   try { new Intl.DateTimeFormat('en', { timeZone: tz }); return true; } catch (_) { return false; }
 }
 
-export function resolveStaffScope(user: any, now = Date.now()) {
+// Verified shop memberships for this session. The only provable membership today is OWNER-SELF:
+// there is no membership entity binding a second login to a shop (team members sign in with a PIN
+// on the Team Portal, which has no assistant). business_name is a label, never proof of membership.
+export function verifiedMemberships(user: any) {
+  return [{ shop_key: `shop_${user.id}`, role: 'owner', name: String(user.business_name) }];
+}
+
+export function resolveStaffScope(user: any, now = Date.now(), requested: any = {}) {
   if (!user?.id || !user?.email) throw new ToolError('unauthorized', 'Sign in required.', 401);
   if (!user.business_name) throw new ToolError('forbidden', 'Finish your shop setup before LBC Auto AI can use shop records.', 403);
   if (!subscriptionActive(user, now)) throw new ToolError('forbidden', 'Your LBC Auto subscription is not active, so shop records are unavailable.', 403);
+  const memberships = verifiedMemberships(user);
+  const sel = requested?.shop_key;
+  const m = sel ? memberships.find((x) => x.shop_key === sel) : memberships.length === 1 ? memberships[0] : null;
+  if (!m) throw new ToolError(sel ? 'shop_mismatch' : 'shop_ambiguous', sel ? 'That shop is not one of your verified shops. Close and reopen LBC Auto AI.' : 'Choose which of your shops to use.', 403);
   const tzOk = validTimezone(user.timezone);
   return Object.freeze({
-    userId: String(user.id), tenant: lc(user.email), role: 'owner', businessName: String(user.business_name),
+    userId: String(user.id), tenant: lc(user.email), role: m.role, shopKey: m.shop_key, businessName: m.name,
+    publicPhone: typeof user.phone === 'string' ? user.phone : '', publicAddress: typeof user.address === 'string' ? user.address : '',
     timezone: tzOk ? user.timezone : 'UTC', timezoneVerified: tzOk,
     laborRate: finite(user.labor_rate) && user.labor_rate > 0 ? user.labor_rate : null,
     taxRate: finite(user.tax_rate) && user.tax_rate >= 0 && user.tax_rate <= 30 ? user.tax_rate : null,
@@ -56,7 +68,10 @@ export function owned(rec: any, scope: any) {
 // after owned() verified them.
 export const writerFor = (ctx: any, rec: any) => (isServiceCreated(rec) ? ctx.svc : ctx.userDb);
 
-const STAMP: Record<string, string> = { Customer: 'shop_owner_email', Vehicle: 'shop_owner_email', Appointment: 'shop_email', Mechanic: 'shop_owner_email', TimeEntry: 'shop_owner_email', PaymentRecord: 'shop_owner_email' };
+export const shopIdentity = (scope: any) => ({ key: scope.shopKey, name: scope.businessName, role: scope.role, verified: true });
+
+const STAMP: Record<string, string> = { Customer: 'shop_owner_email', Vehicle: 'shop_owner_email', Appointment: 'shop_email', Mechanic: 'shop_owner_email', TimeEntry: 'shop_owner_email', PaymentRecord: 'shop_owner_email',
+  DiagnosticScan: 'shop_owner_email', CustomerReview: 'shop_owner_email', ShopOffer: 'shop_owner_email', CustomerMessage: 'shop_owner_email', CarRecommendation: 'shop_owner_email', VehiclePhoto: 'shop_email' };
 // AND(query, owner) using only $or: (A|B) & (X|Y) = AX|AY|BX|BY.
 export function ownerQuery(entity: string, scope: any, query: any = {}) {
   const owners: any[] = [{ created_by_id: scope.userId }];
