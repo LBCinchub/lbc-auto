@@ -43,6 +43,7 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import PayInvoice from './pages/PayInvoice';
 import LbcAutoLogo from '@/components/brand/LbcAutoLogo';
+import EstimateLayoutHarness from './pages/EstimateLayoutHarness';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -223,6 +224,7 @@ const AuthenticatedApp = () => {
   }
 
   // PUBLIC ROUTES — bypass all auth, render immediately, no login required
+  if (location.pathname === '/__estimateLayoutHarness') return <Routes><Route path="/__estimateLayoutHarness" element={<EstimateLayoutHarness />} /></Routes>;
   const PUBLIC_PATHS = ['/CustomerPortal', '/lbc-customer', '/CustomerDashboard', '/TechPortal', '/lbc-team', '/TechDashboard', '/TechJobView', '/OfficeAssistant', '/landing', '/WebBookingWidget', '/privacy-policy', '/terms', '/PayInvoice'];
   if (PUBLIC_PATHS.some(p => location.pathname.startsWith(p))) {
     return (
