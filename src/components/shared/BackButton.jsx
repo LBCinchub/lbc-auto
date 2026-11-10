@@ -1,18 +1,14 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import { useSmartBack } from "@/components/shared/useSmartBack";
 
 /**
  * Smart history-aware back button.
- * Goes one step back in browser history; if there's no previous entry
- * (user landed directly via URL), falls back to `fallbackTo`.
+ * Goes one step back in in-app history; on a direct URL it returns to the
+ * remembered origin, or `fallbackTo`.
  */
 export default function BackButton({ fallbackTo = "/", className = "", showLabel = false }) {
-  const navigate = useNavigate();
-  const goBack = () => {
-    if (window.history.length > 1) navigate(-1);
-    else navigate(fallbackTo);
-  };
+  const goBack = useSmartBack(fallbackTo);
   return (
     <button
       onClick={goBack}

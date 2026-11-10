@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { propagateCustomerUpdate } from "@/utils/syncCustomerActivity";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -25,6 +25,8 @@ import AutoAIBubble from "@/components/shared/AutoAIBubble";
 import InvoiceLinkGuard from "@/components/customers/InvoiceLinkGuard";
 import PortalAccessPanel from "@/components/customers/PortalAccessPanel";
 import InvoiceFormDialog from "@/components/invoices/InvoiceFormDialog";
+import { openDocument } from "@/lib/customerDocuments";
+import { useSmartBack } from "@/components/shared/useSmartBack";
 
 const AVATAR_COLORS = ["bg-sky-500","bg-violet-500","bg-emerald-500","bg-amber-500","bg-rose-500","bg-indigo-500"];
 function getAvatarColor(name = "") {
@@ -71,6 +73,7 @@ const summarizeLineItems = (names) => {
 };
 
 function VehicleTimeline({ vehicle, repairOrders, defaultOpen = false }) {
+  const navigate = useNavigate();
   const [open, setOpen] = React.useState(defaultOpen);
   const vehicleOrders = repairOrders
     .filter(ro => ro.vehicle_id === vehicle.id)
@@ -117,7 +120,7 @@ function VehicleTimeline({ vehicle, repairOrders, defaultOpen = false }) {
           ) : (
             <div className="p-4 space-y-2">
               {vehicleOrders.map(ro => (
-                <div key={ro.id} onClick={() => window.location.href = `/RepairOrderDetail/${ro.id}`}
+                <div key={ro.id} onClick={() => openDocument(navigate, "repair_order", ro.id)}
                   className="rounded-lg border border-gray-800 bg-gray-800/30 p-3 cursor-pointer hover:border-sky-500/40 hover:bg-gray-800/60 transition-all">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
@@ -142,8 +145,11 @@ function VehicleTimeline({ vehicle, repairOrders, defaultOpen = false }) {
 export default function CustomerDetails() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const params = new URLSearchParams(window.location.search);
-  const customerId = params.get("id");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const customerId = searchParams.get("id");
+  const docTab = searchParams.get("tab") || "estimates";
+  const setDocTab = (tab) => setSearchParams((p) => { const n = new URLSearchParams(p); n.set("tab", tab); return n; }, { replace: true });
+  const goBack = useSmartBack("/Customers");
 
   const [customer, setCustomer] = useState(null);
   const [vehicles, setVehicles] = useState([]);
@@ -284,7 +290,7 @@ export default function CustomerDetails() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="text-gray-400 hover:text-white gap-2">
+        <Button variant="ghost" size="sm" onClick={goBack} className="text-gray-400 hover:text-white gap-2">
           <ArrowLeft className="w-4 h-4" /> Back
         </Button>
       </div>
@@ -391,7 +397,7 @@ export default function CustomerDetails() {
           <PortalAccessPanel customerId={customer.id} />
 
           {/* ── TABS: Estimates / Repair Orders / Invoices ── */}
-          <Tabs defaultValue="estimates">
+          <Tabs value={docTab} onValueChange={setDocTab}>
             <TabsList className="bg-gray-900 border border-gray-800 flex-wrap h-auto gap-1 p-1">
               <TabsTrigger value="estimates" className="gap-1.5 data-[state=active]:bg-gray-800">
                 <ClipboardList className="w-3.5 h-3.5" /> Estimates ({estimates.length})
@@ -416,7 +422,7 @@ export default function CustomerDetails() {
                       ...(est.labor_items || []).map(l => l.description),
                     ]);
                     return (
-                    <div key={est.id} onClick={() => navigate(`/EstimateDetail/${est.id}`)}
+                    <div key={est.id} onClick={() => openDocument(navigate, "estimate", est.id)}
                       className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 flex items-center justify-between gap-3 cursor-pointer hover:border-sky-500/30 hover:bg-gray-800/50 transition-all">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -458,7 +464,7 @@ export default function CustomerDetails() {
                       ...(ro.parts_ordered || []).map(p => p.name),
                     ]);
                     return (
-                    <div key={ro.id} onClick={() => navigate(`/RepairOrderDetail/${ro.id}`)}
+                    <div key={ro.id} onClick={() => openDocument(navigate, "repair_order", ro.id)}
                       className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 flex items-center justify-between gap-3 cursor-pointer hover:border-sky-500/30 hover:bg-gray-800/50 transition-all">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -498,7 +504,7 @@ export default function CustomerDetails() {
                     ]);
                     const partialPaid = inv.status === "partial" && (inv.amount_paid || 0) > 0;
                     return (
-                    <div key={inv.id} onClick={() => navigate(`/InvoiceDetail/${inv.id}`)}
+                    <div key={inv.id} onClick={() => openDocument(navigate, "invoice", inv.id)}
                       className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 flex items-center justify-between gap-3 cursor-pointer hover:border-sky-500/30 hover:bg-gray-800/50 transition-all">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">

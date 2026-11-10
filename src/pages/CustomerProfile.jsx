@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import CustomerDocumentCard from "@/components/customers/CustomerDocumentCard";
 import {
   ArrowLeft, Phone, Mail, MapPin, Car, Wrench, FileText,
   Clock, Bell, BellOff, Send, CheckCircle2, TrendingUp,
@@ -65,7 +66,9 @@ export default function CustomerProfile() {
   const [estimates, setEstimates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "overview";
+  const setActiveTab = (tab) => setSearchParams((p) => { const n = new URLSearchParams(p); n.set("tab", tab); return n; }, { replace: true });
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [savingReminder, setSavingReminder] = useState(false);
@@ -206,7 +209,7 @@ export default function CustomerProfile() {
   const tabs = [
     { id:"overview", label:"Overview" },
     { id:"vehicles", label:`Vehicles (${vehicles.length})` },
-    { id:"history",  label:`History (${orders.length})` },
+    { id:"history",  label:`History (${orders.length + estimates.length + invoices.length})` },
     { id:"reminders",label:"Reminders" },
   ];
 
@@ -391,17 +394,7 @@ export default function CustomerProfile() {
             {lastOrder && (
               <div style={S.card}>
                 <p style={{ ...S.label, marginBottom:10 }}>Last Repair Order</p>
-                <p style={{ color:"#fff", fontSize:14, fontWeight:700, margin:0 }}>{lastOrder.description || "Service"}</p>
-                <p style={{ color:"#64748b", fontSize:12, margin:"4px 0 0" }}>{lastOrder.created_date?.slice(0,10)} · #{lastOrder.order_number}</p>
-                {lastOrder.status && (
-                  <span style={{
-                    display:"inline-block", marginTop:6,
-                    background: lastOrder.status==="completed" ? "rgba(74,222,128,0.1)" : "rgba(251,191,36,0.1)",
-                    color: lastOrder.status==="completed" ? "#4ade80" : "#fbbf24",
-                    border: `1px solid ${lastOrder.status==="completed" ? "rgba(74,222,128,0.3)" : "rgba(251,191,36,0.3)"}`,
-                    borderRadius:20, padding:"2px 10px", fontSize:11, fontWeight:700, textTransform:"capitalize",
-                  }}>{lastOrder.status}</span>
-                )}
+                <CustomerDocumentCard type="repair_order" doc={lastOrder} />
               </div>
             )}
           </>
@@ -501,48 +494,24 @@ export default function CustomerProfile() {
         {/* ══════ HISTORY TAB ══════ */}
         {activeTab === "history" && (
           <>
-            {orders.length === 0 && invoices.length === 0 ? (
+            {orders.length === 0 && invoices.length === 0 && estimates.length === 0 ? (
               <div style={{ ...S.card, textAlign:"center", padding:40 }}>
                 <Wrench style={{ width:36, height:36, color:"#334155", margin:"0 auto 12px" }}/>
                 <p style={{ color:"#475569" }}>No service history yet.</p>
               </div>
             ) : (
-              <>
-                {/* Repair Orders */}
-                {orders.map(o => (
-                  <div key={o.id} style={S.card}>
-                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:6 }}>
-                      <div>
-                        <p style={{ color:"#fff", fontSize:14, fontWeight:700, margin:0 }}>{o.description || "Repair Order"}</p>
-                        <p style={{ color:"#64748b", fontSize:12, margin:"3px 0 0" }}>{o.created_date?.slice(0,10)} · RO #{o.order_number}</p>
-                      </div>
-                      <span style={{
-                        background: o.status==="completed" ? "rgba(74,222,128,0.1)" : "rgba(56,189,248,0.1)",
-                        color: o.status==="completed" ? "#4ade80" : "#38bdf8",
-                        border: `1px solid ${o.status==="completed" ? "rgba(74,222,128,0.3)" : "rgba(56,189,248,0.3)"}`,
-                        borderRadius:20, padding:"2px 10px", fontSize:10, fontWeight:700, textTransform:"capitalize", whiteSpace:"nowrap",
-                      }}>{o.status || "pending"}</span>
-                    </div>
-                    {o.vehicle_info && <p style={{ color:"#38bdf8", fontSize:12 }}>🚗 {o.vehicle_info}</p>}
-                    {o.mileage && <p style={{ color:"#64748b", fontSize:12 }}>📍 {Number(o.mileage).toLocaleString()} km</p>}
-                  </div>
+              <div className="space-y-5">
+                {[
+                  { type: "repair_order", title: "Repair Orders", docs: orders },
+                  { type: "estimate", title: "Estimates", docs: estimates },
+                  { type: "invoice", title: "Invoices", docs: invoices },
+                ].filter((g) => g.docs.length > 0).map((g) => (
+                  <section key={g.type} className="space-y-2">
+                    <p style={{ ...S.label, margin:0 }}>{g.title} ({g.docs.length})</p>
+                    {g.docs.map((doc) => <CustomerDocumentCard key={doc.id} type={g.type} doc={doc} />)}
+                  </section>
                 ))}
-
-                {/* Invoices */}
-                {invoices.map(inv => (
-                  <div key={inv.id} style={S.card}>
-                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
-                      <div>
-                        <p style={{ color:"#fff", fontSize:14, fontWeight:700, margin:0 }}>Invoice #{inv.invoice_number}</p>
-                        <p style={{ color:"#64748b", fontSize:12, margin:"3px 0 0" }}>{inv.created_date?.slice(0,10)}</p>
-                      </div>
-                      <p style={{ color:"#4ade80", fontSize:16, fontWeight:800, margin:0 }}>
-                        ${(inv.amount_paid || 0).toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </>
+              </div>
             )}
           </>
         )}
