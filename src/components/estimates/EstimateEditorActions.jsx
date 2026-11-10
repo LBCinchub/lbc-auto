@@ -1,9 +1,10 @@
 import React from "react";
 import { DollarSign, FileText, Loader2, Printer, Save, Send, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import TextPdfButton from "@/components/document-delivery/TextPdfButton";
 
 export default function EstimateEditorActions({
-  saving, sending, hasLinkedInvoice, hasLinkedRO, extraActions,
+  estimateId, saving, sending, hasLinkedInvoice, hasLinkedRO, extraActions,
   onCancel, onSave, onPrint, onSend, onPayment, onViewInvoice, onConvertRO, onViewRO,
 }) {
   return (
@@ -12,8 +13,9 @@ export default function EstimateEditorActions({
         {extraActions}
         <Button variant="outline" onClick={onPrint}><Printer /> Print</Button>
         <Button variant="outline" onClick={onSend} disabled={sending}>
-          {sending ? <Loader2 className="animate-spin" /> : <Send />} {sending ? "Sending…" : "Send"}
+          {sending ? <Loader2 className="animate-spin" /> : <Send />} {sending ? "Emailing…" : "Email Estimate"}
         </Button>
+        {estimateId && <TextPdfButton documentType="estimate" documentId={estimateId} size="default" />}
         <Button variant="outline" onClick={onPayment}><DollarSign /> Record Payment</Button>
         {hasLinkedInvoice && (
           <Button variant="outline" onClick={onViewInvoice}><FileText /> View Invoice</Button>

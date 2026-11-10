@@ -218,3 +218,21 @@ test("Twilio signature: matches independent HMAC-SHA1, rejects tampering and wro
   assert.equal(await verifyTwilioSignature("tok", url + "?x=1", params, ref), false);
   assert.equal(await verifyTwilioSignature("tok", url, params, ""), false);
 });
+
+test("estimate send: saved estimate PDF to its own customer, no portal/sign/login/pay link, estimate untouched", async () => {
+  const s = seed(); const { d, twilio, files } = deps(s);
+  const before = structuredClone(s.t.Estimate[0]);
+  const r = await sendDocument(d, { document_type: "estimate", document_id: "eA", idempotency_key: "key-est-001" });
+  assert.equal(r.status, 200); assert.equal(twilio.sent.length, 1);
+  const m = twilio.sent[0];
+  assert.equal(m.to, "+16135550199");
+  assert.match(m.mediaUrl, /\/functions\/documentMedia\?d=DocumentDelivery_\d+&t=[\w-]{43}$/);
+  assert.ok(!containsUrl(m.body));
+  for (const bad of ["invoicesign", "customerportal", "lbc-customer", "payinvoice", "login", "sign in", "stripe", "http", "download"]) assert.ok(!m.body.toLowerCase().includes(bad), bad);
+  assert.ok(files[0].name.startsWith("EST-77") && files[0].name.endsWith(".pdf")); assert.ok(pdfString(files[0].bytes).startsWith("%PDF"));
+  assert.equal(r.delivery.status, "queued"); assert.equal(r.delivery.delivered, false);
+  assert.deepEqual(s.t.Estimate[0], before, "estimate status/approval untouched");
+  const asB = deps(s, { user: userB });
+  assert.equal((await sendDocument(asB.d, { document_type: "estimate", document_id: "eA", idempotency_key: "key-est-002" })).status, 404);
+  assert.equal(asB.twilio.sent.length, 0);
+});

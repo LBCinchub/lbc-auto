@@ -360,6 +360,7 @@ export default function OriginalEstimateEditor({ estimateId, onClose }) {
         )}
       </div>
       <EstimateEditorActions
+        estimateId={estimate.id}
         saving={saving}
         sending={sending === estimate.id}
         hasLinkedInvoice={!!estimate.linked_invoice_id}

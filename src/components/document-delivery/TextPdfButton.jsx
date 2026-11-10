@@ -3,14 +3,16 @@ import { Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import TextPdfDialog from "./TextPdfDialog";
 
-export default function TextPdfButton({ documentType, documentId, className = "h-8 w-8", iconClassName = "w-4 h-4" }) {
+// Opens the PDF-attachment text flow (sendDocumentPdf). Never sends a link.
+export default function TextPdfButton({ documentType, documentId, size = "sm", className = "" }) {
   const [open, setOpen] = useState(false);
+  const label = documentType === "invoice" ? "Text Invoice PDF" : "Text Estimate PDF";
   return (
     // Clicks inside the window must not reach the document row underneath (React portals bubble).
     <span className="contents" onClick={(e) => e.stopPropagation()}>
-      <Button variant="ghost" size="icon" className={`${className} text-gray-500 hover:text-sky-400`} title="Text PDF to customer"
-        aria-label="Text PDF to customer" onClick={(e) => { e.stopPropagation(); setOpen(true); }}>
-        <Smartphone className={iconClassName} />
+      <Button variant="outline" size={size} className={`border-gray-700 bg-transparent text-sky-300 hover:text-sky-200 ${className}`}
+        title={`${label}: sends the PDF as an attachment, no link`} onClick={(e) => { e.stopPropagation(); setOpen(true); }}>
+        <Smartphone /> {label}
       </Button>
       {open && <TextPdfDialog documentType={documentType} documentId={documentId} onClose={() => setOpen(false)} />}
     </span>

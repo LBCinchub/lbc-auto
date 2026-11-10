@@ -56,12 +56,13 @@ export default function Invoices() {
     const customer = customers.find(c => c.id === inv.customer_id);
     const phone = customer?.phone;
     if (!phone) { alert("No phone number found for this customer. Please add a phone number to the customer profile first."); return; }
+    if (!window.confirm(`Request Signature (Link)\n\nThis texts ${phone} a signing LINK, not the invoice PDF. To send the PDF itself, use "Text Invoice PDF".\n\nSend the signature link?`)) return;
     setSendingAuth(inv.id);
     try {
       const appUrl = window.location.origin;
       await base44.functions.invoke('sendInvoiceAuthSMS', { invoice_id: inv.id, phone, app_url: appUrl });
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      alert(`Authorization SMS sent to ${phone}`);
+      alert(`Signature link sent to ${phone}`);
     } catch (err) {
       const detail = err?.response?.data?.details?.message || err?.response?.data?.error || err.message;
       alert(`Failed to send SMS: ${detail}`);
@@ -487,10 +488,10 @@ export default function Invoices() {
                     </div>
                   )}
                   <div className="flex gap-1" onClick={e => e.stopPropagation()}>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-sky-400" title="Send Invoice to Customer" onClick={e => sendInvoiceEmail(e, inv)} disabled={sendingEmail === inv.id}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-sky-400" title="Email Invoice" aria-label="Email Invoice" onClick={e => sendInvoiceEmail(e, inv)} disabled={sendingEmail === inv.id}>
                       {sendingEmail === inv.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     </Button>
-                    <TextPdfButton documentType="invoice" documentId={inv.id} />
+                    <TextPdfButton documentType="invoice" documentId={inv.id} className="h-8 px-2 text-xs" />
                     {(inv.status === "unpaid" || inv.status === "partial") && (
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-emerald-500 hover:text-emerald-400"
                         onClick={() => setPaymentInvoice(inv)} title="Record Payment">
@@ -502,9 +503,10 @@ export default function Invoices() {
                         <ShieldCheck className="w-4 h-4 text-emerald-400" />
                       </span>
                     ) : (
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-sky-500 hover:text-sky-400"
-                        onClick={() => sendAuthSMS(inv)} disabled={sendingAuth === inv.id} title="Send Auth SMS">
-                        <MessageSquare className="w-4 h-4" />
+                      <Button variant="ghost" size="sm" className="h-8 px-2 text-xs text-amber-400 hover:text-amber-300"
+                        onClick={() => sendAuthSMS(inv)} disabled={sendingAuth === inv.id}
+                        title="Request Signature (Link): texts a signing link, not the PDF">
+                        <MessageSquare className="w-4 h-4" /> Request Signature (Link)
                       </Button>
                     )}
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-white"

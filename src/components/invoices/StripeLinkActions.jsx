@@ -43,7 +43,7 @@ export default function StripeLinkActions({ link, busy, customerPhone, onCheck, 
         <Button size="sm" variant="outline" className={BTN} asChild>
           <a href={link.url} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-3.5 w-3.5" /> Open</a>
         </Button>
-        {customerPhone && <Button type="button" size="sm" variant="outline" className={BTN} onClick={text}><MessageSquare className="h-3.5 w-3.5" /> Text customer</Button>}
+        {customerPhone && <Button type="button" size="sm" variant="outline" className={BTN} onClick={text}><MessageSquare className="h-3.5 w-3.5" /> Send Payment Link</Button>}
         <Button type="button" size="sm" variant="outline" className={BTN} onClick={onCheck} disabled={!!busy}>
           {busy === "link_status" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />} Check payment
         </Button>

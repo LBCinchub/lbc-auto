@@ -394,10 +394,10 @@ export default function Estimates() {
                       💵 Cash Out
                     </button>
                     {/* icon-only row */}
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-500 hover:text-sky-400" title="Email" onClick={e => sendEstimateEmail(e, est)} disabled={sendingEmail === est.id}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-500 hover:text-sky-400" title="Email Estimate" aria-label="Email Estimate" onClick={e => sendEstimateEmail(e, est)} disabled={sendingEmail === est.id}>
                       {sendingEmail === est.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
                     </Button>
-                    <TextPdfButton documentType="estimate" documentId={est.id} className="h-7 w-7" iconClassName="w-3 h-3" />
+                    <TextPdfButton documentType="estimate" documentId={est.id} className="h-7 px-2 text-xs" />
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-500 hover:text-white" onClick={e => { e.stopPropagation(); openEdit(est); }}>
                       <Pencil className="w-3 h-3" />
                     </Button>
