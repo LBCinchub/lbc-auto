@@ -8,6 +8,7 @@ const STATUS = {
   not_found: ["Not Found", "#fca5a5"], failed: ["Could Not Check", "#fca5a5"], unavailable: ["Unavailable", "#fca5a5"], invalid: ["Unclear Request", "#fde68a"],
   needs_input: ["Needs Details", "#fde68a"], blocked: ["Blocked", "#fca5a5"], awaiting_confirmation: ["Awaiting Confirm", "#fdba74"],
   saved: ["Saved", "#86efac"], cancelled: ["Cancelled", "#a8a29e"], unsupported: ["Not Available", "#a8a29e"],
+  not_connected: ["Not Connected", "#a8a29e"], forbidden_role: ["Not For Your Role", "#a8a29e"],
 };
 const chip = { fontSize: 9.5, padding: "2px 7px", borderRadius: 20, border: "1px solid #f9731633", background: "#120a04" };
 

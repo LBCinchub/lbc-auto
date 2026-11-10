@@ -7,6 +7,8 @@ import { planTools } from './planner.ts';
 import { createPending, claim, finish, cancel } from './confirm.ts';
 import { roleAllows, enforceStaffDisclosure } from './policy.ts';
 import { coverageReply } from './coverage.ts';
+import { routeLabor, laborTurn, laborRateReply } from './laborTurn.ts';
+import { replyText } from './deadline.ts';
 
 const RATE_PER_MIN = 20;
 const safePath = (p: any) => (typeof p === 'string' && /^\/[A-Za-z0-9/_-]{0,80}$/.test(p) ? p : '');
@@ -99,8 +101,12 @@ async function staffTurn({ userDb, svc, llm, body, scope, now = Date.now() }: an
   const messages = sanitize(body.messages);
   if (!messages.length) return null;
   ctx.userText = messages.filter((m: any) => m.role === 'user').slice(-6).map((m: any) => m.content).join('\n');
-  const plan = await planTools(llm, { messages, today: ctx.today, pagePath: safePath(body.page), role: scope.role });
   const audit = (tools: string[]) => store.create({ shop_owner_email: scope.tenant, actor_user_id: scope.userId, capability: tools.join(',') || 'none', kind: 'turn', status: 'logged', tools_used: tools, request_id: String(body.request_id || '').slice(0, 64) });
+  // Labor time and labor rate are routed before the planner, so they can never become a write.
+  const route = routeLabor(messages);
+  if (route === 'labor_rate') { await audit(['settings.get']); return laborRateReply(scope); }
+  if (route === 'repair_hours') { const { audit: used, ...out } = await laborTurn(ctx, llm, messages); await audit(used); return out; }
+  const plan = await planTools(llm, { messages, today: ctx.today, pagePath: safePath(body.page), role: scope.role });
   if (plan.unsupported) { await audit([]); return { reply: UNSUPPORTED[plan.unsupported], staff: { tool_results: [{ label: 'Not Available From Chat', status: 'unsupported' }] } }; }
   if (!plan.calls.length) {
     if (!plan.dropped.length) return null;
@@ -109,14 +115,17 @@ async function staffTurn({ userDb, svc, llm, body, scope, now = Date.now() }: an
   }
   await audit(plan.calls.map((c: any) => c.cap.name));
   if (plan.calls[0].cap.kind !== 'read') {
+    if (body.read_only === true) return { reply: 'Retry Only Repeats Lookups. Ask Again To Prepare That Change.', staff: { tool_results: [{ label: plan.calls[0].cap.label, status: 'blocked' }] } };
     if (!roleAllows(scope.role, plan.calls[0].cap)) return { reply: `${plan.calls[0].cap.label} is not available for your role.`, staff: { tool_results: [{ label: plan.calls[0].cap.label, status: 'forbidden_role' }] } };
     return prepareWrite(ctx, store, plan.calls[0], body.request_id);
   }
   const results = await Promise.all(plan.calls.map((c: any) => runRead(ctx, c)));
-  const reply = await llm({ prompt: composePrompt(messages, results, scope) });
+  // A slow, failed or empty summary still returns what was checked, with a read-only Retry.
+  const reply = replyText(await Promise.resolve(llm({ prompt: composePrompt(messages, results, scope) })).catch((e: any) => { console.error('staff compose failed', e?.code || e?.name); return ''; }));
   const links = results.flatMap((r: any) => (r.items || []).flatMap((x: any) => [itemLink(x), itemLink(x?.customer), itemLink(x?.vehicle)])).filter(Boolean).slice(0, 5);
   return {
-    reply: typeof reply === 'string' ? reply : reply?.content || reply?.reply || 'Here is what I found.',
+    reply: reply || 'I Checked Your Records But Could Not Write The Answer. Nothing Was Changed. Tap Retry.',
+    ...(reply ? {} : { retryable: true, error_code: 'empty_reply' }),
     staff: { tool_results: results.map((r: any) => ({ label: r.label, module: r.module, status: r.status, count: r.items?.length ?? null, has_more: !!r.has_more, partial: !!r.partial })), links, read_only: true },
   };
 }

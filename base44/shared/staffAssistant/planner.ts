@@ -17,7 +17,9 @@ TOOLS:
 ${catalogText(role)}
 
 RULES:
-- Use tools only when the request needs this shop's records or asks to create/change one. General car advice (labor times, codes, how-to) needs NO tools: return calls [].
+- Use tools only when the request needs this shop's records or asks to create/change one. General car advice (codes, how-to) needs NO tools: return calls [].
+- Repair labor time ("labor hours", "book time", "how long to replace X") is answered elsewhere: never use estimates.create, price_library.search or time.summary for it. time.summary is employee clock time only, never repair labor hours.
+- Use estimates.create ONLY when the staff explicitly asks to create, make or write an estimate.
 - At most 3 read calls, or exactly 1 WRITE call. Never invent ids. Use names, phones, numbers exactly as the staff wrote them.
 - For WRITE args, only include values the staff actually stated in the conversation. Leave unknown values out; never guess prices, hours, dates or tax.
 - If the staff asks to take a payment/refund, delete something, send a text/email, or convert a document, set unsupported accordingly and calls [].

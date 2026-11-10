@@ -117,13 +117,15 @@ test('money movement and deletes are refused honestly', async () => {
   const env = await setup();
   const out = await turn(env, A, { calls: [], unsupported: 'payments' }, 'record a $200 payment on INV-1');
   assert.match(out.reply, /never moved from chat/);
-  assert.equal((await turn(env, A, { calls: [] }, 'how many hours for a timing belt')), null);
+  assert.equal((await turn(env, A, { calls: [] }, 'what does a timing belt do')), null);
+  assert.match((await turn(env, A, { calls: [] }, 'how many hours for a timing belt')).reply, /^To Look Up Labor Time/);
 });
 
 test('source guards: staff tools only in owner mode; browser sends no tenant claims', () => {
   const fn = readFileSync('base44/functions/lbcAutoAI/entry.ts', 'utf8');
-  assert.match(fn, /if \(mode === 'owner' && !image_base64 && !image_url\)[\s\S]*handleStaffTurn/);
-  assert.ok(fn.indexOf('handleStaffTurn({') < fn.indexOf('PUBLIC MODE'));
+  const owner = readFileSync('base44/shared/staffAssistant/ownerRequest.ts', 'utf8');
+  assert.match(owner, /if \(mode === 'owner' && !image_base64 && !image_url\)[\s\S]*handleStaffTurn/);
+  assert.ok(fn.indexOf('handleOwnerRequest({') < fn.indexOf('PUBLIC MODE'));
   assert.ok(!/shop_context\)/.test(fn));
   const ui = readFileSync('src/components/shared/AutoAIBubble.jsx', 'utf8');
   assert.ok(!/shop_email|shop_context|InvokeLLM/.test(ui));

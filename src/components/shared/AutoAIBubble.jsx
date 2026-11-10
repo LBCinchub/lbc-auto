@@ -15,6 +15,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import StaffToolResults from "@/components/staff-ai/StaffToolResults";
 import CopyTextButton from "@/components/staff-ai/CopyTextButton";
 import { staffSuggestions } from "@/components/staff-ai/staffSuggestions";
+import AiRetryButton from "@/components/staff-ai/AiRetryButton";
+import { requestAiReply } from "@/lib/aiChatRequest";
 
 // Detail pages with a sticky bottom financial action bar — lift the widget above it.
 const DETAIL_PATTERN = /\/(EstimateDetail|RepairOrderDetail|InvoiceDetail)/i;
@@ -178,6 +180,7 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
   const listRef  = useRef(null);
   const nearBottomRef = useRef(true);
   const msgIdRef = useRef(0);
+  const requestSeqRef = useRef(0); // only the newest request may write a reply
   const animatedIdsRef = useRef(new Set()); // replies already revealed once — never retype
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -222,14 +225,24 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
 
   const removePendingImage = () => setPendingImage(null);
 
-  const sendMessage = async (text) => {
-    const q = (text || input).trim();
-    if ((!q && !pendingImage) || loading) return;
-    setInput("");
-
-    const preview = pendingImage?.preview || null;
-    const userMsg = { role: "user", content: q || "Please analyze this image.", image: preview };
-    const history = [...messages, userMsg];
+  // retryOf: a failed assistant reply to re-ask (read-only: the server will not prepare a change).
+  const sendMessage = async (text, retryOf = null) => {
+    if (loading) return;
+    let userMsg, history;
+    if (retryOf) {
+      const idx = messages.findIndex(m => m.id === retryOf.id);
+      if (idx < 1 || messages[idx - 1].role !== "user") return;
+      history = messages.slice(0, idx);
+      userMsg = history[history.length - 1];
+    } else {
+      const q = (text || input).trim();
+      if (!q && !pendingImage) return;
+      setInput("");
+      userMsg = { role: "user", content: q || "Please analyze this image.", image: pendingImage?.preview || null };
+      history = [...messages, userMsg];
+    }
+    const preview = retryOf ? null : pendingImage?.preview || null;
+    const seq = ++requestSeqRef.current;
     setMessages(history);
     nearBottomRef.current = true; // sending a message returns the view to the latest reply
     setLoading(true);
@@ -238,7 +251,7 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
       // Photos are stored privately; the AI reads them through a short-lived link.
       let imageUri = null;
       let imageUrl = null;
-      if (pendingImage) {
+      if (pendingImage && !retryOf) {
         try {
           const { file_uri } = await base44.integrations.Core.UploadPrivateFile({ file: pendingImage.file });
           const { signed_url } = await base44.integrations.Core.CreateFileSignedUrl({ file_uri, expires_in: 600 });
@@ -257,35 +270,38 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
         page: location.pathname,
         request_id: crypto.randomUUID(),
         shop_key: shopKeyRef.current || undefined,
+        read_only: retryOf ? true : undefined,
       };
       if (imageUrl) {
         payload.image_url = imageUrl;
         payload.image_context = "User uploaded a photo for AI analysis";
       }
 
-      const result = await base44.functions.invoke("lbcAutoAI", payload);
-      setPendingImage(null);
+      const out = await requestAiReply((name, p) => base44.functions.invoke(name, p), payload);
+      if (seq !== requestSeqRef.current) return; // a newer request owns the chat: drop this reply
+      if (!retryOf) setPendingImage(null);
 
-      const replyRaw = result?.data?.reply || result?.reply || "No response generated.";
-      const offerApt  = result?.data?.offer_appointment || result?.offer_appointment || false;
-      const assistantMsg = { id: `a${++msgIdRef.current}`, animate: true, role: "assistant", content: replyRaw, offerApt, estimateCapability: result?.data?.estimate_capability || null, staff: result?.data?.staff || null };
+      const data = out.data || {};
+      const assistantMsg = { id: `a${++msgIdRef.current}`, animate: out.ok, role: "assistant", content: out.content, offerApt: !!data.offer_appointment, estimateCapability: data.estimate_capability || null, staff: data.staff || null,
+        retry: out.retryable && !preview };
       if (imageUri) {
         assistantMsg.imageUri = imageUri;
         assistantMsg.imagePreview = preview;
         assistantMsg.saveable = true;
       }
       // A different verified shop means earlier replies belong to another shop: drop them.
-      const nextShop = result?.data?.shop || null;
-      const mismatch = result?.data?.staff?.error_code === "shop_mismatch";
+      const nextShop = data.shop || null;
+      const mismatch = data.staff?.error_code === "shop_mismatch";
       const switched = mismatch || !!(nextShop?.key && shopKeyRef.current && nextShop.key !== shopKeyRef.current);
       if (mismatch) { shopKeyRef.current = null; setShop(null); }
       if (nextShop?.key) { shopKeyRef.current = nextShop.key; setShop(nextShop); }
       setMessages(prev => (switched ? [userMsg, assistantMsg] : [...prev, assistantMsg]));
     } catch (e) {
-      console.error("AutoAI error:", e);
-      setMessages(prev => [...prev, { id: `a${++msgIdRef.current}`, role: "assistant", content: "⚠️ AI unavailable right now. Try again in a moment." }]);
+      console.error("AutoAI error:", e?.name || "error");
+      if (seq === requestSeqRef.current) setMessages(prev => [...prev, { id: `a${++msgIdRef.current}`, role: "assistant", content: "LBC Auto AI Is Unavailable Right Now. Nothing Was Changed. Tap Retry.", retry: !preview }]);
+    } finally {
+      if (seq === requestSeqRef.current) setLoading(false);
     }
-    setLoading(false);
   };
 
   // Confirm / Cancel a previewed change. The server holds the details; we send only id + token.
@@ -293,16 +309,16 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
     if (decisions[msg.id]) return;
     setDecisions(d => ({ ...d, [msg.id]: "busy" }));
     const { action_id, token } = msg.staff.confirmation;
+    // Confirmations are never retried automatically; a failure tells staff to check the record.
     try {
-      const result = await base44.functions.invoke("lbcAutoAI", { mode: "owner", shop_key: shopKeyRef.current || undefined, staff_action: { action_id, token, decision } });
-      const staff = result?.data?.staff || null;
-      setMessages(prev => [...prev, { id: `a${++msgIdRef.current}`, role: "assistant", content: result?.data?.reply || "Done.", staff }]);
+      const out = await requestAiReply((name, p) => base44.functions.invoke(name, p), { mode: "owner", shop_key: shopKeyRef.current || undefined, staff_action: { action_id, token, decision } });
+      const staff = out.data?.staff || null;
+      const content = out.ok || staff ? out.content : "Could Not Confirm The Result. Check The Record Before Trying Again.";
+      setMessages(prev => [...prev, { id: `a${++msgIdRef.current}`, role: "assistant", content, staff }]);
       if (staff?.refresh?.length) queryClient.invalidateQueries();
-    } catch (e) {
-      console.error("AutoAI action error:", e);
-      setMessages(prev => [...prev, { id: `a${++msgIdRef.current}`, role: "assistant", content: "⚠️ Could not reach the shop records. Nothing was confirmed; check the record before trying again." }]);
+    } finally {
+      setDecisions(d => ({ ...d, [msg.id]: "done" }));
     }
-    setDecisions(d => ({ ...d, [msg.id]: "done" }));
   };
 
   const handleKey = (e) => {
@@ -408,6 +424,9 @@ export default function AutoAIBubble({ vehicle = "", description = "" }) {
                     <StaffToolResults staff={m.staff} decisionState={decisions[m.id]} onDecision={(d) => decide(m, d)} onAsk={(q) => sendMessage(q)} />
                   )}
                   {m.role === "assistant" && m.content && !m.staff?.confirmation && <CopyTextButton text={m.content} />}
+                  {m.role === "assistant" && m.retry && idx === messages.length - 1 && (
+                    <AiRetryButton disabled={loading} onRetry={() => sendMessage(null, m)} />
+                  )}
                   {m.saveable && (
                     <button
                       onClick={() => setSavePhoto({ photoUri: m.imageUri, preview: m.imagePreview, aiAnalysis: m.content })}
