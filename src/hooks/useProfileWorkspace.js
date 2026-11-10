@@ -38,7 +38,7 @@ export default function useProfileWorkspace(customerId, onClosed) {
       onClosed?.();
     }
     prevKey.current = docKey;
-  }, [docKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [docKey]);
 
   return { tab, setTab, doc, openDoc, closeDoc };
 }

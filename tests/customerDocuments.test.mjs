@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 globalThis.window = { history: { state: null }, location: { pathname: "/CustomerProfile/c1", search: "?tab=history" } };
-const { safeReturnTo, hasInAppHistory, documentPath, openDocument, describeDocument } = await import("../src/lib/customerDocuments.js");
+const { safeReturnTo, hasInAppHistory, documentPath, openDocument, describeDocument, matchDocumentPath, matchListPath } = await import("../src/lib/customerDocuments.js");
 
 test("routes each type to its canonical main-module detail page with the real id", () => {
   assert.equal(documentPath("invoice", "inv_1"), "/InvoiceDetail/inv_1");
@@ -45,10 +45,36 @@ test("summaries use saved values only, with balance just for open invoices", () 
   assert.deepEqual([ro.label, ro.number, ro.title, ro.total, ro.mechanic], ["Repair Order", "RO-2", "Brakes", 75, "Sam"]);
 });
 
-test("customer profile entry points open documents through the shared canonical helper", () => {
+test("document links map into the profile; other paths pass through", () => {
+  assert.deepEqual(matchDocumentPath("/InvoiceDetail/inv_1"), { type: "invoice", id: "inv_1" });
+  assert.deepEqual(matchDocumentPath("/EstimateDetail/e%201"), { type: "estimate", id: "e 1" });
+  assert.deepEqual(matchDocumentPath("/RepairOrderDetail/ro_1"), { type: "repair_order", id: "ro_1" });
+  for (const p of ["/InvoiceDetail/", "/InvoiceDetail/a/b", "/Invoices", "/Settings", "https://x/InvoiceDetail/1", null]) assert.equal(matchDocumentPath(p), null);
+  assert.deepEqual(matchListPath("/Estimates", "c1"), { tab: "estimates" });
+  assert.deepEqual(matchListPath("/RepairOrders", "c1"), { tab: "repairorders" });
+  assert.deepEqual(matchListPath("/Invoices", "c1"), { tab: "invoices" });
+  assert.deepEqual(matchListPath("/CustomerDetails?id=c1", "c1"), { tab: null });
+  assert.equal(matchListPath("/CustomerDetails?id=other", "c1"), null);
+  assert.equal(matchListPath("/Invoices?q=x", "c1"), null);
+  assert.equal(matchListPath("/Billing", "c1"), null);
+});
+
+test("staff customer profile opens the canonical editors in place and keeps tab state stable", () => {
   const details = readFileSync("src/pages/CustomerDetails.jsx", "utf8");
-  for (const t of ['"estimate"', '"repair_order"', '"invoice"']) assert.ok(details.includes(`openDocument(navigate, ${t}`));
+  for (const t of ['"estimate"', '"repair_order"', '"invoice"']) assert.ok(details.includes(`openDoc(${t}`));
   assert.ok(!details.includes("window.location.href"));
+  assert.ok(details.includes('activationMode="manual"'), "tabs must not switch on programmatic focus");
+  assert.ok(details.includes("loading && !customer ?"), "reloads must not unmount the tabs");
+  assert.ok(!details.includes("<AutoAIBubble"), "layout already renders the assistant");
+  const view = readFileSync("src/components/customers/ProfileDocumentView.jsx", "utf8");
+  for (const c of ["OriginalInvoiceEditor", "OriginalEstimateEditor", "RepairOrderDetail"]) assert.ok(view.includes(`<${c}`));
+  for (const f of ["src/components/invoices/OriginalInvoiceEditor.jsx", "src/components/estimates/OriginalEstimateEditor.jsx", "src/pages/RepairOrderDetail.jsx", "src/components/invoices/InvoiceEditorHeader.jsx", "src/components/estimates/EstimateEditorHeader.jsx"]) {
+    const src = readFileSync(f, "utf8");
+    assert.ok(src.includes("useDocumentNavigate()"), `${f} must use the profile-aware navigate`);
+    assert.ok(!/\buseNavigate\(\)/.test(src), `${f} still uses raw useNavigate`);
+  }
+  const ws = readFileSync("src/hooks/useProfileWorkspace.js", "utf8");
+  assert.ok(ws.includes("profileDoc: true") && ws.includes("navigate(-1)"), "opening pushes history; closing steps back");
   const profile = readFileSync("src/pages/CustomerProfile.jsx", "utf8");
   for (const t of ['"repair_order"', '"estimate"', '"invoice"']) assert.ok(profile.includes(`type: ${t}`) || profile.includes(`type=${t}`));
   for (const p of ["src/pages/InvoiceDetail.jsx", "src/pages/EstimateDetail.jsx"]) {
