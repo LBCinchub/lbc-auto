@@ -13,9 +13,10 @@ const DEFAULT_SHOP = [
   { label: "This Month So Far", q: "How much have we collected this month and what is still owed?" },
 ];
 const ADVICE = [
-  { label: "🔧 Brake job hours", q: "How many hours for a full brake job (pads + rotors, all 4 wheels)?" },
-  { label: "⚠️ P0420 code", q: "What does P0420 mean and how many hours to fix?" },
-  { label: "🦀 Rust factor", q: "How do I adjust labor hours for a heavily rusted Canadian car?" },
+  { label: "Parts Needed", q: "What parts are needed for front brake pads and rotors?" },
+  { label: "Brake Job Hours", q: "How many hours for a full brake job (pads + rotors, all 4 wheels)?" },
+  { label: "P0420 Code", q: "What does P0420 mean and how many hours to fix?" },
+  { label: "Rust Factor", q: "How do I adjust labor hours for a heavily rusted Canadian car?" },
 ];
 
 export function staffSuggestions(pathname) {

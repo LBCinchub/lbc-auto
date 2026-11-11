@@ -3,7 +3,7 @@
 // connected); optional rough guidance is labelled as such and never presented as book time.
 import { getOwned } from './scope.ts';
 import { roleAllows, FINANCE, OWNER } from './policy.ts';
-import { laborIntent, mentionsRate, parseVehicle, parseJob, missingQuestions, title } from './laborTime.ts';
+import { laborIntent, mentionsRate, parseVehicle, parseJob, missingQuestions, title, stripInstructions } from './laborTime.ts';
 import { laborHistory, priceLibraryHits } from './laborHistory.ts';
 import { withDeadline } from './deadline.ts';
 
@@ -13,11 +13,11 @@ const ROUGH_MS = 15000;
 const FOLLOW_UP_BLOCK = /\b(show|list|create|make|write|unpaid|invoices?|appointments?|customers?|estimates?|orders?|paid)\b/i;
 
 // User messages of the current labor thread (continues only across LBC Auto AI's own labor questions).
-export function laborThread(messages: any[]) {
+export function laborThread(messages: any[], ask = LABOR_ASK) {
   const out: string[] = [];
   for (let i = messages.length - 1; i >= 0; i--) {
     if (messages[i].role === 'user') { out.unshift(messages[i].content); continue; }
-    if (!String(messages[i].content).startsWith(LABOR_ASK)) break;
+    if (!String(messages[i].content).startsWith(ask)) break;
   }
   return out;
 }
@@ -37,7 +37,7 @@ export function laborRateReply(scope: any) {
     staff: { tool_results: [{ label: 'Shop Settings', module: 'Settings', status: 'ok' }], read_only: true } };
 }
 
-async function contextVehicle(ctx: any) {
+export async function contextVehicle(ctx: any) {
   const h = ctx.page;
   if (!h || h.entity === 'Customer') return null;
   try {
@@ -60,7 +60,8 @@ async function roughGuidance(llm: any, vehicle: any, job: any) {
 }
 
 export async function laborTurn(ctx: any, llm: any, messages: any[]) {
-  const text = laborThread(messages).join(' ');
+  const raw = laborThread(messages).join(' ');
+  const text = stripInstructions(raw); // instructions ("Read Only. Distinguish...") are not the job
   let vehicle = parseVehicle(text);
   let vehicleFrom = '';
   if (!vehicle.complete) {
@@ -93,7 +94,8 @@ export async function laborTurn(ctx: any, llm: any, messages: any[]) {
   }
   out.push('', '**Book Time**', "No Licensed Labor Guide Is Connected To LBC Auto, So I Can't Give A Verified Book Time.");
   out.push('', '**Rough Guidance (Not Book Time)**', rough ? `About ${rough.lo}-${rough.hi} h.${rough.note ? ` ${rough.note}` : ''} Verify With A Labor Guide Before Quoting.` : 'Rough Guidance Is Unavailable Right Now.');
-  if (mentionsRate(text) && ctx.scope.laborRate != null && roleAllows(ctx.scope.role, { roles: OWNER })) out.push('', `Shop Labor Rate: $${ctx.scope.laborRate}/Hr (From Settings).`);
+  if (mentionsRate(raw) && ctx.scope.laborRate != null && roleAllows(ctx.scope.role, { roles: OWNER })) out.push('', `Shop Labor Rate: $${ctx.scope.laborRate}/Hr (From Settings).`);
+  out.push('', '**Next Step**', hist.items.length ? 'Open A Matching Job Below To Compare Before Quoting.' : 'Quote From Your Experience Or A Licensed Labor Guide; Nothing Here Is Book Time.');
   const links = [...new Map(hist.items.map((x: any) => [x.open_path, { label: `${x.source} ${x.number}`.trim(), path: x.open_path }])).values()].slice(0, 3);
   return {
     reply: out.join('\n'),
@@ -101,7 +103,7 @@ export async function laborTurn(ctx: any, llm: any, messages: any[]) {
       { label: 'Shop Labor History', module: 'Estimates, Repair Orders, Invoices', status: hist.status, count: hist.items.length, partial: !!hist.partial },
       { label: 'Labor Guide', status: 'not_connected' },
       { label: 'Rough Guidance', status: rough ? 'ok' : 'unavailable' },
-    ], links, read_only: true },
+    ], links, options: [`Parts Needed For ${job.label}${side} ${vehicle.label}`], read_only: true },
     audit: canHistory ? ['labor.history'] : [],
   };
 }

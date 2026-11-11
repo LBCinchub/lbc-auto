@@ -1,7 +1,7 @@
 // Additional read capabilities (balances, suppliers, expenses, diagnostics, photos, reviews, offers,
 // recommendations, notes, portal messages, public shop info). Same rules: tenant-constrained queries
 // before retrieval, safe projections, and an explicit partial flag instead of guessed totals.
-import { ownedPage, ownedScan, todayIn } from './scope.ts';
+import { ownedPage, ownedScan, shopToday } from './scope.ts';
 import * as P from './projections.ts';
 import { FINANCE, OWNER, ALL_STAFF } from './policy.ts';
 import { page, pickCustomer, range, skipArg, OPEN_INV } from './reads.ts';
@@ -43,7 +43,7 @@ export const MORE_READS: any[] = [
   { name: 'expenses.list', module: 'Expenses', label: 'Expenses', roles: OWNER, description: 'Shop expenses in a date range (default this month).',
     args: { from: { type: 'date' }, to: { type: 'date' } },
     run: async (ctx: any, a: any) => {
-      const today = todayIn(ctx.scope.timezone, ctx.now);
+      const today = a.from && a.to ? a.to : shopToday(ctx);
       const rg = range(ctx, { from: a.from || today.slice(0, 8) + '01', to: a.to || today });
       const s = await ownedScan(ctx.svc, 'Expense', ctx.scope, { expense_date: { $gte: rg.from, $lte: rg.to } }, { pages: 2 });
       return { status: s.rows.length ? 'ok' : 'no_results', range: rg, partial: s.partial, total: s.partial ? null : r2(s.rows.reduce((x: number, e: any) => x + (Number(e.amount) || 0), 0)),

@@ -8,6 +8,7 @@ import { createPending, claim, finish, cancel } from './confirm.ts';
 import { roleAllows, enforceStaffDisclosure } from './policy.ts';
 import { coverageReply } from './coverage.ts';
 import { routeLabor, laborTurn, laborRateReply } from './laborTurn.ts';
+import { routeParts, partsTurn } from './partsTurn.ts';
 import { replyText } from './deadline.ts';
 
 const RATE_PER_MIN = 20;
@@ -45,7 +46,7 @@ async function runRead(ctx: any, call: any) {
   // Disclosure policy runs on the server result BEFORE the model or the browser sees it.
   try { return { ...base, ...enforceStaffDisclosure(ctx.scope.role, await call.cap.run(ctx, call.args)) }; }
   catch (e: any) {
-    if (e instanceof ToolError) return { ...base, status: e.code === 'not_found' ? 'not_found' : 'failed', message: e.message };
+    if (e instanceof ToolError) return { ...base, status: e.code === 'not_found' ? 'not_found' : e.code === 'needs_date' ? 'needs_input' : 'failed', message: e.message };
     console.error('staff read failed', call.cap.name, e?.message);
     return { ...base, status: 'unavailable', message: `${call.cap.label} could not be loaded right now.` };
   }
@@ -106,7 +107,11 @@ async function staffTurn({ userDb, svc, llm, body, scope, now = Date.now() }: an
   const route = routeLabor(messages);
   if (route === 'labor_rate') { await audit(['settings.get']); return laborRateReply(scope); }
   if (route === 'repair_hours') { const { audit: used, ...out } = await laborTurn(ctx, llm, messages); await audit(used); return out; }
-  const plan = await planTools(llm, { messages, today: ctx.today, pagePath: safePath(body.page), role: scope.role });
+  // Parts questions are advice plus this shop's own inventory read: never a write.
+  if (routeParts(messages)) { const { audit: used, ...out } = await partsTurn(ctx, llm, messages); await audit(used); return out; }
+  // Without a shop timezone, "today" is unknown: never let the planner assume the UTC date.
+  const today = scope.timezoneVerified ? ctx.today : 'unknown (shop timezone not set; use only dates the staff wrote, leave from/to empty otherwise)';
+  const plan = await planTools(llm, { messages, today, pagePath: safePath(body.page), role: scope.role });
   if (plan.unsupported) { await audit([]); return { reply: UNSUPPORTED[plan.unsupported], staff: { tool_results: [{ label: 'Not Available From Chat', status: 'unsupported' }] } }; }
   if (!plan.calls.length) {
     if (!plan.dropped.length) return null;
@@ -126,6 +131,10 @@ async function staffTurn({ userDb, svc, llm, body, scope, now = Date.now() }: an
     return { reply: c.cap.ask || `To use ${c.cap.label} I still need: ${c.errors.join('; ')}.`, staff: { tool_results: [{ label: c.cap.label, module: c.cap.module, status: 'needs_input' }], read_only: true } };
   }
   const results = await Promise.all(plan.calls.map((c: any) => runRead(ctx, c)));
+  // "Today" with no shop timezone: ask for the date instead of answering for the UTC day.
+  if (results.every((r: any) => r.status === 'needs_input')) {
+    return { reply: results[0].message, staff: { tool_results: results.map((r: any) => ({ label: r.label, module: r.module, status: r.status })), read_only: true } };
+  }
   // A slow, failed or empty summary still returns what was checked, with a read-only Retry.
   const reply = replyText(await Promise.resolve(llm({ prompt: composePrompt(messages, results, scope) })).catch((e: any) => { console.error('staff compose failed', e?.code || e?.name); return ''; }));
   const links = results.flatMap((r: any) => (r.items || []).flatMap((x: any) => [itemLink(x), itemLink(x?.customer), itemLink(x?.vehicle)])).filter(Boolean).slice(0, 5);

@@ -22,6 +22,11 @@ export function delayFor(g, base = BASE_DELAY_MS) {
   return base;
 }
 
+// Graphemes per tick so any reply is fully shown in about MAX_REVEAL_TICKS ticks (~1.3s at 8ms):
+// long replies never sit half-typed waiting for "Show Full Reply".
+export const MAX_REVEAL_TICKS = 160;
+export const chunkFor = (text) => Math.max(1, Math.ceil(splitGraphemes(text).length / MAX_REVEAL_TICKS));
+
 // Only brand-new replies animate; loaded history and already-revealed replies never retype.
 export function shouldAnimate(msg, revealedIds) {
   return !!(msg && msg.animate && msg.id && !revealedIds.has(msg.id));
@@ -30,7 +35,7 @@ export function shouldAnimate(msg, revealedIds) {
 // Queue-based controller. push() accepts streamed chunks; end() marks the stream complete.
 export function createTypewriter({
   onUpdate, onDone, base = BASE_DELAY_MS, maxCatchUp = MAX_CATCHUP_GRAPHEMES,
-  schedule = setTimeout, cancel = clearTimeout, now = () => Date.now(),
+  schedule = setTimeout, cancel = clearTimeout, now = () => Date.now(), chunk = 1,
 }) {
   let target = "";
   let graphemes = [];
@@ -57,10 +62,10 @@ export function createTypewriter({
     if (shown < graphemes.length) {
       // If the timer fired late (background tab), catch up a little — never a whole paragraph.
       const late = Math.max(0, now() - dueAt);
-      const steps = Math.min(maxCatchUp, 1 + Math.floor(late / base));
+      const steps = Math.min(maxCatchUp, 1 + Math.floor(late / base)) * chunk;
       shown = Math.min(graphemes.length, shown + steps);
       onUpdate(graphemes.slice(0, shown).join(""));
-      arm(delayFor(graphemes[shown - 1], base));
+      arm(chunk > 1 ? base : delayFor(graphemes[shown - 1], base));
     } else if (ended) {
       finish();
     }

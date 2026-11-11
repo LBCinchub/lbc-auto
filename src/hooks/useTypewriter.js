@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { createTypewriter } from "@/lib/typewriter";
+import { createTypewriter, chunkFor } from "@/lib/typewriter";
 
 const prefersReducedMotion = () =>
   typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -26,6 +26,7 @@ export default function useTypewriter(text, { animate, onDone, onProgress }) {
     setShown("");
     setTyping(true);
     const tw = createTypewriter({
+      chunk: chunkFor(text),
       onUpdate: (s) => { setShown(s); progressRef.current?.(); },
       onDone: () => { setTyping(false); doneRef.current?.(); },
     });

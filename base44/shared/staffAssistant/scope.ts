@@ -109,6 +109,14 @@ export async function ownedScan(svc: any, entity: string, scope: any, query: any
   return { rows: out, partial: true };
 }
 
+// The shop's current calendar date. Only from a verified shop timezone: the UTC day is a different
+// date for part of every evening in the Americas, so it is never used as "today".
+export const NO_SHOP_TZ = 'Your Shop Timezone Is Not Set In LBC Auto, So I Can\'t Tell Which Day "Today" Is For Your Shop. Ask With A Date (E.g. "Appointments On Nov 10").';
+export function shopToday(ctx: any) {
+  if (!ctx.scope.timezoneVerified) throw new ToolError('needs_date', NO_SHOP_TZ);
+  return todayIn(ctx.scope.timezone, ctx.now);
+}
+
 export function todayIn(tz: string, now = new Date()) {
   return new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
 }

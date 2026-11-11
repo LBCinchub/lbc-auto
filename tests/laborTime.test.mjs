@@ -180,7 +180,7 @@ test('UI wiring: deadline helper, stale-reply guard, loading reset in finally, R
   assert.match(ui, /\} finally \{\n\s*if \(seq === requestSeqRef\.current\) setLoading\(false\);/);
   assert.match(ui, /read_only: retryOf \? true : undefined/);
   assert.match(ui, /m\.retry && idx === messages\.length - 1/);
-  const decide = ui.slice(ui.indexOf('const decide = async'), ui.indexOf('const handleKey'));
+  const decide = ui.slice(ui.indexOf('const decide = async'), ui.indexOf('const placeholder'));
   assert.ok(!/retry/.test(decide.replace(/never retried/, '')), 'confirmations get no Retry');
   assert.ok(!/No response generated/.test(ui));
 });

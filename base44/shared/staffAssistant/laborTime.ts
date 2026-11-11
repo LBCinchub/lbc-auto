@@ -22,7 +22,7 @@ export function laborIntent(text: string): 'repair_hours' | 'labor_rate' | 'time
 export const mentionsRate = (t: string) => RATE_RE.test(String(t || ''));
 
 const MAKES = ['acura', 'alfa', 'audi', 'bmw', 'buick', 'cadillac', 'chevrolet', 'chevy', 'chrysler', 'dodge', 'fiat', 'ford', 'genesis', 'gmc', 'honda', 'hyundai', 'infiniti', 'jaguar', 'jeep', 'kia', 'lexus', 'lincoln', 'mazda', 'mercedes', 'mercedes-benz', 'mini', 'mitsubishi', 'nissan', 'pontiac', 'porsche', 'ram', 'saturn', 'scion', 'subaru', 'tesla', 'toyota', 'volkswagen', 'vw', 'volvo'];
-const STOP = new Set(['how', 'many', 'much', 'long', 'h', 'hr', 'hrs', 'hour', 'hours', 'labor', 'labour', 'labr', 'lbr', 'lab', 'book', 'time', 'times', 'flat', 'rate', 'for', 'to', 'on', 'a', 'an', 'the', 'do', 'does', 'it', 'take', 'is', 'what', 'whats', 's', 'of', 'my', 'this', 'that', 'in', 'at', 'with', 'and', 'please', 'check', 'checking', 'look', 'up', 'me', 'give', 'i', 'im', 'you', 'can', 'need', 'get', 'would', 'will', 'should', 'be', 'we', 'our', 'usually', 'typical', 'about', 'charge', 'charged', 'did', 'use', 'used', 'previously', 'before', 'last', 'shop', 'hi', 'hey', 'ok', 'yes', 'its', 'car', 'vehicle', 'truck', 'suv', 'engine', 'job', 'repair', 'work', 'service', 'fix', 'lbc', 'auto', 'ai', 'asking', 'ask', 'asked', 'him', 'her', 'he', 'she', 'them', 'help', 'tell', 'know', 'want', 'quote', 'roughly', 'approx', 'average', 'normally', 'there', 'thanks', 'thank']);
+const STOP = new Set(['how', 'many', 'much', 'long', 'h', 'hr', 'hrs', 'hour', 'hours', 'labor', 'labour', 'labr', 'lbr', 'lab', 'book', 'time', 'times', 'flat', 'rate', 'for', 'to', 'on', 'a', 'an', 'the', 'do', 'does', 'it', 'take', 'is', 'what', 'whats', 's', 'of', 'my', 'this', 'that', 'in', 'at', 'with', 'and', 'please', 'check', 'checking', 'look', 'up', 'me', 'give', 'i', 'im', 'you', 'can', 'need', 'get', 'would', 'will', 'should', 'be', 'we', 'our', 'usually', 'typical', 'about', 'charge', 'charged', 'did', 'use', 'used', 'previously', 'before', 'last', 'shop', 'hi', 'hey', 'ok', 'yes', 'its', 'car', 'vehicle', 'truck', 'suv', 'engine', 'job', 'repair', 'work', 'service', 'fix', 'lbc', 'auto', 'ai', 'asking', 'ask', 'asked', 'him', 'her', 'he', 'she', 'them', 'help', 'tell', 'know', 'want', 'quote', 'roughly', 'approx', 'average', 'normally', 'there', 'thanks', 'thank', 'read', 'only', 'actual', 'saved', 'rates', 'any', 'general', 'estimate', 'estimates', 'parts', 'part', 'needed', 'required', 'list', 'which', 'typical', 'from', 'vs', 'versus', 'or', 'are', 'was', 'were', 'have', 'has', 'had', 'got']);
 const VERBS = new Set(['replace', 'replacing', 'replacement', 'install', 'r&r', 'rr', 'remove', 'change', 'swap', 'do', 'doing']);
 const SIDES = ['front', 'rear', 'left', 'right', 'lh', 'rh', 'driver', 'passenger', 'both', 'all', 'four', '4', 'upper', 'lower', 'inner', 'outer'];
 const SIDED = /\b(brakes?|pads?|rotors?|calipers?|struts?|shocks?|bearings?|hubs?|control\s*arms?|axles?|cv|tie\s*rods?|ball\s*joints?|sway|links?|springs?)\b/i;
@@ -56,6 +56,16 @@ export function parseJob(text: string, vehicleUsed: Set<string> = new Set()) {
   const needsSide = tokens.length > 0 && SIDED.test(core.join(' ')) && !sides.length;
   return { tokens, sides, label, complete: tokens.length > 0, needsSide };
 }
+
+// Staff often add instructions to a repair question ("Read Only. Distinguish Actual Saved From Hourly
+// Rates."). Those clauses are about HOW to answer, not WHAT the repair is, so they are removed before
+// vehicle/job parsing and history retrieval. Clauses naming a vehicle year are always kept.
+const INSTRUCTION_RE = /\b(read[\s-]*only|do\s*n[o']?t|dont|never|distinguish|separate(ly)?|differentiate|compare|explain|include|mention|make\s+sure|be\s+(brief|concise|clear)|no\s+changes?|without\s+(changing|saving|sending)|change\s+any|send\s+anything|keep\s+(it|them)|actual\s+saved|hourly\s+rates?|general\s+estimate|show\s+(both|separately|sources?))\b/i;
+export function stripInstructions(text: string) {
+  return String(text || '').split(/[.!?]+(?=\s|$)|[;\n,]+/).map((c) => c.trim()).filter(Boolean)
+    .filter((c) => /\b(19[6-9]\d|20[0-4]\d)\b/.test(c) || !INSTRUCTION_RE.test(c)).join(' ');
+}
+export const VIN_RE = /\b[A-HJ-NPR-Z0-9]{17}\b/i;
 
 // Questions to ask when essentials are missing (never a guess).
 export function missingQuestions(vehicle: any, job: any) {

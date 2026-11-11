@@ -22,6 +22,24 @@ export function toPlainText(md = "") {
     .trim();
 }
 
+// Display-only: keep the reply's own line breaks (Markdown would merge single newlines into one
+// paragraph). Text, VINs, part numbers and units are never changed, only line structure.
+const LIST_LINE = /^\s*([-*+•]|\d+[.)])\s/;
+export function toDisplayMarkdown(md = "") {
+  const lines = String(md).split("\n");
+  const out = [];
+  lines.forEach((line, i) => {
+    const next = lines[i + 1];
+    out.push(line);
+    if (next == null || !line.trim() || !next.trim()) return;
+    const a = LIST_LINE.test(line), b = LIST_LINE.test(next);
+    if (a && b) return;
+    if (!a && !b) { out[out.length - 1] = `${line}  `; return; }
+    out.push("");
+  });
+  return out.join("\n");
+}
+
 // Split plain text into { title, body } sections by heading-like lines.
 function splitSections(md) {
   const out = [];

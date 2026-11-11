@@ -133,7 +133,8 @@ test('source guards: no default shop and no browser shop email on public paths',
   const diag = readFileSync('base44/functions/lbcDiagAI/entry.ts', 'utf8');
   assert.ok(!/base44\.entities\.(Part|Vehicle|RepairOrder)/.test(diag));
   const ui = readFileSync('src/components/shared/AutoAIBubble.jsx', 'utf8');
-  assert.match(ui, /Verified Shop:/);
+  assert.match(readFileSync('src/components/staff-ai/AiChatHeader.jsx', 'utf8'), /Verified Shop:/); // header shows the verified shop
+  assert.match(ui, /<AiChatHeader shop=\{shop\}/);
   assert.match(ui, /switched \? \[userMsg, assistantMsg\]/);
 });
 

@@ -1,5 +1,5 @@
 // Read capabilities. Every query is tenant-constrained (ownedPage/ownedScan/getOwned) BEFORE retrieval.
-import { ToolError, getOwned, ownedPage, ownedScan, stampedOwned, todayIn, dayStartUtc, addDays } from './scope.ts';
+import { ToolError, getOwned, ownedPage, ownedScan, stampedOwned, shopToday, dayStartUtc, addDays } from './scope.ts';
 import { textQuery } from './validate.ts';
 import * as P from './projections.ts';
 import { FINANCE, OWNER } from './policy.ts';
@@ -20,7 +20,7 @@ export async function pickCustomer(ctx: any, a: any) {
 }
 
 export function range(ctx: any, a: any, defDays = 0) {
-  const from = a.from || todayIn(ctx.scope.timezone, ctx.now);
+  const from = a.from || shopToday(ctx);
   const to = a.to || addDays(from, defDays);
   if (to < from) throw new ToolError('invalid', 'The end date is before the start date.');
   if (Date.parse(to) - Date.parse(from) > 366 * 864e5) throw new ToolError('invalid', 'Date ranges are limited to one year.');
@@ -98,7 +98,7 @@ export const READS: any[] = [
   { name: 'reports.summary', module: 'Reporting', label: 'Shop Summary', roles: FINANCE, description: 'Money collected (amount paid), invoice count, expenses for a date range, plus all-time open balance. Default: this month.',
     args: { from: { type: 'date' }, to: { type: 'date' } },
     run: async (ctx: any, a: any) => {
-      const today = todayIn(ctx.scope.timezone, ctx.now);
+      const today = a.from && a.to ? a.to : shopToday(ctx);
       const rg = range(ctx, { from: a.from || today.slice(0, 8) + '01', to: a.to || today });
       const [inv, open, exp] = await Promise.all([
         ownedScan(ctx.svc, 'Invoice', ctx.scope, createdIn(rg)),
@@ -139,7 +139,7 @@ export const READS: any[] = [
   { name: 'payroll.list', module: 'Payroll', label: 'Payroll Payments', description: 'Recorded payroll payments in a date range (default this month).', roles: OWNER,
     args: { from: { type: 'date' }, to: { type: 'date' } },
     run: async (ctx: any, a: any) => {
-      const today = todayIn(ctx.scope.timezone, ctx.now);
+      const today = a.from && a.to ? a.to : shopToday(ctx);
       const rg = range(ctx, { from: a.from || today.slice(0, 8) + '01', to: a.to || today });
       const s = await ownedScan(ctx.svc, 'PaymentRecord', ctx.scope, { payment_date: { $gte: rg.from, $lte: rg.to } }, { pages: 2 });
       return { status: s.rows.length ? 'ok' : 'no_results', range: rg, partial: s.partial, total_paid: r2(s.rows.reduce((x, p) => x + (Number(p.amount) || 0), 0)), items: s.rows.slice(0, 25).map((p) => ({ mechanic_name: p.mechanic_name, amount: r2(p.amount), payment_date: p.payment_date, period: p.period })) };
